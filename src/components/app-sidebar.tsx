@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { useCollections } from '@/hooks/use-collections'
 
@@ -67,7 +68,10 @@ export function AppSidebar() {
     const name = newName.trim()
     setIsCreating(false)
     setNewName('')
-    if (!name) return
+    if (!name) {
+      toast.error('Name darf nicht leer sein')
+      return
+    }
     const col = await createCollection(name)
     if (col) router.push(`/collections/${col.id}`)
   }

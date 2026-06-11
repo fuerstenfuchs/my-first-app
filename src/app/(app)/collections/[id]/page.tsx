@@ -15,7 +15,7 @@ type ModalMode = 'view' | 'edit'
 
 export default function CollectionPage() {
   const { id } = useParams<{ id: string }>()
-  const { items, loading, collectionName, moveUp, moveDown, removeFromCollection } =
+  const { items, loading, collectionName, moveUp, moveDown, removeFromCollection, removeItemAt } =
     useCollectionPrompts(id)
   const { updatePrompt, deletePrompt, copyPrompt } = usePrompts()
 
@@ -45,6 +45,7 @@ export default function CollectionPage() {
   async function handleDeleteConfirm() {
     if (!deleteId) return
     await deletePrompt(deleteId)
+    if (deleteIndex !== null) removeItemAt(deleteIndex)
     setDeleteId(null)
     setDeleteIndex(null)
   }

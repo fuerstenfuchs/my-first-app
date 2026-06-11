@@ -1,6 +1,6 @@
 # PROJ-4: Sammlungen & Workflows
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
@@ -220,7 +220,7 @@ Keine.
 
 ### Bugs Found
 
-#### BUG-1: Prompt-Löschen aus Sammlungsansicht aktualisiert lokalen State nicht
+#### ~~BUG-1: Prompt-Löschen aus Sammlungsansicht aktualisiert lokalen State nicht~~ ✅ FIXED
 - **Severity:** High
 - **Steps to Reproduce:**
   1. Gehe zu einer Sammlung mit mindestens einem Prompt
@@ -232,7 +232,7 @@ Keine.
 - **Betroffene Datei:** `src/app/(app)/collections/[id]/page.tsx` — `handleDeleteConfirm` + ungenutzte `deleteIndex`-State
 - **Priority:** Fix before deployment
 
-#### BUG-2: Leeres Namensfeld beim Sammlung-Erstellen zeigt keine Validierungsmeldung
+#### ~~BUG-2: Leeres Namensfeld beim Sammlung-Erstellen zeigt keine Validierungsmeldung~~ ✅ FIXED
 - **Severity:** Medium
 - **Steps to Reproduce:**
   1. Klicke „+" in der Sidebar um neue Sammlung anzulegen
@@ -248,8 +248,8 @@ Keine.
 - **Security:** Bestanden — keine Sicherheitslücken gefunden
 - **Unit Tests:** 8/8 bestanden (Swap-Logik, Boundary-Guards, Name-Trimming)
 - **E2E Tests:** 19 Tests geschrieben, beim Ausführen mit `TEST_PASSWORD` ausführbar
-- **Production Ready:** NO — BUG-1 (High) muss zuerst behoben werden
-- **Recommendation:** BUG-1 und BUG-2 beheben, dann erneut `/qa` ausführen
+- **Production Ready:** YES — alle Bugs behoben
+- **Recommendation:** Deploy
 
 ## Deployment
 _To be added by /deploy_

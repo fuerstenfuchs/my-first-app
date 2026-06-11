@@ -170,5 +170,9 @@ export function useCollectionPrompts(collectionId: string) {
     }
   }
 
-  return { items, loading, collectionName, moveUp, moveDown, removeFromCollection }
+  function removeItemAt(index: number) {
+    setItems(prev => prev.filter((_, i) => i !== index))
+  }
+
+  return { items, loading, collectionName, moveUp, moveDown, removeFromCollection, removeItemAt }
 }
