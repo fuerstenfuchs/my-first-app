@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -60,6 +61,7 @@ export function PromptCardGrid({
   const visibleTags = prompt.tags.slice(0, 3)
 
   return (
+    <>
     <motion.div
       className="group relative bg-card border border-border rounded-xl overflow-hidden cursor-pointer flex flex-col"
       onClick={onClick}
@@ -124,38 +126,6 @@ export function PromptCardGrid({
         </div>
       </div>
 
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightboxOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setLightboxOpen(false)}
-          >
-            <motion.img
-              src={prompt.cover_image_url!}
-              alt={prompt.title}
-              className="max-w-full max-h-full object-contain rounded-lg"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              onClick={e => e.stopPropagation()}
-            />
-            <button
-              className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
-              onClick={() => setLightboxOpen(false)}
-            >
-              <X className="h-5 w-5" />
-              <span className="sr-only">Schließen</span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Card body */}
       <div className="p-3 flex flex-col gap-2 flex-1">
         <h3 className="font-semibold text-sm leading-snug line-clamp-2">{prompt.title}</h3>
@@ -182,5 +152,39 @@ export function PromptCardGrid({
         </div>
       </div>
     </motion.div>
+
+    {/* Lightbox — rendered in document.body via portal to avoid card hover flicker */}
+    {lightboxOpen && typeof document !== 'undefined' && createPortal(
+      <AnimatePresence>
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          onClick={() => setLightboxOpen(false)}
+        >
+          <motion.img
+            src={prompt.cover_image_url!}
+            alt={prompt.title}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            initial={{ scale: 0.88, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.88, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Schließen</span>
+          </button>
+        </motion.div>
+      </AnimatePresence>,
+      document.body
+    )}
+    </>
   )
 }
