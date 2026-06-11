@@ -139,33 +139,39 @@ export function PromptCardGrid({
             </DropdownMenu>
           </div>
 
-          {/* Bottom gradient overlay: title + tags + copy */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent pt-10 pb-3 px-3">
-            <h3 className="font-semibold text-sm leading-snug line-clamp-2 text-white">
+        </div>
+
+        {/* Card body below image */}
+        <div className="px-3 pt-2.5 pb-3">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-sm leading-snug line-clamp-2 flex-1">
               {prompt.title}
             </h3>
-            <div className="flex items-center justify-between gap-2 mt-1.5">
-              <div className="flex flex-wrap gap-1 min-w-0 overflow-hidden">
-                {visibleTags.map(tag => (
-                  <span
-                    key={tag}
-                    className={`text-[10px] px-1.5 py-0 rounded font-mono leading-5 shrink-0 ${tagColorClass(tag)}`}
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 shrink-0 text-white/60 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={e => { e.stopPropagation(); onCopy() }}
-              >
-                <Copy className="h-3 w-3" />
-                <span className="sr-only">Kopieren</span>
-              </Button>
-            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 shrink-0 -mt-0.5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={e => { e.stopPropagation(); onCopy() }}
+            >
+              <Copy className="h-3 w-3" />
+              <span className="sr-only">Kopieren</span>
+            </Button>
           </div>
+          {prompt.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{prompt.description}</p>
+          )}
+          {visibleTags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {visibleTags.map(tag => (
+                <span
+                  key={tag}
+                  className={`text-[10px] px-1.5 py-0 rounded font-mono leading-5 ${tagColorClass(tag)}`}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </motion.div>
 
