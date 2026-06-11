@@ -1,6 +1,6 @@
 # PROJ-4: Sammlungen & Workflows
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
@@ -252,4 +252,8 @@ Keine.
 - **Recommendation:** Deploy
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-11
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app/
+**Platform:** Vercel (auto-deploy from GitHub `main` branch)
+**Environment Variables set:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ALLOWED_EMAIL`
