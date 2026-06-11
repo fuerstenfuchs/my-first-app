@@ -12,7 +12,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
-    { name: 'mobile', use: { ...devices['iPhone 13'], channel: 'chrome' } },
+    { name: 'mobile', use: { ...devices['Pixel 5'], channel: 'chrome' } },
   ],
   webServer: {
     command: 'npm run dev',
