@@ -104,4 +104,76 @@
 | Altes Bild bei Neuupload löschen | Verhindert unbegrenzt wachsende Storage-Kosten | 2026-06-12 |
 
 ### Technical Decisions
-<!-- Added by /architecture -->
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| `class="dark"` fix auf `<html>` | shadcn/ui hat `.dark`-Variablen bereits fertig — kein neues CSS nötig | 2026-06-12 |
+| ThemeProvider entfernen | War nur für den Toggle nötig; fällt weg wenn Dark Theme erzwungen wird | 2026-06-12 |
+| Framer Motion | Industriestandard für React-Animationen, tree-shakeable | 2026-06-12 |
+| Gradient aus Titel-Hash | Deterministisch (gleicher Prompt → immer gleiche Farbe), kein extra DB-Feld | 2026-06-12 |
+| 2 separate Karten-Komponenten (Grid + Liste) | Sauberer als eine Mega-Komponente mit vielen Fallunterscheidungen | 2026-06-12 |
+| Storage-Pfad `{user_id}/{uuid}.{ext}` | RLS rein per Pfad möglich — kein DB-Join in der Storage-Regel nötig | 2026-06-12 |
+| `prompt-card.tsx` bleibt für Collections | Collections-Ansicht braucht kein Cover-Bild — keine unnötige Kopplung | 2026-06-12 |
+
+---
+
+## Tech Design (Solution Architect)
+
+### Komponenten-Struktur
+
+```
+globals.css + layout.tsx (GEÄNDERT)
++-- class="dark" fix auf <html> → erzwingt Dark Theme
++-- ThemeProvider entfernt
+
+src/app/(app)/page.tsx (GEÄNDERT)
++-- Grid/Listen-Umschalter (oben rechts, 2 Icon-Buttons)
++-- useViewMode() Hook → liest/schreibt localStorage
++-- Grid-Modus → PromptCardGrid
++-- Listen-Modus → PromptListRow
+
+src/components/prompts/
++-- prompt-card-grid.tsx (NEU)
+|   +-- 16:9 Bildbereich (object-fit: contain)
+|   |   +-- <img> onError → Gradient-Fallback
+|   |   +-- GradientPlaceholder wenn kein Bild
+|   +-- Titel, Tags, Beschreibung gekürzt
+|   +-- Framer Motion: Hover (leichtes Anheben + Glow)
+|   +-- Dropdown: Bearbeiten / Sammlung / Löschen
+|
++-- prompt-list-row.tsx (NEU)
+|   +-- 48x48 Thumbnail (Bild oder Gradient)
+|   +-- Titel, erste 2 Tags, Beschreibung, Datum
+|   +-- Klick → Modal
+|
++-- cover-image-picker.tsx (NEU)
+|   +-- Toggle: URL eingeben vs. Datei hochladen
+|   +-- URL-Modus: Input + Live-Vorschau
+|   +-- Upload-Modus: Datei-Picker (jpg/png/webp/gif, max 5 MB)
+|   +-- Schaltfläche "Bild entfernen"
+|
++-- prompt-modal.tsx (GEÄNDERT)
+    +-- CoverImagePicker ins Formular
+    +-- Framer Motion: Scale+Fade beim Oeffnen/Schliessen
+
+src/hooks/
++-- use-view-mode.ts (NEU) — localStorage "promptdb-view-mode"
++-- use-prompts.ts (GEÄNDERT) — cover_image_url in Typ + CRUD
+```
+
+### Datenhaltung
+
+```
+prompts-Tabelle (neues Feld):
+  cover_image_url  TEXT  NULL
+    → externe URL (vom Nutzer eingegeben)
+    → oder oeffentliche Supabase-Storage-URL (nach Upload)
+    → null = kein Bild, Gradient-Platzhalter wird gezeigt
+
+Supabase Storage Bucket: prompt-covers (oeffentlich lesbar)
+  prompt-covers/
+    {user_id}/
+      {uuid}.jpg / .png / .webp / .gif
+```
+
+### Neue Pakete
+- `framer-motion` — Hover-, Modal- und Stagger-Animationen
