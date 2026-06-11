@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,6 +54,7 @@ export function PromptCardGrid({
   onAddToCollection,
 }: PromptCardGridProps) {
   const [imgError, setImgError] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const gradient = gradientForTitle(prompt.title)
   const showGradient = !prompt.cover_image_url || imgError
   const visibleTags = prompt.tags.slice(0, 3)
@@ -63,7 +64,7 @@ export function PromptCardGrid({
       className="group relative bg-card border border-border rounded-xl overflow-hidden cursor-pointer flex flex-col"
       onClick={onClick}
       variants={cardVariants}
-      whileHover={{ y: -3, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+      whileHover={{ y: -3, boxShadow: '0 0 0 1px rgba(139,92,246,0.7), 0 0 24px rgba(139,92,246,0.12), 0 8px 32px rgba(0,0,0,0.5)' }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
     >
       {/* 16:9 cover area */}
@@ -79,8 +80,9 @@ export function PromptCardGrid({
             <img
               src={prompt.cover_image_url!}
               alt=""
-              className="w-full h-full object-contain bg-black/60"
+              className="w-full h-full object-contain bg-black/60 cursor-zoom-in"
               onError={() => setImgError(true)}
+              onClick={e => { e.stopPropagation(); setLightboxOpen(true) }}
             />
           )}
         </div>
@@ -121,6 +123,38 @@ export function PromptCardGrid({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setLightboxOpen(false)}
+          >
+            <motion.img
+              src={prompt.cover_image_url!}
+              alt={prompt.title}
+              className="max-w-full max-h-full object-contain rounded-lg"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+            />
+            <button
+              className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">Schließen</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Card body */}
       <div className="p-3 flex flex-col gap-2 flex-1">
