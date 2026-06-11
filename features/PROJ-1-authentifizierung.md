@@ -1,6 +1,6 @@
 # PROJ-1: Authentifizierung
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
@@ -61,12 +61,74 @@
 | Keine Landing Page | Persönliches Tool braucht kein Marketing | 2026-06-11 |
 
 ### Technical Decisions
-<!-- Added by /architecture -->
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| `@supabase/ssr` statt `supabase-js` direkt | Pflicht für Next.js App Router: ermöglicht Session-Management auf Server-Seite (Middleware, Server Components, Route Handlers) | 2026-06-11 |
+| Next.js Middleware für Route-Schutz | Läuft vor jedem Request auf dem Edge, keine Millisekunde Verzögerung — sicherer als Client-Side-Redirect | 2026-06-11 |
+| Allowlist als `ALLOWED_EMAIL` Env-Variable | Kein DB-Overhead für einfache Single-User-Prüfung; leicht zu ändern ohne Code-Deploy | 2026-06-11 |
+| Zwei-Schicht-Sicherheit (Middleware + RLS) | Middleware blockt unbekannte User am Eingang; RLS verhindert direkten DB-Zugriff via API-Schlüssel | 2026-06-11 |
+| Kein Custom Auth-Provider | Supabase Auth verwaltet Passwort-Hashing, Token-Refresh (7 Tage) und OAuth-Flow selbst | 2026-06-11 |
+| `/auth/callback` Route Handler | Standard OAuth + PKCE Callback-Endpunkt — Supabase tauscht dort den Code gegen eine Session aus | 2026-06-11 |
 
 ---
 
 ## Tech Design
-_To be added by /architecture_
+
+### Komponenten-Struktur
+
+```
+/login                       → LoginPage (Server Component, Suspense-Wrapper)
+  └── LoginForm              → Client Component
+        ├── E-Mail + Passwort Formular
+        ├── "Anmelden"-Button
+        ├── "Mit Google anmelden"-Button
+        └── "Passwort vergessen?"-Link
+
+/login/reset                 → ResetPage (Client Component)
+  └── E-Mail-Formular + Erfolgs-Zustand
+
+/login/reset/update          → UpdatePasswordPage (Client Component)
+  └── Neues-Passwort-Formular (nach Klick auf Reset-E-Mail)
+
+/auth/callback               → Route Handler (kein UI)
+  └── Tauscht OAuth/Reset-Code gegen Session aus
+
+/ (geschützt via Middleware)
+  └── Hauptansicht — wird in PROJ-2 gebaut
+```
+
+### Datenhaltung
+
+Keine eigenen Tabellen für Auth nötig. Supabase verwaltet `auth.users` automatisch.
+
+| Was | Wo |
+|---|---|
+| Benutzerkonto | Supabase `auth.users` |
+| Session (7 Tage) | HTTP-only Cookie (gesetzt von `@supabase/ssr`) |
+| Allowlist | `ALLOWED_EMAIL` Umgebungsvariable |
+
+### Schutz-Flow
+
+```
+Request kommt an
+      ↓
+Middleware prüft Session
+      ↓
+Keine Session + geschützte Route → Redirect /login
+Session + E-Mail nicht erlaubt  → Abmelden + /login?error=not_allowed
+Session + /login aufgerufen     → Redirect /
+Session OK                      → Request durchlassen
+```
+
+### Neue Dateien
+- `src/lib/supabase.ts` — Browser-Client (für Client Components)
+- `src/lib/supabase-server.ts` — Server-Client (für Server Components, Route Handlers)
+- `src/middleware.ts` — Route-Schutz + Allowlist
+- `src/app/auth/callback/route.ts` — OAuth + Password-Reset Callback
+- `src/app/login/page.tsx` — Login-Seite (Suspense-Wrapper)
+- `src/app/login/login-form.tsx` — Login-Formular (Client Component)
+- `src/app/login/reset/page.tsx` — Passwort-Reset anfordern
+- `src/app/login/reset/update/page.tsx` — Neues Passwort setzen
 
 ## QA Test Results
 _To be added by /qa_
