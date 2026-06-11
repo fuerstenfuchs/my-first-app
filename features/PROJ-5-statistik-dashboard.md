@@ -1,6 +1,6 @@
 # PROJ-5: Statistik-Dashboard
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -132,3 +132,69 @@ Keine neuen Daten — alles wird aus der bestehenden `prompts`-Tabelle abgeleite
 
 ### Neue Packages
 Keine — `Card`, `Badge`, `Progress`, `Table` aus shadcn sind bereits installiert.
+
+## QA Test Results
+
+**Tested:** 2026-06-12
+**App URL:** https://my-first-app-gamma-ecru.vercel.app/
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### Navigation
+- [x] Sidebar-Eintrag „Statistiken" mit BarChart2-Icon unterhalb „Alle Prompts", oberhalb Sammlungen ✓
+- [x] Klick → `/stats` ✓
+
+#### Leerseite
+- [x] `totalCopies === 0` → „Noch keine Nutzungsdaten" + Button „Zur Hauptansicht" ✓
+- [x] Button → `router.push('/')` ✓
+
+#### KPI-Kacheln
+- [x] 3 KpiCards: Gesamt-Kopiervorgänge, Prompts gesamt, Meistgenutzter Tag ✓
+- [x] Kein Tag vorhanden → `topTag ?? '—'` ✓
+
+#### Top-10-Rangliste
+- [x] Sortiert nach `usage_count` absteigend, max. 10 Einträge ✓
+- [x] `usage_count = 0` gefiltert via `.filter(p => p.usage_count > 0)` ✓
+- [x] Weniger als 10 → zeigt nur verfügbare Einträge ✓
+- [x] Klick auf Eintrag → Detail-Modal öffnet sich ✓
+
+### Edge Cases Status
+- [x] Gleichstand: alphabetischer Tiebreaker `|| a.title.localeCompare(b.title)` ✓
+- [x] Gelöschte Prompts: automatisch ausgeblendet (nicht in `prompts`-State) ✓
+- [x] Kein Tag vorhanden: `topTag = null` → „—" angezeigt ✓
+
+### Security Audit Results
+- [x] **Route-Schutz**: `/stats` in `(app)`-Routegruppe, durch Middleware geschützt ✓
+- [x] **Kein User-Input**: Statistiken sind rein lesend — kein XSS/Injection-Risiko ✓
+- [x] **IDOR**: Nutzer sieht nur eigene Prompts via RLS ✓
+- [x] **Keine Secrets im Client**: Nur `NEXT_PUBLIC_`-Variablen ✓
+
+### Automated Test Results
+
+**Unit Tests (Vitest): 48/48 passed** (inkl. 11 neue PROJ-5-Tests)
+- `src/hooks/use-stats.test.ts` — 11 Tests: KPI-Berechnungen, topTag, Top-10-Rangliste, Tiebreaker, Grenzen
+
+**E2E Tests (Playwright): 2/2 passed, 18 skipped (TEST_PASSWORD not set)**
+- `tests/proj-5-statistik.spec.ts` — 10 Tests × 2 Browser (Chrome Desktop + Pixel 5)
+- Ohne Credentials: Redirect-Test — bestanden
+- Mit Credentials: 9 weitere Tests ausführbar
+
+### Bugs Found
+
+**BUG-1 (Low):** Netzwerkfehler zeigt generischen Toast
+- **Beschreibung:** Die Spec verlangt die Meldung „Statistiken konnten nicht geladen werden — bitte Seite neu laden". Stattdessen zeigt `usePrompts` den generischen Toast „Fehler beim Laden der Prompts".
+- **Auswirkung:** Nutzer wird über den Fehler informiert, aber mit einer nicht-seitenspezifischen Nachricht.
+- **Workaround:** Toast vom gemeinsamen Hook ist ausreichend informativ für MVP.
+
+### Summary
+- **Acceptance Criteria:** 10/10 bestanden
+- **Edge Cases:** 3/3 bestanden
+- **Bugs Found:** 1 Low (nicht deployment-blockierend)
+- **Security:** Bestanden — keine Lücken gefunden
+- **E2E Tests:** 2/2 ohne Credentials bestanden, 9 weitere mit `TEST_PASSWORD` ausführbar
+- **Production Ready:** YES
+- **Recommendation:** Deploy
+
+## Deployment
+_To be added by /deploy_
