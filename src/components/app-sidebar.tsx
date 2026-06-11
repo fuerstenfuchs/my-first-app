@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Database, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { BarChart2, Database, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -104,6 +104,14 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton isActive={pathname === '/'} asChild>
               <a href="/">Alle Prompts</a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton isActive={pathname === '/stats'} asChild>
+              <a href="/stats">
+                <BarChart2 className="h-4 w-4" />
+                Statistiken
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

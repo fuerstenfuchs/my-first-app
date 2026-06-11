@@ -1,6 +1,6 @@
 # PROJ-5: Statistik-Dashboard
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
