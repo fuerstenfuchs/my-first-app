@@ -12,6 +12,7 @@ export interface Prompt {
   description: string | null
   tags: string[]
   usage_count: number
+  cover_image_url: string | null
   created_at: string
   updated_at: string
 }
@@ -21,6 +22,7 @@ export interface PromptInput {
   content: string
   description?: string
   tags?: string[]
+  cover_image_url?: string | null
 }
 
 export function usePrompts() {

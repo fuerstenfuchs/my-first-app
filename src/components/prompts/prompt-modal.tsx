@@ -13,7 +13,9 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { CoverImagePicker } from '@/components/prompts/cover-image-picker'
 import type { Prompt, PromptInput } from '@/hooks/use-prompts'
 
 type ModalMode = 'view' | 'edit' | 'create'
@@ -33,6 +35,7 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
   const [content, setContent] = useState('')
   const [description, setDescription] = useState('')
   const [tagsInput, setTagsInput] = useState('')
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({})
 
@@ -45,11 +48,13 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
         setContent(prompt.content)
         setDescription(prompt.description ?? '')
         setTagsInput(prompt.tags.join(', '))
+        setCoverImageUrl(prompt.cover_image_url)
       } else {
         setTitle('')
         setContent('')
         setDescription('')
         setTagsInput('')
+        setCoverImageUrl(null)
       }
     }
   }, [open, prompt, initialMode])
@@ -69,6 +74,7 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
       content: content.trim(),
       description: description.trim() || undefined,
       tags,
+      cover_image_url: coverImageUrl,
     })
     setSaving(false)
     if (success) onClose()
@@ -90,6 +96,15 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
 
         {!isForm && prompt ? (
           <div className="space-y-4">
+            {prompt.cover_image_url && (
+              <div className="w-full rounded-lg overflow-hidden border border-border bg-black/40" style={{ paddingBottom: '56.25%', position: 'relative' }}>
+                <img
+                  src={prompt.cover_image_url}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-contain"
+                />
+              </div>
+            )}
             <div className="rounded-md bg-muted p-4">
               <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed">{prompt.content}</p>
             </div>
@@ -127,7 +142,7 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
                 value={content}
                 onChange={e => { setContent(e.target.value); setErrors(p => ({ ...p, content: undefined })) }}
                 placeholder="Schreib hier deinen Prompt…"
-                rows={8}
+                rows={6}
                 className="resize-none font-mono text-sm"
               />
               {errors.content && <p className="text-xs text-destructive">{errors.content}</p>}
@@ -154,6 +169,8 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
                 placeholder="z.B. schreiben, blog, deutsch"
               />
             </div>
+            <Separator />
+            <CoverImagePicker value={coverImageUrl} onChange={setCoverImageUrl} />
           </div>
         )}
 
