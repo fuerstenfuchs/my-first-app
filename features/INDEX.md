@@ -22,6 +22,8 @@
 | PROJ-5 | Statistik-Dashboard | Deployed | [PROJ-5](PROJ-5-statistik-dashboard.md) | 2026-06-11 |
 | PROJ-6 | Import / Export | Deployed | [PROJ-6](PROJ-6-import-export.md) | 2026-06-11 |
 
+| PROJ-7 | Visuelles Redesign & Cover-Bilder | Planned | [PROJ-7](PROJ-7-visuelles-redesign.md) | 2026-06-12 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-7
+## Next Available ID: PROJ-8
