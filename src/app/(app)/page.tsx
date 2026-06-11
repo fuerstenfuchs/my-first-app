@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Plus, Search, X } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PromptCard } from '@/components/prompts/prompt-card'
 import { PromptModal } from '@/components/prompts/prompt-modal'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
+import { TagFilterBar } from '@/components/prompts/tag-filter-bar'
 import { usePrompts, type Prompt, type PromptInput } from '@/hooks/use-prompts'
 
 type ModalMode = 'view' | 'edit' | 'create'
@@ -15,10 +17,38 @@ type ModalMode = 'view' | 'edit' | 'create'
 export default function PromptsPage() {
   const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt } = usePrompts()
 
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+
   const [modalOpen, setModalOpen] = useState(false)
   const [modalPrompt, setModalPrompt] = useState<Prompt | null>(null)
   const [modalMode, setModalMode] = useState<ModalMode>('create')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>()
+    prompts.forEach(p => p.tags.forEach(t => tagSet.add(t)))
+    return Array.from(tagSet).sort()
+  }, [prompts])
+
+  const filteredPrompts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    return prompts.filter(prompt => {
+      const matchesSearch = !query ||
+        prompt.title.toLowerCase().includes(query) ||
+        (prompt.description?.toLowerCase().includes(query) ?? false) ||
+        prompt.tags.some(t => t.toLowerCase().includes(query))
+      const matchesTag = !activeTag || prompt.tags.includes(activeTag)
+      return matchesSearch && matchesTag
+    })
+  }, [prompts, searchQuery, activeTag])
+
+  const hasActiveFilter = searchQuery.trim() !== '' || activeTag !== null
+
+  function resetFilters() {
+    setSearchQuery('')
+    setActiveTag(null)
+  }
 
   function openCreate() {
     setModalPrompt(null)
@@ -53,18 +83,48 @@ export default function PromptsPage() {
 
   return (
     <div className="flex flex-col h-svh">
-      <header className="flex items-center justify-between border-b px-4 py-3 shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="border-b shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
-          <h1 className="text-lg font-semibold">Alle Prompts</h1>
-          {!loading && prompts.length > 0 && (
-            <span className="text-sm text-muted-foreground">({prompts.length})</span>
+          <h1 className="text-lg font-semibold shrink-0">Alle Prompts</h1>
+          {!loading && (
+            <span className="text-sm text-muted-foreground shrink-0">
+              ({hasActiveFilter
+                ? `${filteredPrompts.length} / ${prompts.length}`
+                : prompts.length})
+            </span>
           )}
+          <div className="flex-1 relative min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Suchen…"
+              className="pl-9 pr-8 h-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+                <span className="sr-only">Suche leeren</span>
+              </button>
+            )}
+          </div>
+          <Button size="sm" onClick={openCreate} className="shrink-0">
+            <Plus className="mr-1.5 h-4 w-4" />
+            Neuer Prompt
+          </Button>
         </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Neuer Prompt
-        </Button>
+
+        {!loading && allTags.length > 0 && (
+          <TagFilterBar
+            tags={allTags}
+            activeTag={activeTag}
+            onTagClick={tag => setActiveTag(prev => prev === tag ? null : tag)}
+          />
+        )}
       </header>
 
       <main className="flex-1 overflow-auto p-4 md:p-6">
@@ -87,9 +147,25 @@ export default function PromptsPage() {
               Ersten Prompt anlegen
             </Button>
           </div>
+        ) : filteredPrompts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center gap-4 px-4">
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Keine Prompts gefunden</h2>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery && activeTag
+                  ? `Kein Treffer für „${searchQuery}" mit Tag „${activeTag}"`
+                  : searchQuery
+                  ? `Kein Treffer für „${searchQuery}"`
+                  : `Keine Prompts mit Tag „${activeTag}"`}
+              </p>
+            </div>
+            <Button variant="outline" onClick={resetFilters}>
+              Filter zurücksetzen
+            </Button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {prompts.map(prompt => (
+            {filteredPrompts.map(prompt => (
               <PromptCard
                 key={prompt.id}
                 prompt={prompt}

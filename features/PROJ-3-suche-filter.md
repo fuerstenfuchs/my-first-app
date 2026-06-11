@@ -1,6 +1,6 @@
 # PROJ-3: Suche & Filter
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
