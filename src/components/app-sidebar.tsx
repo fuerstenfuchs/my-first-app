@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, Database, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { BarChart2, Database, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -211,6 +211,14 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton isActive={pathname === '/einstellungen'} asChild>
+              <a href="/einstellungen">
+                <Settings className="h-4 w-4" />
+                Einstellungen
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout}>
               <LogOut className="h-4 w-4" />

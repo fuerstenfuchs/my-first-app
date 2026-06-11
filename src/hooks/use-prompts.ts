@@ -107,5 +107,34 @@ export function usePrompts() {
     }
   }
 
-  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt }
+  async function importPrompts(items: Array<{
+    title: string
+    content: string
+    description?: string | null
+    tags?: string[]
+    usage_count?: number
+  }>): Promise<number> {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const rows = items.map(item => ({
+      title: item.title,
+      content: item.content,
+      description: item.description ?? null,
+      tags: item.tags ?? [],
+      usage_count: item.usage_count ?? 0,
+      user_id: user!.id,
+    }))
+    const { data, error } = await supabase
+      .from('prompts')
+      .insert(rows)
+      .select()
+    if (error) {
+      toast.error('Import fehlgeschlagen — bitte erneut versuchen')
+      return 0
+    }
+    setPrompts(prev => [...(data ?? []), ...prev])
+    return data?.length ?? 0
+  }
+
+  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, importPrompts }
 }
