@@ -63,5 +63,72 @@
 | 3 KPI-Kacheln (Kopiervorgänge, Prompts, Tag) | Schneller Überblick ohne Overcrowding; alle drei Werte sind sofort aus vorhandenen Daten berechenbar | 2026-06-12 |
 | Sidebar-Position: nach „Alle Prompts", vor Sammlungen | Statistiken sind globale Sicht, Sammlungen sind spezifischer — logische Hierarchie | 2026-06-12 |
 
+### Technical Decisions
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| Keine neue DB-Tabelle | Alle benötigten Daten (`usage_count`, `tags`) sind bereits in `prompts` vorhanden | 2026-06-12 |
+| Rein client-seitige Berechnung | Dieselbe Strategie wie PROJ-3 (Suche/Filter) — alle Prompts sind bereits im Speicher nach dem Laden | 2026-06-12 |
+| Eigener `useStats`-Hook | Kapselt die Berechnung von KPIs + Top-10 und hält `stats/page.tsx` übersichtlich | 2026-06-12 |
+| „Meistgenutzter Tag" = höchste kumulierte usage_count | Aussagekräftiger als bloße Tag-Häufigkeit — zeigt welcher Themenbereich am meisten genutzt wird | 2026-06-12 |
+| Keine Charting-Library | Kein Diagramm im Scope — Progress-Bar in der Rangliste reicht als visuelle Orientierung | 2026-06-12 |
+| PromptModal wiederverwenden | Bereits gebaut in PROJ-2, konsequentes UX-Muster | 2026-06-12 |
+
 ### Open Questions
 - keine
+
+---
+
+## Tech Design
+
+### Komponenten-Struktur
+
+```
+/stats (neue Seite)
++-- Header
+|   +-- SidebarTrigger
+|   +-- Seitentitel „Statistiken"
++-- Leerseite (wenn Gesamt-Kopiervorgänge = 0)
+|   +-- Icon + Meldung „Noch keine Nutzungsdaten"
+|   +-- Button „Zur Hauptansicht" → /
++-- KPI-Bereich (3 Kacheln, nebeneinander)
+|   +-- KpiCard „Gesamt-Kopiervorgänge" (Summe aller usage_count)
+|   +-- KpiCard „Prompts gesamt" (Anzahl Prompts)
+|   +-- KpiCard „Meistgenutzter Tag" (Tag mit höchster kumulierter usage_count)
++-- Top-10-Rangliste (nur wenn Gesamt-Kopiervorgänge > 0)
+    +-- Tabellen-Header: Rang | Prompt | Kopiervorgänge
+    +-- RankRow (je Eintrag, klickbar)
+        +-- Rang-Nummer (1–10)
+        +-- Prompt-Titel
+        +-- Kopieranzahl als Badge
+        +-- Progress-Bar (relativ zur Top-1-Anzahl)
+
+Wiederverwendet aus PROJ-2:
++-- PromptModal — öffnet bei Klick auf Ranglisten-Eintrag
+
+Sidebar (ERWEITERT in app-sidebar.tsx):
++-- „Alle Prompts" (bestehend)
++-- „Statistiken" (NEU) — BarChart-Icon, Link zu /stats
++-- Sammlungen (bestehend)
+```
+
+### Datenhaltung
+
+Keine neuen Daten — alles wird aus der bestehenden `prompts`-Tabelle abgeleitet:
+
+| KPI | Berechnung |
+|---|---|
+| Gesamt-Kopiervorgänge | Summe aller `usage_count`-Werte über alle Prompts |
+| Prompts gesamt | Anzahl der Einträge in der `prompts`-Tabelle |
+| Meistgenutzter Tag | Tag dessen Prompts kumulativ die meisten Kopiervorgänge aufweisen |
+| Top-10-Rangliste | Prompts mit `usage_count > 0`, absteigend sortiert, max. 10 Einträge |
+
+### Neue Dateien
+- `src/app/(app)/stats/page.tsx` — Statistik-Seite
+- `src/components/stats/kpi-card.tsx` — wiederverwendbare Kennzahl-Kachel
+- `src/hooks/use-stats.ts` — Hook: lädt Prompts, berechnet alle KPIs + Top-10
+
+### Geänderte Dateien
+- `src/components/app-sidebar.tsx` — „Statistiken"-Eintrag hinzufügen
+
+### Neue Packages
+Keine — `Card`, `Badge`, `Progress`, `Table` aus shadcn sind bereits installiert.
