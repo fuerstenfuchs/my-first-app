@@ -62,5 +62,93 @@
 | Keine Sammlungen im Export | Sammlungen sind Organisationsstruktur; Prompts sind die eigentlichen Daten | 2026-06-12 |
 | `/einstellungen`-Seite statt Buttons auf Hauptseite | Hält die Hauptansicht sauber; Einstellungen-Seite ist erweiterbar (ggf. später Konto-Einstellungen) | 2026-06-12 |
 
+### Technical Decisions
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| Export vollständig client-seitig | Prompts sind bereits im Speicher (via `usePrompts`); kein Server-Roundtrip nötig — Browser-Download direkt aus dem State | 2026-06-12 |
+| Import mit Batch-Insert (eine DB-Transaktion) | Atomic: entweder alle Prompts oder keine — erfüllt die „keine Teildaten"-Anforderung aus den Edge Cases | 2026-06-12 |
+| Neuer `importPrompts()`-Funktion in `use-prompts.ts` | Kapselt Batch-Insert-Logik neben den bestehenden CRUD-Funktionen; kein neues API-Route nötig | 2026-06-12 |
+| Verstecktes `<input type="file">` hinter Button | Standard-Pattern für Datei-Picker ohne nativen Browser-Look; vollständig mit shadcn Button gestaltbar | 2026-06-12 |
+| `id`, `user_id`, `created_at`, `updated_at` NICHT exportieren | Diese Felder werden beim Import frisch generiert — verhindert ID-Konflikte bei Restore auf anderes Konto | 2026-06-12 |
+| „Einstellungen" in Sidebar-Footer (über Abmelden) | Spec: „am unteren Ende der Hauptnavigation" — konsistent mit dem Platz des Logout-Buttons | 2026-06-12 |
+
 ### Open Questions
 - keine
+
+---
+
+## Tech Design
+
+### Komponenten-Struktur
+
+```
+/einstellungen (neue Seite)
++-- Header
+|   +-- SidebarTrigger
+|   +-- Seitentitel „Einstellungen"
++-- Export-Sektion (Card)
+|   +-- Sektions-Header „Daten exportieren"
+|   +-- Kurzbeschreibung (was wird exportiert)
+|   +-- Button „Alle Prompts exportieren"
++-- Import-Sektion (Card)
+    +-- Sektions-Header „Daten importieren"
+    +-- Hinweis (neue Prompts werden angelegt, keine Duplikat-Prüfung)
+    +-- Button „Prompts importieren" (löst verstecktes Datei-Input aus)
+    +-- Verstecktes <input type="file" accept=".json"> (unsichtbar im DOM)
+
+Sidebar (ERWEITERT in app-sidebar.tsx):
++-- Footer (neu geordnet)
+    +-- Einstellungen (NEU) — Settings-Icon, Link zu /einstellungen
+    +-- Abmelden (bestehend)
+```
+
+### Datenhaltung
+
+Keine neue Datenbanktabelle. Das Export-Format ist ein einfaches JSON-Array:
+
+```
+Exportiertes Objekt je Prompt:
+  title        — Pflichtfeld
+  content      — Pflichtfeld (Prompt-Text)
+  description  — optional, kann null sein
+  tags         — Array von Strings, kann leer sein
+  usage_count  — Ganzzahl, Kopiervorgänge
+
+NICHT exportiert (werden beim Import neu generiert):
+  id, user_id, created_at, updated_at
+```
+
+Dateiname des Downloads: `promptdb-export-YYYY-MM-DD.json`
+
+### Import-Ablauf (schrittweise)
+
+```
+1. Nutzer klickt „Prompts importieren"
+   → Datei-Picker öffnet sich (accept=".json")
+
+2. Nutzer wählt Datei
+   → Browser liest Datei-Inhalt (FileReader API)
+
+3. JSON-Parsing
+   → Ungültiges JSON → Toast „Ungültige Datei", Abbruch
+   → Kein Array → Toast „Ungültige Datei", Abbruch
+
+4. Validierung pro Eintrag
+   → Einträge ohne title oder content werden übersprungen
+   → Fehlende optionale Felder werden mit Standardwerten befüllt
+
+5. Batch-Insert in Supabase
+   → Alle validen Prompts in einer einzigen DB-Transaktion
+   → Fehler → Toast „Import fehlgeschlagen", keine Teildaten
+   → Erfolg → Toast „X Prompts importiert"
+```
+
+### Neue Dateien
+- `src/app/(app)/einstellungen/page.tsx` — Einstellungen-Seite
+
+### Geänderte Dateien
+- `src/hooks/use-prompts.ts` — neue Funktion `importPrompts(items[])` für Batch-Insert
+- `src/components/app-sidebar.tsx` — „Einstellungen"-Eintrag im Footer hinzufügen
+
+### Neue Packages
+Keine — Export und Import nutzen ausschließlich native Browser-APIs (`JSON`, `FileReader`, `URL.createObjectURL`).
