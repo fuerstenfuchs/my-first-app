@@ -10,12 +10,15 @@ import { PromptCard } from '@/components/prompts/prompt-card'
 import { PromptModal } from '@/components/prompts/prompt-modal'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
 import { TagFilterBar } from '@/components/prompts/tag-filter-bar'
+import { AddToCollectionDialog } from '@/components/collections/add-to-collection-dialog'
 import { usePrompts, type Prompt, type PromptInput } from '@/hooks/use-prompts'
+import { useCollections } from '@/hooks/use-collections'
 
 type ModalMode = 'view' | 'edit' | 'create'
 
 export default function PromptsPage() {
   const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt } = usePrompts()
+  const { collections } = useCollections()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
@@ -24,6 +27,7 @@ export default function PromptsPage() {
   const [modalPrompt, setModalPrompt] = useState<Prompt | null>(null)
   const [modalMode, setModalMode] = useState<ModalMode>('create')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [addToCollectionId, setAddToCollectionId] = useState<string | null>(null)
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>()
@@ -173,6 +177,7 @@ export default function PromptsPage() {
                 onCopy={() => copyPrompt(prompt)}
                 onEdit={() => openEdit(prompt)}
                 onDelete={() => setDeleteId(prompt.id)}
+                onAddToCollection={() => setAddToCollectionId(prompt.id)}
               />
             ))}
           </div>
@@ -192,6 +197,13 @@ export default function PromptsPage() {
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
         onConfirm={handleDeleteConfirm}
+      />
+
+      <AddToCollectionDialog
+        promptId={addToCollectionId ?? ''}
+        open={!!addToCollectionId}
+        onOpenChange={open => !open && setAddToCollectionId(null)}
+        collections={collections}
       />
     </div>
   )

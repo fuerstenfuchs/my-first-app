@@ -1,4 +1,4 @@
-import { Copy, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, ChevronUp, ChevronDown, FolderMinus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Prompt } from '@/hooks/use-prompts'
@@ -16,11 +17,30 @@ interface PromptCardProps {
   onCopy: () => void
   onEdit: () => void
   onDelete: () => void
+  onAddToCollection?: () => void
+  onRemoveFromCollection?: () => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  isFirst?: boolean
+  isLast?: boolean
 }
 
-export function PromptCard({ prompt, onClick, onCopy, onEdit, onDelete }: PromptCardProps) {
+export function PromptCard({
+  prompt,
+  onClick,
+  onCopy,
+  onEdit,
+  onDelete,
+  onAddToCollection,
+  onRemoveFromCollection,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}: PromptCardProps) {
   const visibleTags = prompt.tags.slice(0, 3)
   const hiddenCount = prompt.tags.length - 3
+  const isCollectionMode = onMoveUp !== undefined || onMoveDown !== undefined
 
   return (
     <Card
@@ -32,31 +52,70 @@ export function PromptCard({ prompt, onClick, onCopy, onEdit, onDelete }: Prompt
           <CardTitle className="text-base leading-snug line-clamp-2">
             {prompt.title}
           </CardTitle>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Menü</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Bearbeiten
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={onDelete}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Löschen
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-0.5 shrink-0">
+            {isCollectionMode && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={isFirst}
+                  onClick={(e) => { e.stopPropagation(); onMoveUp?.() }}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                  <span className="sr-only">Nach oben</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={isLast}
+                  onClick={(e) => { e.stopPropagation(); onMoveDown?.() }}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  <span className="sr-only">Nach unten</span>
+                </Button>
+              </>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Menü</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Bearbeiten
+                </DropdownMenuItem>
+                {onAddToCollection && (
+                  <DropdownMenuItem onClick={onAddToCollection}>
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    Zu Sammlung hinzufügen
+                  </DropdownMenuItem>
+                )}
+                {onRemoveFromCollection && (
+                  <DropdownMenuItem onClick={onRemoveFromCollection}>
+                    <FolderMinus className="mr-2 h-4 w-4" />
+                    Aus Sammlung entfernen
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Löschen
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
