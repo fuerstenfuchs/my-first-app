@@ -19,7 +19,7 @@
 | PROJ-2 | Prompt-Verwaltung (CRUD) | Deployed | [PROJ-2](PROJ-2-prompt-verwaltung.md) | 2026-06-11 |
 | PROJ-3 | Suche & Filter | Deployed | [PROJ-3](PROJ-3-suche-filter.md) | 2026-06-11 |
 | PROJ-4 | Sammlungen & Workflows | Deployed | [PROJ-4](PROJ-4-sammlungen-workflows.md) | 2026-06-11 |
-| PROJ-5 | Statistik-Dashboard | Approved | [PROJ-5](PROJ-5-statistik-dashboard.md) | 2026-06-11 |
+| PROJ-5 | Statistik-Dashboard | Deployed | [PROJ-5](PROJ-5-statistik-dashboard.md) | 2026-06-11 |
 | PROJ-6 | Import / Export | Roadmap | — | 2026-06-11 |
 
 <!-- Add features above this line -->

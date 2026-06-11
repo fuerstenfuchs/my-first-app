@@ -1,6 +1,6 @@
 # PROJ-5: Statistik-Dashboard
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -197,4 +197,8 @@ Keine — `Card`, `Badge`, `Progress`, `Table` aus shadcn sind bereits installie
 - **Recommendation:** Deploy
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-12
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app/stats
+**Platform:** Vercel (GitHub auto-deploy from `main`)
+**Git Tag:** v1.5.0-PROJ-5
