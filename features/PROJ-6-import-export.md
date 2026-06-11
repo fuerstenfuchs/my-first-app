@@ -1,6 +1,6 @@
 # PROJ-6: Import / Export
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -156,6 +156,9 @@ Keine — Export und Import nutzen ausschließlich native Browser-APIs (`JSON`, 
 ---
 
 ## QA Test Results
+
+**Deployed:** 2026-06-12
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app/einstellungen
 
 **QA Datum:** 2026-06-12
 **Tester:** Claude Code (QA Engineer)
