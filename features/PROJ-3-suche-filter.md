@@ -1,6 +1,6 @@
 # PROJ-3: Suche & Filter
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-12
 
@@ -164,4 +164,8 @@ Keine Bugs gefunden.
 - **Recommendation:** Deploy
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-12
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app/
+**Platform:** Vercel (GitHub auto-deploy from `main`)
+**Git Tag:** v1.2.0-PROJ-3
