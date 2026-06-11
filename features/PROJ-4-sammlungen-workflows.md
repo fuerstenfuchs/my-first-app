@@ -1,6 +1,6 @@
 # PROJ-4: Sammlungen & Workflows
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
@@ -78,12 +78,80 @@
 | „Aus Sammlung entfernen" nur in Sammlungsansicht sichtbar | Kontextsensitiv — verhindert Verwirrung in der Hauptansicht | 2026-06-11 |
 
 ### Technical Decisions
-<!-- Added by /architecture -->
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| Eigene `collection_prompts`-Verknüpfungstabelle | Ermöglicht Viele-zu-Viele-Beziehung und speichert Reihenfolge pro Sammlung | 2026-06-11 |
+| Ganzzahl-Reihenfolge + Tausch bei ↑↓ | Einfachste Lösung: benachbarte Positionen werden getauscht, keine Lücken nötig | 2026-06-11 |
+| RLS auf beiden Tabellen | Nutzer sieht und verändert nur eigene Sammlungen | 2026-06-11 |
+| Route `/collections/[id]` | Saubere URL, jede Sammlung hat eigene Seite | 2026-06-11 |
+| Keine neuen Packages | Alle UI-Komponenten bereits installiert | 2026-06-11 |
 
 ---
 
 ## Tech Design
-_To be added by /architecture_
+
+### Komponenten-Struktur
+
+```
+Sidebar (ERWEITERT)
++-- „Alle Prompts" (unverändert)
++-- Trennlinie + Label „Sammlungen"
++-- SammlungsEintrag (je Sammlung)
+|   +-- Name
+|   +-- Kontext-Menü → Umbenennen / Löschen
++-- „+ Neue Sammlung"-Button
+
+/collections/[id] (NEU — Sammlungsansicht)
++-- Header: SidebarTrigger + Sammlungsname + Prompt-Anzahl
++-- PromptGrid (in gespeicherter Reihenfolge)
+|   +-- PromptCard (ERWEITERT)
+|       +-- ↑-Button (deaktiviert bei erster Kachel)
+|       +-- ↓-Button (deaktiviert bei letzter Kachel)
+|       +-- Drei-Punkte-Menü: + „Aus Sammlung entfernen"
++-- Leerzustand: „Diese Sammlung ist leer"
+
+AddToCollectionDialog (NEU)
++-- Liste aller Sammlungen (klickbar)
++-- Hinweis wenn Prompt bereits enthalten
++-- Hinweis wenn noch keine Sammlung existiert
+
+Kacheln in „Alle Prompts" (ERWEITERT)
++-- Drei-Punkte-Menü: + „Zu Sammlung hinzufügen"
+```
+
+### Datenhaltung
+
+**Tabelle `collections`:**
+
+| Feld | Beschreibung |
+|---|---|
+| id | UUID (auto) |
+| name | Name der Sammlung (Pflicht) |
+| user_id | Verknüpfung zu auth.users |
+| created_at | Zeitstempel (auto) |
+
+**Tabelle `collection_prompts`:**
+
+| Feld | Beschreibung |
+|---|---|
+| collection_id | Verknüpfung zu collections |
+| prompt_id | Verknüpfung zu prompts |
+| sort_order | Position in der Sammlung (0, 1, 2 …) |
+| added_at | Zeitstempel (auto) |
+
+RLS auf beiden Tabellen: Nutzer sieht und verändert nur eigene Daten.
+
+### Neue Dateien
+| Datei | Typ |
+|---|---|
+| `src/app/(app)/collections/[id]/page.tsx` | NEU — Sammlungsansicht |
+| `src/components/collections/add-to-collection-dialog.tsx` | NEU |
+| `src/hooks/use-collections.ts` | NEU — Collections CRUD |
+| `src/components/app-sidebar.tsx` | ERWEITERT |
+| `src/components/prompts/prompt-card.tsx` | ERWEITERT |
+
+### Neue Packages
+Keine.
 
 ## QA Test Results
 _To be added by /qa_
