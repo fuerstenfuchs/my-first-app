@@ -20,7 +20,7 @@ PromptDB ist eine persönliche KI-Prompt-Management-Plattform für KI-Power-User
 | P0 (MVP) | Prompt-Verwaltung (CRUD) | Spec fertig ✓ |
 | P0 (MVP) | Suche & Filter | Spec fertig ✓ |
 | P1 | Sammlungen & Workflows | Spec fertig ✓ |
-| P1 | Statistik-Dashboard | Planned |
+| P1 | Statistik-Dashboard | Spec fertig ✓ |
 | P2 | Import / Export | Planned |
 
 ## Success Metrics
