@@ -15,7 +15,13 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
+| PROJ-1 | Authentifizierung (Login / Registrierung) | Planned | [PROJ-1](PROJ-1-authentifizierung.md) | 2026-06-11 |
+| PROJ-2 | Prompt-Verwaltung (CRUD) | Roadmap | — | 2026-06-11 |
+| PROJ-3 | Suche & Filter | Roadmap | — | 2026-06-11 |
+| PROJ-4 | Sammlungen & Workflows | Roadmap | — | 2026-06-11 |
+| PROJ-5 | Statistik-Dashboard | Roadmap | — | 2026-06-11 |
+| PROJ-6 | Import / Export | Roadmap | — | 2026-06-11 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-1
+## Next Available ID: PROJ-7
