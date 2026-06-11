@@ -1,6 +1,6 @@
 # PROJ-4: Sammlungen & Workflows
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
@@ -154,7 +154,102 @@ RLS auf beiden Tabellen: Nutzer sieht und verändert nur eigene Daten.
 Keine.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-06-11
+**App URL:** http://localhost:3000
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### AC-1: Sammlung erstellen
+- [x] Klick auf „+" öffnet Inline-Eingabefeld für den Namen
+- [x] Name eingeben + Enter → Sammlung angelegt, Navigation zur Sammlungsansicht
+- [ ] **BUG-2**: Leerer Name → Sammlung wird nicht angelegt (korrekt), aber **keine Validierungsmeldung** erscheint (AC verlangt eine)
+
+#### AC-2: Sammlung navigieren
+- [x] Sammlungen erscheinen in der Sidebar unter „Alle Prompts"
+- [x] Klick navigiert zur Sammlungsansicht mit korrektem Titel
+
+#### AC-3: Prompt zu Sammlung hinzufügen
+- [x] „Zu Sammlung hinzufügen" erscheint im Drei-Punkte-Menü einer Kachel
+- [x] Klick auf Sammlung fügt Prompt am Ende hinzu und zeigt Toast-Bestätigung
+- [x] Bereits enthaltener Prompt ist deaktiviert und zeigt Häkchen
+- [x] Dialog ohne Sammlungen zeigt Hinweistext „Noch keine Sammlungen…"
+
+#### AC-4: Reihenfolge ändern
+- [x] Jede Kachel in Sammlungsansicht hat ↑- und ↓-Button
+- [x] ↑-Button der ersten Kachel ist deaktiviert (isFirst)
+- [x] ↓-Button der letzten Kachel ist deaktiviert (isLast)
+- [x] Reihenfolge-Swap tauscht sort_order-Werte und persistiert in DB (rollback bei Fehler)
+
+#### AC-5: Prompt aus Sammlung entfernen
+- [x] „Aus Sammlung entfernen" erscheint im Drei-Punkte-Menü in Sammlungsansicht
+- [x] Entfernen löscht aus collection_prompts, Karte verschwindet sofort, Toast erscheint
+
+#### AC-6: Sammlung umbenennen / löschen
+- [x] Hover auf Sammlung in Sidebar zeigt Kontextmenü mit „Umbenennen" und „Löschen"
+- [x] Umbenennen öffnet Inline-Eingabe vorausgefüllt mit aktuellem Namen
+- [x] Löschen öffnet Bestätigungsdialog
+- [x] Löschen bestätigen entfernt Sammlung aus Sidebar, Prompts bleiben erhalten
+
+### Edge Cases Status
+
+#### EC-1: Prompt in mehreren Sammlungen
+- [x] Technisch korrekt — junction-Tabelle erlaubt Mehrfachmitgliedschaft; AddToCollectionDialog markiert alle Sammlungen in denen Prompt bereits ist
+
+#### EC-2: Prompt wird gelöscht der in einer Sammlung ist
+- [x] DB: `ON DELETE CASCADE` auf collection_prompts → Datenbank korrekt
+- [ ] **BUG-1**: UI: Karte in Sammlungsansicht bleibt sichtbar nach Bestätigung (lokaler State wird nicht aktualisiert)
+
+#### EC-3: Leere Sammlung
+- [x] Leerzustand mit FolderOpen-Icon, Titel „Diese Sammlung ist leer" und Hinweistext wird korrekt angezeigt
+
+#### EC-4: Netzwerkfehler beim Speichern der Reihenfolge
+- [x] Fehlerbehandlung implementiert: optimistisches Update + Rollback mit `setItems(items)` bei DB-Fehler, Toast „Speichern fehlgeschlagen"
+
+#### EC-5: Sehr viele Sammlungen in der Sidebar
+- [x] Sidebar-Scroll vom shadcn/ui SidebarContent übernommen — keine Begrenzung
+
+### Security Audit Results
+- [x] **Authentifizierung**: Alle Routen durch `proxy.ts` geschützt — ohne Login kein Zugriff
+- [x] **Autorisierung (RLS)**: Beide Tabellen (`collections`, `collection_prompts`) haben vollständige RLS-Policies — Nutzer kann nur eigene Daten lesen/schreiben
+- [x] **IDOR via URL**: `/collections/<fremde-id>` gibt leere Daten zurück (RLS blockiert) — kein Datenleck
+- [x] **XSS**: Sammlungsnamen werden als React-Textknoten gerendert (kein `dangerouslySetInnerHTML`)
+- [x] **SQL Injection**: Supabase-Client nutzt parametrisierte Queries
+- [x] **sort_order-Manipulation**: sort_order wird serverseitig berechnet, nie direkt aus User-Input übernommen
+
+### Bugs Found
+
+#### BUG-1: Prompt-Löschen aus Sammlungsansicht aktualisiert lokalen State nicht
+- **Severity:** High
+- **Steps to Reproduce:**
+  1. Gehe zu einer Sammlung mit mindestens einem Prompt
+  2. Öffne Drei-Punkte-Menü → „Löschen"
+  3. Bestätige Löschdialog
+  4. **Erwartet:** Karte verschwindet sofort aus der Sammlung
+  5. **Tatsächlich:** Karte bleibt sichtbar bis zur manuellen Seitenaktualisierung
+- **Root Cause:** `handleDeleteConfirm` ruft `deletePrompt(deleteId)` aus `usePrompts` auf (aktualisiert nur `prompts`-State), aber `items`-State in `useCollectionPrompts` wird nicht synchronisiert
+- **Betroffene Datei:** `src/app/(app)/collections/[id]/page.tsx` — `handleDeleteConfirm` + ungenutzte `deleteIndex`-State
+- **Priority:** Fix before deployment
+
+#### BUG-2: Leeres Namensfeld beim Sammlung-Erstellen zeigt keine Validierungsmeldung
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Klicke „+" in der Sidebar um neue Sammlung anzulegen
+  2. Lasse Eingabefeld leer und drücke Enter (oder klicke weg)
+  3. **Erwartet:** Meldung „Name darf nicht leer sein" erscheint
+  4. **Tatsächlich:** Eingabefeld schließt sich kommentarlos
+- **Root Cause:** `handleCreate` in `src/components/app-sidebar.tsx` gibt bei leerem Namen ohne Toast zurück
+- **Priority:** Fix before deployment
+
+### Summary
+- **Acceptance Criteria:** 17/19 bestanden (2 Bugs)
+- **Bugs Found:** 2 total (0 Critical, 1 High, 1 Medium, 0 Low)
+- **Security:** Bestanden — keine Sicherheitslücken gefunden
+- **Unit Tests:** 8/8 bestanden (Swap-Logik, Boundary-Guards, Name-Trimming)
+- **E2E Tests:** 19 Tests geschrieben, beim Ausführen mit `TEST_PASSWORD` ausführbar
+- **Production Ready:** NO — BUG-1 (High) muss zuerst behoben werden
+- **Recommendation:** BUG-1 und BUG-2 beheben, dann erneut `/qa` ausführen
 
 ## Deployment
 _To be added by /deploy_
