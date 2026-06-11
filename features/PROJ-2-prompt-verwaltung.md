@@ -1,6 +1,6 @@
 # PROJ-2: Prompt-Verwaltung (CRUD)
 
-## Status: Architected
+## Status: In Progress
 **Created:** 2026-06-11
 **Last Updated:** 2026-06-11
 
