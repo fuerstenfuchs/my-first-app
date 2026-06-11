@@ -1,8 +1,8 @@
 # PROJ-3: Suche & Filter
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-11
-**Last Updated:** 2026-06-11
+**Last Updated:** 2026-06-12
 
 ## Dependencies
 - Requires: PROJ-1 (Authentifizierung) — geschützte Routen
@@ -104,7 +104,64 @@ Keine neuen Daten in der Datenbank. Neue Zustände nur im Arbeitsspeicher:
 Keine.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-06-12
+**App URL:** https://my-first-app-gamma-ecru.vercel.app/
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### Suchfeld
+- [x] Suchfeld im Header sichtbar und leer beim Laden ✓
+- [x] Live-Filterung nach Titel, Beschreibung, Tags — `searchQuery.trim().toLowerCase()` + `.includes()` ✓
+- [x] Löschen des Suchbegriffs → alle Prompts wieder sichtbar (`!query` guard im Filter) ✓
+
+#### Tag-Filter
+- [x] Tag-Leiste nur sichtbar wenn Tags existieren (`allTags.length > 0` guard) ✓
+- [x] Klick auf Tag → Prompts mit diesem Tag angezeigt ✓
+- [x] Erneuter Klick → Filter aufgehoben (`prev === tag ? null : tag`) ✓
+
+#### Kombinierte Filterung
+- [x] UND-Logik: `matchesSearch && matchesTag` ✓
+
+#### Keine Ergebnisse
+- [x] Meldung „Keine Prompts gefunden" + „Filter zurücksetzen"-Button ✓
+- [x] „Filter zurücksetzen" leert `searchQuery` und `activeTag` ✓
+
+### Edge Cases Status
+- [x] Suche mit Leerzeichen: `searchQuery.trim()` → kein Filter, alle Prompts ✓
+- [x] Tag verschwindet nach Löschen letzten Prompts: `allTags` aus `useMemo([prompts])` berechnet ✓
+- [x] Kein Tag vorhanden → Tag-Leiste ausgeblendet ✓
+- [x] Viele Tags → horizontaler Scroll, `overflow-x-auto`, Scrollbalken versteckt ✓
+- [x] Case-insensitive: `.toLowerCase()` auf Suche und alle Felder ✓
+
+### Security Audit Results
+- [x] **Keine serverseitigen Requests:** Filterung ausschließlich client-seitig — kein IDOR-Risiko ✓
+- [x] **Kein SQL Injection:** Filterung über JS `.includes()`, kein DB-Query mit Nutzereingabe ✓
+- [x] **XSS:** Suchwort wird nie als HTML gerendert ✓
+
+### Automated Test Results
+
+**Unit Tests (Vitest): 37/37 passed** (inkl. 16 neue PROJ-3-Tests)
+- `src/app/(app)/search-filter.test.ts` — 16 Tests: filterPrompts (Suche, Tag, Kombiniert) + computeAllTags
+
+**E2E Tests (Playwright): 2/2 passed, 18 skipped (TEST_PASSWORD not set)**
+- `tests/proj-3-suche-filter.spec.ts` — 10 Tests × 2 Browser (Chrome Desktop + Pixel 5)
+- Ohne Credentials: Redirect-Test — bestanden
+- Mit Credentials: 9 weitere Tests ausführbar
+
+### Bugs Found
+
+Keine Bugs gefunden.
+
+### Summary
+- **Acceptance Criteria:** 9/9 bestanden
+- **Edge Cases:** 5/5 bestanden
+- **Bugs Found:** 0
+- **Security:** Bestanden — keine Lücken gefunden
+- **E2E Tests:** 2/2 ohne Credentials bestanden, 9 weitere mit `TEST_PASSWORD` ausführbar
+- **Production Ready:** YES
+- **Recommendation:** Deploy
 
 ## Deployment
 _To be added by /deploy_
