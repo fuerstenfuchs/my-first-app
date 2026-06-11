@@ -20,7 +20,7 @@
 | PROJ-3 | Suche & Filter | Deployed | [PROJ-3](PROJ-3-suche-filter.md) | 2026-06-11 |
 | PROJ-4 | Sammlungen & Workflows | Deployed | [PROJ-4](PROJ-4-sammlungen-workflows.md) | 2026-06-11 |
 | PROJ-5 | Statistik-Dashboard | Deployed | [PROJ-5](PROJ-5-statistik-dashboard.md) | 2026-06-11 |
-| PROJ-6 | Import / Export | In Progress | [PROJ-6](PROJ-6-import-export.md) | 2026-06-11 |
+| PROJ-6 | Import / Export | Approved | [PROJ-6](PROJ-6-import-export.md) | 2026-06-11 |
 
 <!-- Add features above this line -->
 
