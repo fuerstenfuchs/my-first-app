@@ -80,6 +80,11 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(ellipse 80% 45% at 50% -5%, hsl(260 45% 10% / 0.7) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 35% at 85% 75%, hsl(220 45% 8% / 0.35) 0%, transparent 55%);
+    background-attachment: fixed;
   }
 }

@@ -36,11 +36,24 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { useCollections } from '@/hooks/use-collections'
+import { usePrompts } from '@/hooks/use-prompts'
+import { tagColorClass } from '@/lib/tag-colors'
 
 export function AppSidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const { collections, createCollection, renameCollection, deleteCollection } = useCollections()
+  const { prompts } = usePrompts()
+
+  const topTags = Object.entries(
+    prompts.flatMap(p => p.tags).reduce<Record<string, number>>((acc, tag) => {
+      acc[tag] = (acc[tag] ?? 0) + 1
+      return acc
+    }, {})
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([tag]) => tag)
 
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -207,6 +220,24 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {topTags.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Beliebte Tags</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="flex flex-wrap gap-1.5 px-2 pb-2">
+                {topTags.map(tag => (
+                  <a
+                    key={tag}
+                    href={`/?tag=${encodeURIComponent(tag)}`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono leading-4 transition-opacity hover:opacity-75 ${tagColorClass(tag)}`}
+                  >
+                    #{tag}
+                  </a>
+                ))}
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

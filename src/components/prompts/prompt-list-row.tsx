@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, MoreVertical, Pencil, Trash2, FolderPlus } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { tagColorClass } from '@/lib/tag-colors'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,9 +87,9 @@ export function PromptListRow({
           <span className="font-medium text-sm truncate">{prompt.title}</span>
           <div className="flex gap-1 shrink-0">
             {prompt.tags.slice(0, 2).map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+              <span key={tag} className={`text-[10px] px-1.5 py-0 rounded font-mono leading-5 ${tagColorClass(tag)}`}>
                 #{tag}
-              </Badge>
+              </span>
             ))}
           </div>
         </div>
