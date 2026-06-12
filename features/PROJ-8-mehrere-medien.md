@@ -102,6 +102,92 @@
 ## Open Questions
 - keine — Anforderungen aus Roadmap-Dokument vollständig spezifiziert
 
+---
+
+## Tech Design (Solution Architect)
+
+### Komponenten-Struktur
+
+```
+src/components/prompts/
+
++-- media-manager.tsx (NEU) — ersetzt CoverImagePicker im Formular
+|   +-- Drop-Zone (Drag & Drop mehrere Dateien gleichzeitig)
+|   |   +-- Datei-Picker (mehrere Dateien gleichzeitig)
+|   |   +-- URL-Eingabe Tab (wie bisher)
+|   +-- Upload-Liste
+|   |   +-- UploadProgressItem pro Datei (Name, Fortschrittsbalken, Status)
+|   +-- Sortierbare Medien-Liste (Drag & Drop Reihenfolge)
+|       +-- MediaItem (Thumbnail oder Video-Vorschau)
+|           +-- Drag-Handle
+|           +-- „Als Cover setzen"-Button (nur bei Bildern)
+|           +-- Löschen-Button
+|
++-- media-gallery.tsx (NEU) — Vollbild-Galerie-Viewer (via Portal)
+|   +-- Haupt-Anzeigebereich (Bild oder HTML5-Video-Player)
+|   +-- Pfeil-Links / Pfeil-Rechts
+|   +-- Thumbnail-Leiste (horizontal scrollend, unten)
+|   +-- Schließen-Button
+|   +-- Tastatur-Navigation (← → Escape)
+|   +-- Touch/Swipe Gesten (Mobile)
+|
++-- prompt-modal.tsx (GEÄNDERT)
+|   +-- View-Modus: horizontale Thumbnail-Leiste aller Medien
+|   |   +-- Klick auf Thumbnail → öffnet MediaGallery
+|   +-- Edit-Modus: MediaManager statt CoverImagePicker
+|
++-- cover-image-picker.tsx (ERSETZT durch MediaManager, Datei bleibt für Rückwärtskompatibilität)
+
+src/hooks/
++-- use-prompt-media.ts (NEU)
+    +-- media[] — geladene Medien für einen Prompt
+    +-- uploading — Upload-Fortschritte pro Datei
+    +-- fetchMedia(promptId)
+    +-- uploadFiles(files, promptId) → parallel, Fortschritt pro Datei
+    +-- deleteMedia(id) → DB-Eintrag + Storage-Datei entfernen
+    +-- reorderMedia(orderedIds) → sort_order bulk-update
+    +-- setCoverImage(mediaUrl, promptId) → cover_image_url auf Prompt setzen
+```
+
+### Datenhaltung
+
+**Neue Tabelle `prompt_media`:**
+```
+id           UUID       Primärschlüssel, auto-generated
+prompt_id    UUID       → prompts.id (ON DELETE CASCADE)
+user_id      UUID       → auth.uid() (für RLS)
+type         TEXT       'image' | 'video'
+url          TEXT       Öffentliche Supabase Storage URL
+sort_order   INTEGER    Reihenfolge innerhalb des Prompts
+created_at   TIMESTAMP  Automatisch gesetzt
+```
+
+**Bestehende Tabelle `prompts`:**
+`cover_image_url` bleibt erhalten — zeigt auf das gewählte Cover-Bild.
+Wird beim „Als Cover setzen" und beim Löschen des Covers direkt aktualisiert.
+
+**Supabase Storage:**
+- Neuer Bucket: `prompt-media` (public read, authenticated write)
+- Pfad: `{user_id}/{prompt_id}/{uuid}.{ext}`
+- Limits: 20 MB Bilder / 100 MB Videos (in Bucket Policy)
+- Alter Bucket `prompt-covers` bleibt unberührt — bestehende URLs bleiben gültig
+
+**Datenmigration:**
+Bestehende `cover_image_url`-Werte (die auf `prompt-covers` zeigen) werden als erstes `prompt_media`-Element (type=image, sort_order=0) gespiegelt. Kein Datenverlust.
+
+**RLS:**
+- SELECT: `user_id = auth.uid()`
+- INSERT: `user_id = auth.uid()`
+- DELETE: `user_id = auth.uid()`
+- UPDATE: `user_id = auth.uid()`
+
+### Neue Pakete
+- `@dnd-kit/core` — Drag & Drop Kern-Engine
+- `@dnd-kit/sortable` — Sortierbare Listen (Medien-Reihenfolge)
+- `@dnd-kit/utilities` — Hilfs-Utilities
+
+---
+
 ## Decision Log
 
 ### Product Decisions
@@ -113,3 +199,12 @@
 | Hover-Carousel & Video-Preview auf Kacheln in PROJ-9 | PROJ-8 liefert das Fundament; visuelle Gallery-Improvements sind eigenständig testbar und deploybar | 2026-06-12 |
 | Kein Limit für Medien pro Prompt | KI-Power-User haben potenziell viele Output-Bilder pro Prompt | 2026-06-12 |
 | Galerie-Viewer im Modal, nicht separate Seite | Behält den Kontext (Prompt-Titel, Tags sichtbar) | 2026-06-12 |
+
+### Technical Decisions
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| `@dnd-kit/sortable` statt HTML5 DnD API | HTML5 DnD ist zu niedrig-level für sortierbare Listen; react-beautiful-dnd ist deprecated; dnd-kit ist TypeScript-nativ und leichtgewichtig | 2026-06-12 |
+| `cover_image_url` auf `prompts` bleibt erhalten | Kein Breaking Change an der Kachelansicht; kein zusätzlicher JOIN beim Laden der Galerie | 2026-06-12 |
+| Neuer Storage-Bucket `prompt-media` (nicht `prompt-covers`) | Trennung von alten Einzel-Cover-Uploads und neuem Mediensystem; altes Bucket bleibt gültig | 2026-06-12 |
+| Parallele Uploads mit XHR für Fortschritt | `fetch` API hat keine Upload-Progress-Events; Supabase SDK Upload ermöglicht onUploadProgress callback | 2026-06-12 |
+| cascade delete auf prompt_media.prompt_id | Wenn ein Prompt gelöscht wird, werden alle Medien-Einträge automatisch entfernt | 2026-06-12 |
