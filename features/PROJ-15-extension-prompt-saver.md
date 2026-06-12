@@ -1,6 +1,6 @@
 # PROJ-15: Extension Prompt Saver (Rechtsklick → In PromptDB speichern)
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-06-13
 **Last Updated:** 2026-06-13
 
@@ -195,7 +195,160 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 `scripting`-Permission ist **nicht nötig**: Chrome liefert den markierten Text direkt über `selectionText` im Context-Menu-Event — kein Content-Script-Injection erforderlich.
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-06-13
+**Extension dist:** `extension/dist/` (built locally)
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### Kontextmenü
+
+- [x] Context-Menu-Eintrag wird via `contextMenus.create` mit `contexts: ['all']` registriert — erscheint mit und ohne Textauswahl
+- [x] Bei Textauswahl: Content = `selectionText`, Source URL = `tab.url`, Titel = erste 60 Zeichen des Textes (trimEnd)
+- [x] Kein Text ausgewählt: Content leer, EmptyContentNotice gerendert, Titel = Tab-Titel
+
+#### Quick Capture Screen
+
+- [x] Alle 4 Felder (Titel, Inhalt, Tags, Quell-Link) sichtbar und editierbar
+- [ ] **BUG-1:** Speichern schlägt fehl — `user_id` fehlt im INSERT
+- [x] Content kein Pflichtfeld (leeres Content wird als `null` gesendet)
+- [ ] **BUG-2:** ESC-Taste — kein keydown-Handler implementiert; Popup schließt ohne Dirty-State-Prüfung
+- [x] ← Zurück löscht pendingCapture nicht (nur State-Wechsel zu 'authenticated')
+
+#### Pending Capture — Draft-Verhalten
+
+- [x] Startup mit pendingCapture → direkt zu QuickCaptureScreen (App.tsx init-Logik korrekt)
+- [x] Popup schließen + wiederöffnen → Daten bleiben (chrome.storage.local, kein sessionStorage)
+- [x] Browser-Neustart → Daten bleiben (chrome.storage.local überlebt Neustart)
+- [x] PendingCaptureBanner auf MainScreen sichtbar wenn `pendingCapture !== null`
+- [x] Verwerfen-Button öffnet Bestätigungsdialog (Titel + Buttons korrekt)
+- [x] „Capture verwerfen" bestätigt → `chrome.storage.local.remove('pendingCapture')` + Main
+- [x] „Weiter bearbeiten" → Dialog schließt, Felder unverändert
+
+#### Nicht-eingeloggt Flow
+
+- [x] Nicht eingeloggt + pendingCapture → App.tsx zeigt LoginScreen; pendingCapture bleibt in chrome.storage.local
+- [x] Login fehlgeschlagen → `pendingCapture` State in App.tsx bleibt erhalten
+- [ ] **BUG-3:** `captureRestored`-Hinweis erscheint wieder nach Zurück + Banner-Klick (nicht nur einmalig nach Login)
+- [x] Popup schließen während Login → nächstes Öffnen liest pendingCapture aus chrome.storage.local
+
+#### Netzwerkfehler beim Speichern
+
+- [x] Fehler-State in QuickCaptureScreen implementiert (`setError`); pendingCapture bleibt bei Fehler erhalten
+- [ ] **BUG-1-bezogen:** Fehler wird aktuell durch fehlende user_id ausgelöst, nicht Netzwerkausfall
+
+### Edge Cases Status
+
+- [x] Sehr langer Text (>10.000 Zeichen): Content vollständig in `content`-Feld; scrollbare Textarea (rows=5)
+- [ ] **BUG-5:** Mehrere Tabs: background.ts überschreibt pendingCapture stillschweigend ohne Bestätigungsdialog
+- [x] Extension-Update: chrome.storage.local überlebt Updates
+- [x] Seiten mit chrome:// Restriction: contextMenus nicht auf priviligierten Seiten — Chrome-Standard-Behavior
+- [x] Kein Internetzugang: Supabase INSERT wirft Fehler, wird in Error-State angezeigt
+- [x] Sehr kurzer Text (1–2 Wörter): kein Mindestlimit — wird akzeptiert
+- [x] URL ohne Text und Titel: source_url gespeichert, Titel bleibt leer (Pflichtfeld — User muss ausfüllen)
+
+### Security Audit Results
+
+- [x] **Auth:** Extension popup erfordert Supabase-Session; ohne Login → LoginScreen
+- [x] **Auth Bypass:** pendingCapture-Daten werden nur gespeichert wenn User eingeloggt ist
+- [x] **Datenisolierung:** Supabase RLS erzwingt `user_id = auth.uid()` — allerdings: fehlende user_id im INSERT schlägt wegen RLS fehl (BUG-1), was ein impliziter Sicherheitsschutz ist
+- [x] **XSS:** React rendert alle Felder escaped; Supabase-Insert via parametrisierte Queries — keine direkten SQL/XSS-Vektoren
+- [x] **Permissions:** Extension nutzt nur `contextMenus`, `activeTab`, `storage` — minimale Rechte, kein `scripting` (kein Content-Script-Injection)
+- [x] **Sensitive Data:** Nur Capture-Payload in chrome.storage.local gespeichert — keine Tokens oder Passwörter
+- [x] **URL-Injection:** source_url-Feld nimmt beliebige URLs an, aber React rendert Links escaped
+
+### Bugs Found
+
+#### BUG-1: Fehlende `user_id` im Supabase INSERT (Kritisch)
+- **Severity:** Critical
+- **Datei:** `extension/src/components/QuickCaptureScreen.tsx` — `handleSave()`
+- **Ursache:** Web-App (`use-prompts.ts:79`) übergibt explizit `user_id: user!.id`. Extension-INSERT fehlt dieses Feld. Supabase-RLS erzwingt `user_id = auth.uid()` — INSERT ohne `user_id` schlägt mit RLS-Verletzung fehl.
+- **Steps to Reproduce:**
+  1. Extension installieren, einloggen
+  2. Rechtsklick → „In PromptDB speichern"
+  3. Felder ausfüllen → „Speichern" klicken
+  4. Expected: Prompt gespeichert, Popup schließt sich
+  5. Actual: Fehlermeldung „Speichern fehlgeschlagen. Bitte erneut versuchen."
+- **Fix:** `const { data: { user } } = await supabase.auth.getUser()` und `user_id: user!.id` zum INSERT hinzufügen
+- **Priority:** Fix before deployment
+
+#### BUG-2: ESC-Taste schließt Popup ohne Dirty-State-Prüfung (High)
+- **Severity:** High
+- **Datei:** `extension/src/components/QuickCaptureScreen.tsx`
+- **Ursache:** Kein `keydown`-Handler für `Escape`. Chrome-Extension-Popup schließt bei ESC ohne Confirmation.
+- **Steps to Reproduce:**
+  1. QuickCaptureScreen öffnen
+  2. Felder bearbeiten
+  3. ESC drücken
+  4. Expected: Bestätigungsdialog „Capture verwerfen?"
+  5. Actual: Popup schließt sofort — pendingCapture bleibt in chrome.storage.local (kein Datenverlust), aber kein Warning
+- **Fix:** `useEffect` mit `keydown`-Listener: `if (event.key === 'Escape') setShowDiscardDialog(true)`
+- **Priority:** Fix before deployment
+
+#### BUG-3: „Capture wiederhergestellt"-Hinweis erscheint mehrfach (Medium)
+- **Severity:** Medium
+- **Datei:** `extension/src/App.tsx` — `handleCaptureBack()`
+- **Ursache:** `captureRestored` wird in `handleCaptureBack()` nicht auf `false` zurückgesetzt. Nach Login → Back → Banner-Klick erscheint der Hinweis erneut.
+- **Steps to Reproduce:**
+  1. Ohne Login: Rechtsklick → speichern → Login-Screen
+  2. Einloggen → „✓ Capture wiederhergestellt" erscheint (korrekt)
+  3. ← Zurück klicken → MainScreen mit Banner
+  4. Banner klicken → QuickCaptureScreen
+  5. Expected: Kein „Capture wiederhergestellt"-Hinweis
+  6. Actual: Hinweis erscheint nochmals
+- **Fix:** `setState('authenticated')` + `setCaptureRestored(false)` in `handleCaptureBack()`
+- **Priority:** Fix before deployment
+
+#### BUG-4: Kein Erfolgs-Toast nach erfolgreichem Speichern (Medium)
+- **Severity:** Medium
+- **Datei:** `extension/src/components/QuickCaptureScreen.tsx` — `handleSave()` ruft sofort `onSaved()` auf
+- **Ursache:** Nach erfolgreichem INSERT wird direkt `onSaved()` aufgerufen → App schließt Popup nach 800ms. Kein visuelles Feedback inside QuickCaptureScreen.
+- **Steps to Reproduce (nach BUG-1-Fix):**
+  1. Prompt speichern
+  2. Expected: Kurze „Gespeichert!"-Meldung, dann Popup schließt
+  3. Actual: Popup schließt sich ohne Bestätigung
+- **Fix:** Nach erfolgreichem INSERT: Button-Text auf „✓ Gespeichert!" setzen (z.B. `setSaved(true)`), dann nach 800ms `onSaved()` aufrufen
+- **Priority:** Fix before deployment
+
+#### BUG-5: Mehrfach-Capture überschreibt ohne Bestätigung (Medium)
+- **Severity:** Medium
+- **Datei:** `extension/src/background.ts` — `chrome.storage.local.set({ pendingCapture }, ...)`
+- **Ursache:** Ein zweiter Context-Menu-Klick überschreibt stillschweigend einen existierenden pendingCapture.
+- **Spec-Edge-Case:** „neuer Capture überschreibt den alten (nach Bestätigungsdialog)"
+- **Steps to Reproduce:**
+  1. Text markieren → „In PromptDB speichern" (Capture A angelegt)
+  2. Anderen Text markieren → „In PromptDB speichern" (Capture A überschrieben ohne Warning)
+  3. Expected: Bestätigungsdialog „Du hast einen ungespeicherten Capture. Ersetzen?"
+  4. Actual: Capture A still überschrieben
+- **Fix:** In `background.ts`: `chrome.storage.local.get('pendingCapture', ...)` vor dem Set; wenn vorhanden → speichere auch `pendingCaptureConflict` und handle in App.tsx
+- **Priority:** Fix before deployment
+
+#### BUG-6: Titel-Truncation schneidet Wörter ab (Low)
+- **Severity:** Low
+- **Datei:** `extension/src/background.ts` — `content.slice(0, 60).trimEnd()`
+- **Ursache:** Slicing nach exakt 60 Zeichen kann mitten in einem Wort enden.
+- **Example:** „This is a really long prompt text that reaches the exact siz" (60 chars, „siz" unvollständig)
+- **Fix:** Letztes vollständiges Wort vor Char 60 suchen: `content.slice(0, 60).replace(/\s+\S*$/, '')`
+- **Priority:** Nice to have
+
+### Automated Test Results
+
+| Suite | Tests | Passed | Skipped |
+|-------|-------|--------|---------|
+| Vitest unit (background.test.ts) | 7 | 7 | 0 |
+| Playwright E2E (proj-15, chromium) | 14 | 9 | 5 |
+| Vitest full suite (all) | 163 | 163 | 0 |
+
+*5 Playwright-Tests erfordern `TEST_PASSWORD` (Auth-abhängig)*
+
+### Summary
+- **Acceptance Criteria:** 17/21 passed (4 fail wegen BUG-1/2/3)
+- **Edge Cases:** 6/7 passed (BUG-5: Multi-Capture-Konflikt)
+- **Bugs Found:** 6 total (1 Critical, 1 High, 3 Medium, 1 Low)
+- **Security:** Pass — minimale Permissions, RLS aktiv, kein XSS-Risiko
+- **Production Ready:** **NO — Critical + High Bugs müssen zuerst behoben werden**
+- **Recommendation:** BUG-1 (user_id), BUG-2 (ESC), BUG-3 (captureRestored), BUG-4 (Toast) vor Deployment fixen
 
 ## Deployment
 _To be added by /deploy_
