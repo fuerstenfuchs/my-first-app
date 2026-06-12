@@ -84,6 +84,125 @@
 ## Open Questions
 - keine — Anforderungen aus Roadmap-Dokument vollständig spezifiziert
 
+---
+
+## Tech Design (Solution Architect)
+
+### Überblick
+
+PROJ-9 ist **rein frontend** — keine neuen Datenbank-Tabellen, keine Migrationen. Die `prompt_media`-Tabelle aus PROJ-8 wird genutzt. Die einzige Daten-Änderung ist eine erweiterte SELECT-Query beim Laden der Prompts: statt nur `cover_image_url` zu laden, werden jetzt auch die ersten 6 Medien-Vorschau-Einträge pro Prompt mitgeladen.
+
+### Komponenten-Struktur
+
+```
+src/app/(app)/page.tsx (UNVERÄNDERT)
+
+src/hooks/
++-- use-prompts.ts (MODIFIZIERT)
+|   +-- SELECT-Query erweitert: liefert jetzt preview_media[] (max. 6 Einträge: type + url + sort_order)
+|   +-- Prompt-Interface erhält preview_media[]
+|
++-- use-card-carousel.ts (NEU)
+    +-- Eingabe: previewMedia[] (aus dem erweiterten Prompt-Objekt)
+    +-- Zustand: currentIndex, isCarouselActive
+    +-- Logik: Debounce 200ms, Auto-Advance alle 1,5s, prefers-reduced-motion-Check
+    +-- Ausgabe: currentIndex, isCarouselActive, onMouseEnter, onMouseLeave
+
+src/components/prompts/
++-- prompt-card-grid.tsx (MODIFIZIERT)
+    +-- 16:9 Bildzone (ERWEITERT)
+    |   +-- Basis-Schicht: cover_image_url oder Gradient (immer sichtbar, unverändert)
+    |   +-- Carousel-Schichten: je eine Schicht pro preview_media-Eintrag
+    |   |   +-- Bild-Schicht: opacity 0 → 1 per Crossfade beim Carousel
+    |   |   +-- Video-Schicht: <video muted loop> für Einträge mit type='video'
+    |   +-- Dot-Indikatoren: horizontale Reihe am unteren Bildrand (nur bei Hover + >1 Medium)
+    |   +-- Medien-Badge (IMMER SICHTBAR)
+    |       +-- Zähler-Badge: „N" wenn prompt mehr als 1 Medium hat
+    |       +-- Video-Icon: kleines Icon wenn erstes Medium ein Video ist
+    +-- Card-Body (UNVERÄNDERT: Titel, Beschreibung, Tags, Sterne)
+```
+
+### Datenhaltung
+
+**Kein neues Datenbank-Schema erforderlich.**
+
+Die bestehende `usePrompts`-Hook-Query wird erweitert:
+- Bisher: lädt `prompts.*` (inkl. cover_image_url)
+- Neu: lädt zusätzlich für jeden Prompt die ersten 6 `prompt_media`-Einträge (type + url), sortiert nach sort_order
+
+Jeder Prompt im Frontend erhält dadurch:
+```
+preview_media: Array von max. 6 Einträgen, jeder mit:
+  - type: 'image' oder 'video'
+  - url: Öffentliche URL des Mediums
+  - sort_order: Reihenfolge-Nummer
+```
+
+Daraus werden zwei weitere Werte abgeleitet (clientseitig, kein Extra-Query):
+- `media_count`: Anzahl der geladenen preview_media-Einträge (0–6; Wert 6 wird als „6 oder mehr" behandelt)
+- `first_media_type`: type des ersten Eintrags — bestimmt ob Video-Icon und Video-Preview angezeigt werden
+
+### Hook-Logik: `use-card-carousel`
+
+Dieser neue Hook kapselt die gesamte Carousel-Intelligenz einer Kachel:
+
+| Eingabe | Beschreibung |
+|---|---|
+| `previewMedia[]` | Die max. 6 Medien-Einträge des Prompts |
+
+| Ausgabe | Beschreibung |
+|---|---|
+| `currentIndex` | Welches Medium gerade angezeigt wird (0 = erstes) |
+| `isCarouselActive` | Ob der Carousel-Modus aktiv ist (Maus über Kachel) |
+| `onMouseEnter` | Handler für Kachel-Hover-Start — startet 200ms Debounce, dann Auto-Advance |
+| `onMouseLeave` | Handler für Kachel-Verlassen — stoppt Auto-Advance, setzt Index zurück |
+
+Interne Logik des Hooks:
+1. **Debounce:** `onMouseEnter` startet einen 200ms-Timer. Erst wenn die Maus 200ms ununterbrochen auf der Kachel ist, wechselt `isCarouselActive` auf `true` und der Auto-Advance beginnt.
+2. **Auto-Advance:** Ein Interval-Timer wechselt `currentIndex` alle 1.500ms. Läuft im Kreis (letztes Bild → erstes Bild).
+3. **prefers-reduced-motion:** Beim Mounten prüft der Hook `window.matchMedia('(prefers-reduced-motion: reduce)')`. Ist diese Einstellung aktiv, läuft kein Auto-Advance.
+4. **Aufräumen:** Beim `onMouseLeave` werden Debounce-Timer und Auto-Advance-Interval sofort gestoppt und alle Zustände zurückgesetzt.
+
+### Render-Logik der Bildzone
+
+Die 16:9-Bildzone enthält mehrere überlagerte Schichten:
+
+```
+Schicht 1 (unterste): Basis-Bild (cover_image_url oder Gradient) — immer opacity: 1
+Schicht 2–7:          preview_media[0..5] — opacity: 1 wenn currentIndex übereinstimmt, sonst opacity: 0
+                       Transition: opacity 0.4s ease (Crossfade-Effekt)
+                       Bild-Einträge: <img> Element
+                       Video-Einträge: <video muted loop autoPlay> Element
+```
+
+**Warum Overlay-Schichten statt Bild-Austausch:** Durch überlagerte Schichten mit opacity-Crossfade entstehen weiche Übergänge ohne Layout-Sprünge. Der Browser kann alle Bilder im Speicher halten sobald sie einmal geladen sind.
+
+### Medien-Badge
+
+Das Medien-Badge liegt oben links in der Bildzone (neben dem bestehenden Monospace-Tag-Badge oben links):
+
+- **Zähler-Badge:** Icon `Images` + Zahl, z.B. „🖼 3". Sichtbar wenn `media_count > 1`.
+- **Video-Icon-Badge:** Icon `Video`. Sichtbar wenn `first_media_type === 'video'`. Ersetzt den Zähler-Badge wenn das erste Medium ein Video ist.
+- **Position:** Obere linke Ecke der Bildzone, als kleines Pill-Badge — konsistent mit dem bestehenden Monospace-Tag-Badge (der weicht nach rechts).
+
+### Keine Backend-Arbeit erforderlich
+
+| Aspekt | Entscheidung |
+|---|---|
+| Neue Tabellen | Keine |
+| Migrationen | Keine |
+| API Routes | Keine |
+| RLS | Bereits vorhanden (PROJ-8) |
+
+### Neue Pakete
+
+Keine neuen Pakete erforderlich. Alle benötigten APIs sind in React und dem Browser nativ verfügbar:
+- `useState`, `useEffect`, `useRef` für Carousel-Logik
+- `window.matchMedia` für prefers-reduced-motion
+- CSS `opacity` + `transition` für Crossfade
+
+---
+
 ## Decision Log
 
 ### Product Decisions
@@ -98,3 +217,13 @@
 | Debounce 200ms | Verhindert unnötige Fetches beim schnellen Durchscrollen der Galerie | 2026-06-12 |
 | prefers-reduced-motion respektieren | Accessibility-Mindeststandard für auto-playing Animationen | 2026-06-12 |
 | Mobile: kein Carousel (kein Hover) | Touch-Geräte haben kein hover-Event; Modal ist der primäre Weg für Medienansicht auf Mobile | 2026-06-12 |
+
+### Technical Decisions
+| Entscheidung | Begründung | Datum |
+|---|---|---|
+| Eager loading von max. 6 preview_media pro Prompt | Eliminiert lazy-load-Delay beim Hover; 6 Items × N Prompts ist vertretbar; Prompts mit >6 Items sind selten | 2026-06-12 |
+| Kein neues DB-Schema / keine Migration | preview_media bereits in PROJ-8 vorhanden; COUNT + Typ über erweiterte SELECT-Query verfügbar | 2026-06-12 |
+| useCardCarousel als separater Hook | Trennt Carousel-Logik von Render-Logik; ermöglicht Unit-Tests des Auto-Advance/Debounce-Verhaltens | 2026-06-12 |
+| Overlay-Schichten statt Bild-Tausch für Crossfade | Kein Layout-Shift; weicher Übergang; Browser cached geladene Bilder in den inaktiven Schichten | 2026-06-12 |
+| prefers-reduced-motion clientseitig via window.matchMedia | Standard-Accessibility-API; kein Server-State nötig; wird einmalig beim Hook-Mount geprüft | 2026-06-12 |
+| Video-Element nur beim Hover gerendert | Verhindert gleichzeitiges Autoplay vieler Videos beim Seitenaufbau; spart Netzwerk und CPU | 2026-06-12 |
