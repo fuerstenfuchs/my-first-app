@@ -1,6 +1,6 @@
 # PROJ-8: Mehrere Medien pro Prompt (Bilder & Videos)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
