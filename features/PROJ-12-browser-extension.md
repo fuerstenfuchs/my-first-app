@@ -1,6 +1,6 @@
 # PROJ-12: Browser-Extension – Phase 1: Prompt Picker
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -282,4 +282,10 @@ Keine Host-Berechtigungen nötig (kein Content-Script in Phase 1).
 - Sammlungs-Detailseite lädt fehlerfrei ✅
 
 ## Deployment
-_To be added by /deploy_
+
+- **Version:** v1.12.0-PROJ-12
+- **Datum:** 2026-06-12
+- **Webapp:** Vercel (auto-deploy via GitHub push — `last_used_at` + `copyPrompt` Änderungen live)
+- **Extension:** Lokal als entpackte Erweiterung geladen (`extension/dist/`)
+- **Chrome Web Store:** Phase 1 — noch nicht veröffentlicht (lokale Nutzung)
+- **Nächster Schritt Extension:** Für öffentliche Veröffentlichung Chrome Web Store Developer Account + Review-Prozess erforderlich

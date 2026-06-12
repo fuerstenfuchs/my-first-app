@@ -28,7 +28,7 @@
 | PROJ-9  | Prompt-Galerie Upgrade (Hover-Carousel, Video-Preview) | Deployed | [PROJ-9](PROJ-9-galerie-upgrade.md) | 2026-06-12 |
 | PROJ-10 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | Deployed | [PROJ-10](PROJ-10-quick-capture.md) | 2026-06-12 |
 | PROJ-11 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Deployed | [PROJ-11](PROJ-11-sammlungen-upgrade.md) | 2026-06-12 |
-| PROJ-12 | Browser-Extension (Chrome/Edge/Brave) | Approved | [PROJ-12](PROJ-12-browser-extension.md) | 2026-06-12 |
+| PROJ-12 | Browser-Extension (Chrome/Edge/Brave) | Deployed | [PROJ-12](PROJ-12-browser-extension.md) | 2026-06-12 |
 | PROJ-13 | Mobile Share Integration (Android & iOS) | Roadmap | — | 2026-06-12 |
 | PROJ-14 | Smart Features (Duplikat-Erkennung, KI-Suche, Tags) | Roadmap | — | 2026-06-12 |
 
