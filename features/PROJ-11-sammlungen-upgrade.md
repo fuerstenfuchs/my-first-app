@@ -229,6 +229,19 @@ Auf der **Detailseite** wird immer nur ein einzelnes Bild angezeigt (kein Raster
 | `@dnd-kit/sortable` | Sortierbare Listen (SortableContext, useSortable) |
 | `@dnd-kit/utilities` | CSS-Transform-Utilities für flüssige Animationen |
 
+## Backend Implementation Notes
+
+**Migrationen angewendet am 2026-06-12:**
+
+1. `add_collections_cover_image_url` — `ALTER TABLE collections ADD COLUMN cover_image_url TEXT;`
+2. `create_collection_covers_bucket` — Neuer `collection-covers` Storage-Bucket (public) + 4 RLS-Policies:
+   - INSERT: nur eigene Dateien (`auth.uid() = folder[1]`)
+   - UPDATE: nur eigene Dateien
+   - DELETE: nur eigene Dateien
+   - SELECT: öffentlich lesbar (für Cover-Anzeige ohne Auth)
+
+**Keine API Routes** — Frontend ruft Supabase direkt auf (gleiche Strategie wie gesamte App).
+
 ## QA Test Results
 _To be added by /qa_
 
