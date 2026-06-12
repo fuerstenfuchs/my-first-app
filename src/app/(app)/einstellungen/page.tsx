@@ -1,13 +1,14 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Download, Settings, Upload } from 'lucide-react'
+import { Download, Settings, Smartphone, Upload } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { usePrompts } from '@/hooks/use-prompts'
+import { usePwaInstall } from '@/components/pwa-install-banner'
 
 interface ExportPrompt {
   title: string
@@ -28,6 +29,12 @@ export default function EinstellungenPage() {
   const { prompts, importPrompts } = usePrompts()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
+  const { canInstall, isInstalled, install } = usePwaInstall()
+
+  async function handleInstall() {
+    const accepted = await install()
+    if (accepted) toast.success('PromptDB wurde installiert')
+  }
 
   function handleExport() {
     if (prompts.length === 0) {
@@ -97,6 +104,36 @@ export default function EinstellungenPage() {
 
       <main className="flex-1 overflow-auto p-4 md:p-6">
         <div className="max-w-xl space-y-6">
+
+          {!isInstalled && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">App installieren</CardTitle>
+                  <CardDescription>
+                    Installiere PromptDB als App auf deinem Gerät, um Prompts direkt aus dem Share-Menü von Reddit, ChatGPT, Claude und anderen Apps zu speichern.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="gap-2"
+                    disabled={!canInstall}
+                    onClick={handleInstall}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    PromptDB installieren
+                  </Button>
+                  {!canInstall && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Installation über den Browser möglich: Menü → „Zum Startbildschirm hinzufügen" (iOS Safari) oder Adressleiste → Install-Symbol (Android Chrome).
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Separator />
+            </>
+          )}
 
           <Card>
             <CardHeader>

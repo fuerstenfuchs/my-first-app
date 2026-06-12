@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, Heart } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, Heart, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { tagColorClass } from '@/lib/tag-colors'
 import { StarRating } from '@/components/prompts/star-rating'
@@ -100,6 +100,21 @@ export function PromptListRow({
         </div>
         {prompt.description && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">{prompt.description}</p>
+        )}
+        {prompt.source_url && (
+          <a
+            href={prompt.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-400 transition-colors mt-0.5"
+            onClick={e => e.stopPropagation()}
+            title="Quelle öffnen"
+          >
+            <ExternalLink className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[160px]">
+              {(() => { try { return new URL(prompt.source_url).hostname } catch { return prompt.source_url } })()}
+            </span>
+          </a>
         )}
       </div>
 

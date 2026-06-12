@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Copy, Heart, Pencil } from 'lucide-react'
+import { Copy, Heart, Pencil, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -49,6 +49,8 @@ export function PromptModal({
   const [description, setDescription] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [sourceUrlError, setSourceUrlError] = useState('')
   const [draftPromptId] = useState<string>(() => crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({})
@@ -61,6 +63,7 @@ export function PromptModal({
     if (open) {
       setMode(initialMode)
       setErrors({})
+      setSourceUrlError('')
       setGalleryIndex(null)
       if (prompt) {
         setTitle(prompt.title)
@@ -68,6 +71,7 @@ export function PromptModal({
         setDescription(prompt.description ?? '')
         setTagsInput(prompt.tags.join(', '))
         setCoverImageUrl(prompt.cover_image_url)
+        setSourceUrl(prompt.source_url ?? '')
         if (initialMode === 'view') fetchViewMedia(prompt.id)
       } else {
         setTitle('')
@@ -75,9 +79,15 @@ export function PromptModal({
         setDescription('')
         setTagsInput('')
         setCoverImageUrl(null)
+        setSourceUrl('')
       }
     }
   }, [open, prompt, initialMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function isValidUrl(url: string): boolean {
+    if (!url.trim()) return true
+    try { new URL(url); return true } catch { return false }
+  }
 
   async function handleSave() {
     const newErrors: { title?: string; content?: string } = {}
@@ -85,6 +95,10 @@ export function PromptModal({
     if (!content.trim()) newErrors.content = 'Prompt-Text ist erforderlich'
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      return
+    }
+    if (sourceUrl.trim() && !isValidUrl(sourceUrl.trim())) {
+      setSourceUrlError('Bitte eine gültige URL eingeben (z.B. https://…)')
       return
     }
     setSaving(true)
@@ -95,6 +109,7 @@ export function PromptModal({
       description: description.trim() || undefined,
       tags,
       cover_image_url: coverImageUrl,
+      source_url: sourceUrl.trim() || null,
     }
     // Pass draftPromptId for create mode so media already uploaded links up
     const success = await onSave(input, mode === 'create' ? draftPromptId : undefined)
@@ -173,6 +188,22 @@ export function PromptModal({
                   ))}
                 </div>
               )}
+              {prompt.source_url && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Quelle</p>
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <a
+                      href={prompt.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-violet-400 hover:text-violet-300 transition-colors truncate"
+                    >
+                      {prompt.source_url}
+                    </a>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">{prompt.usage_count}× kopiert</p>
                 <div className="flex items-center gap-3">
@@ -241,6 +272,20 @@ export function PromptModal({
                   onChange={e => setTagsInput(e.target.value)}
                   placeholder="z.B. schreiben, blog, deutsch"
                 />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="modal-source">
+                  Quell-Link{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="modal-source"
+                  type="url"
+                  value={sourceUrl}
+                  onChange={e => { setSourceUrl(e.target.value); setSourceUrlError('') }}
+                  placeholder="https://..."
+                />
+                {sourceUrlError && <p className="text-xs text-destructive">{sourceUrlError}</p>}
               </div>
               <Separator />
               <MediaManager

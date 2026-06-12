@@ -17,6 +17,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const searchParams = useSearchParams()
   const errorParam = searchParams.get('error')
+  const fromShare = searchParams.get('from') === 'share'
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -27,7 +28,7 @@ export function LoginForm() {
       if (error) {
         toast.error('Anmeldung fehlgeschlagen. Bitte überprüfe deine Eingaben.')
       } else {
-        window.location.href = '/'
+        window.location.href = fromShare ? '/?from=share' : '/'
       }
     } catch {
       toast.error('Verbindungsfehler — bitte erneut versuchen')

@@ -27,15 +27,29 @@ import { QuickImageDrop } from './quick-image-drop'
 import { usePromptMedia, IMAGE_TYPES, IMAGE_MAX } from '@/hooks/use-prompt-media'
 import type { Prompt } from '@/hooks/use-prompts'
 
+export interface SharePayload {
+  content: string
+  source_url: string | null
+  title: string | null
+}
+
 interface QuickCaptureModalProps {
   isOpen: boolean
   onClose: () => void
+  initialValues?: SharePayload | null
 }
 
-export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
+function isValidUrl(url: string): boolean {
+  if (!url.trim()) return true
+  try { new URL(url); return true } catch { return false }
+}
+
+export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptureModalProps) {
   const [content, setContent] = useState('')
   const [title, setTitle] = useState('')
   const [tagsInput, setTagsInput] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [sourceUrlError, setSourceUrlError] = useState('')
   const [saving, setSaving] = useState(false)
   const [contentError, setContentError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
@@ -52,18 +66,36 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
     ...media.map(m => ({ id: m.id, url: m.url, status: 'done' as const })),
   ]
 
-  // Reset form on each open
   useEffect(() => {
     if (isOpen) {
-      setContent('')
-      setTitle('')
-      setTagsInput('')
       setContentError('')
+      setSourceUrlError('')
       setIsDirty(false)
       draftId.current = crypto.randomUUID()
       // eslint-disable-next-line react-hooks/exhaustive-deps
       clearMedia()
-      setTimeout(() => textareaRef.current?.focus(), 50)
+
+      if (initialValues) {
+        setContent(initialValues.content ?? '')
+        setSourceUrl(initialValues.source_url ?? '')
+        if (initialValues.title) {
+          setTitle(initialValues.title)
+        } else if (initialValues.content) {
+          setTitle(initialValues.content.trim().slice(0, 55).trimEnd())
+        } else if (!initialValues.content && initialValues.source_url) {
+          setTitle('Shared Link')
+        } else {
+          setTitle('')
+        }
+        setTagsInput('')
+        setIsDirty(true)
+      } else {
+        setContent('')
+        setTitle('')
+        setTagsInput('')
+        setSourceUrl('')
+        setTimeout(() => textareaRef.current?.focus(), 50)
+      }
     }
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -96,8 +128,12 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
   }, [uploadFiles])
 
   async function handleSave() {
-    if (!content.trim()) {
-      setContentError('Prompt-Text ist erforderlich')
+    if (!content.trim() && !sourceUrl.trim()) {
+      setContentError('Prompt-Text oder Quell-Link ist erforderlich')
+      return
+    }
+    if (sourceUrl.trim() && !isValidUrl(sourceUrl.trim())) {
+      setSourceUrlError('Bitte eine gültige URL eingeben (z.B. https://…)')
       return
     }
     if (isUploading) return
@@ -107,7 +143,7 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
 
-    const autoTitle = title.trim() || content.trim().slice(0, 50).trimEnd()
+    const autoTitle = title.trim() || content.trim().slice(0, 50).trimEnd() || 'Shared Link'
     const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean)
 
     const { data, error } = await supabase
@@ -119,6 +155,8 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
         content: content.trim(),
         tags,
         description: null,
+        source_url: sourceUrl.trim() || null,
+        source_type: null,
       })
       .select()
       .single()
@@ -132,6 +170,8 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
 
     const newPrompt: Prompt = {
       ...data,
+      source_url: data.source_url ?? null,
+      source_type: data.source_type ?? null,
       preview_media: media
         .sort((a, b) => a.sort_order - b.sort_order)
         .slice(0, 6)
@@ -159,9 +199,7 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
 
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="qc-content">
-                Prompt-Text <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="qc-content">Prompt-Text</Label>
               <Textarea
                 id="qc-content"
                 ref={textareaRef}
@@ -191,6 +229,21 @@ export function QuickCaptureModal({ isOpen, onClose }: QuickCaptureModalProps) {
                 onChange={e => { setTitle(e.target.value); setIsDirty(true) }}
                 placeholder='z.B. „Bildgenerator Portrait-Stil"'
               />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="qc-source">
+                Quell-Link{' '}
+                <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="qc-source"
+                type="url"
+                value={sourceUrl}
+                onChange={e => { setSourceUrl(e.target.value); setSourceUrlError(''); setIsDirty(true) }}
+                placeholder="https://..."
+              />
+              {sourceUrlError && <p className="text-xs text-destructive">{sourceUrlError}</p>}
             </div>
 
             <div className="space-y-1">

@@ -89,6 +89,22 @@ export default function PromptsPage() {
     setModalOpen(true)
   }, [])
 
+  // Open Quick Capture with shared content when redirected from /share
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('from') !== 'share') return
+    const stored = sessionStorage.getItem('pending_share_payload')
+    window.history.replaceState(null, '', '/')
+    if (!stored) return
+    try {
+      const payload = JSON.parse(stored)
+      sessionStorage.removeItem('pending_share_payload')
+      window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: payload }))
+    } catch {
+      // Corrupt storage entry — ignore
+    }
+  }, [])
+
   useEffect(() => {
     function handleQuickCaptureSaved(e: Event) {
       const prompt = (e as CustomEvent<Prompt>).detail

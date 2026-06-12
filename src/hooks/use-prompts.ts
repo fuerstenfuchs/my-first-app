@@ -22,6 +22,8 @@ export interface Prompt {
   cover_image_url: string | null
   rating: number | null
   is_favorite: boolean
+  source_url: string | null
+  source_type: string | null
   created_at: string
   updated_at: string
   preview_media: PreviewMediaItem[]
@@ -37,6 +39,8 @@ export interface PromptInput {
   description?: string
   tags?: string[]
   cover_image_url?: string | null
+  source_url?: string | null
+  source_type?: string | null
 }
 
 export function usePrompts() {

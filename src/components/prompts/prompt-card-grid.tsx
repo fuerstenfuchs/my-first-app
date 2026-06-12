@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, Video } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, Video, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -275,6 +275,21 @@ export function PromptCardGrid({
           </div>
           {prompt.description && (
             <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{prompt.description}</p>
+          )}
+          {prompt.source_url && (
+            <a
+              href={prompt.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-400 transition-colors mt-1"
+              onClick={e => e.stopPropagation()}
+              title="Quelle öffnen"
+            >
+              <ExternalLink className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[140px]">
+                {(() => { try { return new URL(prompt.source_url).hostname } catch { return prompt.source_url } })()}
+              </span>
+            </a>
           )}
           <div className="flex items-center justify-between gap-2 mt-2">
             {visibleTags.length > 0 ? (
