@@ -201,6 +201,16 @@ iOS < 16.4: Banner wird nicht angezeigt (kein Web Share Target möglich)
 
 Keine neuen npm-Pakete erforderlich. Alles basiert auf Next.js App Router, `sessionStorage`, `localStorage` und dem `beforeinstallprompt`-Browser-Event.
 
+## Backend Implementation Notes
+
+**Migration (2026-06-12, manuell im Supabase SQL Editor):**
+- `prompts.source_url TEXT` — nullable, URL der Prompt-Quelle
+- `prompts.source_type TEXT` — nullable, Plattform-Name (Phase 2 befüllt automatisch)
+- Index `idx_prompts_source_url` auf `(user_id, source_url) WHERE source_url IS NOT NULL`
+- Keine neuen RLS-Policies notwendig — bestehende Owner-Policies greifen auf alle Spalten
+
+**Keine neuen API-Routen:** Frontend schreibt `source_url`/`source_type` direkt über Supabase-Client in `quick-capture-modal.tsx` und `prompt-modal.tsx`.
+
 ## QA Test Results
 _To be added by /qa_
 
