@@ -1,6 +1,6 @@
 # PROJ-11: Sammlungen Upgrade (Cover-Bilder, Drag & Drop)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 

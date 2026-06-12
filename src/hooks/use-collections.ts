@@ -9,6 +9,7 @@ export interface Collection {
   id: string
   user_id: string
   name: string
+  cover_image_url: string | null
   created_at: string
 }
 
@@ -16,6 +17,17 @@ export interface CollectionPromptItem {
   id: string
   sort_order: number
   prompt: Prompt
+}
+
+export interface CollectionOverviewItem extends Collection {
+  prompt_count: number
+  collage_images: string[]
+}
+
+function arrayMove<T>(arr: T[], from: number, to: number): T[] {
+  const result = [...arr]
+  result.splice(to, 0, result.splice(from, 1)[0])
+  return result
 }
 
 export function useCollections() {
@@ -83,25 +95,137 @@ export function useCollections() {
     return true
   }
 
-  return { collections, loading, createCollection, renameCollection, deleteCollection }
+  async function updateCollectionCover(id: string, url: string | null): Promise<boolean> {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('collections')
+      .update({ cover_image_url: url })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) {
+      toast.error('Cover konnte nicht gespeichert werden')
+      return false
+    }
+    setCollections(prev => prev.map(c => c.id === id ? data : c))
+    return true
+  }
+
+  return { collections, loading, createCollection, renameCollection, deleteCollection, updateCollectionCover }
+}
+
+export function useCollectionsOverview() {
+  const [collections, setCollections] = useState<CollectionOverviewItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchCollections = useCallback(async () => {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('collections')
+      .select(`
+        id, user_id, name, cover_image_url, created_at,
+        collection_prompts(
+          sort_order,
+          prompt:prompts(id, cover_image_url, prompt_media(url, type, sort_order))
+        )
+      `)
+      .order('created_at', { ascending: true })
+    if (error) {
+      toast.error('Fehler beim Laden der Sammlungen')
+    } else {
+      setCollections(
+        ((data ?? []) as unknown as Array<{
+          id: string
+          user_id: string
+          name: string
+          cover_image_url: string | null
+          created_at: string
+          collection_prompts: Array<{
+            sort_order: number
+            prompt: {
+              id: string
+              cover_image_url: string | null
+              prompt_media: Array<{ url: string; type: string; sort_order: number }>
+            } | null
+          }> | null
+        }>).map(col => {
+          const sortedPrompts = ((col.collection_prompts ?? [])
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map(cp => cp.prompt)
+            .filter(Boolean)) as Array<{
+              id: string
+              cover_image_url: string | null
+              prompt_media: Array<{ url: string; type: string; sort_order: number }>
+            }>
+
+          const images: string[] = []
+          for (const prompt of sortedPrompts) {
+            const firstMedia = (prompt.prompt_media ?? [])
+              .filter(m => m.type === 'image')
+              .sort((a, b) => a.sort_order - b.sort_order)[0]
+            const img = prompt.cover_image_url || firstMedia?.url
+            if (img) images.push(img)
+            if (images.length >= 4) break
+          }
+
+          return {
+            id: col.id,
+            user_id: col.user_id,
+            name: col.name,
+            cover_image_url: col.cover_image_url,
+            created_at: col.created_at,
+            prompt_count: (col.collection_prompts ?? []).length,
+            collage_images: col.cover_image_url ? [col.cover_image_url] : images,
+          }
+        })
+      )
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetchCollections()
+  }, [fetchCollections])
+
+  async function createCollection(name: string): Promise<Collection | null> {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data, error } = await supabase
+      .from('collections')
+      .insert({ name: name.trim(), user_id: user!.id })
+      .select()
+      .single()
+    if (error) {
+      toast.error('Sammlung konnte nicht erstellt werden')
+      return null
+    }
+    await fetchCollections()
+    return data
+  }
+
+  return { collections, loading, createCollection }
 }
 
 export function useCollectionPrompts(collectionId: string) {
   const [items, setItems] = useState<CollectionPromptItem[]>([])
   const [loading, setLoading] = useState(true)
   const [collectionName, setCollectionName] = useState('')
+  const [collectionCoverUrl, setCollectionCoverUrl] = useState<string | null>(null)
 
   const fetchItems = useCallback(async () => {
     const supabase = createClient()
     const [{ data: col }, { data: rows, error }] = await Promise.all([
-      supabase.from('collections').select('name').eq('id', collectionId).single(),
+      supabase.from('collections').select('name, cover_image_url').eq('id', collectionId).single(),
       supabase
         .from('collection_prompts')
         .select('id, sort_order, prompt:prompts(*)')
         .eq('collection_id', collectionId)
         .order('sort_order', { ascending: true }),
     ])
-    if (col) setCollectionName(col.name)
+    if (col) {
+      setCollectionName(col.name)
+      setCollectionCoverUrl(col.cover_image_url ?? null)
+    }
     if (error) {
       toast.error('Fehler beim Laden der Sammlung')
     } else {
@@ -120,39 +244,44 @@ export function useCollectionPrompts(collectionId: string) {
     fetchItems()
   }, [fetchItems])
 
-  async function moveUp(index: number) {
-    if (index === 0) return
-    await swap(index, index - 1)
-  }
-
-  async function moveDown(index: number) {
-    if (index === items.length - 1) return
-    await swap(index, index + 1)
-  }
-
-  async function swap(i: number, j: number) {
-    const newItems = [...items]
-    const tempOrder = newItems[i].sort_order
-    newItems[i] = { ...newItems[i], sort_order: newItems[j].sort_order }
-    newItems[j] = { ...newItems[j], sort_order: tempOrder }
-    ;[newItems[i], newItems[j]] = [newItems[j], newItems[i]]
-    setItems(newItems)
+  async function reorder(oldIndex: number, newIndex: number) {
+    if (oldIndex === newIndex) return
+    const prev = items
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, i) => ({
+      ...item,
+      sort_order: i + 1,
+    }))
+    setItems(reordered)
 
     const supabase = createClient()
-    const [r1, r2] = await Promise.all([
-      supabase
-        .from('collection_prompts')
-        .update({ sort_order: newItems[i].sort_order })
-        .eq('id', newItems[i].id),
-      supabase
-        .from('collection_prompts')
-        .update({ sort_order: newItems[j].sort_order })
-        .eq('id', newItems[j].id),
-    ])
-    if (r1.error || r2.error) {
-      toast.error('Speichern fehlgeschlagen')
-      setItems(items)
+    const results = await Promise.all(
+      reordered.map(item =>
+        supabase
+          .from('collection_prompts')
+          .update({ sort_order: item.sort_order })
+          .eq('id', item.id)
+      )
+    )
+    if (results.some(r => r.error)) {
+      toast.error('Reihenfolge konnte nicht gespeichert werden')
+      setItems(prev)
     }
+  }
+
+  async function updateCover(url: string | null): Promise<boolean> {
+    const prevUrl = collectionCoverUrl
+    setCollectionCoverUrl(url)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('collections')
+      .update({ cover_image_url: url })
+      .eq('id', collectionId)
+    if (error) {
+      toast.error('Cover konnte nicht gespeichert werden')
+      setCollectionCoverUrl(prevUrl)
+      return false
+    }
+    return true
   }
 
   async function removeFromCollection(index: number) {
@@ -174,5 +303,14 @@ export function useCollectionPrompts(collectionId: string) {
     setItems(prev => prev.filter((_, i) => i !== index))
   }
 
-  return { items, loading, collectionName, moveUp, moveDown, removeFromCollection, removeItemAt }
+  return {
+    items,
+    loading,
+    collectionName,
+    collectionCoverUrl,
+    reorder,
+    updateCover,
+    removeFromCollection,
+    removeItemAt,
+  }
 }

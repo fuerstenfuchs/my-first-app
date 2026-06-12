@@ -2,10 +2,28 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import { FolderOpen } from 'lucide-react'
+import { FolderOpen, ImageIcon } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Button } from '@/components/ui/button'
 import { Skeleton as SkeletonUI } from '@/components/ui/skeleton'
-import { PromptCard } from '@/components/prompts/prompt-card'
+import { SortablePromptCard } from '@/components/collections/sortable-prompt-card'
+import { CollectionCover } from '@/components/collections/collection-cover'
+import { CollectionCoverModal } from '@/components/collections/collection-cover-modal'
 import { PromptModal } from '@/components/prompts/prompt-modal'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
 import { useCollectionPrompts } from '@/hooks/use-collections'
@@ -15,8 +33,16 @@ type ModalMode = 'view' | 'edit'
 
 export default function CollectionPage() {
   const { id } = useParams<{ id: string }>()
-  const { items, loading, collectionName, moveUp, moveDown, removeFromCollection, removeItemAt } =
-    useCollectionPrompts(id)
+  const {
+    items,
+    loading,
+    collectionName,
+    collectionCoverUrl,
+    reorder,
+    updateCover,
+    removeFromCollection,
+    removeItemAt,
+  } = useCollectionPrompts(id)
   const { updatePrompt, deletePrompt, copyPrompt } = usePrompts()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -24,6 +50,32 @@ export default function CollectionPage() {
   const [modalMode, setModalMode] = useState<ModalMode>('view')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
+  const [coverModalOpen, setCoverModalOpen] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = items.findIndex(item => item.id === active.id)
+    const newIndex = items.findIndex(item => item.id === over.id)
+    if (oldIndex !== -1 && newIndex !== -1) reorder(oldIndex, newIndex)
+  }
+
+  const coverImages: string[] = (() => {
+    if (collectionCoverUrl) return [collectionCoverUrl]
+    for (const item of items) {
+      const img =
+        item.prompt.cover_image_url ||
+        item.prompt.preview_media.find(m => m.type === 'image')?.url
+      if (img) return [img]
+    }
+    return []
+  })()
 
   function openView(prompt: Prompt) {
     setModalPrompt(prompt)
@@ -55,14 +107,38 @@ export default function CollectionPage() {
       <header className="border-b shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
-          <FolderOpen className="h-5 w-5 text-muted-foreground shrink-0" />
-          <h1 className="text-lg font-semibold truncate">
-            {loading ? <SkeletonUI className="h-6 w-40" /> : collectionName}
-          </h1>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <CollectionCover
+              images={loading ? [] : coverImages}
+              name={collectionName}
+              mode="single"
+              className="h-10 w-10 rounded-lg shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              {loading ? (
+                <SkeletonUI className="h-6 w-40" />
+              ) : (
+                <>
+                  <h1 className="text-lg font-semibold truncate leading-tight">
+                    {collectionName}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {items.length} {items.length === 1 ? 'Prompt' : 'Prompts'}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
           {!loading && (
-            <span className="text-sm text-muted-foreground shrink-0">
-              ({items.length})
-            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCoverModalOpen(true)}
+              className="shrink-0"
+            >
+              <ImageIcon className="mr-2 h-4 w-4" />
+              Cover
+            </Button>
           )}
         </div>
       </header>
@@ -86,26 +162,34 @@ export default function CollectionPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {items.map((item, index) => (
-              <PromptCard
-                key={item.id}
-                prompt={item.prompt}
-                onClick={() => openView(item.prompt)}
-                onCopy={() => copyPrompt(item.prompt)}
-                onEdit={() => openEdit(item.prompt)}
-                onDelete={() => {
-                  setDeleteId(item.prompt.id)
-                  setDeleteIndex(index)
-                }}
-                onMoveUp={() => moveUp(index)}
-                onMoveDown={() => moveDown(index)}
-                onRemoveFromCollection={() => removeFromCollection(index)}
-                isFirst={index === 0}
-                isLast={index === items.length - 1}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items.map(i => i.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {items.map((item, index) => (
+                  <SortablePromptCard
+                    key={item.id}
+                    id={item.id}
+                    prompt={item.prompt}
+                    onClick={() => openView(item.prompt)}
+                    onCopy={() => copyPrompt(item.prompt)}
+                    onEdit={() => openEdit(item.prompt)}
+                    onDelete={() => {
+                      setDeleteId(item.prompt.id)
+                      setDeleteIndex(index)
+                    }}
+                    onRemoveFromCollection={() => removeFromCollection(index)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </main>
 
@@ -122,6 +206,15 @@ export default function CollectionPage() {
         open={!!deleteId}
         onOpenChange={open => !open && (setDeleteId(null), setDeleteIndex(null))}
         onConfirm={handleDeleteConfirm}
+      />
+
+      <CollectionCoverModal
+        open={coverModalOpen}
+        onClose={() => setCoverModalOpen(false)}
+        collectionId={id}
+        currentCoverUrl={collectionCoverUrl}
+        items={items}
+        onCoverChange={updateCover}
       />
     </div>
   )

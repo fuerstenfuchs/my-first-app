@@ -131,7 +131,12 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between pr-1">
-            Sammlungen
+            <a
+              href="/collections"
+              className={`hover:text-foreground transition-colors ${pathname.startsWith('/collections') ? 'text-foreground' : ''}`}
+            >
+              Sammlungen
+            </a>
             <button
               onClick={() => { setIsCreating(true); setNewName('') }}
               className="text-muted-foreground hover:text-foreground transition-colors rounded p-0.5"
