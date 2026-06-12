@@ -60,7 +60,10 @@
 
 ### Sammlungs-Detailseite — Verbesserter Header
 
-- [ ] Angenommen der Nutzer ruft eine Sammlungsseite auf, dann sieht er im Header: Cover-Vorschau (klein), Sammlungsname, Prompt-Anzahl und „Cover bearbeiten"-Button
+- [ ] Angenommen der Nutzer ruft eine Sammlungsseite auf, dann sieht er im Header: ein einzelnes großes Cover-Bild (kein Collage-Raster), Sammlungsname, Prompt-Anzahl und „Cover bearbeiten"-Button
+- [ ] Angenommen ein manuelles Cover gesetzt ist, dann zeigt der Header dieses Cover-Bild
+- [ ] Angenommen kein manuelles Cover gesetzt ist (Auto-Modus), dann zeigt der Header das automatisch ausgewählte einzelne Bild (erstes verfügbares Bild aus den Prompts der Sammlung) — kein Collage-Raster auf der Detailseite
+- [ ] Angenommen die Sammlung hat keine Bilder, dann zeigt der Header den Platzhalter (Icon + Name)
 
 ### Drag & Drop — Prompt-Reihenfolge
 
@@ -84,15 +87,17 @@
 
 ## Technical Requirements
 
-- Drag & Drop: Muss auf Desktop (Maus) und Mobile (Touch, long-press) funktionieren
+- Drag & Drop: `@dnd-kit/core` + `@dnd-kit/sortable` — einzige DnD-Bibliothek in der App
+- Drag & Drop: Desktop (Maus) und Mobile (Touch) müssen funktionieren
+- Drag & Drop: Keyboard-Accessibility (Tab + Space/Enter für Reorder)
 - Cover-Berechnung: Client-seitig aus bereits geladenen Prompt-Daten (kein separater API-Call)
 - Reihenfolge-Persistierung: Optimistisches Update + Supabase-Write (gleiche Strategie wie PROJ-4)
-- Cover-Upload: Supabase Storage, gleicher Bucket `prompt-media` oder neuer `collection-covers`-Bucket
+- Cover-Upload: Supabase Storage (neuer `collection-covers`-Bucket oder bestehender `prompt-media`-Bucket — Architektur-Entscheidung)
+- Collage: Nur auf `/collections` Übersicht; auf Detailseite immer einzelnes Bild
 
 ## Open Questions
 
-- [ ] Soll die Collage-Vorschau auf der `/collections`-Übersicht zusätzlich auch auf der Sammlungs-Detailseite im Header erscheinen, oder nur im Header als kleines quadratisches Vorschaubild?
-- [ ] Welche Bibliothek für Drag & Drop? Empfehlung: `@dnd-kit/core` (React-nativ, Touch-Support, aktiv gepflegt, keine jQuery-Abhängigkeit)
+_Alle Fragen geklärt — keine offenen Punkte._
 
 ---
 
@@ -111,6 +116,8 @@
 | Cover beim Erstellen nicht konfigurieren | Sammlung soll in 2 Sekunden erstellt sein; Cover-System generiert automatisch nach Inhalt | 2026-06-12 |
 | Nach Erstellung direkt zur Detailseite navigieren | Ermutigt Nutzer sofort Prompts hinzuzufügen; leere Sammlung auf Übersicht wirkt demotivierend | 2026-06-12 |
 | Cover-URL-Eingabe nicht als primären Workflow | Nutzer haben bereits Bilder in ihren Prompts; Galerie-Auswahl ist komfortabler als URL-Tippen | 2026-06-12 |
+| Detailseite: einzelnes Cover-Bild statt Collage | Detailseite braucht Identität und Lesbarkeit, nicht Browsing — Collage gehört auf die Übersichtsseite | 2026-06-12 |
+| Drag & Drop: `@dnd-kit/core` + `@dnd-kit/sortable` | Einzige DnD-Bibliothek in der gesamten App; React-nativ, Touch-Support, Keyboard-Accessibility, aktiv gepflegt; Basis für künftige Features (Collection-Ordering, Cross-Collection-DnD) | 2026-06-12 |
 
 ### Technical Decisions
 <!-- Added by /architecture -->
