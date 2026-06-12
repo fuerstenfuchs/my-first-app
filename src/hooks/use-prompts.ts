@@ -18,6 +18,7 @@ export interface Prompt {
   description: string | null
   tags: string[]
   usage_count: number
+  last_used_at: string | null
   cover_image_url: string | null
   rating: number | null
   is_favorite: boolean
@@ -136,13 +137,14 @@ export function usePrompts() {
     try {
       await navigator.clipboard.writeText(prompt.content)
       toast.success('Kopiert!')
+      const now = new Date().toISOString()
       const supabase = createClient()
       await supabase
         .from('prompts')
-        .update({ usage_count: prompt.usage_count + 1 })
+        .update({ usage_count: prompt.usage_count + 1, last_used_at: now })
         .eq('id', prompt.id)
       setPrompts(prev =>
-        prev.map(p => p.id === prompt.id ? { ...p, usage_count: p.usage_count + 1 } : p)
+        prev.map(p => p.id === prompt.id ? { ...p, usage_count: p.usage_count + 1, last_used_at: now } : p)
       )
     } catch {
       toast.error('Kopieren fehlgeschlagen')

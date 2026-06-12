@@ -43,7 +43,7 @@ export default function CollectionPage() {
     removeFromCollection,
     removeItemAt,
   } = useCollectionPrompts(id)
-  const { updatePrompt, deletePrompt, copyPrompt } = usePrompts()
+  const { updatePrompt, deletePrompt, copyPrompt, toggleFavorite, setRating } = usePrompts()
 
   const [modalOpen, setModalOpen] = useState(false)
   const [modalPrompt, setModalPrompt] = useState<Prompt | null>(null)
@@ -185,6 +185,8 @@ export default function CollectionPage() {
                       setDeleteIndex(index)
                     }}
                     onRemoveFromCollection={() => removeFromCollection(index)}
+                    onToggleFavorite={() => toggleFavorite(item.prompt)}
+                    onSetRating={(rating) => setRating(item.prompt, rating)}
                   />
                 ))}
               </div>

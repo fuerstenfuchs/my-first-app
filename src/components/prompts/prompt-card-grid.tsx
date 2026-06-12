@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X, Heart, Images, Video } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -46,8 +46,10 @@ interface PromptCardGridProps {
   onEdit: () => void
   onDelete: () => void
   onAddToCollection?: () => void
+  onRemoveFromCollection?: () => void
   onToggleFavorite: () => void
   onSetRating: (rating: number | null) => void
+  dragHandleSlot?: React.ReactNode
 }
 
 export function PromptCardGrid({
@@ -57,8 +59,10 @@ export function PromptCardGrid({
   onEdit,
   onDelete,
   onAddToCollection,
+  onRemoveFromCollection,
   onToggleFavorite,
   onSetRating,
+  dragHandleSlot,
 }: PromptCardGridProps) {
   const [imgError, setImgError] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -174,6 +178,13 @@ export function PromptCardGrid({
             </div>
           )}
 
+          {/* Bottom-left: drag handle (when in sortable context) */}
+          {dragHandleSlot && (
+            <div className="absolute bottom-2 left-2 z-10">
+              {dragHandleSlot}
+            </div>
+          )}
+
           {/* Top-left: media badge + monospace category badge */}
           <div className="absolute top-2 left-2 z-10 flex items-center gap-1 pointer-events-none flex-wrap max-w-[calc(100%-4rem)]">
             {firstMediaType === 'video' ? (
@@ -224,6 +235,12 @@ export function PromptCardGrid({
                   <DropdownMenuItem onClick={onAddToCollection}>
                     <FolderPlus className="mr-2 h-4 w-4" />
                     Zu Sammlung hinzufügen
+                  </DropdownMenuItem>
+                )}
+                {onRemoveFromCollection && (
+                  <DropdownMenuItem onClick={onRemoveFromCollection}>
+                    <FolderMinus className="mr-2 h-4 w-4" />
+                    Aus Sammlung entfernen
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />

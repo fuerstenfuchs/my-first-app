@@ -25,6 +25,7 @@ PromptDB ist eine persönliche KI-Prompt-Management-Plattform für KI-Power-User
 | P2 | Visuelles Redesign & Cover-Bilder | Spec fertig ✓ |
 | P1 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | Spec fertig ✓ |
 | P1 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Spec fertig ✓ |
+| P2 | Browser-Extension – Phase 1: Prompt Picker (Chrome/Edge/Brave) | Spec fertig ✓ |
 
 ## Success Metrics
 - Nutzer hat alle seine Prompts in PromptDB migriert (>20 Prompts)
