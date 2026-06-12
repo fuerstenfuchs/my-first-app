@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 
+export interface PreviewMediaItem {
+  type: 'image' | 'video'
+  url: string
+  sort_order: number
+}
+
 export interface Prompt {
   id: string
   user_id: string
@@ -17,6 +23,11 @@ export interface Prompt {
   is_favorite: boolean
   created_at: string
   updated_at: string
+  preview_media: PreviewMediaItem[]
+}
+
+interface RawPromptRow extends Omit<Prompt, 'preview_media'> {
+  prompt_media: Array<{ type: string; url: string; sort_order: number }> | null
 }
 
 export interface PromptInput {
@@ -35,12 +46,18 @@ export function usePrompts() {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('prompts')
-      .select('*')
+      .select('*, prompt_media(type, url, sort_order)')
       .order('created_at', { ascending: false })
     if (error) {
       toast.error('Fehler beim Laden der Prompts')
     } else {
-      setPrompts(data ?? [])
+      setPrompts((data as unknown as RawPromptRow[]).map(({ prompt_media, ...row }) => ({
+        ...row,
+        preview_media: (prompt_media ?? [])
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .slice(0, 6)
+          .map(m => ({ type: m.type as 'image' | 'video', url: m.url, sort_order: m.sort_order })),
+      })))
     }
     setLoading(false)
   }, [])
@@ -61,7 +78,7 @@ export function usePrompts() {
       toast.error('Speichern fehlgeschlagen — bitte erneut versuchen')
       return false
     }
-    setPrompts(prev => [data, ...prev])
+    setPrompts(prev => [{ ...data, preview_media: [] }, ...prev])
     toast.success('Prompt gespeichert')
     return true
   }
@@ -78,7 +95,7 @@ export function usePrompts() {
       toast.error('Speichern fehlgeschlagen — bitte erneut versuchen')
       return false
     }
-    setPrompts(prev => prev.map(p => p.id === id ? data : p))
+    setPrompts(prev => prev.map(p => p.id === id ? { ...data, preview_media: p.preview_media } : p))
     toast.success('Prompt aktualisiert')
     return true
   }
@@ -157,7 +174,7 @@ export function usePrompts() {
       toast.error('Import fehlgeschlagen — bitte erneut versuchen')
       return 0
     }
-    setPrompts(prev => [...(data ?? []), ...prev])
+    setPrompts(prev => [...(data ?? []).map(p => ({ ...p, preview_media: [] as PreviewMediaItem[] })), ...prev])
     return data?.length ?? 0
   }
 

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X, Heart } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X, Heart, Images, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { tagColorClass } from '@/lib/tag-colors'
 import { StarRating } from '@/components/prompts/star-rating'
+import { useCardCarousel } from '@/hooks/use-card-carousel'
 import type { Prompt } from '@/hooks/use-prompts'
 
 const GRADIENTS = [
@@ -61,10 +62,32 @@ export function PromptCardGrid({
 }: PromptCardGridProps) {
   const [imgError, setImgError] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [mediaVisible, setMediaVisible] = useState(false)
+
+  const { currentIndex, isCarouselActive, onMouseEnter: carouselEnter, onMouseLeave: carouselLeave } = useCardCarousel(prompt.preview_media)
+
   const gradient = gradientForTitle(prompt.title)
   const showGradient = !prompt.cover_image_url || imgError
   const visibleTags = prompt.tags.slice(0, 3)
   const badgeTag = prompt.tags[0]
+
+  const mediaCount = prompt.preview_media.length
+  const firstMediaType = prompt.preview_media[0]?.type
+  const dotCount = Math.min(mediaCount, 5)
+
+  function handleMouseEnter() {
+    setMediaVisible(true)
+    carouselEnter()
+  }
+
+  function handleMouseLeave() {
+    carouselLeave()
+  }
+
+  function handleCardClick() {
+    carouselLeave()
+    onClick()
+  }
 
   return (
     <>
@@ -75,7 +98,9 @@ export function PromptCardGrid({
           backdropFilter: 'blur(8px)',
           border: '1px solid rgba(255,255,255,0.08)',
         }}
-        onClick={onClick}
+        onClick={handleCardClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         variants={cardVariants}
         whileHover={{
           y: -3,
@@ -83,10 +108,10 @@ export function PromptCardGrid({
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >
-        {/* 16:9 image + all overlays */}
+        {/* 16:9 image zone */}
         <div className="relative aspect-video overflow-hidden">
 
-          {/* Background: image or gradient */}
+          {/* Base layer: cover image or gradient — always visible */}
           {showGradient ? (
             <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
           ) : (
@@ -99,14 +124,74 @@ export function PromptCardGrid({
             />
           )}
 
-          {/* Top-left: monospace category badge */}
-          {badgeTag && (
-            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+          {/* Carousel overlay layers — rendered after first hover, pointer-events-none */}
+          {mediaVisible && prompt.preview_media.map((media, i) => {
+            const isActive = isCarouselActive && i === currentIndex
+            return (
+              <div
+                key={`overlay-${i}`}
+                className="absolute inset-0 transition-opacity duration-[400ms] ease-in-out pointer-events-none"
+                style={{ opacity: isActive ? 1 : 0 }}
+                aria-hidden
+              >
+                {media.type === 'image' ? (
+                  <img
+                    src={media.url}
+                    alt=""
+                    className="w-full h-full object-contain bg-black/60"
+                    loading="lazy"
+                  />
+                ) : isActive ? (
+                  <video
+                    src={media.url}
+                    className="w-full h-full object-contain bg-black"
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                  />
+                ) : null}
+              </div>
+            )
+          })}
+
+          {/* Dot indicators — shown when carousel active and > 1 medium */}
+          {isCarouselActive && mediaCount > 1 && (
+            <div className="absolute bottom-2 inset-x-0 z-10 flex items-center justify-center gap-1 pointer-events-none">
+              {Array.from({ length: dotCount }, (_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-200 ${
+                    i === currentIndex % dotCount
+                      ? 'w-2 h-2 bg-white shadow-sm'
+                      : 'w-1.5 h-1.5 bg-white/40'
+                  }`}
+                />
+              ))}
+              {mediaCount > 5 && (
+                <span className="text-white/50 text-[8px] ml-0.5 leading-none">…</span>
+              )}
+            </div>
+          )}
+
+          {/* Top-left: media badge + monospace category badge */}
+          <div className="absolute top-2 left-2 z-10 flex items-center gap-1 pointer-events-none flex-wrap max-w-[calc(100%-4rem)]">
+            {firstMediaType === 'video' ? (
+              <span className="inline-flex items-center bg-black/55 backdrop-blur-sm text-white/75 px-1.5 py-0.5 rounded">
+                <Video className="h-3 w-3" />
+              </span>
+            ) : mediaCount > 1 ? (
+              <span className="inline-flex items-center gap-0.5 bg-black/55 backdrop-blur-sm text-white/65 px-1.5 py-0.5 rounded font-mono text-[9px]">
+                <Images className="h-3 w-3" />
+                <span>{mediaCount}</span>
+              </span>
+            ) : null}
+            {badgeTag && (
               <span className="font-mono text-[9px] uppercase tracking-widest bg-black/55 backdrop-blur-sm text-white/65 px-2 py-0.5 rounded">
                 {badgeTag}
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Top-right: favorite + context menu */}
           <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>

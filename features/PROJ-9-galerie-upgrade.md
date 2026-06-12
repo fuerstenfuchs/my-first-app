@@ -1,6 +1,6 @@
 # PROJ-9: Prompt-Galerie Upgrade (Hover-Carousel, Video-Preview)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -83,6 +83,21 @@
 
 ## Open Questions
 - keine — Anforderungen aus Roadmap-Dokument vollständig spezifiziert
+
+---
+
+## Implementation Notes (Frontend)
+
+**Geänderte Dateien:**
+- `src/hooks/use-card-carousel.ts` (NEU) — Kapselung der Carousel-Logik: 200ms Debounce, 1.5s Auto-Advance, prefers-reduced-motion-Check via `window.matchMedia`, onMouseEnter/onMouseLeave Handler
+- `src/hooks/use-prompts.ts` (MODIFIZIERT) — `PreviewMediaItem`-Interface + `preview_media: PreviewMediaItem[]` im `Prompt`-Interface; SELECT-Query erweitert auf `*, prompt_media(type, url, sort_order)`; Daten werden client-seitig sortiert (sort_order), auf max. 6 Items gesliced, typisiert. `createPrompt`, `updatePrompt`, `importPrompts` setzen `preview_media` korrekt im lokalen State.
+- `src/components/prompts/prompt-card-grid.tsx` (MODIFIZIERT) — `mediaVisible`-State für lazy Rendering der Overlay-Schichten (Bilder laden erst beim ersten Hover); Crossfade-Overlays (opacity 400ms) per `preview_media`; Video-Elemente nur gerendert wenn Overlay aktiv; Dot-Indikatoren (max. 5 Punkte + „…") bei Carousel; Medien-Badge oben links (Video-Icon oder Images+Zahl, je nach erstem Medium-Typ); Carousel stoppt beim Öffnen des Modals (`handleCardClick`)
+
+**Implementierungs-Abweichungen vom Spec:**
+- Das Lightbox-Feature (cover_image_url → Lightbox bei Klick auf Basisbild) bleibt erhalten; Overlay-Schichten haben `pointer-events-none`, Klicks fallen durch zum Basisbild. Dies ist die erwartete Rückwärtskompatibilität.
+- `preview_media` wird nach einer Prompt-Bearbeitung (via MediaManager) im lokalen State nicht sofort aktualisiert — ein Seiten-Reload ist nötig. Dies ist eine bewusste Einschränkung für PROJ-9-Scope (kein Realtime-Subscription).
+
+**Build:** ✓ TypeScript fehlerfrei, Next.js 16.1.1 Build erfolgreich (2026-06-12)
 
 ---
 
