@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { tagColorClass } from '@/lib/tag-colors'
+import { StarRating } from '@/components/prompts/star-rating'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,8 @@ interface PromptListRowProps {
   onEdit: () => void
   onDelete: () => void
   onAddToCollection?: () => void
+  onToggleFavorite: () => void
+  onSetRating: (rating: number | null) => void
 }
 
 export function PromptListRow({
@@ -52,6 +55,8 @@ export function PromptListRow({
   onEdit,
   onDelete,
   onAddToCollection,
+  onToggleFavorite,
+  onSetRating,
 }: PromptListRowProps) {
   const [imgError, setImgError] = useState(false)
   const gradient = gradientForTitle(prompt.title)
@@ -98,11 +103,25 @@ export function PromptListRow({
         )}
       </div>
 
+      {/* Stars */}
+      <div className="shrink-0 hidden sm:block" onClick={e => e.stopPropagation()}>
+        <StarRating value={prompt.rating} onChange={onSetRating} />
+      </div>
+
       {/* Date */}
-      <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{date}</span>
+      <span className="text-xs text-muted-foreground shrink-0 hidden md:block">{date}</span>
 
       {/* Actions */}
       <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={`h-7 w-7 transition-opacity ${prompt.is_favorite ? 'opacity-100 text-rose-500' : 'opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-rose-500'}`}
+          onClick={onToggleFavorite}
+        >
+          <Heart className={`h-3.5 w-3.5 ${prompt.is_favorite ? 'fill-rose-500' : ''}`} />
+          <span className="sr-only">Favorit</span>
+        </Button>
         <Button
           size="icon"
           variant="ghost"

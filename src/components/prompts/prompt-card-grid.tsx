@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, X, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { tagColorClass } from '@/lib/tag-colors'
+import { StarRating } from '@/components/prompts/star-rating'
 import type { Prompt } from '@/hooks/use-prompts'
 
 const GRADIENTS = [
@@ -44,6 +45,8 @@ interface PromptCardGridProps {
   onEdit: () => void
   onDelete: () => void
   onAddToCollection?: () => void
+  onToggleFavorite: () => void
+  onSetRating: (rating: number | null) => void
 }
 
 export function PromptCardGrid({
@@ -53,6 +56,8 @@ export function PromptCardGrid({
   onEdit,
   onDelete,
   onAddToCollection,
+  onToggleFavorite,
+  onSetRating,
 }: PromptCardGridProps) {
   const [imgError, setImgError] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -103,8 +108,17 @@ export function PromptCardGrid({
             </div>
           )}
 
-          {/* Top-right: context menu */}
-          <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
+          {/* Top-right: favorite + context menu */}
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 bg-black/50 hover:bg-black/70 transition-opacity ${prompt.is_favorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              onClick={onToggleFavorite}
+            >
+              <Heart className={`h-4 w-4 transition-colors ${prompt.is_favorite ? 'fill-rose-500 text-rose-500' : 'text-white'}`} />
+              <span className="sr-only">Favorit</span>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -160,18 +174,23 @@ export function PromptCardGrid({
           {prompt.description && (
             <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{prompt.description}</p>
           )}
-          {visibleTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {visibleTags.map(tag => (
-                <span
-                  key={tag}
-                  className={`text-[10px] px-1.5 py-0 rounded font-mono leading-5 ${tagColorClass(tag)}`}
-                >
-                  #{tag}
-                </span>
-              ))}
+          <div className="flex items-center justify-between gap-2 mt-2">
+            {visibleTags.length > 0 ? (
+              <div className="flex flex-wrap gap-1 min-w-0">
+                {visibleTags.map(tag => (
+                  <span
+                    key={tag}
+                    className={`text-[10px] px-1.5 py-0 rounded font-mono leading-5 ${tagColorClass(tag)}`}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            ) : <div />}
+            <div onClick={e => e.stopPropagation()}>
+              <StarRating value={prompt.rating} onChange={onSetRating} />
             </div>
-          )}
+          </div>
         </div>
       </motion.div>
 

@@ -13,6 +13,8 @@ export interface Prompt {
   tags: string[]
   usage_count: number
   cover_image_url: string | null
+  rating: number | null
+  is_favorite: boolean
   created_at: string
   updated_at: string
 }
@@ -92,6 +94,27 @@ export function usePrompts() {
     return true
   }
 
+  async function toggleFavorite(prompt: Prompt): Promise<void> {
+    const supabase = createClient()
+    const next = !prompt.is_favorite
+    const { error } = await supabase
+      .from('prompts')
+      .update({ is_favorite: next })
+      .eq('id', prompt.id)
+    if (error) { toast.error('Fehler beim Aktualisieren'); return }
+    setPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, is_favorite: next } : p))
+  }
+
+  async function setRating(prompt: Prompt, rating: number | null): Promise<void> {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('prompts')
+      .update({ rating })
+      .eq('id', prompt.id)
+    if (error) { toast.error('Fehler beim Speichern der Bewertung'); return }
+    setPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, rating } : p))
+  }
+
   async function copyPrompt(prompt: Prompt): Promise<void> {
     try {
       await navigator.clipboard.writeText(prompt.content)
@@ -138,5 +161,5 @@ export function usePrompts() {
     return data?.length ?? 0
   }
 
-  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, importPrompts }
+  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, importPrompts, toggleFavorite, setRating }
 }

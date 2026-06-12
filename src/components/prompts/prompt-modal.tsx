@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Copy, Pencil } from 'lucide-react'
+import { Copy, Pencil, Heart } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { CoverImagePicker } from '@/components/prompts/cover-image-picker'
+import { StarRating } from '@/components/prompts/star-rating'
 import type { Prompt, PromptInput } from '@/hooks/use-prompts'
 
 type ModalMode = 'view' | 'edit' | 'create'
@@ -27,9 +28,11 @@ interface PromptModalProps {
   mode: ModalMode
   onSave: (input: PromptInput) => Promise<boolean>
   onCopy?: () => void
+  onToggleFavorite?: () => void
+  onSetRating?: (rating: number | null) => void
 }
 
-export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, onCopy }: PromptModalProps) {
+export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, onCopy, onToggleFavorite, onSetRating }: PromptModalProps) {
   const [mode, setMode] = useState<ModalMode>(initialMode)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -121,7 +124,20 @@ export function PromptModal({ open, onClose, prompt, mode: initialMode, onSave, 
                 ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">{prompt.usage_count}× kopiert</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">{prompt.usage_count}× kopiert</p>
+              <div className="flex items-center gap-3">
+                {onSetRating && (
+                  <StarRating value={prompt.rating} onChange={onSetRating} size="md" />
+                )}
+                {onToggleFavorite && (
+                  <button onClick={onToggleFavorite} className="transition-colors">
+                    <Heart className={`h-5 w-5 ${prompt.is_favorite ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground hover:text-rose-400'}`} />
+                    <span className="sr-only">Favorit</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
