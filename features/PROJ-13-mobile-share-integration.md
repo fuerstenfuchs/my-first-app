@@ -1,6 +1,6 @@
 # PROJ-13: Mobile Share Integration (Android & iOS)
 
-## Status: Planned
+## Status: Architected
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -99,12 +99,107 @@
 <!-- Added by /architecture -->
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Web Share Target via manifest.json (kein JS) | Browser-nativer Mechanismus; keine externe Bibliothek nötig; funktioniert auf Android Chrome + iOS Safari 16.4+ | 2026-06-12 |
+| `/share`-Route als Share-Target-Endpoint | Next.js App Router kann POST-Requests empfangen; parst Form-Daten und leitet weiter | 2026-06-12 |
+| `sessionStorage` für pending Payload (nicht URL-Parameter) | Prompt-Texte können sehr lang sein (>2000 Zeichen); URL-Parameter haben Längenbeschränkungen und sind sichtbar in Logs; sessionStorage hält Daten durch Page-Refresh | 2026-06-12 |
+| Keine neuen npm-Pakete | PWA-Setup (Manifest + SW) ist plain-file; install-prompt ist Browser-API; unnötige Abhängigkeiten vermieden | 2026-06-12 |
+| Minimaler Service Worker ohne Offline-Cache | Nur Installierbarkeit als Ziel in Phase 1; Offline-Modus ist eigenes Feature (offen in Open Questions) | 2026-06-12 |
+| `localStorage` für "Banner dismissed"-Flag | Muss über Sessions hinaus erhalten bleiben; `sessionStorage` würde Flag bei jedem Browser-Start zurücksetzen | 2026-06-12 |
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Komponenten-Struktur
+
+```
+App
+├── public/
+│   ├── manifest.json          [NEU] PWA-Manifest mit share_target
+│   ├── sw.js                  [NEU] Minimaler Service Worker (~10 Zeilen)
+│   └── icons/                 [NEU] App-Icons (192×192, 512×512 PNG)
+│
+├── Root Layout                [ÄNDERN] <link rel="manifest"> + SW-Registrierung
+│
+├── /share Route               [NEU] Empfängt OS-Share, speichert in sessionStorage
+│   └── → eingeloggt: Weiterleitung zu /?from=share
+│       → nicht eingeloggt: Weiterleitung zu /login?from=share
+│
+├── Login Form                 [ÄNDERN] Nach Login: prüft auf pending Payload
+│   └── Wenn vorhanden: Weiterleitung zu /?from=share statt /
+│
+├── Main Page                  [ÄNDERN] Erkennt ?from=share
+│   └── Liest sessionStorage → öffnet Quick Capture mit vorausgefüllten Feldern
+│
+├── Quick Capture Modal        [ÄNDERN] Neues Feld source_url + initialValues-Prop
+│
+├── PwaInstallBanner           [NEU] Einmaliger Mobile-Hinweis
+│   └── "Installieren" / "Schließen" (dauerhaft)
+│
+├── Einstellungen              [ÄNDERN] Option "PromptDB installieren"
+│
+├── Prompt Card Grid           [ÄNDERN] Link-Icon wenn source_url gesetzt
+├── Prompt List Row            [ÄNDERN] Link-Icon wenn source_url gesetzt
+└── Prompt Modal               [ÄNDERN] source_url-Feld in Edit + Detail
+```
+
+### Share-Flow (Datenfluss)
+
+```
+Native Share Sheet (Android / iOS)
+↓
+POST → /share  (definiert im manifest.json als share_target)
+↓
+/share-Seite parst: text → content, url → source_url, title
+↓ Speichert als "pending_share_payload" in sessionStorage
+↓
+┌─────────────────────────────────────────────────┐
+│ Eingeloggt?                                     │
+│   JA  → Redirect zu /?from=share               │
+│   NEIN → Redirect zu /login?from=share         │
+└─────────────────────────────────────────────────┘
+       ↓ (nach Login)
+Login-Seite erkennt ?from=share → nach Erfolg: Redirect zu /?from=share
+
+Main Page erkennt ?from=share:
+↓ Liest + löscht sessionStorage-Payload
+↓ Öffnet Quick Capture mit vorausgefüllten Feldern
+↓ Generiert Titel aus ersten 40–60 Zeichen (wenn kein Titel vorhanden)
+↓ User speichert → Prompt landet in DB mit source_url
+```
+
+### Datenmodell
+
+Zwei neue Felder auf der bestehenden `prompts`-Tabelle (gelten für alle Prompts):
+
+| Feld | Typ | Pflicht | Beschreibung |
+|------|-----|---------|--------------|
+| `source_url` | TEXT | Nein | URL der Quelle (manuell oder per Share) |
+| `source_type` | TEXT | Nein | Plattformname z.B. "Reddit" — Phase 2 befüllt dies automatisch |
+
+### PWA-Infrastruktur
+
+| Datei | Zweck |
+|---|---|
+| `public/manifest.json` | Macht PromptDB installierbar; definiert `/share` als Share-Target mit `text`, `url`, `title` |
+| `public/sw.js` | Minimaler Service Worker — erfüllt Browser-Installierbarkeits-Anforderung; kein Offline-Cache in Phase 1 |
+| Root Layout | Bindet Manifest ein, registriert Service Worker |
+
+### Install-Banner-Logik
+
+```
+PwaInstallBanner
+├── Wartet auf "beforeinstallprompt"-Event
+├── Bedingungen: Mobile + nicht im Standalone-Mode + nicht bereits geschlossen
+├── [Installieren] → nativer OS-Dialog
+└── [Schließen]    → localStorage-Flag gesetzt, Banner nie wieder automatisch
+iOS < 16.4: Banner wird nicht angezeigt (kein Web Share Target möglich)
+```
+
+### Neue Pakete
+
+Keine neuen npm-Pakete erforderlich. Alles basiert auf Next.js App Router, `sessionStorage`, `localStorage` und dem `beforeinstallprompt`-Browser-Event.
 
 ## QA Test Results
 _To be added by /qa_
