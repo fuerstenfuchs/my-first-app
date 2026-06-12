@@ -105,7 +105,7 @@
 ## Open Questions
 
 - [ ] Soll der FAB auf der Login-Seite und der Reset-Seite ausgeblendet werden? (Empfehlung: Ja — nur für eingeloggte Nutzer sichtbar)
-- [ ] Welches Icon für den FAB — einfaches „+" oder ein spezifischeres „Blitz/Capture"-Icon?
+- [x] Welches Icon für den FAB — **„+"** (Plus-Icon, einfach und universell erkennbar)
 
 ---
 
@@ -125,7 +125,64 @@
 | FAB auf allen authentifizierten Seiten sichtbar | „Fastest way to save anywhere" — Nutzer soll nicht erst auf Hauptseite navigieren müssen | 2026-06-12 |
 
 ### Technical Decisions
-<!-- Added by /architecture -->
-| Decision | Rationale | Date |
+
+| Entscheidung | Begründung | Datum |
 |---|---|---|
-| _To be added by /architecture_ | | |
+| FAB + Modal in `(app)/layout.tsx` statt in `page.tsx` | Layout umschließt alle authentifizierten Seiten; FAB muss auf Collections, Stats, Einstellungen sichtbar sein — einmalige Platzierung statt N Seiten anfassen | 2026-06-12 |
+| Custom Event `quick-capture:saved` für Grid-Update | Entkopplung zwischen layout.tsx (Modal) und page.tsx (Grid); kein Re-fetch nötig, sofortiger Update; sauberer als prop-drilling oder Context | 2026-06-12 |
+| Bild-Upload sofort beim Drop (pre-upload mit UUID) | Gleiche Strategie wie PROJ-8 — Bilder laden im Hintergrund während Nutzer tippt; Speichern-Klick fühlt sich sofort an | 2026-06-12 |
+| Keine neuen Pakete | Alle Bausteine vorhanden: shadcn/ui, sonner, lucide-react, use-prompt-media (PROJ-8) | 2026-06-12 |
+| `use-quick-capture.ts` als eigener Hook | Kapselt Q-Shortcut, isDirty, isOpen — testbar, wiederverwendbar, keine Logik in der Komponente | 2026-06-12 |
+
+---
+
+## Tech Design (Solution Architect)
+
+### Überblick
+
+PROJ-10 ist **rein frontend** — keine neuen Datenbank-Tabellen, keine Migrationen. Quick Capture nutzt exakt die gleiche Infrastruktur wie der volle Editor (PROJ-2, PROJ-8): `prompts`-Tabelle, `prompt_media`-Tabelle, `prompt-media` Storage-Bucket.
+
+### Komponenten-Struktur
+
+```
+src/app/(app)/layout.tsx (MODIFIZIERT)
++-- SidebarProvider
+|   +-- AppSidebar
+|   +-- SidebarInset
+|       +-- {children}               ← alle App-Seiten unverändert
++-- QuickCaptureFAB (NEU)            ← floating "+" Button, unten rechts, fixed
++-- QuickCaptureModal (NEU)          ← öffnet sich bei FAB-Klick oder Q-Shortcut
+    +-- Header: „Quick Capture" + X-Button (isDirty-Prüfung)
+    +-- Prompt-Text (Textarea, auto-focus, Pflichtfeld)
+    +-- Titel (Input, optional, Placeholder: „Wird aus Prompt-Text generiert")
+    +-- Tags (Tag-Input, optional — gleiche Komponente wie im vollen Editor)
+    +-- QuickImageDrop (NEU)
+    |   +-- Drop-Bereich (Drag & Drop + „Bilder auswählen"-Button)
+    |   +-- Thumbnail-Reihe (kleine Vorschau hochgeladener Bilder)
+    +-- Aktionsleiste: [Speichern (mit Lade-Zustand)] [Abbrechen]
+
+src/hooks/use-quick-capture.ts (NEU)
+    +-- Zustand: isOpen, isDirty
+    +-- Q-Shortcut: keydown auf document, Guard für input/textarea/contenteditable
+    +-- Methoden: open(), close()
+    +-- Auto-Titel-Generierung aus ersten 50 Zeichen (clientseitig)
+```
+
+### Datenhaltung
+
+Keine neuen Tabellen. Quick Capture speichert in dieselbe Infrastruktur wie PROJ-8:
+
+| Was | Wo |
+|---|---|
+| Prompt (Titel, Text, Tags) | `prompts`-Tabelle (Supabase, bestehende RLS) |
+| Bilder | `prompt_media`-Tabelle + `prompt-media` Storage-Bucket |
+
+**Bild-Upload-Strategie:** UUID vorab generieren → Bilder laden sofort beim Drop im Hintergrund → Speichern-Klick ist sofort fertig.
+
+### Cross-Page-Kommunikation
+
+Custom Event `quick-capture:saved` verbindet `layout.tsx` (Modal) mit `page.tsx` (Grid) ohne prop-drilling. Nach Save: Grid-Update sofort, Toast mit „Im Editor öffnen" / „Prompt ansehen".
+
+### Neue Pakete
+
+Keine.
