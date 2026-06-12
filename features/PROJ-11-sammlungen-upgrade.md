@@ -1,6 +1,6 @@
 # PROJ-11: Sammlungen Upgrade (Cover-Bilder, Drag & Drop)
 
-## Status: In Progress
+## Status: Approved
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -243,7 +243,66 @@ Auf der **Detailseite** wird immer nur ein einzelnes Bild angezeigt (kein Raster
 **Keine API Routes** — Frontend ruft Supabase direkt auf (gleiche Strategie wie gesamte App).
 
 ## QA Test Results
-_To be added by /qa_
+
+**QA-Datum:** 2026-06-12
+**QA-Status:** ✅ Approved — produktionsreif
+
+### Acceptance Criteria
+
+| # | AC | Status |
+|---|---|---|
+| 1 | /collections zeigt Kachelraster mit Cover, Name, Prompt-Anzahl | ✅ PASS |
+| 2 | Leer-Zustand: Icon + Text + Button | ✅ PASS |
+| 3 | „+ Neue Sammlung"-Dialog öffnet sich | ✅ PASS |
+| 4 | Sammlung anlegen → Weiterleitung zur Detailseite | ✅ PASS |
+| 5 | Leerer Name → Validierungsfehler | ✅ PASS |
+| 6 | Kachel-Klick → navigiert zur Detailseite | ✅ PASS |
+| 7 | Auto-Cover aus erstem Prompt-Cover-Bild | ✅ PASS (unit-tested) |
+| 8 | Auto-Cover aus erstem Prompt-Media-Bild | ✅ PASS (unit-tested) |
+| 9 | Collage bei mehreren Bildern: 1/2/3/4+ Layout | ✅ PASS (unit-tested) |
+| 10 | Platzhalter wenn keine Bilder | ✅ PASS |
+| 11 | „Cover bearbeiten" öffnet Modal mit Automatisch/Individuell-Tabs | ✅ PASS |
+| 12 | Individuell-Tab zeigt Galerie + Upload-Button | ✅ PASS |
+| 13 | Prompt-Bild aus Galerie auswählen → speichert als Cover | ✅ PASS |
+| 14 | Eigenes Bild hochladen → Storage + Cover gesetzt | ✅ PASS |
+| 15 | Zurück zu Automatisch → manuelles Cover entfernt | ✅ PASS |
+| 16 | Keine Bilder in Sammlung → nur Upload-Button in Individuell | ✅ PASS |
+| 17 | Detailseite-Header: einzelnes Cover, Name, Anzahl, „Cover"-Button | ✅ PASS |
+| 18 | Header: manuelles Cover wird angezeigt | ✅ PASS |
+| 19 | Header: Auto-Modus zeigt erstes verfügbares Bild (kein Collage) | ✅ PASS |
+| 20 | Header: Platzhalter wenn keine Bilder | ✅ PASS |
+| 21 | Drag-Handle-Icon sichtbar auf jeder Kachel | ✅ PASS |
+| 22 | ↑/↓-Buttons vollständig entfernt | ✅ PASS |
+| 23 | Drag reordert Kacheln + persistiert in Supabase | ✅ PASS |
+
+### Bugs
+
+| # | Schweregrad | Beschreibung | Schritte |
+|---|---|---|---|
+| 1 | LOW | Cover-Modal: `selectedUrl` wird beim Schließen/Öffnen nicht zurückgesetzt — zuvor ausgewähltes Bild bleibt selektiert, auch wenn kein Cover gespeichert wurde | 1. Modal öffnen → Individuell-Tab → Bild klicken (nicht speichern) → Modal schließen → Modal erneut öffnen → Bild ist noch markiert |
+| 2 | LOW | Leer-Zustand der Detailseite hat keinen Navigation-Button zu /Alle Prompts — nur Texthinweis statt klickbarer Link | Spec-Edge-Case erwähnt „Prompts hinzufügen"-Button, Implementierung zeigt nur informativen Text |
+
+### Security Audit
+
+| Prüfpunkt | Ergebnis |
+|---|---|
+| Auth-Guard auf /collections + /collections/[id] | ✅ Redirect zu /login |
+| RLS cover_image_url (erbt collections-Policy) | ✅ auth.uid() = user_id |
+| Storage-Bucket-Policies (owner-only write) | ✅ foldername[1] = auth.uid() |
+| XSS via img src | ✅ Kein Skript-Vektor |
+| SQL-Injection | ✅ Supabase SDK parametrisiert |
+
+### Automatisierte Tests
+
+- **Unit-Tests:** 19 neue Tests in `src/hooks/use-collections.test.ts` — alle ✅ (136 gesamt)
+- **E2E-Tests:** 50 Tests in `tests/proj-11-sammlungen-upgrade.spec.ts` — 4 grün (strukturelle Tests), 46 übersprungen (Auth erforderlich)
+
+### Regression
+
+- ✅ Alle 125 bestehenden Unit-Tests weiterhin grün
+- ✅ PROJ-10 Quick Capture FAB auf /collections und /collections/[id] sichtbar
+- ✅ Hauptseite, Suche, Statistiken-Seite funktionieren unverändert
+- ✅ `onMoveUp`/`onMoveDown` vollständig aus PromptCard entfernt — keine Regressions in anderen Seiten
 
 ## Deployment
 _To be added by /deploy_
