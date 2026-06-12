@@ -1,0 +1,113 @@
+# PROJ-13: Mobile Share Integration (Android & iOS)
+
+## Status: Planned
+**Created:** 2026-06-12
+**Last Updated:** 2026-06-12
+
+## Dependencies
+- PROJ-1 (Authentifizierung) — Login-Flow, Session-Management
+- PROJ-2 (Prompt-Verwaltung) — Speichern des Prompts, Datenmodell
+- PROJ-10 (Quick Capture) — Quick Capture öffnet sich mit vorausgefüllten Feldern
+
+## User Stories
+- Als KI-Power-User möchte ich Text aus einer anderen App (Reddit, Claude, ChatGPT, Gemini, Discord etc.) per Share direkt in PromptDB speichern, damit wertvolle Prompts nicht verloren gehen.
+- Als KI-Power-User möchte ich eine URL per Share in PromptDB speichern, damit ich die Quelle eines Prompts später nachschlagen kann.
+- Als KI-Power-User möchte ich auch dann per Share speichern können, wenn ich gerade nicht eingeloggt bin — nach dem Login soll der Inhalt noch vollständig vorhanden sein.
+- Als KI-Power-User möchte ich PromptDB als PWA auf meinem Telefon installieren können, damit es im nativen Share-Sheet erscheint.
+- Als KI-Power-User möchte ich bei jedem Prompt sehen, woher er stammt, damit ich den Kontext Monate später noch nachvollziehen kann.
+
+## Out of Scope
+- Sharing **aus** PromptDB heraus zu anderen Apps (WhatsApp, E-Mail, Notizen) — deferred to PROJ-15
+- `source_type`-Automatik (z.B. `reddit.com` → Badge „Reddit") — Phase 2, Datenfeld wird jetzt angelegt, Befüllung erfolgt später
+- Source-Badges pro Plattform (Reddit, Claude, ChatGPT-Icons) — Phase 2 nach source_type-Inferenz
+- Mehrere Bilder gleichzeitig teilen — Phase 2
+- Video-Sharing — Phase 2
+- Desktop-Share-Integration (kein Web Share Target auf Desktop)
+- Automatisches Abrufen des Seiteninhalts per URL (kein Web Scraping)
+
+## Acceptance Criteria
+
+### Share Flow (eingeloggt)
+
+- [ ] Angenommen PromptDB ist als PWA installiert und der User ist eingeloggt, wenn er Text aus einer anderen App teilt und PromptDB auswählt, dann öffnet sich Quick Capture mit dem geteilten Text im Content-Feld.
+- [ ] Angenommen PromptDB ist als PWA installiert und der User ist eingeloggt, wenn er eine URL teilt, dann öffnet sich Quick Capture mit der URL im `source_url`-Feld — nicht im Content-Feld.
+- [ ] Angenommen Text und URL gemeinsam geteilt werden, wenn Quick Capture sich öffnet, dann ist der Text in `content` und die URL in `source_url` vorausgefüllt.
+- [ ] Angenommen kein Titel bereitgestellt wird, wenn Quick Capture sich öffnet, dann wird ein Titelvorschlag aus den ersten 40–60 Zeichen des Contents generiert; der User kann ihn vor dem Speichern bearbeiten.
+- [ ] Angenommen nur eine URL geteilt wird (kein Text), wenn Quick Capture sich öffnet, dann ist der Titel „Shared Link", das Content-Feld ist leer und `source_url` ist vorausgefüllt.
+- [ ] Angenommen ein einzelnes Bild geteilt wird, wenn Quick Capture sich öffnet, dann wird das Bild als Cover-Bild gesetzt.
+
+### Auth Edge Case (nicht eingeloggt)
+
+- [ ] Angenommen PromptDB ist als PWA installiert und der User ist **nicht** eingeloggt, wenn er Inhalt teilt und PromptDB öffnet, dann wird der geteilte Inhalt als pending Payload in `sessionStorage` gespeichert und der Login-Screen wird angezeigt.
+- [ ] Angenommen ein pending Share-Payload existiert, wenn der User sich erfolgreich einloggt, dann öffnet sich Quick Capture direkt (ohne Umweg über die Hauptseite) mit dem vollständig vorausgefüllten Inhalt.
+- [ ] Angenommen ein pending Share-Payload existiert und der Login **schlägt fehl**, dann bleibt der Payload erhalten für den nächsten Login-Versuch.
+- [ ] Angenommen die App wird während des Login-Flows neu geladen, dann wird der Payload aus dem `sessionStorage` wiederhergestellt; Quick Capture öffnet sich nach erfolgreichem Login mit dem Inhalt.
+- [ ] Angenommen der `sessionStorage` wurde geleert bevor der Login abgeschlossen war, dann öffnet sich Quick Capture leer und zeigt einen Hinweis: „Inhalt konnte nicht wiederhergestellt werden."
+
+### PWA Install-Banner
+
+- [ ] Angenommen der User öffnet PromptDB auf einem mobilen Gerät, die App ist nicht als PWA installiert, und der User hat den Banner noch nicht weggeklickt, dann wird ein Install-Banner angezeigt mit dem Text: „Installiere PromptDB, um Prompts direkt aus dem Share-Menü zu speichern."
+- [ ] Angenommen der Install-Banner ist sichtbar, wenn der User auf „Installieren" tippt, dann öffnet sich der native „Zum Startbildschirm hinzufügen"-Dialog des Browsers.
+- [ ] Angenommen der Install-Banner ist sichtbar, wenn der User auf „Schließen" tippt, dann wird der Banner dauerhaft ausgeblendet (wird nie wieder automatisch gezeigt).
+- [ ] Angenommen der User hat den Banner weggeklickt, dann ist in den Einstellungen weiterhin die Option „PromptDB installieren" vorhanden, die denselben nativen Dialog öffnet.
+- [ ] Angenommen die App ist bereits als PWA installiert, dann wird der Install-Banner nie gezeigt.
+
+### source_url in der UI
+
+- [ ] Angenommen ein Prompt hat eine `source_url`, wenn er in der Grid-Ansicht angezeigt wird, dann ist ein Link-Icon sichtbar, das beim Klick die URL in einem neuen Tab öffnet (Tooltip: „Quelle öffnen").
+- [ ] Angenommen ein Prompt hat **keine** `source_url`, dann wird kein Link-Icon auf der Karte angezeigt.
+- [ ] Angenommen der User erstellt oder bearbeitet einen Prompt, dann gibt es ein optionales Feld „Quell-Link" mit dem Placeholder `https://...`.
+- [ ] Angenommen ein Prompt hat eine `source_url`, wenn der User die Detailansicht öffnet, dann wird die Quelle mit dem vollen URL und einem „Quelle öffnen"-Button angezeigt.
+- [ ] Angenommen der User gibt im Feld „Quell-Link" eine URL ein, die kein gültiges URL-Format hat, dann wird eine Validierungsfehlermeldung angezeigt.
+
+## Edge Cases
+- **Sehr langer geteilter Text (> 10.000 Zeichen):** Inhalt wird vollständig übergeben; Quick Capture zeigt alle Zeichen (kein Truncate ohne Warnung).
+- **App läuft bereits im Vordergrund:** Share-Parameter werden verarbeitet und Quick Capture öffnet sich über der aktuellen Ansicht.
+- **Kein Internet beim Öffnen via Share:** Quick Capture öffnet sich mit vorausgefülltem Inhalt; beim Speichern erscheint eine Fehlermeldung wenn der Upload fehlschlägt.
+- **User teilt aus einer App die kein Text/URL mitgibt** (nur App-Name): Quick Capture öffnet sich leer.
+- **iOS Safari < 16.4:** Web Share Target nicht unterstützt; Install-Banner wird auf diesen Geräten nicht angezeigt (kein PWA-Install möglich); User sieht keine Share-Option.
+- **Android Chrome ohne PWA-Installation:** Install-Banner erscheint; bevor die App installiert ist, erscheint PromptDB nicht im Share-Sheet.
+
+## Technical Requirements
+- Web Share Target API (Manifest V3 `share_target` Eintrag)
+- PWA-Manifest mit `start_url`, `display: standalone`, `icons`
+- Service Worker (minimal, nur für PWA-Installierbarkeit erforderlich)
+- `sessionStorage` für pending Share-Payload (kein `localStorage`, da Payload nach Browser-Session ablaufen soll)
+- Neue Datenbank-Felder: `source_url TEXT` und `source_type TEXT` auf der `prompts`-Tabelle
+- Platform: Android (Chrome 75+) und iOS (Safari 16.4+)
+
+## Open Questions
+- [ ] Soll PromptDB einen Offline-Modus bekommen (Service Worker mit Caching)? Das ist technisch mit PWA verbunden, aber nicht im Scope von PROJ-13.
+- [ ] Wie soll Quick Capture reagieren, wenn der User per Share ein Bild teilt, das zu groß ist (> Supabase Storage Limit)? Fehlermeldung oder automatisches Downsampling?
+
+## Decision Log
+
+### Product Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Nur Capture INTO PromptDB; kein Share OUT | Kern-Mission ist Prompt-Acquisition; Share-Out ist Phase 2 (PROJ-15) | 2026-06-12 |
+| `source_url` als eigenes Feld statt Notes | Quell-Metadaten sind wertvoller Knowledge-Graph; soll nicht in Freitext versteckt werden | 2026-06-12 |
+| `source_type` jetzt anlegen, Befüllung Phase 2 | Datenmigration vermeiden; Feld ist bereit wenn Inferenz-Logik implementiert wird | 2026-06-12 |
+| URL bei geteilter URL-only → `source_url`, nicht `content` | URL ist Metadatum, kein Prompt-Inhalt; Trennung von Quelle und Inhalt ist explizites Design-Prinzip | 2026-06-12 |
+| Titel auto-generiert aus ersten 40–60 Zeichen | Reduziert Reibung beim Speichern; User kann jederzeit überschreiben | 2026-06-12 |
+| Pending Payload in `sessionStorage` (nicht `localStorage`) | Payload soll nach Browser-Session ablaufen; kein dauerhafter Rückstand in Storage | 2026-06-12 |
+| Install-Banner einmalig, permanent schließbar | Persönliche App — kein Marketing-Spam; Feature-Discovery reicht einmal | 2026-06-12 |
+| Install-Option permanent in Einstellungen | User soll Installation jederzeit nachholen können ohne erneutes Suchen | 2026-06-12 |
+| Phase 1: nur Einzelbild; mehrere Bilder Phase 2 | Web Share Target für Mehrfach-Bilder komplex; Einzelfall abdecken reicht für Launch | 2026-06-12 |
+
+### Technical Decisions
+<!-- Added by /architecture -->
+| Decision | Rationale | Date |
+|----------|-----------|------|
+
+---
+<!-- Sections below are added by subsequent skills -->
+
+## Tech Design (Solution Architect)
+_To be added by /architecture_
+
+## QA Test Results
+_To be added by /qa_
+
+## Deployment
+_To be added by /deploy_
