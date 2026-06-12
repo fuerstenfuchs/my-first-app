@@ -88,11 +88,11 @@ export default function PromptsPage() {
     setModalOpen(true)
   }
 
-  async function handleSave(input: PromptInput): Promise<boolean> {
+  async function handleSave(input: PromptInput, promptId?: string): Promise<boolean> {
     if (modalPrompt?.id) {
       return updatePrompt(modalPrompt.id, input)
     }
-    return createPrompt(input)
+    return createPrompt(input, promptId)
   }
 
   async function handleDeleteConfirm() {

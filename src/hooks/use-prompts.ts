@@ -49,12 +49,12 @@ export function usePrompts() {
     fetchPrompts()
   }, [fetchPrompts])
 
-  async function createPrompt(input: PromptInput): Promise<boolean> {
+  async function createPrompt(input: PromptInput, id?: string): Promise<boolean> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data, error } = await supabase
       .from('prompts')
-      .insert({ ...input, user_id: user!.id })
+      .insert({ ...input, user_id: user!.id, ...(id ? { id } : {}) })
       .select()
       .single()
     if (error) {
