@@ -86,7 +86,7 @@ export default function PromptsPage() {
   }
 
   async function handleSave(input: PromptInput): Promise<boolean> {
-    if (modalMode === 'edit' && modalPrompt) {
+    if (modalPrompt?.id) {
       return updatePrompt(modalPrompt.id, input)
     }
     return createPrompt(input)
