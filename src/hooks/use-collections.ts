@@ -218,7 +218,7 @@ export function useCollectionPrompts(collectionId: string) {
       supabase.from('collections').select('name, cover_image_url').eq('id', collectionId).single(),
       supabase
         .from('collection_prompts')
-        .select('id, sort_order, prompt:prompts(*)')
+        .select('id, sort_order, prompt:prompts(*, prompt_media(type, url, sort_order))')
         .eq('collection_id', collectionId)
         .order('sort_order', { ascending: true }),
     ])
@@ -230,11 +230,23 @@ export function useCollectionPrompts(collectionId: string) {
       toast.error('Fehler beim Laden der Sammlung')
     } else {
       setItems(
-        (rows ?? []).map(r => ({
-          id: r.id as string,
-          sort_order: r.sort_order as number,
-          prompt: r.prompt as unknown as Prompt,
-        }))
+        (rows ?? []).map(r => {
+          const raw = r.prompt as unknown as {
+            prompt_media?: Array<{ type: string; url: string; sort_order: number }>
+            [key: string]: unknown
+          }
+          const { prompt_media, ...rest } = raw ?? {}
+          return {
+            id: r.id as string,
+            sort_order: r.sort_order as number,
+            prompt: {
+              ...rest,
+              preview_media: (prompt_media ?? [])
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map(m => ({ type: m.type as 'image' | 'video', url: m.url, sort_order: m.sort_order })),
+            } as Prompt,
+          }
+        })
       )
     }
     setLoading(false)
