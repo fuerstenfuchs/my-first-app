@@ -26,7 +26,7 @@
 
 | PROJ-8  | Mehrere Medien pro Prompt (Bilder & Videos) | Deployed | [PROJ-8](PROJ-8-mehrere-medien.md) | 2026-06-12 |
 | PROJ-9  | Prompt-Galerie Upgrade (Hover-Carousel, Video-Preview) | Deployed | [PROJ-9](PROJ-9-galerie-upgrade.md) | 2026-06-12 |
-| PROJ-10 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | Architected | [PROJ-10](PROJ-10-quick-capture.md) | 2026-06-12 |
+| PROJ-10 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | In Progress | [PROJ-10](PROJ-10-quick-capture.md) | 2026-06-12 |
 | PROJ-11 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Roadmap | — | 2026-06-12 |
 | PROJ-12 | Browser-Extension (Chrome/Edge/Brave) | Roadmap | — | 2026-06-12 |
 | PROJ-13 | Mobile Share Integration (Android & iOS) | Roadmap | — | 2026-06-12 |

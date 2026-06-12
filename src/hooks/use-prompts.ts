@@ -149,6 +149,13 @@ export function usePrompts() {
     }
   }
 
+  function prependPrompt(prompt: Prompt) {
+    setPrompts(prev => {
+      if (prev.some(p => p.id === prompt.id)) return prev
+      return [prompt, ...prev]
+    })
+  }
+
   async function importPrompts(items: Array<{
     title: string
     content: string
@@ -178,5 +185,5 @@ export function usePrompts() {
     return data?.length ?? 0
   }
 
-  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, importPrompts, toggleFavorite, setRating }
+  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, importPrompts, toggleFavorite, setRating, prependPrompt }
 }

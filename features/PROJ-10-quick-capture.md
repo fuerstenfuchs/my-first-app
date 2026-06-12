@@ -1,6 +1,6 @@
 # PROJ-10: Quick Capture (FAB, Keyboard-Shortcut, Mobile)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 

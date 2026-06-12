@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Plus, Search, X, LayoutGrid, List, Heart } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -13,6 +13,7 @@ import { PromptModal } from '@/components/prompts/prompt-modal'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
 import { TagFilterBar } from '@/components/prompts/tag-filter-bar'
 import { AddToCollectionDialog } from '@/components/collections/add-to-collection-dialog'
+import { toast } from 'sonner'
 import { usePrompts, type Prompt, type PromptInput } from '@/hooks/use-prompts'
 import { useCollections } from '@/hooks/use-collections'
 import { useViewMode } from '@/hooks/use-view-mode'
@@ -30,7 +31,7 @@ const listContainer = {
 }
 
 export default function PromptsPage() {
-  const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, toggleFavorite, setRating } = usePrompts()
+  const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, toggleFavorite, setRating, prependPrompt } = usePrompts()
   const { collections } = useCollections()
   const { viewMode, setMode } = useViewMode()
 
@@ -76,17 +77,36 @@ export default function PromptsPage() {
     setModalOpen(true)
   }
 
-  function openView(prompt: Prompt) {
+  const openView = useCallback((prompt: Prompt) => {
     setModalPrompt(prompt)
     setModalMode('view')
     setModalOpen(true)
-  }
+  }, [])
 
-  function openEdit(prompt: Prompt) {
+  const openEdit = useCallback((prompt: Prompt) => {
     setModalPrompt(prompt)
     setModalMode('edit')
     setModalOpen(true)
-  }
+  }, [])
+
+  useEffect(() => {
+    function handleQuickCaptureSaved(e: Event) {
+      const prompt = (e as CustomEvent<Prompt>).detail
+      prependPrompt(prompt)
+      toast.success('Prompt gespeichert', {
+        action: {
+          label: 'Im Editor öffnen',
+          onClick: () => openEdit(prompt),
+        },
+        cancel: {
+          label: 'Prompt ansehen',
+          onClick: () => openView(prompt),
+        },
+      })
+    }
+    window.addEventListener('quick-capture:saved', handleQuickCaptureSaved)
+    return () => window.removeEventListener('quick-capture:saved', handleQuickCaptureSaved)
+  }, [prependPrompt, openEdit, openView])
 
   async function handleSave(input: PromptInput, promptId?: string): Promise<boolean> {
     if (modalPrompt?.id) {
