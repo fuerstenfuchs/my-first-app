@@ -29,7 +29,7 @@
 | PROJ-10 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | Deployed | [PROJ-10](PROJ-10-quick-capture.md) | 2026-06-12 |
 | PROJ-11 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Deployed | [PROJ-11](PROJ-11-sammlungen-upgrade.md) | 2026-06-12 |
 | PROJ-12 | Browser-Extension (Chrome/Edge/Brave) | Deployed | [PROJ-12](PROJ-12-browser-extension.md) | 2026-06-12 |
-| PROJ-13 | Mobile Share Integration (Android & iOS) | Approved | [PROJ-13](PROJ-13-mobile-share-integration.md) | 2026-06-12 |
+| PROJ-13 | Mobile Share Integration (Android & iOS) | Deployed | [PROJ-13](PROJ-13-mobile-share-integration.md) | 2026-06-12 |
 | PROJ-14 | Smart Features (Duplikat-Erkennung, KI-Suche, Tags) | Roadmap | — | 2026-06-12 |
 
 <!-- Add features above this line -->

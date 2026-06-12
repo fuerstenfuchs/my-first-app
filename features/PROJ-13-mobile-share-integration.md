@@ -1,6 +1,6 @@
 # PROJ-13: Mobile Share Integration (Android & iOS)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -275,4 +275,19 @@ Next.js 16 renamed the proxy/middleware file convention from `middleware.ts` to 
 No regressions found across 68 E2E tests covering PROJ-1 through PROJ-12.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-12
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app
+**Vercel Deployment:** `dpl_EP2PZVh9RDsVV3LLPDAKfqYqtP7k`
+**Git tag:** `v1.13.0-PROJ-13`
+
+### Post-Deployment Verification
+
+| Check | Result |
+|-------|--------|
+| `/manifest.json` → 200 `application/json` | ✅ |
+| `manifest.json` has `share_target: /share` | ✅ |
+| `/sw.js` → 200 (accessible without auth) | ✅ |
+| `/login` → 200 | ✅ |
+| `/` unauthenticated → 307 `/login` (no query param leak) | ✅ |
+| `/share` passes through proxy (public path) | ✅ |
