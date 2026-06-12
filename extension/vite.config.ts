@@ -10,6 +10,13 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'popup.html'),
+        background: resolve(__dirname, 'src/background.ts'),
+      },
+      output: {
+        // Background SW must land at dist/background.js (referenced in manifest)
+        entryFileNames: (chunk) =>
+          chunk.name === 'background' ? '[name].js' : 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
       },
     },
   },

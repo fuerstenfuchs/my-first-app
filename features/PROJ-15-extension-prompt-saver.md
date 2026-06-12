@@ -1,6 +1,6 @@
 # PROJ-15: Extension Prompt Saver (Rechtsklick → In PromptDB speichern)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-06-13
 **Last Updated:** 2026-06-13
 
@@ -108,7 +108,91 @@
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Komponenten-Struktur
+
+```
+Extension Popup
+├── App.tsx                          [ÄNDERN] State-Machine um 'quick-capture' erweitern
+│   ├── Loading-Spinner              [unverändert]
+│   ├── LoginScreen                  [ÄNDERN] nach Login: pendingCapture prüfen
+│   ├── MainScreen                   [ÄNDERN] PendingCaptureBanner hinzufügen
+│   │   ├── Header + Search + Tabs   [unverändert]
+│   │   └── PendingCaptureBanner     [NEU] "📝 Unsaved Capture" – klickbar
+│   └── QuickCaptureScreen           [NEU] vollständiger eigener Screen
+│       ├── QuickCaptureHeader       (← Zurück | Verwerfen)
+│       ├── TitleField               (auto-fokussiert, editierbar)
+│       ├── ContentTextarea          (scrollbar, editierbar)
+│       ├── TagsInput                (kommagetrennt)
+│       ├── SourceUrlField           (vorausgefüllt mit Seiten-URL)
+│       ├── EmptyContentNotice       (Hinweis wenn kein Text ausgewählt)
+│       ├── SaveButton
+│       └── DiscardConfirmDialog     (Bestätigung vor Verwerfen)
+│
+└── Background Service Worker        [NEU] background.ts
+    ├── contextMenus.create          (beim Extension-Install einmalig)
+    └── contextMenus.onClicked       (liest Text + URL + Titel → speichert + öffnet Popup)
+```
+
+### Datenfluss
+
+```
+Nutzer rechtsklickt → "In PromptDB speichern"
+         ↓
+Background Service Worker
+  liest: selectionText (markierter Text, kann leer sein)
+  liest: tab.url (aktuelle Seiten-URL)
+  liest: tab.title (Browser-Tab-Titel)
+         ↓
+Speichert in chrome.storage.local:
+  pendingCapture = {
+    content:    markierter Text (oder leer)
+    source_url: aktuelle URL
+    title:      Vorschlag (erste 40–60 Zeichen des Textes ODER Tab-Titel)
+    timestamp:  Zeitpunkt des Captures
+  }
+         ↓
+Öffnet das Extension-Popup
+         ↓
+App.tsx startet → prüft chrome.storage.local auf pendingCapture
+         ↓
+  ┌──────────────────────────────────────────────────┐
+  │ Eingeloggt?                                      │
+  │  JA  → QuickCaptureScreen (Felder vorausgefüllt) │
+  │  NEIN → LoginScreen (pendingCapture bleibt)      │
+  │         → nach Login: "Capture wiederhergestellt" │
+  │         → QuickCaptureScreen                     │
+  └──────────────────────────────────────────────────┘
+         ↓
+Nutzer prüft, passt an, speichert
+         ↓
+Supabase INSERT (prompts: title, content, source_url, tags)
+pendingCapture aus chrome.storage.local gelöscht
+Erfolgs-Toast → Popup schließt sich
+```
+
+### Pending Capture Datenstruktur
+
+Gespeichert in `chrome.storage.local` — überlebt Browser-Neustart und Extension-Updates:
+
+| Feld | Inhalt |
+|------|--------|
+| `content` | Markierter Text (leer wenn nichts ausgewählt) |
+| `source_url` | URL der aktuellen Seite |
+| `title` | Vorschlag: erste 40–60 Zeichen des Textes, oder Tab-Titel wenn kein Text |
+| `timestamp` | Zeitpunkt — für spätere Anzeige |
+
+Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen gelöscht.
+
+### Neue Permissions in `manifest.json`
+
+| Permission | Zweck |
+|------------|-------|
+| `contextMenus` | Rechtsklick-Eintrag registrieren |
+| `activeTab` | URL und Titel des aktiven Tabs lesen |
+| `background` (Service Worker) | Context-Menu-Handler im Hintergrund |
+
+`scripting`-Permission ist **nicht nötig**: Chrome liefert den markierten Text direkt über `selectionText` im Context-Menu-Event — kein Content-Script-Injection erforderlich.
 
 ## QA Test Results
 _To be added by /qa_

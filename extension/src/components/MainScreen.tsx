@@ -1,19 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { filterPrompts } from '../lib/filter'
-import type { Prompt } from '../types'
+import type { Prompt, PendingCapture } from '../types'
 import { Header } from './Header'
 import { SearchBar } from './SearchBar'
 import { TabBar, type Tab } from './TabBar'
 import { EmptyState } from './EmptyState'
 import { PromptRow } from './PromptRow'
 import { CopyToast } from './CopyToast'
+import { PendingCaptureBanner } from './PendingCaptureBanner'
 
 interface Props {
   onLogout: () => void
+  pendingCapture: PendingCapture | null
+  onOpenCapture: () => void
 }
 
-export function MainScreen({ onLogout }: Props) {
+export function MainScreen({ onLogout, pendingCapture, onOpenCapture }: Props) {
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -74,6 +77,7 @@ export function MainScreen({ onLogout }: Props) {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <Header onLogout={onLogout} />
+      {pendingCapture && <PendingCaptureBanner onClick={onOpenCapture} />}
       <SearchBar value={query} onChange={setQuery} />
 
       {!isSearching && <TabBar active={tab} onChange={setTab} />}

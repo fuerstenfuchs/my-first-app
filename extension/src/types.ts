@@ -9,3 +9,10 @@ export interface Prompt {
   usage_count: number
   created_at: string
 }
+
+export interface PendingCapture {
+  content: string
+  source_url: string
+  title: string
+  timestamp: number
+}
