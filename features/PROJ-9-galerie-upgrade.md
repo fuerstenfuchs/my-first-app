@@ -1,6 +1,6 @@
 # PROJ-9: Prompt-Galerie Upgrade (Hover-Carousel, Video-Preview)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -98,6 +98,13 @@
 - `preview_media` wird nach einer Prompt-Bearbeitung (via MediaManager) im lokalen State nicht sofort aktualisiert — ein Seiten-Reload ist nötig. Dies ist eine bewusste Einschränkung für PROJ-9-Scope (kein Realtime-Subscription).
 
 **Build:** ✓ TypeScript fehlerfrei, Next.js 16.1.1 Build erfolgreich (2026-06-12)
+
+## Deployment
+
+**Deployed:** 2026-06-12
+**Version:** v1.9.0-PROJ-9
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app/
+**Platform:** Vercel (Auto-Deploy via GitHub push to `origin/main`)
 
 ---
 
