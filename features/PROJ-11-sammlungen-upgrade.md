@@ -1,6 +1,6 @@
 # PROJ-11: Sammlungen Upgrade (Cover-Bilder, Drag & Drop)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -305,4 +305,8 @@ Auf der **Detailseite** wird immer nur ein einzelnes Bild angezeigt (kein Raster
 - ✅ `onMoveUp`/`onMoveDown` vollständig aus PromptCard entfernt — keine Regressions in anderen Seiten
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://my-first-app-gamma-ecru.vercel.app
+- **Deployed:** 2026-06-12
+- **Git Tag:** v1.11.0-PROJ-11
+- **Vercel Deployment ID:** dpl_CB6Qoeqh8FTRzUfNkPtwcoBx5Wsk
