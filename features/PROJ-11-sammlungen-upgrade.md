@@ -120,15 +120,114 @@ _Alle Fragen geklärt — keine offenen Punkte._
 | Drag & Drop: `@dnd-kit/core` + `@dnd-kit/sortable` | Einzige DnD-Bibliothek in der gesamten App; React-nativ, Touch-Support, Keyboard-Accessibility, aktiv gepflegt; Basis für künftige Features (Collection-Ordering, Cross-Collection-DnD) | 2026-06-12 |
 
 ### Technical Decisions
-<!-- Added by /architecture -->
-| Decision | Rationale | Date |
+
+| Entscheidung | Begründung | Datum |
 |---|---|---|
-| _To be added by /architecture_ | | |
+| `cover_image_url = null` bedeutet Auto-Modus | Kein separates `cover_mode`-Feld nötig — null = automatisch, gesetzt = manuell; einfachste mögliche Implementierung | 2026-06-12 |
+| Cover-Berechnung rein client-seitig | Die Prompt-Daten inkl. `preview_media` (PROJ-9) sind beim Laden der Seite bereits vorhanden — kein zusätzlicher API-Call nötig | 2026-06-12 |
+| Neuer `collection-covers` Storage-Bucket | Saubere Trennung von `prompt-media`; ermöglicht eigene Storage-Regeln und Cleanup-Strategien | 2026-06-12 |
+| `SortablePromptCard` als Wrapper-Komponente | `PromptCard` bleibt unverändert (wird auch in anderen Kontexten genutzt); DnD-Logik ist in Collections isoliert | 2026-06-12 |
+| `DndContext` nur auf der Collections-Detailseite | Drag & Drop ist eine lokale Seiten-Funktion — kein globaler Context nötig | 2026-06-12 |
+| Reihennfolge-Persistierung: Optimistisches Update wie PROJ-4 | Gleiche bewährte Strategie — sofortiges UI-Update + Supabase-Write im Hintergrund | 2026-06-12 |
 
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Überblick
+
+PROJ-11 braucht **Backend + Frontend**:
+- Backend: 1 neue Datenbank-Spalte in der `collections`-Tabelle + 1 neuer Storage-Bucket
+- Frontend: 1 neue Seite, 4 neue Komponenten, 3 geänderte Seiten/Hooks
+
+Keine neuen Tabellen, keine Migrations-Komplexität.
+
+### Komponenten-Struktur
+
+```
+/collections  (NEUE SEITE)
++-- Header: „Sammlungen" + „+ Neue Sammlung"-Button
++-- Kachelraster
+|   +-- CollectionCard × N  (NEU)
+|       +-- CollectionCover  (NEU) → Collage oder Einzelbild oder Platzhalter
+|       +-- Name + Prompt-Anzahl
++-- Leer-Zustand: Icon + Text + „Erste Sammlung anlegen"-Button
++-- Erstell-Dialog (bestehend, bereits in Sidebar verwendet)
+
+/collections/[id]  (MODIFIZIERT)
++-- Header  (VERBESSERT)
+|   +-- CollectionCover  (NEU, geteilt) → einzelnes großes Cover-Bild
+|   +-- Sammlungsname + Prompt-Anzahl
+|   +-- „Cover bearbeiten"-Button
++-- DndContext  (NEU — @dnd-kit/core)
+|   +-- SortableContext  (NEU — @dnd-kit/sortable)
+|       +-- SortablePromptCard × N  (NEU)
+|           +-- Drag-Handle-Icon ⠿ (fix positioniert, immer sichtbar)
+|           +-- PromptCard  (bestehend, ↑/↓-Props entfernt)
++-- Leer-Zustand (unverändert)
++-- CollectionCoverModal  (NEU)
+    +-- Modus-Auswahl: „Automatisch" / „Individuell"
+    +-- Bild-Galerie (alle Bilder aus Prompts dieser Sammlung)
+    +-- „Eigenes Bild hochladen"-Button
+```
+
+**Neue Dateien (4):**
+- `src/app/(app)/collections/page.tsx` — Collections-Übersichtsseite
+- `src/components/collections/collection-card.tsx` — Visuelle Kachel für eine Sammlung
+- `src/components/collections/collection-cover.tsx` — Wiederverwendbare Cover/Collage-Anzeige (Übersicht + Detailseite)
+- `src/components/collections/collection-cover-modal.tsx` — Cover-Verwaltungs-Modal
+- `src/components/collections/sortable-prompt-card.tsx` — DnD-Wrapper um bestehende PromptCard
+
+**Geänderte Dateien (3):**
+- `src/hooks/use-collections.ts` — `cover_image_url` zum `Collection`-Interface hinzufügen; neue Funktion `updateCollectionCover()`
+- `src/app/(app)/collections/[id]/page.tsx` — Verbesserter Header, ↑/↓ durch DnD ersetzen, Cover-Modal einbinden
+- `src/components/prompts/prompt-card.tsx` — `onMoveUp` / `onMoveDown` Props entfernen (nicht mehr benötigt)
+
+### Datenhaltung
+
+```
+collections-Tabelle (ERWEITERT):
+- id            bestehend
+- user_id       bestehend
+- name          bestehend
+- cover_image_url  NEU (Text, optional) — null = Auto, gesetzt = Manuell
+- created_at    bestehend
+
+Neuer Storage-Bucket: collection-covers
+→ für hochgeladene individuelle Cover-Bilder
+→ Pfad: {user_id}/{collection_id}/{filename}
+```
+
+### Cover-Logik (client-seitig)
+
+Die `CollectionCover`-Komponente berechnet ihr Bild automatisch aus den bereits geladenen Daten:
+
+| Bedingung | Ergebnis |
+|---|---|
+| `cover_image_url` ist gesetzt | Zeigt dieses Bild (manueller Modus) |
+| Kein manuelles Cover, 1 Prompt mit Bild | Vollbild aus diesem Prompt |
+| Kein manuelles Cover, 2 Prompts mit Bild | Split-Collage (2 Bilder nebeneinander) |
+| Kein manuelles Cover, 3 Prompts mit Bild | Drei-Kacheln-Collage |
+| Kein manuelles Cover, 4+ Prompts mit Bild | 2×2-Raster mit Anzahl-Badge |
+| Keine Bilder in der Sammlung | Platzhalter (Ordner-Icon + Name) |
+
+Auf der **Detailseite** wird immer nur ein einzelnes Bild angezeigt (kein Raster) — gleiche Priorität, aber kein Collage-Rendering.
+
+### Drag & Drop
+
+- `@dnd-kit/core` stellt den `DndContext` bereit (Event-Handling, Sensoren für Maus + Touch)
+- `@dnd-kit/sortable` stellt `SortableContext` + `useSortable`-Hook bereit
+- `SortablePromptCard` nutzt `useSortable` und rendert das ⠿-Handle
+- Nach einem Drop: sofortiges Optimistic-Update des `items`-Arrays + parallele Supabase-Writes (gleiche Strategie wie bisherige `swap()`-Funktion)
+- Die bisherigen `moveUp()` und `moveDown()` Funktionen im Hook werden durch eine neue `reorder(oldIndex, newIndex)`-Funktion ersetzt
+
+### Neue Pakete
+
+| Paket | Zweck |
+|---|---|
+| `@dnd-kit/core` | DnD-Grundlage (Events, Sensoren, Kontext) |
+| `@dnd-kit/sortable` | Sortierbare Listen (SortableContext, useSortable) |
+| `@dnd-kit/utilities` | CSS-Transform-Utilities für flüssige Animationen |
 
 ## QA Test Results
 _To be added by /qa_
