@@ -24,7 +24,7 @@
 
 | PROJ-7 | Visuelles Redesign & Cover-Bilder | Deployed | [PROJ-7](PROJ-7-visuelles-redesign.md) | 2026-06-12 |
 
-| PROJ-8  | Mehrere Medien pro Prompt (Bilder & Videos) | Approved | [PROJ-8](PROJ-8-mehrere-medien.md) | 2026-06-12 |
+| PROJ-8  | Mehrere Medien pro Prompt (Bilder & Videos) | Deployed | [PROJ-8](PROJ-8-mehrere-medien.md) | 2026-06-12 |
 | PROJ-9  | Prompt-Galerie Upgrade (Hover-Carousel, Video-Preview) | Roadmap | — | 2026-06-12 |
 | PROJ-10 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | Roadmap | — | 2026-06-12 |
 | PROJ-11 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Roadmap | — | 2026-06-12 |

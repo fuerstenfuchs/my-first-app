@@ -1,6 +1,6 @@
 # PROJ-8: Mehrere Medien pro Prompt (Bilder & Videos)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -20,6 +20,13 @@
 - `MediaGallery` component: fullscreen portal overlay, keyboard nav (← → Escape), touch swipe, thumbnail strip
 - `PromptModal` updated: view mode shows thumbnail strip → opens gallery; edit mode uses MediaManager
 - `usePrompts.createPrompt` accepts optional pre-generated UUID so media uploaded before first save links correctly
+
+## Deployment
+
+- **Production URL:** https://my-first-app-gamma-ecru.vercel.app/
+- **Deployed:** 2026-06-12
+- **Git Tag:** v1.8.0-PROJ-8
+- **Migrations applied:** `create_prompt_media_table`, `create_prompt_media_storage_bucket`, `migrate_cover_image_url_to_prompt_media`
 
 ## Dependencies
 - Requires: PROJ-1 (Authentifizierung) — geschützte Routes, user_id
