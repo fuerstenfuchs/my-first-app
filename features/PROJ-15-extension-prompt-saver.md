@@ -1,6 +1,6 @@
 # PROJ-15: Extension Prompt Saver (Rechtsklick → In PromptDB speichern)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-13
 **Last Updated:** 2026-06-13
 
@@ -351,4 +351,30 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 - **Recommendation:** Deploy
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-13
+**Tag:** `v1.15.0-PROJ-15`
+**Web App:** https://my-first-app-gamma-ecru.vercel.app (keine Änderungen an der Web-App — reine Extension-Änderung)
+
+### Extension installieren / aktualisieren
+
+PROJ-15 ist eine reine Browser-Extension-Änderung. Kein Vercel-Deployment erforderlich.
+
+1. **Extension neu bauen** (falls noch nicht geschehen):
+   ```bash
+   cd extension && npm run build
+   ```
+2. **In Chrome laden:**
+   - Öffne `chrome://extensions`
+   - „Entwicklermodus" aktivieren (oben rechts)
+   - „Entpackte Extension laden" → `extension/dist/` Ordner auswählen
+3. **Bereits installierte Extension aktualisieren:**
+   - Auf der Extensions-Seite: Refresh-Symbol bei PromptDB klicken
+   - Extension-Icon im Toolbar anstecken (Pin), damit `chrome.action.openPopup()` funktioniert
+
+### Verifikation
+- [ ] Extension geladen → `chrome://extensions` zeigt PromptDB v1.1.0
+- [ ] Rechtsklick auf beliebiger Seite → „In PromptDB speichern" erscheint im Menü
+- [ ] Markierten Text rechtsklicken → Popup öffnet sich mit vorausgefülltem QuickCaptureScreen
+- [ ] Speichern → `✓ Gespeichert!` erscheint → Popup schließt sich → Prompt in Web-App sichtbar
+- [ ] Ohne Login: Capture gespeichert → Login → „✓ Capture wiederhergestellt" erscheint
