@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Search, X, LayoutGrid, List } from 'lucide-react'
+import { Plus, Search, X, LayoutGrid, List, Heart } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ export default function PromptsPage() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalPrompt, setModalPrompt] = useState<Prompt | null>(null)
   const [modalMode, setModalMode] = useState<ModalMode>('create')
@@ -56,15 +57,17 @@ export default function PromptsPage() {
         (prompt.description?.toLowerCase().includes(query) ?? false) ||
         prompt.tags.some(t => t.toLowerCase().includes(query))
       const matchesTag = !activeTag || prompt.tags.includes(activeTag)
-      return matchesSearch && matchesTag
+      const matchesFavorite = !favoritesOnly || prompt.is_favorite
+      return matchesSearch && matchesTag && matchesFavorite
     })
-  }, [prompts, searchQuery, activeTag])
+  }, [prompts, searchQuery, activeTag, favoritesOnly])
 
-  const hasActiveFilter = searchQuery.trim() !== '' || activeTag !== null
+  const hasActiveFilter = searchQuery.trim() !== '' || activeTag !== null || favoritesOnly
 
   function resetFilters() {
     setSearchQuery('')
     setActiveTag(null)
+    setFavoritesOnly(false)
   }
 
   function openCreate() {
@@ -140,6 +143,18 @@ export default function PromptsPage() {
               </button>
             )}
           </div>
+
+          {/* Favorites toggle */}
+          <Button
+            variant={favoritesOnly ? 'secondary' : 'ghost'}
+            size="icon"
+            className={`h-9 w-9 shrink-0 ${favoritesOnly ? 'text-rose-500' : ''}`}
+            onClick={() => setFavoritesOnly(v => !v)}
+            title="Nur Favoriten"
+          >
+            <Heart className={`h-4 w-4 ${favoritesOnly ? 'fill-rose-500 text-rose-500' : ''}`} />
+            <span className="sr-only">Nur Favoriten</span>
+          </Button>
 
           {/* View toggle */}
           <div className="flex items-center gap-0.5 shrink-0 border border-border rounded-md p-0.5">
