@@ -19,17 +19,23 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     ? content.slice(0, 60).trimEnd()
     : tabTitle
 
-  const pendingCapture = {
+  const newCapture = {
     content,
     source_url: sourceUrl,
     title,
     timestamp: Date.now(),
   }
 
-  chrome.storage.local.set({ pendingCapture }, () => {
-    // openPopup() requires a user gesture — works when extension is pinned to toolbar
-    chrome.action.openPopup().catch(() => {
-      // Extension not visible in toolbar; capture is saved, user opens manually
-    })
+  // If a pendingCapture already exists, store as conflict for popup to resolve
+  chrome.storage.local.get('pendingCapture', (result) => {
+    if (result.pendingCapture) {
+      chrome.storage.local.set({ pendingCaptureConflict: newCapture }, () => {
+        chrome.action.openPopup().catch(() => {})
+      })
+    } else {
+      chrome.storage.local.set({ pendingCapture: newCapture }, () => {
+        chrome.action.openPopup().catch(() => {})
+      })
+    }
   })
 })

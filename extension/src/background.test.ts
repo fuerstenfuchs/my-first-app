@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock chrome API before importing background.ts
 const mockSet = vi.fn((_data: object, cb?: () => void) => cb?.())
+const mockGet = vi.fn((_key: string, cb: (result: Record<string, unknown>) => void) => cb({}))
 const mockOpenPopup = vi.fn(() => Promise.resolve())
 const onInstalledCallback: Array<() => void> = []
 const onClickedCallback: Array<(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => void> = []
@@ -22,6 +23,7 @@ vi.stubGlobal('chrome', {
   storage: {
     local: {
       set: mockSet,
+      get: mockGet,
     },
   },
   action: {
@@ -40,7 +42,10 @@ function fireClick(info: Partial<chrome.contextMenus.OnClickData>, tab?: Partial
 describe('background service worker', () => {
   beforeEach(() => {
     mockSet.mockClear()
+    mockGet.mockClear()
     mockOpenPopup.mockClear()
+    // Default: no existing pendingCapture
+    mockGet.mockImplementation((_key: string, cb: (r: Record<string, unknown>) => void) => cb({}))
   })
 
   it('registers context menu on install', () => {
@@ -98,5 +103,29 @@ describe('background service worker', () => {
   it('opens popup after storing capture', () => {
     fireClick({ selectionText: 'test' }, { url: 'https://x.com', title: 'X' })
     expect(mockOpenPopup).toHaveBeenCalledOnce()
+  })
+
+  it('stores new capture as pendingCaptureConflict when pendingCapture already exists', () => {
+    const existing = { content: 'old', source_url: 'https://old.com', title: 'Old', timestamp: 1 }
+    mockGet.mockImplementation((_key: string, cb: (r: Record<string, unknown>) => void) =>
+      cb({ pendingCapture: existing })
+    )
+    fireClick({ selectionText: 'new capture' }, { url: 'https://new.com', title: 'New' })
+    expect(mockSet).toHaveBeenCalledOnce()
+    const [payload] = mockSet.mock.calls[0]
+    expect(payload.pendingCaptureConflict).toBeDefined()
+    expect(payload.pendingCaptureConflict.content).toBe('new capture')
+    expect(payload.pendingCapture).toBeUndefined()
+  })
+
+  it('does not overwrite existing pendingCapture directly on conflict', () => {
+    const existing = { content: 'old', source_url: 'https://old.com', title: 'Old', timestamp: 1 }
+    mockGet.mockImplementation((_key: string, cb: (r: Record<string, unknown>) => void) =>
+      cb({ pendingCapture: existing })
+    )
+    fireClick({ selectionText: 'new' }, { url: 'https://new.com', title: 'New' })
+    const [payload] = mockSet.mock.calls[0]
+    // pendingCapture should NOT be in the set payload — only conflict
+    expect(payload.pendingCapture).toBeUndefined()
   })
 })

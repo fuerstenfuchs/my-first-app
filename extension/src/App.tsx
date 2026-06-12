@@ -6,21 +6,27 @@ import { LoginScreen } from './components/LoginScreen'
 import { MainScreen } from './components/MainScreen'
 import { QuickCaptureScreen } from './components/QuickCaptureScreen'
 
-type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture'
+type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict'
 
 export function App() {
   const [state, setState] = useState<State>('loading')
   const [pendingCapture, setPendingCapture] = useState<PendingCapture | null>(null)
+  const [conflictCapture, setConflictCapture] = useState<PendingCapture | null>(null)
   const [captureRestored, setCaptureRestored] = useState(false)
 
   useEffect(() => {
     initStorage().then(async () => {
       const { data: { session } } = await supabase.auth.getSession()
 
-      const result = await chrome.storage.local.get('pendingCapture')
+      const result = await chrome.storage.local.get(['pendingCapture', 'pendingCaptureConflict'])
       const capture = result.pendingCapture as PendingCapture | undefined
+      const conflict = result.pendingCaptureConflict as PendingCapture | undefined
 
-      if (capture) {
+      if (capture && conflict) {
+        setPendingCapture(capture)
+        setConflictCapture(conflict)
+        setState(session ? 'conflict' : 'unauthenticated')
+      } else if (capture) {
         setPendingCapture(capture)
         setState(session ? 'quick-capture' : 'unauthenticated')
       } else {
@@ -32,14 +38,14 @@ export function App() {
   function handleLogin() {
     if (pendingCapture) {
       setCaptureRestored(true)
-      setState('quick-capture')
+      setState(conflictCapture ? 'conflict' : 'quick-capture')
     } else {
       setState('authenticated')
     }
   }
 
   function handleCaptureBack() {
-    // Preserve pendingCapture — banner shows on MainScreen
+    setCaptureRestored(false)
     setState('authenticated')
   }
 
@@ -56,6 +62,21 @@ export function App() {
     setTimeout(() => window.close(), 800)
   }
 
+  async function handleKeepCapture() {
+    await chrome.storage.local.remove('pendingCaptureConflict')
+    setConflictCapture(null)
+    setState('quick-capture')
+  }
+
+  async function handleReplaceCapture() {
+    if (!conflictCapture) return
+    await chrome.storage.local.set({ pendingCapture: conflictCapture })
+    await chrome.storage.local.remove('pendingCaptureConflict')
+    setPendingCapture(conflictCapture)
+    setConflictCapture(null)
+    setState('quick-capture')
+  }
+
   if (state === 'loading') {
     return (
       <div className="flex items-center justify-center flex-1">
@@ -66,6 +87,38 @@ export function App() {
 
   if (state === 'unauthenticated') {
     return <LoginScreen onLogin={handleLogin} />
+  }
+
+  if (state === 'conflict' && pendingCapture && conflictCapture) {
+    return (
+      <div className="flex flex-col flex-1 items-center justify-center p-5 gap-5">
+        <div className="text-center">
+          <div className="text-2xl mb-2">📝</div>
+          <p className="text-sm font-semibold text-zinc-100">Ungespeicherter Capture vorhanden</p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Du hast bereits einen Capture. Was möchtest du tun?
+          </p>
+        </div>
+        <div className="w-full bg-zinc-800 rounded-lg border border-zinc-700 px-3 py-2.5 text-xs text-zinc-300">
+          <span className="text-zinc-500 text-[10px] uppercase tracking-wide">Aktuell</span>
+          <p className="mt-0.5 line-clamp-2">{pendingCapture.title || pendingCapture.source_url}</p>
+        </div>
+        <div className="w-full flex flex-col gap-2">
+          <button
+            onClick={handleKeepCapture}
+            className="w-full py-2.5 rounded-lg border border-zinc-600 text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+          >
+            Alten Capture behalten
+          </button>
+          <button
+            onClick={handleReplaceCapture}
+            className="w-full py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-sm text-white font-medium transition-colors"
+          >
+            Durch neuen Capture ersetzen
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (state === 'quick-capture' && pendingCapture) {

@@ -1,6 +1,6 @@
 # PROJ-15: Extension Prompt Saver (Rechtsklick → In PromptDB speichern)
 
-## Status: In Review
+## Status: Approved
 **Created:** 2026-06-13
 **Last Updated:** 2026-06-13
 
@@ -260,7 +260,7 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 
 ### Bugs Found
 
-#### BUG-1: Fehlende `user_id` im Supabase INSERT (Kritisch)
+#### ~~BUG-1: Fehlende `user_id` im Supabase INSERT (Kritisch)~~ ✅ FIXED
 - **Severity:** Critical
 - **Datei:** `extension/src/components/QuickCaptureScreen.tsx` — `handleSave()`
 - **Ursache:** Web-App (`use-prompts.ts:79`) übergibt explizit `user_id: user!.id`. Extension-INSERT fehlt dieses Feld. Supabase-RLS erzwingt `user_id = auth.uid()` — INSERT ohne `user_id` schlägt mit RLS-Verletzung fehl.
@@ -273,7 +273,7 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 - **Fix:** `const { data: { user } } = await supabase.auth.getUser()` und `user_id: user!.id` zum INSERT hinzufügen
 - **Priority:** Fix before deployment
 
-#### BUG-2: ESC-Taste schließt Popup ohne Dirty-State-Prüfung (High)
+#### ~~BUG-2: ESC-Taste schließt Popup ohne Dirty-State-Prüfung (High)~~ ✅ FIXED
 - **Severity:** High
 - **Datei:** `extension/src/components/QuickCaptureScreen.tsx`
 - **Ursache:** Kein `keydown`-Handler für `Escape`. Chrome-Extension-Popup schließt bei ESC ohne Confirmation.
@@ -286,7 +286,7 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 - **Fix:** `useEffect` mit `keydown`-Listener: `if (event.key === 'Escape') setShowDiscardDialog(true)`
 - **Priority:** Fix before deployment
 
-#### BUG-3: „Capture wiederhergestellt"-Hinweis erscheint mehrfach (Medium)
+#### ~~BUG-3: „Capture wiederhergestellt"-Hinweis erscheint mehrfach (Medium)~~ ✅ FIXED
 - **Severity:** Medium
 - **Datei:** `extension/src/App.tsx` — `handleCaptureBack()`
 - **Ursache:** `captureRestored` wird in `handleCaptureBack()` nicht auf `false` zurückgesetzt. Nach Login → Back → Banner-Klick erscheint der Hinweis erneut.
@@ -300,7 +300,7 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 - **Fix:** `setState('authenticated')` + `setCaptureRestored(false)` in `handleCaptureBack()`
 - **Priority:** Fix before deployment
 
-#### BUG-4: Kein Erfolgs-Toast nach erfolgreichem Speichern (Medium)
+#### ~~BUG-4: Kein Erfolgs-Toast nach erfolgreichem Speichern (Medium)~~ ✅ FIXED
 - **Severity:** Medium
 - **Datei:** `extension/src/components/QuickCaptureScreen.tsx` — `handleSave()` ruft sofort `onSaved()` auf
 - **Ursache:** Nach erfolgreichem INSERT wird direkt `onSaved()` aufgerufen → App schließt Popup nach 800ms. Kein visuelles Feedback inside QuickCaptureScreen.
@@ -311,7 +311,7 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 - **Fix:** Nach erfolgreichem INSERT: Button-Text auf „✓ Gespeichert!" setzen (z.B. `setSaved(true)`), dann nach 800ms `onSaved()` aufrufen
 - **Priority:** Fix before deployment
 
-#### BUG-5: Mehrfach-Capture überschreibt ohne Bestätigung (Medium)
+#### ~~BUG-5: Mehrfach-Capture überschreibt ohne Bestätigung (Medium)~~ ✅ FIXED
 - **Severity:** Medium
 - **Datei:** `extension/src/background.ts` — `chrome.storage.local.set({ pendingCapture }, ...)`
 - **Ursache:** Ein zweiter Context-Menu-Klick überschreibt stillschweigend einen existierenden pendingCapture.
@@ -345,10 +345,10 @@ Lebensdauer: **unbegrenzt** — nur durch Speichern oder explizites Verwerfen ge
 ### Summary
 - **Acceptance Criteria:** 17/21 passed (4 fail wegen BUG-1/2/3)
 - **Edge Cases:** 6/7 passed (BUG-5: Multi-Capture-Konflikt)
-- **Bugs Found:** 6 total (1 Critical, 1 High, 3 Medium, 1 Low)
+- **Bugs Found:** 6 total (1 Critical, 1 High, 3 Medium, 1 Low) — **5/6 gefixt**
 - **Security:** Pass — minimale Permissions, RLS aktiv, kein XSS-Risiko
-- **Production Ready:** **NO — Critical + High Bugs müssen zuerst behoben werden**
-- **Recommendation:** BUG-1 (user_id), BUG-2 (ESC), BUG-3 (captureRestored), BUG-4 (Toast) vor Deployment fixen
+- **Production Ready:** **YES — alle Critical/High/Medium Bugs behoben (BUG-6 Low bleibt)**
+- **Recommendation:** Deploy
 
 ## Deployment
 _To be added by /deploy_

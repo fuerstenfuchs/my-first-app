@@ -16,10 +16,17 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   const [tags, setTags] = useState('')
   const [sourceUrl, setSourceUrl] = useState(capture.source_url)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
   const [showRestoredNotice, setShowRestoredNotice] = useState(captureRestored)
   const titleRef = useRef<HTMLInputElement>(null)
+
+  const isDirty =
+    title !== capture.title ||
+    content !== capture.content ||
+    tags !== '' ||
+    sourceUrl !== capture.source_url
 
   useEffect(() => {
     titleRef.current?.focus()
@@ -31,10 +38,32 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
     return () => clearTimeout(timer)
   }, [captureRestored])
 
+  // BUG-2 fix: ESC key dirty-state check
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      if (isDirty) {
+        setShowDiscardDialog(true)
+      } else {
+        onBack()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isDirty, onBack])
+
   async function handleSave() {
     if (!title.trim()) return
     setSaving(true)
     setError(null)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setError('Nicht eingeloggt. Bitte Popup schließen und neu anmelden.')
+      setSaving(false)
+      return
+    }
 
     const parsedTags = tags
       .split(',')
@@ -48,6 +77,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
         content: content.trim() || null,
         source_url: sourceUrl.trim() || null,
         tags: parsedTags.length > 0 ? parsedTags : null,
+        user_id: user.id,
       })
 
     setSaving(false)
@@ -55,7 +85,8 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       setError('Speichern fehlgeschlagen. Bitte erneut versuchen.')
     } else {
       await chrome.storage.local.remove('pendingCapture')
-      onSaved()
+      setSaved(true)
+      setTimeout(() => onSaved(), 800)
     }
   }
 
@@ -180,10 +211,12 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       <div className="p-3 border-t border-zinc-700 shrink-0">
         <button
           onClick={handleSave}
-          disabled={saving || !title.trim()}
-          className="w-full py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors"
+          disabled={saving || saved || !title.trim()}
+          className={`w-full py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors ${
+            saved ? 'bg-emerald-600' : 'bg-violet-600 hover:bg-violet-500'
+          }`}
         >
-          {saving ? 'Speichern…' : 'Speichern'}
+          {saved ? '✓ Gespeichert!' : saving ? 'Speichern…' : 'Speichern'}
         </button>
       </div>
     </div>
