@@ -13,7 +13,8 @@ export function useQuickCapture() {
       if (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
+        target.isContentEditable ||
+        target.getAttribute?.('contenteditable') === 'true'
       ) return
       e.preventDefault()
       setIsOpen(true)
