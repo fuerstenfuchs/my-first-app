@@ -99,7 +99,11 @@ export default function PromptsPage() {
     try {
       const payload = JSON.parse(stored)
       sessionStorage.removeItem('pending_share_payload')
-      window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: payload }))
+      // setTimeout ensures all useEffect listeners (incl. useQuickCapture in the parent layout)
+      // are registered before the event fires — child effects run before parent effects in React.
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: payload }))
+      }, 0)
     } catch {
       // Corrupt storage entry — ignore
     }
