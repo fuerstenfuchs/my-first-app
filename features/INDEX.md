@@ -24,6 +24,14 @@
 
 | PROJ-7 | Visuelles Redesign & Cover-Bilder | Deployed | [PROJ-7](PROJ-7-visuelles-redesign.md) | 2026-06-12 |
 
+| PROJ-8  | Mehrere Medien pro Prompt (Bilder & Videos) | Roadmap | — | 2026-06-12 |
+| PROJ-9  | Prompt-Galerie Upgrade (Hover-Carousel, Video-Preview) | Roadmap | — | 2026-06-12 |
+| PROJ-10 | Quick Capture (FAB, Keyboard-Shortcut, Mobile) | Roadmap | — | 2026-06-12 |
+| PROJ-11 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Roadmap | — | 2026-06-12 |
+| PROJ-12 | Browser-Extension (Chrome/Edge/Brave) | Roadmap | — | 2026-06-12 |
+| PROJ-13 | Mobile Share Integration (Android & iOS) | Roadmap | — | 2026-06-12 |
+| PROJ-14 | Smart Features (Duplikat-Erkennung, KI-Suche, Tags) | Roadmap | — | 2026-06-12 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-8
+## Next Available ID: PROJ-15
