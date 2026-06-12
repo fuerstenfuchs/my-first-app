@@ -135,4 +135,64 @@ describe('useQuickCapture', () => {
     // After unmount, isOpen stays false (listener removed)
     expect(result.current.isOpen).toBe(false)
   })
+
+  // ── initialValues ──────────────────────────────────────────────────────────
+
+  it('initialValues starts as null', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    expect(result.current.initialValues).toBeNull()
+  })
+
+  it('quick-capture:open-share event opens modal with full payload', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    const payload = { content: 'Test prompt', source_url: 'https://reddit.com/r/test', title: 'Test' }
+    act(() => {
+      window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: payload }))
+    })
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.initialValues).toEqual(payload)
+  })
+
+  it('quick-capture:open-share with null source_url is accepted', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    const payload = { content: 'Test', source_url: null, title: null }
+    act(() => {
+      window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: payload }))
+    })
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.initialValues?.source_url).toBeNull()
+  })
+
+  it('close() clears initialValues', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    act(() => {
+      window.dispatchEvent(new CustomEvent('quick-capture:open-share', {
+        detail: { content: 'x', source_url: null, title: null },
+      }))
+    })
+    expect(result.current.initialValues).not.toBeNull()
+    act(() => result.current.close())
+    expect(result.current.initialValues).toBeNull()
+    expect(result.current.isOpen).toBe(false)
+  })
+
+  it('open() sets initialValues to null (manual open clears share payload)', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    act(() => {
+      window.dispatchEvent(new CustomEvent('quick-capture:open-share', {
+        detail: { content: 'x', source_url: null, title: null },
+      }))
+    })
+    act(() => result.current.close())
+    act(() => result.current.open())
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.initialValues).toBeNull()
+  })
+
+  it('Q key shortcut opens with initialValues = null', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    act(() => { fireKey('q') })
+    expect(result.current.isOpen).toBe(true)
+    expect(result.current.initialValues).toBeNull()
+  })
 })

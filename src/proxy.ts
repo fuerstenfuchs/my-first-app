@@ -26,11 +26,16 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isPublicPath = pathname.startsWith('/login') || pathname.startsWith('/auth/')
+  // /share is public so ShareHandler can run client-side and redirect to /login?from=share itself
+  const isPublicPath =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth/') ||
+    pathname === '/share'
 
   if (!isPublicPath && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 
@@ -40,6 +45,7 @@ export async function proxy(request: NextRequest) {
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/login'
+      url.search = ''
       url.searchParams.set('error', 'not_allowed')
       return NextResponse.redirect(url)
     }
@@ -47,6 +53,7 @@ export async function proxy(request: NextRequest) {
     if (pathname === '/login') {
       const url = request.nextUrl.clone()
       url.pathname = '/'
+      url.search = ''
       return NextResponse.redirect(url)
     }
   }
@@ -56,6 +63,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
