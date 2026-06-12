@@ -4,6 +4,23 @@
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
+## Implementation Notes
+
+### Backend (2026-06-12)
+- Created `prompt_media` table: id (UUID PK), prompt_id (FK → prompts ON DELETE CASCADE), user_id (FK → auth.users), type CHECK('image'|'video'), url TEXT, sort_order INTEGER, created_at TIMESTAMPTZ
+- Indexes: prompt_id, user_id, (prompt_id, sort_order) composite
+- RLS: SELECT/INSERT/UPDATE/DELETE all scoped to `auth.uid() = user_id`
+- Created `prompt-media` Storage bucket: public read, 100 MB file size limit, MIME types: jpeg/png/webp/gif/mp4/webm/quicktime
+- Storage policies: public SELECT, authenticated INSERT/UPDATE/DELETE scoped to `auth.uid()::text = foldername[1]`
+- Data migration: existing `cover_image_url` values from prompts → inserted as type='image', sort_order=0 entries in prompt_media (1 row migrated)
+
+### Frontend (2026-06-12)
+- `usePromptMedia` hook: fetchMedia, uploadFiles (parallel, 20 MB image / 100 MB video limit), deleteMedia (optimistic + storage cleanup), reorderMedia (bulk sort_order update), setCoverImage, addMediaUrl
+- `MediaManager` component: drop zone, file picker (multiple), URL tab, per-file upload progress, @dnd-kit sortable grid, "Als Cover" per image item
+- `MediaGallery` component: fullscreen portal overlay, keyboard nav (← → Escape), touch swipe, thumbnail strip
+- `PromptModal` updated: view mode shows thumbnail strip → opens gallery; edit mode uses MediaManager
+- `usePrompts.createPrompt` accepts optional pre-generated UUID so media uploaded before first save links correctly
+
 ## Dependencies
 - Requires: PROJ-1 (Authentifizierung) — geschützte Routes, user_id
 - Requires: PROJ-2 (Prompt-Verwaltung) — Prompts als Basis-Entität
