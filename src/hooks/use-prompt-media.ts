@@ -23,10 +23,24 @@ export interface UploadingFile {
   error?: string
 }
 
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
-const IMAGE_MAX = 20 * 1024 * 1024
-const VIDEO_MAX = 100 * 1024 * 1024
+export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
+export const IMAGE_MAX = 20 * 1024 * 1024   // 20 MB
+export const VIDEO_MAX = 100 * 1024 * 1024  // 100 MB
+
+export function isVideoUrl(url: string): boolean {
+  return /\.(mp4|webm|mov)(\?|$)/i.test(url)
+}
+
+export function validateMediaFile(file: { type: string; size: number; name: string }): string | null {
+  if (IMAGE_TYPES.includes(file.type)) {
+    return file.size > IMAGE_MAX ? `${file.name}: Datei zu groß — maximal 20 MB pro Bild` : null
+  }
+  if (VIDEO_TYPES.includes(file.type)) {
+    return file.size > VIDEO_MAX ? `${file.name}: Video zu groß — maximal 100 MB` : null
+  }
+  return `${file.name}: Format nicht unterstützt`
+}
 
 export function usePromptMedia() {
   const [media, setMedia] = useState<PromptMedia[]>([])
@@ -53,20 +67,8 @@ export function usePromptMedia() {
 
     const validFiles: File[] = []
     for (const file of files) {
-      if (IMAGE_TYPES.includes(file.type)) {
-        if (file.size > IMAGE_MAX) {
-          toast.error(`${file.name}: Datei zu groß — maximal 20 MB pro Bild`)
-          continue
-        }
-      } else if (VIDEO_TYPES.includes(file.type)) {
-        if (file.size > VIDEO_MAX) {
-          toast.error(`${file.name}: Video zu groß — maximal 100 MB`)
-          continue
-        }
-      } else {
-        toast.error(`${file.name}: Format nicht unterstützt`)
-        continue
-      }
+      const error = validateMediaFile(file)
+      if (error) { toast.error(error); continue }
       validFiles.push(file)
     }
 
