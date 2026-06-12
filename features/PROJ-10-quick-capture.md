@@ -1,6 +1,6 @@
 # PROJ-10: Quick Capture (FAB, Keyboard-Shortcut, Mobile)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-12
 **Last Updated:** 2026-06-12
 
@@ -368,3 +368,12 @@ Keine.
 - **Security:** Pass — keine kritischen Befunde
 - **Production Ready:** YES
 - **Recommendation:** Deploy
+
+---
+
+## Deployment
+
+- **Version:** v1.10.0-PROJ-10
+- **Deployed:** 2026-06-12
+- **Production URL:** https://my-first-app-gamma-ecru.vercel.app/
+- **Git Tag:** v1.10.0-PROJ-10
