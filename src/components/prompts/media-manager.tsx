@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useEffect, useState } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useRef, useEffect, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -27,10 +27,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePromptMedia, type PromptMedia } from '@/hooks/use-prompt-media'
 import { cn } from '@/lib/utils'
 
+export interface MediaManagerHandle {
+  commitDeferredMedia: () => Promise<void>
+}
+
 interface MediaManagerProps {
   promptId: string
   coverImageUrl: string | null
   onCoverChange: (url: string | null) => void
+  deferred?: boolean
 }
 
 interface SortableItemProps {
@@ -104,11 +109,16 @@ function SortableMediaItem({ item, isCover, onSetCover, onDelete }: SortableItem
   )
 }
 
-export function MediaManager({ promptId, coverImageUrl, onCoverChange }: MediaManagerProps) {
-  const { media, uploading, fetchMedia, uploadFiles, deleteMedia, reorderMedia, setCoverImage, addMediaUrl } = usePromptMedia()
+export const MediaManager = forwardRef<MediaManagerHandle, MediaManagerProps>(
+function MediaManager({ promptId, coverImageUrl, onCoverChange, deferred = false }, ref) {
+  const { media, uploading, fetchMedia, uploadFiles, deleteMedia, reorderMedia, setCoverImage, addMediaUrl, commitDeferredMedia } = usePromptMedia()
   const [urlInput, setUrlInput] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    commitDeferredMedia: () => commitDeferredMedia(promptId),
+  }), [commitDeferredMedia, promptId])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -122,16 +132,16 @@ export function MediaManager({ promptId, coverImageUrl, onCoverChange }: MediaMa
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     const arr = Array.from(files)
     if (arr.length === 0) return
-    const newMedia = await uploadFiles(arr, promptId)
+    const newMedia = await uploadFiles(arr, promptId, deferred)
     // Auto-set cover if this is the first image and no cover yet
     if (!coverImageUrl) {
       const firstImage = newMedia.find(m => m.type === 'image')
       if (firstImage) {
-        await setCoverImage(firstImage.url, promptId)
+        if (!deferred) await setCoverImage(firstImage.url, promptId)
         onCoverChange(firstImage.url)
       }
     }
-  }, [uploadFiles, promptId, coverImageUrl, setCoverImage, onCoverChange])
+  }, [uploadFiles, promptId, deferred, coverImageUrl, setCoverImage, onCoverChange])
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -142,17 +152,17 @@ export function MediaManager({ promptId, coverImageUrl, onCoverChange }: MediaMa
   async function handleUrlAdd() {
     const url = urlInput.trim()
     if (!url) return
-    const item = await addMediaUrl(url, promptId)
+    const item = await addMediaUrl(url, promptId, deferred)
     if (!item) return
     setUrlInput('')
     if (!coverImageUrl && item.type === 'image') {
-      await setCoverImage(url, promptId)
+      if (!deferred) await setCoverImage(url, promptId)
       onCoverChange(url)
     }
   }
 
   async function handleSetCover(item: PromptMedia) {
-    await setCoverImage(item.url, promptId)
+    if (!deferred) await setCoverImage(item.url, promptId)
     onCoverChange(item.url)
   }
 
@@ -161,7 +171,7 @@ export function MediaManager({ promptId, coverImageUrl, onCoverChange }: MediaMa
     if (item.url === coverImageUrl) {
       const remaining = media.filter(m => m.id !== item.id && m.type === 'image')
       const next = remaining[0]?.url ?? null
-      await setCoverImage(next, promptId)
+      if (!deferred) await setCoverImage(next, promptId)
       onCoverChange(next)
     }
   }
@@ -298,4 +308,4 @@ export function MediaManager({ promptId, coverImageUrl, onCoverChange }: MediaMa
       )}
     </div>
   )
-}
+})

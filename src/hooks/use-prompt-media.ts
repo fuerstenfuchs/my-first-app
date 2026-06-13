@@ -23,6 +23,12 @@ export interface UploadingFile {
   error?: string
 }
 
+interface DeferredMedia {
+  url: string
+  type: 'image' | 'video'
+  sort_order: number
+}
+
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime']
 export const IMAGE_MAX = 20 * 1024 * 1024   // 20 MB
@@ -45,6 +51,7 @@ export function validateMediaFile(file: { type: string; size: number; name: stri
 export function usePromptMedia() {
   const [media, setMedia] = useState<PromptMedia[]>([])
   const [uploading, setUploading] = useState<UploadingFile[]>([])
+  const [deferredMedia, setDeferredMedia] = useState<DeferredMedia[]>([])
 
   const fetchMedia = useCallback(async (promptId: string) => {
     const supabase = createClient()
@@ -60,7 +67,7 @@ export function usePromptMedia() {
     setMedia(data ?? [])
   }, [])
 
-  async function uploadFiles(files: File[], promptId: string): Promise<PromptMedia[]> {
+  async function uploadFiles(files: File[], promptId: string, deferred = false): Promise<PromptMedia[]> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
@@ -108,14 +115,37 @@ export function usePromptMedia() {
           .from('prompt-media')
           .getPublicUrl(path)
 
+        const sortOrder = currentSortMax + 1 + idx
+        const mediaType: 'image' | 'video' = isVideo ? 'video' : 'image'
+
+        if (deferred) {
+          // Prompt doesn't exist yet — track locally, commit to DB after save
+          setDeferredMedia(prev => [...prev, { url: publicUrl, type: mediaType, sort_order: sortOrder }])
+          const tempItem: PromptMedia = {
+            id: crypto.randomUUID(),
+            prompt_id: promptId,
+            user_id: user.id,
+            type: mediaType,
+            url: publicUrl,
+            sort_order: sortOrder,
+            created_at: new Date().toISOString(),
+          }
+          setUploading(prev => prev.map(u =>
+            u.id === item.id ? { ...u, status: 'done', progress: 100, url: publicUrl } : u
+          ))
+          setMedia(prev => [...prev, tempItem])
+          results.push(tempItem)
+          return
+        }
+
         const { data: mediaRow, error: insertError } = await supabase
           .from('prompt_media')
           .insert({
             prompt_id: promptId,
             user_id: user.id,
-            type: isVideo ? 'video' : 'image',
+            type: mediaType,
             url: publicUrl,
-            sort_order: currentSortMax + 1 + idx,
+            sort_order: sortOrder,
           })
           .select()
           .single()
@@ -146,6 +176,13 @@ export function usePromptMedia() {
 
   async function deleteMedia(id: string, url: string): Promise<void> {
     const supabase = createClient()
+
+    // Deferred items are not yet in DB — remove from local state only
+    if (deferredMedia.some(d => d.url === url)) {
+      setMedia(prev => prev.filter(m => m.id !== id))
+      setDeferredMedia(prev => prev.filter(d => d.url !== url))
+      return
+    }
 
     // Remove from DB first (optimistic)
     setMedia(prev => prev.filter(m => m.id !== id))
@@ -197,22 +234,39 @@ export function usePromptMedia() {
     if (error) toast.error('Cover konnte nicht gesetzt werden')
   }
 
-  async function addMediaUrl(url: string, promptId: string): Promise<PromptMedia | null> {
+  async function addMediaUrl(url: string, promptId: string, deferred = false): Promise<PromptMedia | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
     const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url)
     const sortMax = media.length > 0 ? Math.max(...media.map(m => m.sort_order)) : -1
+    const sortOrder = sortMax + 1
+    const mediaType: 'image' | 'video' = isVideo ? 'video' : 'image'
+
+    if (deferred) {
+      setDeferredMedia(prev => [...prev, { url, type: mediaType, sort_order: sortOrder }])
+      const tempItem: PromptMedia = {
+        id: crypto.randomUUID(),
+        prompt_id: promptId,
+        user_id: user.id,
+        type: mediaType,
+        url,
+        sort_order: sortOrder,
+        created_at: new Date().toISOString(),
+      }
+      setMedia(prev => [...prev, tempItem])
+      return tempItem
+    }
 
     const { data, error } = await supabase
       .from('prompt_media')
       .insert({
         prompt_id: promptId,
         user_id: user.id,
-        type: isVideo ? 'video' : 'image',
+        type: mediaType,
         url,
-        sort_order: sortMax + 1,
+        sort_order: sortOrder,
       })
       .select()
       .single()
@@ -225,10 +279,30 @@ export function usePromptMedia() {
     return data
   }
 
+  async function commitDeferredMedia(promptId: string): Promise<void> {
+    if (deferredMedia.length === 0) return
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await Promise.all(
+      deferredMedia.map(item =>
+        supabase.from('prompt_media').insert({
+          prompt_id: promptId,
+          user_id: user.id,
+          type: item.type,
+          url: item.url,
+          sort_order: item.sort_order,
+        })
+      )
+    )
+    setDeferredMedia([])
+  }
+
   function clearMedia() {
     setMedia([])
     setUploading([])
+    setDeferredMedia([])
   }
 
-  return { media, uploading, fetchMedia, uploadFiles, deleteMedia, reorderMedia, setCoverImage, addMediaUrl, clearMedia }
+  return { media, uploading, fetchMedia, uploadFiles, deleteMedia, reorderMedia, setCoverImage, addMediaUrl, commitDeferredMedia, clearMedia }
 }

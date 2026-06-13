@@ -8,6 +8,17 @@ chrome.runtime.onInstalled.addListener(() => {
   })
 })
 
+// Open as a real window so it stays open when the user clicks back to the page
+function openCaptureWindow() {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('popup.html'),
+    type: 'popup',
+    width: 400,
+    height: 620,
+    focused: true,
+  }).catch(() => {})
+}
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== MENU_ID) return
 
@@ -29,13 +40,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   // If a pendingCapture already exists, store as conflict for popup to resolve
   chrome.storage.local.get('pendingCapture', (result) => {
     if (result.pendingCapture) {
-      chrome.storage.local.set({ pendingCaptureConflict: newCapture }, () => {
-        chrome.action.openPopup().catch(() => {})
-      })
+      chrome.storage.local.set({ pendingCaptureConflict: newCapture }, openCaptureWindow)
     } else {
-      chrome.storage.local.set({ pendingCapture: newCapture }, () => {
-        chrome.action.openPopup().catch(() => {})
-      })
+      chrome.storage.local.set({ pendingCapture: newCapture }, openCaptureWindow)
     }
   })
 })

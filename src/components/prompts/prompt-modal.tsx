@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Copy, Heart, Pencil, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
-import { MediaManager } from '@/components/prompts/media-manager'
+import { MediaManager, type MediaManagerHandle } from '@/components/prompts/media-manager'
 import { MediaGallery } from '@/components/prompts/media-gallery'
 import { StarRating } from '@/components/prompts/star-rating'
 import { usePromptMedia } from '@/hooks/use-prompt-media'
@@ -53,6 +53,7 @@ export function PromptModal({
   const [sourceUrlError, setSourceUrlError] = useState('')
   const [draftPromptId] = useState<string>(() => crypto.randomUUID())
   const [saving, setSaving] = useState(false)
+  const mediaManagerRef = useRef<MediaManagerHandle>(null)
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({})
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
 
@@ -113,6 +114,9 @@ export function PromptModal({
     }
     // Pass draftPromptId for create mode so media already uploaded links up
     const success = await onSave(input, mode === 'create' ? draftPromptId : undefined)
+    if (success && mode === 'create') {
+      await mediaManagerRef.current?.commitDeferredMedia()
+    }
     setSaving(false)
     if (success) onClose()
   }
@@ -289,9 +293,11 @@ export function PromptModal({
               </div>
               <Separator />
               <MediaManager
+                ref={mediaManagerRef}
                 promptId={editingPromptId}
                 coverImageUrl={coverImageUrl}
                 onCoverChange={setCoverImageUrl}
+                deferred={mode === 'create'}
               />
             </div>
           )}

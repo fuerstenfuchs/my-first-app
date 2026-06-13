@@ -10,6 +10,8 @@ interface Props {
   onDiscard: () => void
 }
 
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+
 export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, onDiscard }: Props) {
   const [title, setTitle] = useState(capture.title)
   const [content, setContent] = useState(capture.content)
@@ -20,13 +22,19 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   const [error, setError] = useState<string | null>(null)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
   const [showRestoredNotice, setShowRestoredNotice] = useState(captureRestored)
+  const [draftId] = useState(() => crypto.randomUUID())
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
+  const [imageUploading, setImageUploading] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isDirty =
     title !== capture.title ||
     content !== capture.content ||
     tags !== '' ||
-    sourceUrl !== capture.source_url
+    sourceUrl !== capture.source_url ||
+    coverImageUrl !== null
 
   useEffect(() => {
     titleRef.current?.focus()
@@ -38,7 +46,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
     return () => clearTimeout(timer)
   }, [captureRestored])
 
-  // BUG-2 fix: ESC key dirty-state check
+  // ESC key dirty-state check
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Escape') return
@@ -52,6 +60,42 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isDirty, onBack])
+
+  async function uploadImage(file: File) {
+    if (!IMAGE_TYPES.includes(file.type)) return
+    setImageUploading(true)
+    setError(null)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setImageUploading(false); return }
+
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${user.id}/${draftId}/${crypto.randomUUID()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('prompt-media')
+      .upload(path, file)
+
+    if (uploadError) {
+      setImageUploading(false)
+      setError('Bild-Upload fehlgeschlagen.')
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('prompt-media')
+      .getPublicUrl(path)
+
+    setCoverImageUrl(publicUrl)
+    setImageUploading(false)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDragOver(false)
+    const files = Array.from(e.dataTransfer.files).filter(f => IMAGE_TYPES.includes(f.type))
+    if (files[0]) uploadImage(files[0])
+  }
 
   async function handleSave() {
     if (!title.trim()) return
@@ -73,21 +117,36 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
     const { error: insertError } = await supabase
       .from('prompts')
       .insert({
+        id: draftId,
         title: title.trim(),
         content: content.trim() || null,
         source_url: sourceUrl.trim() || null,
         tags: parsedTags.length > 0 ? parsedTags : null,
         user_id: user.id,
+        cover_image_url: coverImageUrl,
       })
 
-    setSaving(false)
     if (insertError) {
+      setSaving(false)
       setError('Speichern fehlgeschlagen. Bitte erneut versuchen.')
-    } else {
-      await chrome.storage.local.remove('pendingCapture')
-      setSaved(true)
-      setTimeout(() => onSaved(), 800)
+      return
     }
+
+    // Link uploaded image to prompt_media now that the prompt row exists
+    if (coverImageUrl) {
+      await supabase.from('prompt_media').insert({
+        prompt_id: draftId,
+        user_id: user.id,
+        type: 'image',
+        url: coverImageUrl,
+        sort_order: 0,
+      })
+    }
+
+    await chrome.storage.local.remove('pendingCapture')
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => onSaved(), 800)
   }
 
   return (
@@ -137,21 +196,18 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
 
       {/* Form */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-        {/* Restored notice */}
         {showRestoredNotice && (
           <div className="text-xs text-emerald-400 bg-emerald-900/30 border border-emerald-700/40 rounded-lg px-3 py-2">
             ✓ Capture wiederhergestellt
           </div>
         )}
 
-        {/* Empty content notice */}
         {!content && (
           <div className="text-xs text-zinc-500 bg-zinc-800/60 rounded-lg px-3 py-2 border border-zinc-700">
             Kein Text ausgewählt. Inhalt manuell eingeben oder Seite als Referenz speichern.
           </div>
         )}
 
-        {/* Title */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-zinc-400">Titel *</label>
           <input
@@ -164,7 +220,6 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           />
         </div>
 
-        {/* Content */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-zinc-400">Inhalt</label>
           <textarea
@@ -176,7 +231,6 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           />
         </div>
 
-        {/* Tags */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-zinc-400">Tags</label>
           <input
@@ -188,7 +242,6 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           />
         </div>
 
-        {/* Source URL */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-zinc-400">Quell-Link</label>
           <input
@@ -199,6 +252,51 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
             className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
           />
         </div>
+
+        {/* Image drop zone / preview */}
+        {coverImageUrl ? (
+          <div className="relative rounded-lg overflow-hidden border border-zinc-700">
+            <img src={coverImageUrl} alt="Cover" className="w-full h-28 object-cover" />
+            <button
+              type="button"
+              onClick={() => setCoverImageUrl(null)}
+              className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors"
+            >
+              ×
+            </button>
+            <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold">
+              Cover
+            </span>
+          </div>
+        ) : (
+          <div
+            onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`rounded-lg border-2 border-dashed cursor-pointer transition-colors flex items-center justify-center gap-2 py-3 ${
+              isDragOver
+                ? 'border-violet-500 bg-violet-500/10'
+                : 'border-zinc-700 hover:border-zinc-500'
+            }`}
+          >
+            {imageUploading ? (
+              <span className="text-xs text-zinc-400">Lädt hoch…</span>
+            ) : (
+              <>
+                <span className="text-zinc-500 text-sm">🖼</span>
+                <span className="text-xs text-zinc-500">Bild ablegen oder auswählen</span>
+              </>
+            )}
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.gif"
+          className="hidden"
+          onChange={e => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = '' }}
+        />
 
         {error && (
           <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2">
@@ -211,7 +309,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       <div className="p-3 border-t border-zinc-700 shrink-0">
         <button
           onClick={handleSave}
-          disabled={saving || saved || !title.trim()}
+          disabled={saving || saved || !title.trim() || imageUploading}
           className={`w-full py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors ${
             saved ? 'bg-emerald-600' : 'bg-violet-600 hover:bg-violet-500'
           }`}

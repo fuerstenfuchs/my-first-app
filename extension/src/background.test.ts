@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock chrome API before importing background.ts
 const mockSet = vi.fn((_data: object, cb?: () => void) => cb?.())
 const mockGet = vi.fn((_key: string, cb: (result: Record<string, unknown>) => void) => cb({}))
-const mockOpenPopup = vi.fn(() => Promise.resolve())
+const mockWindowsCreate = vi.fn(() => Promise.resolve({ id: 42 }))
 const onInstalledCallback: Array<() => void> = []
 const onClickedCallback: Array<(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => void> = []
 
@@ -12,6 +12,7 @@ vi.stubGlobal('chrome', {
     onInstalled: {
       addListener: (cb: () => void) => onInstalledCallback.push(cb),
     },
+    getURL: (path: string) => `chrome-extension://testid/${path}`,
   },
   contextMenus: {
     create: vi.fn(),
@@ -26,8 +27,8 @@ vi.stubGlobal('chrome', {
       get: mockGet,
     },
   },
-  action: {
-    openPopup: mockOpenPopup,
+  windows: {
+    create: mockWindowsCreate,
   },
 })
 
@@ -43,7 +44,7 @@ describe('background service worker', () => {
   beforeEach(() => {
     mockSet.mockClear()
     mockGet.mockClear()
-    mockOpenPopup.mockClear()
+    mockWindowsCreate.mockClear()
     // Default: no existing pendingCapture
     mockGet.mockImplementation((_key: string, cb: (r: Record<string, unknown>) => void) => cb({}))
   })
@@ -100,9 +101,13 @@ describe('background service worker', () => {
     expect(payload.pendingCapture.source_url).toBe('')
   })
 
-  it('opens popup after storing capture', () => {
+  it('opens capture window after storing capture', () => {
     fireClick({ selectionText: 'test' }, { url: 'https://x.com', title: 'X' })
-    expect(mockOpenPopup).toHaveBeenCalledOnce()
+    expect(mockWindowsCreate).toHaveBeenCalledOnce()
+    expect(mockWindowsCreate).toHaveBeenCalledWith(expect.objectContaining({
+      url: expect.stringContaining('popup.html'),
+      type: 'popup',
+    }))
   })
 
   it('stores new capture as pendingCaptureConflict when pendingCapture already exists', () => {
