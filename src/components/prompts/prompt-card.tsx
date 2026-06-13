@@ -1,4 +1,4 @@
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus } from 'lucide-react'
+import { Copy, Layers, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -101,6 +101,14 @@ export function PromptCard({
                 +{hiddenCount}
               </Badge>
             )}
+          </div>
+        )}
+        {prompt.variant_count > 1 && (
+          <div>
+            <Badge variant="outline" className="text-xs gap-1">
+              <Layers className="h-3 w-3" />
+              {prompt.variant_count} Varianten
+            </Badge>
           </div>
         )}
         <Button

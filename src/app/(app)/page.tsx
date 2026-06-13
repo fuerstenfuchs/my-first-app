@@ -32,7 +32,7 @@ const listContainer = {
 }
 
 export default function PromptsPage() {
-  const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, toggleFavorite, setRating, prependPrompt } = usePrompts()
+  const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, toggleFavorite, setRating, prependPrompt, setPromptVariantCount } = usePrompts()
   const { collections } = useCollections()
   const { viewMode, setMode } = useViewMode()
 
@@ -399,6 +399,7 @@ export default function PromptsPage() {
         onCopy={modalPrompt ? () => copyPrompt(modalPrompt) : undefined}
         onToggleFavorite={modalPrompt ? () => toggleFavorite(modalPrompt) : undefined}
         onSetRating={modalPrompt ? (r) => setRating(modalPrompt, r) : undefined}
+        onVariantCountChange={setPromptVariantCount}
       />
 
       <DeleteDialog

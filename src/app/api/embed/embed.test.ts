@@ -29,10 +29,13 @@ vi.mock('@/lib/supabase-server', () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: authUser } }),
     },
-    from: () => ({
+    from: (table: string) => ({
       select: () => ({
         in: () => ({
-          eq: () => Promise.resolve({ data: fetchedPrompts, error: fetchError }),
+          eq: () => Promise.resolve({
+            data: table === 'prompts' ? fetchedPrompts : [],
+            error: table === 'prompts' ? fetchError : null,
+          }),
         }),
       }),
       update: () => ({
