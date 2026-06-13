@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Plus, Search, X, LayoutGrid, List, Heart } from 'lucide-react'
+import { Plus, Search, X, LayoutGrid, List, Heart, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { usePrompts, type Prompt, type PromptInput } from '@/hooks/use-prompts'
 import { useCollections } from '@/hooks/use-collections'
 import { useViewMode } from '@/hooks/use-view-mode'
+import { useSemanticSearch } from '@/hooks/use-semantic-search'
 
 type ModalMode = 'view' | 'edit' | 'create'
 
@@ -62,6 +63,36 @@ export default function PromptsPage() {
       return matchesSearch && matchesTag && matchesFavorite
     })
   }, [prompts, searchQuery, activeTag, favoritesOnly])
+
+  // Lookup map for prompts within tag/favorites scope (excludes keyword filter)
+  // Used to resolve semantic IDs that may not match the keyword but are contextually relevant
+  const tagFilteredById = useMemo(() => {
+    const map = new Map<string, Prompt>()
+    prompts.forEach(p => {
+      if ((!activeTag || p.tags.includes(activeTag)) && (!favoritesOnly || p.is_favorite)) {
+        map.set(p.id, p)
+      }
+    })
+    return map
+  }, [prompts, activeTag, favoritesOnly])
+
+  const { semanticIds, isSearching, isEnhanced, forceSearch } = useSemanticSearch(
+    searchQuery,
+    activeTag,
+    favoritesOnly,
+  )
+
+  // Semantic-enhanced display: semantic-ranked items first, then keyword-only matches
+  const displayedPrompts = useMemo(() => {
+    if (!isEnhanced || semanticIds.length === 0) return filteredPrompts
+    const semanticItems = semanticIds.flatMap(id => {
+      const p = tagFilteredById.get(id)
+      return p ? [p] : []
+    })
+    const semanticIdSet = new Set(semanticIds)
+    const keywordOnlyItems = filteredPrompts.filter(p => !semanticIdSet.has(p.id))
+    return [...semanticItems, ...keywordOnlyItems]
+  }, [filteredPrompts, tagFilteredById, semanticIds, isEnhanced])
 
   const hasActiveFilter = searchQuery.trim() !== '' || activeTag !== null || favoritesOnly
 
@@ -161,7 +192,7 @@ export default function PromptsPage() {
           {!loading && (
             <span className="text-sm text-muted-foreground shrink-0">
               ({hasActiveFilter
-                ? `${filteredPrompts.length} / ${prompts.length}`
+                ? `${displayedPrompts.length} / ${prompts.length}`
                 : prompts.length})
             </span>
           )}
@@ -170,9 +201,15 @@ export default function PromptsPage() {
             <Input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && forceSearch()}
               placeholder="Suchen…"
-              className="pl-9 pr-8 h-9"
+              className={`pl-9 h-9 ${searchQuery && (isSearching || isEnhanced) ? 'pr-16' : 'pr-8'}`}
             />
+            {searchQuery && (isSearching || isEnhanced) && (
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none">
+                <Sparkles className={`h-3.5 w-3.5 ${isSearching ? 'text-violet-400 animate-pulse' : 'text-violet-500'}`} />
+              </div>
+            )}
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
@@ -231,6 +268,12 @@ export default function PromptsPage() {
             onTagClick={tag => setActiveTag(prev => prev === tag ? null : tag)}
           />
         )}
+        {isEnhanced && searchQuery && (
+          <div className="px-4 py-1 flex items-center gap-1.5 text-xs text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/25 border-t border-violet-100 dark:border-violet-900/40">
+            <Sparkles className="h-3 w-3" />
+            Erweiterte Ergebnisse
+          </div>
+        )}
       </header>
 
       <main className="flex-1 overflow-auto">
@@ -253,7 +296,7 @@ export default function PromptsPage() {
               Ersten Prompt anlegen
             </Button>
           </div>
-        ) : filteredPrompts.length === 0 ? (
+        ) : displayedPrompts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center gap-4 px-4">
             <div className="space-y-2">
               <h2 className="text-xl font-semibold">Keine Prompts gefunden</h2>
@@ -275,7 +318,7 @@ export default function PromptsPage() {
             initial="hidden"
             animate="visible"
           >
-            {filteredPrompts.map(prompt => (
+            {displayedPrompts.map(prompt => (
               <PromptCardGrid key={prompt.id} {...sharedCardProps(prompt)} />
             ))}
           </motion.div>
@@ -287,7 +330,7 @@ export default function PromptsPage() {
             initial="hidden"
             animate="visible"
           >
-            {filteredPrompts.map(prompt => (
+            {displayedPrompts.map(prompt => (
               <PromptListRow key={prompt.id} {...sharedCardProps(prompt)} />
             ))}
           </motion.div>

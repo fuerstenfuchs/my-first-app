@@ -30,7 +30,7 @@
 | PROJ-11 | Sammlungen Upgrade (Cover-Bilder, Drag & Drop) | Deployed | [PROJ-11](PROJ-11-sammlungen-upgrade.md) | 2026-06-12 |
 | PROJ-12 | Browser-Extension (Chrome/Edge/Brave) | Deployed | [PROJ-12](PROJ-12-browser-extension.md) | 2026-06-12 |
 | PROJ-13 | Mobile Share Integration (Android & iOS) | Deployed | [PROJ-13](PROJ-13-mobile-share-integration.md) | 2026-06-12 |
-| PROJ-14 | Smart Features (Duplikat-Erkennung, KI-Suche, Tags) | Roadmap | — | 2026-06-12 |
+| PROJ-14 | Mehrsprachige Semantische Suche (Hybridsuche) | Approved | [PROJ-14](PROJ-14-semantische-suche.md) | 2026-06-12 |
 | PROJ-15 | Extension Prompt Saver (Rechtsklick → In PromptDB speichern) | Deployed | [PROJ-15](PROJ-15-extension-prompt-saver.md) | 2026-06-13 |
 
 <!-- Add features above this line -->

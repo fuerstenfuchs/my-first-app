@@ -85,6 +85,11 @@ export function usePrompts() {
     }
     setPrompts(prev => [{ ...data, preview_media: [] }, ...prev])
     toast.success('Prompt gespeichert')
+    fetch('/api/embed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [data.id] }),
+    }).catch(() => {})
     return true
   }
 
@@ -102,6 +107,11 @@ export function usePrompts() {
     }
     setPrompts(prev => prev.map(p => p.id === id ? { ...data, preview_media: p.preview_media } : p))
     toast.success('Prompt aktualisiert')
+    fetch('/api/embed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] }),
+    }).catch(() => {})
     return true
   }
 

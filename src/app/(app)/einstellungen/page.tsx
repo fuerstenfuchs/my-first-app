@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { Download, Settings, Smartphone, Upload } from 'lucide-react'
+import { useRef, useState, useEffect, useCallback } from 'react'
+import { Download, Loader2, Settings, Smartphone, Sparkles, Upload } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { usePrompts } from '@/hooks/use-prompts'
 import { usePwaInstall } from '@/components/pwa-install-banner'
+import { createClient } from '@/lib/supabase'
 
 interface ExportPrompt {
   title: string
@@ -30,6 +31,63 @@ export default function EinstellungenPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const { canInstall, isInstalled, install } = usePwaInstall()
+
+  // Semantic search indexing state
+  const [indexedCount, setIndexedCount] = useState<number | null>(null)
+  const [isIndexing, setIsIndexing] = useState(false)
+  const [indexingProgress, setIndexingProgress] = useState(0)
+
+  const loadIndexedCount = useCallback(async () => {
+    const supabase = createClient()
+    const { count, error } = await supabase
+      .from('prompts')
+      .select('*', { count: 'exact', head: true })
+      .not('embedding', 'is', null)
+    if (!error) setIndexedCount(count ?? 0)
+  }, [])
+
+  useEffect(() => { loadIndexedCount() }, [loadIndexedCount])
+
+  async function handleIndexAll() {
+    const supabase = createClient()
+    const { data: unindexed, error } = await supabase
+      .from('prompts')
+      .select('id')
+      .is('embedding', null)
+
+    if (error) {
+      toast.error('Fehler — Migration möglicherweise noch ausstehend')
+      return
+    }
+    if (!unindexed || unindexed.length === 0) {
+      toast.success('Alle Prompts sind bereits indiziert')
+      return
+    }
+
+    setIsIndexing(true)
+    setIndexingProgress(0)
+    const BATCH = 20
+    let processed = 0
+
+    for (let i = 0; i < unindexed.length; i += BATCH) {
+      const ids = unindexed.slice(i, i + BATCH).map(p => p.id)
+      try {
+        await fetch('/api/embed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        })
+      } catch {
+        // continue with next batch on transient error
+      }
+      processed += ids.length
+      setIndexingProgress(processed)
+    }
+
+    setIsIndexing(false)
+    await loadIndexedCount()
+    toast.success(`${processed} Prompts indiziert`)
+  }
 
   async function handleInstall() {
     const accepted = await install()
@@ -181,6 +239,71 @@ export default function EinstellungenPage() {
               />
               <p className="mt-3 text-xs text-muted-foreground">
                 Nur <code>.json</code>-Dateien werden akzeptiert. Prompts ohne Titel oder Prompt-Text werden übersprungen.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-500" />
+                Semantische Suche
+              </CardTitle>
+              <CardDescription>
+                Indiziere deine Prompts für KI-gestützte Suche — finde Prompts nach Bedeutung, auch sprachübergreifend (z.B. Deutsch → Englisch).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                {indexedCount === null ? (
+                  <span>Lade Indexstatus…</span>
+                ) : (
+                  <span>
+                    <span className="font-medium text-foreground">{indexedCount}</span>
+                    {' / '}
+                    <span className="font-medium text-foreground">{prompts.length}</span>
+                    {' Prompts indiziert'}
+                  </span>
+                )}
+              </div>
+
+              {isIndexing && (
+                <div className="space-y-1.5">
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 rounded-full transition-all duration-300"
+                      style={{ width: `${prompts.length > 0 ? Math.round((indexingProgress / prompts.length) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {indexingProgress} von {prompts.length} verarbeitet…
+                  </p>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={isIndexing || indexedCount === prompts.length}
+                onClick={handleIndexAll}
+              >
+                {isIndexing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Indiziere…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Alle Prompts indizieren
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-muted-foreground">
+                Neue und bearbeitete Prompts werden automatisch indiziert. Nutze diesen Button einmalig für bestehende Prompts.
               </p>
             </CardContent>
           </Card>
