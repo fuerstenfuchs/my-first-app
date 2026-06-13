@@ -248,7 +248,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       {coverImageUrl ? (
         <div className="shrink-0 border-b border-zinc-700">
           <div className="relative">
-            <img src={coverImageUrl} alt="Cover" className="w-full max-h-44 object-contain bg-zinc-900" />
+            <img src={coverImageUrl} alt="Cover" className="w-full max-h-36 object-contain bg-zinc-900" />
             <button
               type="button"
               onClick={() => setCoverImageUrl(null)}
@@ -342,8 +342,8 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
         onChange={e => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = '' }}
       />
 
-      {/* Form — scrollbar, ohne Bild-Preview */}
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+      {/* Form — kein äußeres Scrollen, Textarea wächst in den Restplatz */}
+      <div className="flex-1 flex flex-col p-3 gap-3 overflow-hidden min-h-0">
 
         {!content && (
           <div className="text-xs text-zinc-500 bg-zinc-800/60 rounded-lg px-3 py-2 border border-zinc-700">
@@ -363,14 +363,13 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Inhalt</label>
+        <div className="flex flex-col gap-1 flex-1 min-h-0">
+          <label className="text-xs font-medium text-zinc-400 shrink-0">Inhalt</label>
           <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
             placeholder="Prompt-Inhalt…"
-            rows={5}
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none"
+            className="flex-1 min-h-0 w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none overflow-y-auto"
           />
         </div>
 
