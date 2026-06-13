@@ -31,6 +31,7 @@ export interface SharePayload {
   content: string
   source_url: string | null
   title: string | null
+  media_urls?: string[]
 }
 
 interface QuickCaptureModalProps {
@@ -54,6 +55,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const [contentError, setContentError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
+  const [sharedMediaUrls, setSharedMediaUrls] = useState<string[]>([])
   const draftId = useRef(crypto.randomUUID())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -62,6 +64,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const isUploading = uploading.some(u => u.status === 'uploading')
 
   const dropItems = [
+    ...sharedMediaUrls.map((url, i) => ({ id: `share-${i}`, url, status: 'done' as const })),
     ...uploading.map(u => ({ id: u.id, url: u.url, status: u.status })),
     ...media.map(m => ({ id: m.id, url: m.url, status: 'done' as const })),
   ]
@@ -78,6 +81,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       if (initialValues) {
         setContent(initialValues.content ?? '')
         setSourceUrl(initialValues.source_url ?? '')
+        setSharedMediaUrls(initialValues.media_urls ?? [])
         if (initialValues.title) {
           setTitle(initialValues.title)
         } else if (initialValues.content) {
@@ -94,6 +98,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
         setTitle('')
         setTagsInput('')
         setSourceUrl('')
+        setSharedMediaUrls([])
         setTimeout(() => textareaRef.current?.focus(), 50)
       }
     }
@@ -168,14 +173,35 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       return
     }
 
+    // Persist images that arrived via the share target (already in Storage, link to DB now)
+    if (sharedMediaUrls.length > 0) {
+      await Promise.all(
+        sharedMediaUrls.map((url, idx) =>
+          supabase.from('prompt_media').insert({
+            prompt_id: draftId.current,
+            user_id: user.id,
+            type: 'image',
+            url,
+            sort_order: idx,
+          })
+        )
+      )
+    }
+
+    const sharedPreview = sharedMediaUrls.map((url, idx) => ({
+      type: 'image' as const,
+      url,
+      sort_order: idx,
+    }))
+    const uploadedPreview = media
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((m, i) => ({ type: m.type, url: m.url, sort_order: sharedPreview.length + i }))
+
     const newPrompt: Prompt = {
       ...data,
       source_url: data.source_url ?? null,
       source_type: data.source_type ?? null,
-      preview_media: media
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .slice(0, 6)
-        .map(m => ({ type: m.type, url: m.url, sort_order: m.sort_order })),
+      preview_media: [...sharedPreview, ...uploadedPreview].slice(0, 6),
     }
 
     window.dispatchEvent(new CustomEvent('quick-capture:saved', { detail: newPrompt }))

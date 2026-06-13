@@ -32,7 +32,8 @@
 | PROJ-13 | Mobile Share Integration (Android & iOS) | Deployed | [PROJ-13](PROJ-13-mobile-share-integration.md) | 2026-06-12 |
 | PROJ-14 | Mehrsprachige Semantische Suche (Hybridsuche) | Deployed | [PROJ-14](PROJ-14-semantische-suche.md) | 2026-06-12 |
 | PROJ-15 | Extension Prompt Saver (Rechtsklick → In PromptDB speichern) | Deployed | [PROJ-15](PROJ-15-extension-prompt-saver.md) | 2026-06-13 |
+| PROJ-16 | Bilder per Share-Sheet direkt in Quick Capture teilen | Deployed | — | 2026-06-13 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-16
+## Next Available ID: PROJ-17

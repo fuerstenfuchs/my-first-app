@@ -124,20 +124,34 @@ export default function PromptsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('from') !== 'share') return
-    const stored = sessionStorage.getItem('pending_share_payload')
+
     window.history.replaceState(null, '', '/')
-    if (!stored) return
-    try {
-      const payload = JSON.parse(stored)
-      sessionStorage.removeItem('pending_share_payload')
-      // setTimeout ensures all useEffect listeners (incl. useQuickCapture in the parent layout)
-      // are registered before the event fires — child effects run before parent effects in React.
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: payload }))
-      }, 0)
-    } catch {
-      // Corrupt storage entry — ignore
+
+    // New POST-based share flow: payload arrives via cookie (supports images)
+    let payload: unknown = null
+    const cookieMatch = document.cookie.split('; ').find(r => r.startsWith('pending_share='))
+    if (cookieMatch) {
+      try {
+        payload = JSON.parse(decodeURIComponent(cookieMatch.split('=').slice(1).join('=')))
+        document.cookie = 'pending_share=; Max-Age=0; path=/'
+      } catch { /* corrupt cookie */ }
     }
+
+    // Fallback: old GET-based share flow stored payload in sessionStorage
+    if (!payload) {
+      const stored = sessionStorage.getItem('pending_share_payload')
+      sessionStorage.removeItem('pending_share_payload')
+      if (!stored) return
+      try { payload = JSON.parse(stored) } catch { return }
+    }
+
+    if (!payload) return
+    const p = payload
+    // setTimeout ensures all useEffect listeners (incl. useQuickCapture in the parent layout)
+    // are registered before the event fires — child effects run before parent effects in React.
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: p }))
+    }, 0)
   }, [])
 
   useEffect(() => {
