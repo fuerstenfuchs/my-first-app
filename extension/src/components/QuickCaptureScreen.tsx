@@ -248,7 +248,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       {coverImageUrl ? (
         <div className="shrink-0 border-b border-zinc-700">
           <div className="relative">
-            <img src={coverImageUrl} alt="Cover" className="w-full max-h-36 object-contain bg-zinc-900" />
+            <img src={coverImageUrl} alt="Cover" className="w-full max-h-32 object-contain bg-zinc-900" />
             <button
               type="button"
               onClick={() => setCoverImageUrl(null)}
