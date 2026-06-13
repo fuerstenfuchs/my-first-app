@@ -322,6 +322,22 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Hero-Vorschau: geteiltes Bild oben groß anzeigen */}
+            {dropItems.length > 0 && dropItems[0].url && (
+              <div className="relative rounded-lg overflow-hidden bg-muted">
+                <img
+                  src={dropItems[0].url}
+                  alt="Geteiltes Bild"
+                  className="w-full max-h-56 object-contain"
+                />
+                {dropItems.length > 1 && (
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                    +{dropItems.length - 1} weitere
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1">
               <Label htmlFor="qc-content">Prompt-Text</Label>
               <Textarea
