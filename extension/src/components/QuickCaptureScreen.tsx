@@ -25,6 +25,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   const [draftId] = useState(() => crypto.randomUUID())
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
   const [imageUploading, setImageUploading] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -88,6 +89,34 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
 
     setCoverImageUrl(publicUrl)
     setImageUploading(false)
+  }
+
+  async function handleAnalyzeImage() {
+    if (!coverImageUrl) return
+    setAnalyzing(true)
+    setError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const appUrl = import.meta.env.VITE_APP_URL as string
+      const res = await fetch(`${appUrl}/api/analyze-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ imageUrl: coverImageUrl }),
+      })
+      if (!res.ok) throw new Error('failed')
+      const { prompt } = await res.json() as { prompt: string }
+      setContent(prompt)
+      if (!title.trim() || title === capture.title) {
+        setTitle(prompt.trim().slice(0, 55).trimEnd())
+      }
+    } catch {
+      setError('Bildanalyse fehlgeschlagen — bitte erneut versuchen.')
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -255,19 +284,36 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
 
         {/* Image drop zone / preview */}
         {coverImageUrl ? (
-          <div className="relative rounded-lg overflow-hidden border border-zinc-700">
-            <img src={coverImageUrl} alt="Cover" className="w-full h-28 object-cover" />
+          <>
+            <div className="relative rounded-lg overflow-hidden border border-zinc-700">
+              <img src={coverImageUrl} alt="Cover" className="w-full h-28 object-cover" />
+              <button
+                type="button"
+                onClick={() => setCoverImageUrl(null)}
+                className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors"
+              >
+                ×
+              </button>
+              <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold">
+                Cover
+              </span>
+            </div>
             <button
               type="button"
-              onClick={() => setCoverImageUrl(null)}
-              className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors"
+              onClick={handleAnalyzeImage}
+              disabled={analyzing || saving}
+              className="w-full py-2 rounded-lg border border-zinc-600 text-xs text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
             >
-              ×
+              {analyzing ? (
+                <>
+                  <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
+                  Bild wird analysiert…
+                </>
+              ) : (
+                '✨ Prompt aus Bild generieren'
+              )}
             </button>
-            <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold">
-              Cover
-            </span>
-          </div>
+          </>
         ) : (
           <div
             onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}

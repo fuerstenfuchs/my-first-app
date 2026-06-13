@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 const SYSTEM_PROMPT = `You are an expert in AI image generation (MidJourney, DALL-E, Stable Diffusion, Flux).
@@ -16,14 +17,26 @@ Rules:
 - Use comma-separated descriptive phrases`
 
 export async function POST(req: NextRequest) {
-  // Auth check
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll() } }
-  )
-  const { data: { user } } = await supabase.auth.getUser()
+  // Auth check — accept both cookie session (web app) and Bearer JWT (extension)
+  let user = null
+  const bearer = req.headers.get('authorization')?.replace('Bearer ', '')
+  if (bearer) {
+    const client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await client.auth.getUser(bearer)
+    user = data.user
+  } else {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll() } }
+    )
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  }
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
