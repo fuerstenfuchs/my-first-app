@@ -97,7 +97,11 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
     setError(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const appUrl = import.meta.env.VITE_APP_URL as string
+      const appUrl = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
+      if (!appUrl) {
+        setError('App-URL nicht konfiguriert. Bitte VITE_APP_URL in der Extension-.env setzen.')
+        return
+      }
       const res = await fetch(`${appUrl}/api/analyze-image`, {
         method: 'POST',
         headers: {
@@ -106,14 +110,18 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
         },
         body: JSON.stringify({ imageUrl: coverImageUrl }),
       })
-      if (!res.ok) throw new Error('failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
       const { prompt } = await res.json() as { prompt: string }
       setContent(prompt)
       if (!title.trim() || title === capture.title) {
         setTitle(prompt.trim().slice(0, 55).trimEnd())
       }
-    } catch {
-      setError('Bildanalyse fehlgeschlagen — bitte erneut versuchen.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unbekannter Fehler'
+      setError(`Bildanalyse fehlgeschlagen: ${msg}`)
     } finally {
       setAnalyzing(false)
     }

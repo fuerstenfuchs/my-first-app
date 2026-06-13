@@ -4,6 +4,17 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
+// Allow Chrome extension and other trusted origins to call this endpoint
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS })
+}
+
 const SYSTEM_PROMPT = `You are an expert in AI image generation (MidJourney, DALL-E, Stable Diffusion, Flux).
 Analyze the image and create a detailed English prompt that can recreate this image or something very similar with an AI image generator.
 
@@ -86,9 +97,9 @@ export async function POST(req: NextRequest) {
     })
 
     const prompt = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
-    return NextResponse.json({ prompt })
+    return NextResponse.json({ prompt }, { headers: CORS_HEADERS })
   } catch (err) {
     console.error('analyze-image error:', err)
-    return NextResponse.json({ error: 'Analyse fehlgeschlagen' }, { status: 500 })
+    return NextResponse.json({ error: 'Analyse fehlgeschlagen' }, { status: 500, headers: CORS_HEADERS })
   }
 }

@@ -14,5 +14,9 @@
     "storage",
     "contextMenus",
     "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.vercel.app/*",
+    "https://*.supabase.co/*"
   ]
 }
