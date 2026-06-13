@@ -261,8 +261,8 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
               Cover
             </span>
           </div>
-          {/* Alle Controls in einer kompakten Zeile */}
-          <div className="px-2 py-1.5 flex items-center gap-1.5 flex-wrap">
+          {/* Zeile 1: Modell-Buttons + [Person] */}
+          <div className="px-2 pt-1.5 flex items-center gap-1.5 flex-wrap">
             {ANALYZE_MODELS.map(m => (
               <button
                 key={m.id}
@@ -289,15 +289,18 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
               />
               <span className="text-[10px] text-zinc-400">[Person]</span>
             </label>
+          </div>
+          {/* Zeile 2: Generieren-Button volle Breite */}
+          <div className="px-2 pb-1.5">
             <button
               type="button"
               onClick={handleAnalyzeImage}
               disabled={analyzing || saving}
-              className="ml-auto px-2 py-0.5 rounded border border-violet-600 text-[10px] text-violet-300 hover:bg-violet-900/40 disabled:opacity-50 transition-colors flex items-center gap-1"
+              className="w-full py-1.5 rounded border border-violet-600 text-xs text-violet-300 hover:bg-violet-900/40 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
             >
               {analyzing ? (
-                <><span className="w-2.5 h-2.5 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />Analysiert…</>
-              ) : '✨ Generieren'}
+                <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />Bild wird analysiert…</>
+              ) : '✨ Prompt aus Bild generieren'}
             </button>
           </div>
         </div>
