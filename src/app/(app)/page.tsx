@@ -184,7 +184,7 @@ export default function PromptsPage() {
   })
 
   return (
-    <div className="flex flex-col h-svh">
+    <div className="flex flex-col h-svh min-w-0 overflow-x-hidden">
       <header className="border-b shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
@@ -276,7 +276,7 @@ export default function PromptsPage() {
         )}
       </header>
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
