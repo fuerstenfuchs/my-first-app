@@ -63,14 +63,11 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const draftId = useRef(crypto.randomUUID())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const { media, uploading, uploadFiles, clearMedia } = usePromptMedia()
-
-  const isUploading = uploading.some(u => u.status === 'uploading')
+  const { media, uploadFiles, clearMedia } = usePromptMedia()
 
   const dropItems = [
     ...sharedMediaUrls.map((url, i) => ({ id: `share-url-${i}`, url, status: 'done' as const })),
     ...pendingFilePreviewUrls.map((url, i) => ({ id: `pending-file-${i}`, url, status: 'done' as const })),
-    ...uploading.map(u => ({ id: u.id, url: u.url, status: u.status })),
     ...media.map(m => ({ id: m.id, url: m.url, status: 'done' as const })),
   ]
 
@@ -136,7 +133,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
     onClose()
   }
 
-  const handleFiles = useCallback(async (files: File[]) => {
+  const handleFiles = useCallback((files: File[]) => {
     const imageFiles: File[] = []
     for (const file of files) {
       if (!IMAGE_TYPES.includes(file.type)) {
@@ -150,9 +147,13 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       imageFiles.push(file)
     }
     if (imageFiles.length === 0) return
+    // Store with Object URL preview — actual upload happens in handleSave
+    // after the prompt row exists (avoids FK timing issues)
+    const previews = imageFiles.map(f => URL.createObjectURL(f))
+    setPendingSharedFiles(prev => [...prev, ...imageFiles])
+    setPendingFilePreviewUrls(prev => [...prev, ...previews])
     setIsDirty(true)
-    await uploadFiles(imageFiles, draftId.current)
-  }, [uploadFiles])
+  }, [])
 
   const hasImages = pendingFilePreviewUrls.length > 0 || sharedMediaUrls.length > 0 || media.length > 0
 
@@ -205,7 +206,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       setSourceUrlError('Bitte eine gültige URL eingeben (z.B. https://…)')
       return
     }
-    if (isUploading) return
+    // (no early-return for isUploading — uploads now happen inside handleSave)
 
     setSaving(true)
     const supabase = createClient()
@@ -388,7 +389,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
                 variant="outline"
                 size="sm"
                 onClick={handleAnalyzeImage}
-                disabled={analyzing || saving || isUploading}
+                disabled={analyzing || saving}
                 className="w-full gap-2"
               >
                 {analyzing ? (
@@ -407,8 +408,8 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
             <Button variant="outline" onClick={tryClose} disabled={saving}>
               Abbrechen
             </Button>
-            <Button onClick={handleSave} disabled={saving || isUploading}>
-              {saving ? 'Speichern…' : isUploading ? 'Lädt hoch…' : 'Speichern'}
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Speichern…' : 'Speichern'}
             </Button>
           </div>
         </DialogContent>
