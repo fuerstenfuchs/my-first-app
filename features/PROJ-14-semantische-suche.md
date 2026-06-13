@@ -1,6 +1,6 @@
 # PROJ-14: Mehrsprachige Semantische Suche (Hybridsuche)
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-13
 **Last Updated:** 2026-06-13
 
@@ -286,4 +286,11 @@ setIsEnhanced(ids.length > 0)
 > Die 3 Cross-Lingual ACs (AC-7, 8, 9) können erst mit konfiguriertem `OPENAI_API_KEY` und indizierten Prompts in der Produktionsumgebung verifiziert werden.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-13
+**Production URL:** https://my-first-app-gamma-ecru.vercel.app
+**Commit:** `9fe044d feat(PROJ-14): Implement multilingual semantic search (Hybridsuche)`
+**Git Tag:** `v1.14.0-PROJ-14`
+
+### Umgebungsvariablen in Vercel
+- `OPENAI_API_KEY` — in Vercel Environment Variables konfiguriert (Production/Preview/Development)
