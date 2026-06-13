@@ -229,11 +229,19 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((m, i) => ({ type: m.type, url: m.url, sort_order: sharedPreview.length + pendingUploadedMedia.length + i }))
 
+    // Auto-set cover image from first available media so the card shows the image immediately
+    const allMedia = [...sharedPreview, ...pendingUploadedMedia, ...uploadedPreview]
+    const autoCoverUrl = allMedia[0]?.url ?? null
+    if (autoCoverUrl) {
+      await supabase.from('prompts').update({ cover_image_url: autoCoverUrl }).eq('id', draftId.current)
+    }
+
     const newPrompt: Prompt = {
       ...data,
+      cover_image_url: autoCoverUrl,
       source_url: data.source_url ?? null,
       source_type: data.source_type ?? null,
-      preview_media: [...sharedPreview, ...pendingUploadedMedia, ...uploadedPreview].slice(0, 6),
+      preview_media: allMedia.slice(0, 6),
     }
 
     window.dispatchEvent(new CustomEvent('quick-capture:saved', { detail: newPrompt }))
