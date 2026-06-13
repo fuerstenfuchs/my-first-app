@@ -58,6 +58,7 @@ export function usePrompts() {
     } else {
       setPrompts((data as unknown as RawPromptRow[]).map(({ prompt_media, ...row }) => ({
         ...row,
+        tags: row.tags ?? [],
         preview_media: (prompt_media ?? [])
           .sort((a, b) => a.sort_order - b.sort_order)
           .slice(0, 6)
