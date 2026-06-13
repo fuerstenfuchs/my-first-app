@@ -252,62 +252,11 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           </div>
         )}
 
-        {!content && (
-          <div className="text-xs text-zinc-500 bg-zinc-800/60 rounded-lg px-3 py-2 border border-zinc-700">
-            Kein Text ausgewählt. Inhalt manuell eingeben oder Seite als Referenz speichern.
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Titel *</label>
-          <input
-            ref={titleRef}
-            type="text"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder="Titel eingeben…"
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Inhalt</label>
-          <textarea
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder="Prompt-Inhalt…"
-            rows={5}
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Tags</label>
-          <input
-            type="text"
-            value={tags}
-            onChange={e => setTags(e.target.value)}
-            placeholder="tag1, tag2, tag3"
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Quell-Link</label>
-          <input
-            type="url"
-            value={sourceUrl}
-            onChange={e => setSourceUrl(e.target.value)}
-            placeholder="https://…"
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
-          />
-        </div>
-
-        {/* Image drop zone / preview */}
+        {/* Bild-Preview oben — sofort sichtbar, vor allen Textfeldern */}
         {coverImageUrl ? (
           <>
             <div className="relative rounded-lg overflow-hidden border border-zinc-700">
-              <img src={coverImageUrl} alt="Cover" className="w-full h-28 object-cover" />
+              <img src={coverImageUrl} alt="Cover" className="w-full max-h-48 object-contain bg-zinc-900" />
               <button
                 type="button"
                 onClick={() => setCoverImageUrl(null)}
@@ -394,6 +343,57 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           className="hidden"
           onChange={e => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = '' }}
         />
+
+        {!content && (
+          <div className="text-xs text-zinc-500 bg-zinc-800/60 rounded-lg px-3 py-2 border border-zinc-700">
+            Kein Text ausgewählt. Inhalt manuell eingeben oder Seite als Referenz speichern.
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-zinc-400">Titel *</label>
+          <input
+            ref={titleRef}
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Titel eingeben…"
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-zinc-400">Inhalt</label>
+          <textarea
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="Prompt-Inhalt…"
+            rows={5}
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-zinc-400">Tags</label>
+          <input
+            type="text"
+            value={tags}
+            onChange={e => setTags(e.target.value)}
+            placeholder="tag1, tag2, tag3"
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-zinc-400">Quell-Link</label>
+          <input
+            type="url"
+            value={sourceUrl}
+            onChange={e => setSourceUrl(e.target.value)}
+            placeholder="https://…"
+            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+          />
+        </div>
 
         {error && (
           <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2">
