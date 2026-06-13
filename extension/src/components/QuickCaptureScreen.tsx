@@ -200,7 +200,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden relative">
+    <div className="flex flex-col flex-1 overflow-hidden relative min-h-0">
       {/* Discard confirm dialog */}
       {showDiscardDialog && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -247,8 +247,8 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       {/* Bild-Preview — fixiert zwischen Header und scrollbarer Form, scrollt nicht weg */}
       {coverImageUrl ? (
         <div className="shrink-0 border-b border-zinc-700">
-          <div className="relative">
-            <img src={coverImageUrl} alt="Cover" className="w-full max-h-32 object-contain bg-zinc-900" />
+          <div className="relative h-32 overflow-hidden">
+            <img src={coverImageUrl} alt="Cover" className="w-full h-full object-contain bg-zinc-900" />
             <button
               type="button"
               onClick={() => setCoverImageUrl(null)}
