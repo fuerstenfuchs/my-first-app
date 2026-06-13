@@ -32,6 +32,7 @@ export interface SharePayload {
   source_url: string | null
   title: string | null
   media_urls?: string[]
+  pending_files?: File[]
 }
 
 interface QuickCaptureModalProps {
@@ -93,6 +94,12 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
         }
         setTagsInput('')
         setIsDirty(true)
+
+        // Images shared via Android Share Sheet arrive as File objects from SW cache
+        if (initialValues.pending_files && initialValues.pending_files.length > 0) {
+          const files = initialValues.pending_files
+          setTimeout(() => handleFiles(files), 0)
+        }
       } else {
         setContent('')
         setTitle('')

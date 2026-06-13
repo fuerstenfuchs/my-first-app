@@ -120,38 +120,77 @@ export default function PromptsPage() {
     setModalOpen(true)
   }, [])
 
-  // Open Quick Capture with shared content when redirected from /share
+  // Open Quick Capture with shared content when redirected from /share or /api/share
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('from') !== 'share') return
 
     window.history.replaceState(null, '', '/')
 
-    // New POST-based share flow: payload arrives via cookie (supports images)
-    let payload: unknown = null
-    const cookieMatch = document.cookie.split('; ').find(r => r.startsWith('pending_share='))
-    if (cookieMatch) {
-      try {
-        payload = JSON.parse(decodeURIComponent(cookieMatch.split('=').slice(1).join('=')))
-        document.cookie = 'pending_share=; Max-Age=0; path=/'
-      } catch { /* corrupt cookie */ }
-    }
+    ;(async () => {
+      // Primary path: SW intercepted the share POST and cached payload + images
+      if ('serviceWorker' in navigator) {
+        try {
+          const payloadRes = await fetch('/__share-payload')
+          if (payloadRes.ok) {
+            const swData = await payloadRes.json() as {
+              content: string
+              source_url: string | null
+              title: string | null
+              image_count: number
+            }
 
-    // Fallback: old GET-based share flow stored payload in sessionStorage
-    if (!payload) {
+            // Read image blobs from SW cache and turn them into File objects
+            const pendingFiles: File[] = []
+            for (let i = 0; i < swData.image_count; i++) {
+              const imgRes = await fetch(`/__share-image-${i}`)
+              if (imgRes.ok) {
+                const blob = await imgRes.blob()
+                const filename = imgRes.headers.get('X-Filename') ?? `image-${i}.jpg`
+                pendingFiles.push(new File([blob], filename, { type: blob.type || 'image/jpeg' }))
+              }
+            }
+
+            const detail = {
+              content:       swData.content,
+              source_url:    swData.source_url,
+              title:         swData.title,
+              pending_files: pendingFiles.length > 0 ? pendingFiles : undefined,
+            }
+            // setTimeout ensures useQuickCapture listener in parent layout is registered
+            // (child effects run before parent effects in React)
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail }))
+            }, 0)
+            return
+          }
+        } catch { /* SW cache miss — fall through */ }
+      }
+
+      // Fallback A: server-side route handler stored payload in a cookie
+      const cookieMatch = document.cookie.split('; ').find(r => r.startsWith('pending_share='))
+      if (cookieMatch) {
+        try {
+          const p = JSON.parse(decodeURIComponent(cookieMatch.split('=').slice(1).join('=')))
+          document.cookie = 'pending_share=; Max-Age=0; path=/'
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: p }))
+          }, 0)
+          return
+        } catch { /* corrupt cookie */ }
+      }
+
+      // Fallback B: old GET-based share (text/URL only via share-handler.tsx)
       const stored = sessionStorage.getItem('pending_share_payload')
       sessionStorage.removeItem('pending_share_payload')
       if (!stored) return
-      try { payload = JSON.parse(stored) } catch { return }
-    }
-
-    if (!payload) return
-    const p = payload
-    // setTimeout ensures all useEffect listeners (incl. useQuickCapture in the parent layout)
-    // are registered before the event fires — child effects run before parent effects in React.
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: p }))
-    }, 0)
+      try {
+        const p = JSON.parse(stored)
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('quick-capture:open-share', { detail: p }))
+        }, 0)
+      } catch { /* corrupt entry */ }
+    })()
   }, [])
 
   useEffect(() => {
