@@ -52,6 +52,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const [tagsInput, setTagsInput] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
   const [sourceUrlError, setSourceUrlError] = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [contentError, setContentError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
@@ -152,6 +153,48 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
     setIsDirty(true)
     await uploadFiles(imageFiles, draftId.current)
   }, [uploadFiles])
+
+  const hasImages = pendingFilePreviewUrls.length > 0 || sharedMediaUrls.length > 0 || media.length > 0
+
+  async function handleAnalyzeImage() {
+    setAnalyzing(true)
+    try {
+      let body: { imageUrl?: string; imageBase64?: string; mediaType?: string }
+
+      if (pendingSharedFiles[0]) {
+        const file = pendingSharedFiles[0]
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        body = { imageBase64: base64, mediaType: file.type }
+      } else if (sharedMediaUrls[0]) {
+        body = { imageUrl: sharedMediaUrls[0] }
+      } else if (media[0]) {
+        body = { imageUrl: media[0].url }
+      } else {
+        return
+      }
+
+      const res = await fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error('failed')
+      const { prompt } = await res.json() as { prompt: string }
+      setContent(prompt)
+      if (!title.trim()) setTitle(prompt.trim().slice(0, 55).trimEnd())
+      setIsDirty(true)
+      toast.success('Prompt generiert!')
+    } catch {
+      toast.error('Bildanalyse fehlgeschlagen — bitte erneut versuchen')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
 
   async function handleSave() {
     if (!content.trim() && !sourceUrl.trim()) {
@@ -338,6 +381,26 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
                 onFiles={handleFiles}
               />
             </div>
+
+            {hasImages && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAnalyzeImage}
+                disabled={analyzing || saving || isUploading}
+                className="w-full gap-2"
+              >
+                {analyzing ? (
+                  <>
+                    <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
+                    Bild wird analysiert…
+                  </>
+                ) : (
+                  '✨ Prompt aus Bild generieren'
+                )}
+              </Button>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
