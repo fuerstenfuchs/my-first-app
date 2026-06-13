@@ -57,6 +57,8 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const [isDirty, setIsDirty] = useState(false)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
   const [sharedMediaUrls, setSharedMediaUrls] = useState<string[]>([])
+  const [pendingSharedFiles, setPendingSharedFiles] = useState<File[]>([])
+  const [pendingFilePreviewUrls, setPendingFilePreviewUrls] = useState<string[]>([])
   const draftId = useRef(crypto.randomUUID())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -65,7 +67,8 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const isUploading = uploading.some(u => u.status === 'uploading')
 
   const dropItems = [
-    ...sharedMediaUrls.map((url, i) => ({ id: `share-${i}`, url, status: 'done' as const })),
+    ...sharedMediaUrls.map((url, i) => ({ id: `share-url-${i}`, url, status: 'done' as const })),
+    ...pendingFilePreviewUrls.map((url, i) => ({ id: `pending-file-${i}`, url, status: 'done' as const })),
     ...uploading.map(u => ({ id: u.id, url: u.url, status: u.status })),
     ...media.map(m => ({ id: m.id, url: m.url, status: 'done' as const })),
   ]
@@ -78,6 +81,10 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       draftId.current = crypto.randomUUID()
       // eslint-disable-next-line react-hooks/exhaustive-deps
       clearMedia()
+
+      // Revoke any leftover object URLs from a previous open
+      setPendingFilePreviewUrls(prev => { prev.forEach(u => URL.revokeObjectURL(u)); return [] })
+      setPendingSharedFiles([])
 
       if (initialValues) {
         setContent(initialValues.content ?? '')
@@ -95,10 +102,13 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
         setTagsInput('')
         setIsDirty(true)
 
-        // Images shared via Android Share Sheet arrive as File objects from SW cache
+        // Images from Android share sheet: show preview immediately,
+        // upload happens in handleSave after the prompt row is created
         if (initialValues.pending_files && initialValues.pending_files.length > 0) {
           const files = initialValues.pending_files
-          setTimeout(() => handleFiles(files), 0)
+          const previews = files.map(f => URL.createObjectURL(f))
+          setPendingSharedFiles(files)
+          setPendingFilePreviewUrls(previews)
         }
       } else {
         setContent('')
@@ -108,6 +118,10 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
         setSharedMediaUrls([])
         setTimeout(() => textareaRef.current?.focus(), 50)
       }
+    } else {
+      // Revoke object URLs when modal closes to free memory
+      setPendingFilePreviewUrls(prev => { prev.forEach(u => URL.revokeObjectURL(u)); return [] })
+      setPendingSharedFiles([])
     }
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -180,7 +194,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       return
     }
 
-    // Persist images that arrived via the share target (already in Storage, link to DB now)
+    // Persist images that arrived via the share target as URLs (already in Storage)
     if (sharedMediaUrls.length > 0) {
       await Promise.all(
         sharedMediaUrls.map((url, idx) =>
@@ -195,6 +209,17 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       )
     }
 
+    // Upload File objects from Android share sheet — prompt now exists so FK is satisfied
+    let pendingUploadedMedia: { type: 'image' | 'video'; url: string; sort_order: number }[] = []
+    if (pendingSharedFiles.length > 0) {
+      const uploaded = await uploadFiles(pendingSharedFiles, draftId.current)
+      pendingUploadedMedia = uploaded.map((m, i) => ({
+        type: m.type,
+        url: m.url,
+        sort_order: sharedMediaUrls.length + i,
+      }))
+    }
+
     const sharedPreview = sharedMediaUrls.map((url, idx) => ({
       type: 'image' as const,
       url,
@@ -202,13 +227,13 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
     }))
     const uploadedPreview = media
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((m, i) => ({ type: m.type, url: m.url, sort_order: sharedPreview.length + i }))
+      .map((m, i) => ({ type: m.type, url: m.url, sort_order: sharedPreview.length + pendingUploadedMedia.length + i }))
 
     const newPrompt: Prompt = {
       ...data,
       source_url: data.source_url ?? null,
       source_type: data.source_type ?? null,
-      preview_media: [...sharedPreview, ...uploadedPreview].slice(0, 6),
+      preview_media: [...sharedPreview, ...pendingUploadedMedia, ...uploadedPreview].slice(0, 6),
     }
 
     window.dispatchEvent(new CustomEvent('quick-capture:saved', { detail: newPrompt }))
