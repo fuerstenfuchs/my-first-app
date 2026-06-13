@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
@@ -14,6 +15,15 @@ const CORS_HEADERS = {
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
+
+const ANTHROPIC_MODELS = new Set(['claude-sonnet-4-6', 'claude-haiku-4-5-20251001'])
+const VALID_MODELS = new Set([
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5-20251001',
+  'gpt-4.1-mini',
+  'gpt-4o',
+])
+const DEFAULT_MODEL = 'claude-haiku-4-5-20251001'
 
 const SYSTEM_PROMPT = `You are an expert reverse-prompt engineer for AI image generators (MidJourney v6, DALL-E 3, Stable Diffusion, Flux).
 
@@ -64,6 +74,57 @@ QUALITY DESCRIPTORS:
 
 Output ONLY the prompt text. No explanations, no labels, no bullet points. Write as comma-separated descriptive phrases optimized for MidJourney v6. Be exhaustive — more detail is always better.`
 
+const SYSTEM_PROMPT_PERSON_PLACEHOLDER = `You are an expert reverse-prompt engineer for AI image generators (MidJourney v6, DALL-E 3, Stable Diffusion, Flux).
+
+Your task: analyze the image with extreme precision and output a single, highly detailed English prompt that would recreate this image as closely as possible.
+
+Cover ALL of the following aspects — skip none:
+
+SUBJECT & PEOPLE (if present):
+- Use the token [Person] to represent each person — do NOT write their face, hair color, skin tone, eye color, age, ethnicity, or any identifying physical features
+- Describe only: exact body pose, posture, gesture, hand position, and camera distance (close-up / half-body / full-body)
+- Describe clothing: every garment, color, fabric texture, fit, pattern, brand style
+
+COMPOSITION & FORMAT:
+- Aspect ratio / framing (portrait, landscape, square, cinematic widescreen)
+- Camera angle (eye-level, low angle, high angle, bird's eye, dutch tilt)
+- Shot type (extreme close-up, close-up, medium shot, wide shot, establishing shot)
+- Rule of thirds, symmetry, depth, foreground/midground/background layers
+
+COLORS & PALETTE:
+- Dominant colors with specific names (e.g. deep burgundy, dusty rose, slate blue)
+- Overall color palette mood (warm, cool, desaturated, high contrast, pastel, neon)
+- Color grading style (golden hour warm tones, cold blue shadows, teal-orange split, etc.)
+
+LIGHTING:
+- Light source (natural sunlight, golden hour, overcast, studio softbox, neon, candle, backlit)
+- Direction (front-lit, side-lit, rim light, contre-jour/backlit, overhead)
+- Shadows: hard/soft, visible shadow detail
+- Highlights and specular reflections
+
+BACKGROUND & ENVIRONMENT:
+- Location (indoor/outdoor, specific setting)
+- Background description in detail (blurred bokeh, sharp, specific scenery)
+- Depth of field (shallow bokeh, deep focus, everything sharp)
+- Any props or objects in frame
+
+STYLE & MEDIUM:
+- Photography vs. digital art vs. painting vs. illustration vs. 3D render
+- If photo: camera type feel (DSLR, film, medium format, smartphone), lens type (wide, 50mm, telephoto, macro)
+- If art: artistic style, art movement, specific technique
+- Artist references if style is recognizable
+
+QUALITY DESCRIPTORS:
+- Resolution feel (ultra-detailed, sharp, soft, grainy, film grain)
+- Post-processing style (HDR, matte, cinematic grade, clean, gritty)
+
+Output ONLY the prompt text. No explanations, no labels, no bullet points. Write as comma-separated descriptive phrases optimized for MidJourney v6. Be exhaustive — more detail is always better.
+Start the prompt with [Person] if a person is present.`
+
+function buildSystemPrompt(personPlaceholder: boolean): string {
+  return personPlaceholder ? SYSTEM_PROMPT_PERSON_PLACEHOLDER : SYSTEM_PROMPT
+}
+
 export async function POST(req: NextRequest) {
   // Auth check — accept both cookie session (web app) and Bearer JWT (extension)
   let user = null
@@ -85,55 +146,93 @@ export async function POST(req: NextRequest) {
     const { data } = await supabase.auth.getUser()
     user = data.user
   }
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 503 })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: CORS_HEADERS })
 
   try {
-    const { imageUrl, imageBase64, mediaType } = await req.json() as {
+    const { imageUrl, imageBase64, mediaType, personPlaceholder, model: rawModel } = await req.json() as {
       imageUrl?: string
       imageBase64?: string
       mediaType?: string
+      personPlaceholder?: boolean
+      model?: string
+    }
+
+    const model = (rawModel && VALID_MODELS.has(rawModel)) ? rawModel : DEFAULT_MODEL
+    const useAnthropic = ANTHROPIC_MODELS.has(model)
+    const systemPrompt = buildSystemPrompt(!!personPlaceholder)
+
+    if (useAnthropic && !process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'Anthropic API key not configured' }, { status: 503, headers: CORS_HEADERS })
+    }
+    if (!useAnthropic && !process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 503, headers: CORS_HEADERS })
     }
 
     let imageData: string
-    let imageMime: Anthropic.Base64ImageSource['media_type']
+    let imageMime: string
 
     if (imageBase64) {
       imageData = imageBase64
-      imageMime = (mediaType as Anthropic.Base64ImageSource['media_type']) || 'image/jpeg'
+      imageMime = mediaType ?? 'image/jpeg'
     } else if (imageUrl) {
       const res = await fetch(imageUrl)
       if (!res.ok) throw new Error('Image fetch failed')
       const buf = await res.arrayBuffer()
       imageData = Buffer.from(buf).toString('base64')
       const ct = res.headers.get('content-type') ?? 'image/jpeg'
-      imageMime = ct.split(';')[0].trim() as Anthropic.Base64ImageSource['media_type']
+      imageMime = ct.split(';')[0].trim()
     } else {
-      return NextResponse.json({ error: 'No image provided' }, { status: 400 })
+      return NextResponse.json({ error: 'No image provided' }, { status: 400, headers: CORS_HEADERS })
     }
 
-    const client = new Anthropic({ apiKey })
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: imageMime, data: imageData },
-            },
-            { type: 'text', text: 'Generate a prompt for this image.' },
-          ],
-        },
-      ],
-    })
+    let prompt: string
 
-    const prompt = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
+    if (useAnthropic) {
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+      const message = await client.messages.create({
+        model,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: imageMime as Anthropic.Base64ImageSource['media_type'],
+                  data: imageData,
+                },
+              },
+              { type: 'text', text: 'Generate a prompt for this image.' },
+            ],
+          },
+        ],
+      })
+      prompt = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
+    } else {
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+      const response = await openai.chat.completions.create({
+        model,
+        max_tokens: 1024,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: `data:${imageMime};base64,${imageData}` },
+              },
+              { type: 'text', text: 'Generate a prompt for this image.' },
+            ],
+          },
+        ],
+      })
+      prompt = response.choices[0]?.message?.content?.trim() ?? ''
+    }
+
     return NextResponse.json({ prompt }, { headers: CORS_HEADERS })
   } catch (err) {
     console.error('analyze-image error:', err)

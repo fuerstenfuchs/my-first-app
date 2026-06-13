@@ -33,7 +33,9 @@
 | PROJ-14 | Mehrsprachige Semantische Suche (Hybridsuche) | Deployed | [PROJ-14](PROJ-14-semantische-suche.md) | 2026-06-12 |
 | PROJ-15 | Extension Prompt Saver (Rechtsklick → In PromptDB speichern) | Deployed | [PROJ-15](PROJ-15-extension-prompt-saver.md) | 2026-06-13 |
 | PROJ-16 | Bilder per Share-Sheet direkt in Quick Capture teilen | Deployed | — | 2026-06-13 |
+| PROJ-17 | Bildanalyse & Reverse Prompting (Bild → Prompt) | Deployed | — | 2026-06-13 |
+| PROJ-18 | Prompt-Varianten | Roadmap | — | 2026-06-13 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-17
+## Next Available ID: PROJ-19

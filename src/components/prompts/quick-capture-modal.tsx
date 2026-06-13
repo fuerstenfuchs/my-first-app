@@ -46,6 +46,15 @@ function isValidUrl(url: string): boolean {
   try { new URL(url); return true } catch { return false }
 }
 
+const ANALYZE_MODELS = [
+  { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5', note: '~0,003 €/Bild' },
+  { id: 'gpt-4.1-mini',              label: 'GPT-4.1 mini', note: '~0,004 €/Bild' },
+  { id: 'claude-sonnet-4-6',         label: 'Sonnet 4.6', note: '~0,012 €/Bild' },
+  { id: 'gpt-4o',                    label: 'GPT-4o', note: '~0,012 €/Bild' },
+] as const
+
+type AnalyzeModelId = typeof ANALYZE_MODELS[number]['id']
+
 export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptureModalProps) {
   const [content, setContent] = useState('')
   const [title, setTitle] = useState('')
@@ -54,6 +63,11 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const [sourceUrlError, setSourceUrlError] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [personPlaceholder, setPersonPlaceholder] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<AnalyzeModelId>(() => {
+    if (typeof window === 'undefined') return 'claude-haiku-4-5-20251001'
+    return (localStorage.getItem('pdb:analyze-model') as AnalyzeModelId | null) ?? 'claude-haiku-4-5-20251001'
+  })
   const [contentError, setContentError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
@@ -182,7 +196,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       const res = await fetch('/api/analyze-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, model: selectedModel, personPlaceholder }),
       })
       if (!res.ok) throw new Error('failed')
       const { prompt } = await res.json() as { prompt: string }
@@ -384,23 +398,56 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
             </div>
 
             {hasImages && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAnalyzeImage}
-                disabled={analyzing || saving}
-                className="w-full gap-2"
-              >
-                {analyzing ? (
-                  <>
-                    <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
-                    Bild wird analysiert…
-                  </>
-                ) : (
-                  '✨ Prompt aus Bild generieren'
-                )}
-              </Button>
+              <div className="space-y-2">
+                <div className="flex gap-1 flex-wrap">
+                  {ANALYZE_MODELS.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      title={m.note}
+                      onClick={() => {
+                        setSelectedModel(m.id)
+                        localStorage.setItem('pdb:analyze-model', m.id)
+                      }}
+                      className={`px-2 py-0.5 rounded text-xs border transition-colors ${
+                        selectedModel === m.id
+                          ? 'bg-violet-600 border-violet-600 text-white'
+                          : 'border-border text-muted-foreground hover:border-foreground/50'
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={personPlaceholder}
+                    onChange={e => setPersonPlaceholder(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Person als <code className="bg-muted px-1 rounded text-[11px]">[Person]</code> ersetzen
+                  </span>
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzeImage}
+                  disabled={analyzing || saving}
+                  className="w-full gap-2"
+                >
+                  {analyzing ? (
+                    <>
+                      <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
+                      Bild wird analysiert…
+                    </>
+                  ) : (
+                    '✨ Prompt aus Bild generieren'
+                  )}
+                </Button>
+              </div>
             )}
           </div>
 

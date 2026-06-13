@@ -12,6 +12,15 @@ interface Props {
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
+const ANALYZE_MODELS = [
+  { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
+  { id: 'gpt-4.1-mini',              label: 'GPT-4.1 mini' },
+  { id: 'claude-sonnet-4-6',         label: 'Sonnet 4.6' },
+  { id: 'gpt-4o',                    label: 'GPT-4o' },
+] as const
+
+type AnalyzeModelId = typeof ANALYZE_MODELS[number]['id']
+
 export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, onDiscard }: Props) {
   const [title, setTitle] = useState(capture.title)
   const [content, setContent] = useState(capture.content)
@@ -26,6 +35,10 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
   const [imageUploading, setImageUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [personPlaceholder, setPersonPlaceholder] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<AnalyzeModelId>(
+    () => (localStorage.getItem('pdb:analyze-model') as AnalyzeModelId | null) ?? 'claude-haiku-4-5-20251001'
+  )
   const [isDragOver, setIsDragOver] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -108,11 +121,11 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token ?? ''}`,
         },
-        body: JSON.stringify({ imageUrl: coverImageUrl }),
+        body: JSON.stringify({ imageUrl: coverImageUrl, model: selectedModel, personPlaceholder }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
+        throw new Error(`${body.error ?? `HTTP ${res.status}`} (${appUrl})`)
       }
       const { prompt } = await res.json() as { prompt: string }
       setContent(prompt)
@@ -306,6 +319,36 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
                 Cover
               </span>
             </div>
+            <div className="flex gap-1 flex-wrap">
+              {ANALYZE_MODELS.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedModel(m.id)
+                    localStorage.setItem('pdb:analyze-model', m.id)
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
+                    selectedModel === m.id
+                      ? 'bg-violet-600 border-violet-600 text-white'
+                      : 'border-zinc-600 text-zinc-400 hover:border-zinc-400'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={personPlaceholder}
+                onChange={e => setPersonPlaceholder(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-[10px] text-zinc-400">
+                Person als <code className="bg-zinc-700 px-1 rounded text-zinc-300">[Person]</code> ersetzen
+              </span>
+            </label>
             <button
               type="button"
               onClick={handleAnalyzeImage}
