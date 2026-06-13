@@ -1,6 +1,6 @@
 # PROJ-18: Prompt-Varianten
 
-## Status: Approved
+## Status: Deployed
 **Created:** 2026-06-13
 **Last Updated:** 2026-06-13
 
@@ -323,4 +323,16 @@ Keine — Supabase, pgvector und OpenAI SDK sind bereits installiert.
 - **Production Ready:** ✅ **JA** — keine Critical/High-Bugs verbleibend nach BUG-1-Fix
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-06-13
+**Git Tag:** v1.18.0-PROJ-18
+**Commit:** 4d56585
+**Trigger:** Push to `main` → Vercel auto-deploy
+**Vercel URL:** https://my-first-app-five-black.vercel.app
+
+### Post-Deployment Checks
+- [ ] Vercel-Build abgeschlossen (Dashboard prüfen)
+- [ ] Prompt öffnen → "+ Neue Variante" sichtbar
+- [ ] Variante erstellen → Tabs erscheinen, Badge auf Karte
+- [ ] Variante umbenennen, Inhalt bearbeiten, löschen
+- [ ] Supabase `prompt_variants` Tabelle enthält Einträge
