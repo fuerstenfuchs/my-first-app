@@ -10,6 +10,15 @@ export interface PreviewMediaItem {
   sort_order: number
 }
 
+export interface PromptVariant {
+  id: string
+  prompt_id: string
+  name: string | null
+  content: string
+  sort_order: number
+  created_at: string
+}
+
 export interface Prompt {
   id: string
   user_id: string
@@ -27,10 +36,12 @@ export interface Prompt {
   created_at: string
   updated_at: string
   preview_media: PreviewMediaItem[]
+  variant_count: number
 }
 
-interface RawPromptRow extends Omit<Prompt, 'preview_media'> {
+interface RawPromptRow extends Omit<Prompt, 'preview_media' | 'variant_count'> {
   prompt_media: Array<{ type: string; url: string; sort_order: number }> | null
+  prompt_variants: Array<{ id: string }> | null
 }
 
 export interface PromptInput {
@@ -51,14 +62,15 @@ export function usePrompts() {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('prompts')
-      .select('*, prompt_media(type, url, sort_order)')
+      .select('*, prompt_media(type, url, sort_order), prompt_variants(id)')
       .order('created_at', { ascending: false })
     if (error) {
       toast.error('Fehler beim Laden der Prompts')
     } else {
-      setPrompts((data as unknown as RawPromptRow[]).map(({ prompt_media, ...row }) => ({
+      setPrompts((data as unknown as RawPromptRow[]).map(({ prompt_media, prompt_variants, ...row }) => ({
         ...row,
         tags: row.tags ?? [],
+        variant_count: (prompt_variants ?? []).length,
         preview_media: (prompt_media ?? [])
           .sort((a, b) => a.sort_order - b.sort_order)
           .slice(0, 6)
@@ -84,7 +96,7 @@ export function usePrompts() {
       toast.error('Speichern fehlgeschlagen — bitte erneut versuchen')
       return false
     }
-    setPrompts(prev => [{ ...data, preview_media: [] }, ...prev])
+    setPrompts(prev => [{ ...data, preview_media: [], variant_count: 0 }, ...prev])
     toast.success('Prompt gespeichert')
     fetch('/api/embed', {
       method: 'POST',
@@ -198,7 +210,7 @@ export function usePrompts() {
       toast.error('Import fehlgeschlagen — bitte erneut versuchen')
       return 0
     }
-    setPrompts(prev => [...(data ?? []).map(p => ({ ...p, preview_media: [] as PreviewMediaItem[] })), ...prev])
+    setPrompts(prev => [...(data ?? []).map(p => ({ ...p, preview_media: [] as PreviewMediaItem[], variant_count: 0 })), ...prev])
     return data?.length ?? 0
   }
 

@@ -56,6 +56,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ids: [] })
   }
 
-  const ids = (data as Array<{ id: string; score: number }>).map(r => r.id)
-  return NextResponse.json({ ids })
+  const rows = data as Array<{ id: string; score: number; matched_variant_name: string | null }>
+  const ids = rows.map(r => r.id)
+  const matchedVariants: Record<string, string> = {}
+  rows.forEach(r => { if (r.matched_variant_name) matchedVariants[r.id] = r.matched_variant_name })
+  return NextResponse.json({ ids, matchedVariants })
 }

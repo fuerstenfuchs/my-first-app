@@ -38,36 +38,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ indexed: 0 })
   }
 
+  // Fetch variants for these prompts
+  const { data: variants } = await supabase
+    .from('prompt_variants')
+    .select('id, prompt_id, content')
+    .in('prompt_id', ids)
+    .eq('user_id', user.id)
+
   // Build embedding texts: title + description + content, capped at ~8000 chars (~6000 tokens)
-  const texts = prompts.map(p =>
+  const promptTexts = prompts.map(p =>
     [p.title, p.description, p.content]
       .filter(Boolean)
       .join('\n\n')
       .slice(0, 8000)
   )
+  const variantTexts = (variants ?? []).map(v => (v.content ?? '').slice(0, 8000))
+
+  const allTexts = [...promptTexts, ...variantTexts]
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  let embeddings: number[][]
+  let allEmbeddings: number[][]
   try {
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
-      input: texts,
+      input: allTexts,
     })
-    embeddings = response.data.map(e => e.embedding)
+    allEmbeddings = response.data.map(e => e.embedding)
   } catch {
     return NextResponse.json({ error: 'Embedding generation failed' }, { status: 502 })
   }
 
-  // Store embeddings — pgvector expects "[v1,v2,...,vN]" string via PostgREST
+  const promptEmbeddings = allEmbeddings.slice(0, prompts.length)
+  const variantEmbeddings = allEmbeddings.slice(prompts.length)
+
+  // Store prompt embeddings
   await Promise.allSettled(
     prompts.map((prompt, i) =>
       supabase
         .from('prompts')
-        .update({ embedding: `[${embeddings[i].join(',')}]` })
+        .update({ embedding: `[${promptEmbeddings[i].join(',')}]` })
         .eq('id', prompt.id)
         .eq('user_id', user.id)
     )
   )
+
+  // Store variant embeddings
+  if (variants && variants.length > 0) {
+    await Promise.allSettled(
+      variants.map((variant, i) =>
+        supabase
+          .from('prompt_variants')
+          .update({ embedding: `[${variantEmbeddings[i].join(',')}]` })
+          .eq('id', variant.id)
+          .eq('user_id', user.id)
+      )
+    )
+  }
 
   return NextResponse.json({ indexed: prompts.length })
 }
