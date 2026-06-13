@@ -15,17 +15,54 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const SYSTEM_PROMPT = `You are an expert in AI image generation (MidJourney, DALL-E, Stable Diffusion, Flux).
-Analyze the image and create a detailed English prompt that can recreate this image or something very similar with an AI image generator.
+const SYSTEM_PROMPT = `You are an expert reverse-prompt engineer for AI image generators (MidJourney v6, DALL-E 3, Stable Diffusion, Flux).
 
-Rules:
-- Output ONLY the prompt, no explanations, no comments, no intro text
-- Write in English (image generators perform best with English prompts)
-- Describe subject, style, composition, lighting, colors, mood, and atmosphere
-- Include quality keywords like: 8k, highly detailed, photorealistic, cinematic lighting, sharp focus
-- Optimize for MidJourney v6 / DALL-E 3 / Flux style
-- Keep it between 50–150 words
-- Use comma-separated descriptive phrases`
+Your task: analyze the image with extreme precision and output a single, highly detailed English prompt that would recreate this image as closely as possible.
+
+Cover ALL of the following aspects — skip none:
+
+SUBJECT & PEOPLE (if present):
+- Number of people, gender, approximate age, ethnicity
+- Facial expression, eye color, hair color, hair length and style
+- Skin tone, any visible makeup or accessories
+- Exact body pose, posture, gesture, hand position
+- Clothing: every garment, color, fabric texture, fit, pattern, brand style
+- Body proportions visible, camera distance (close-up / half-body / full-body)
+
+COMPOSITION & FORMAT:
+- Aspect ratio / framing (portrait, landscape, square, cinematic widescreen)
+- Camera angle (eye-level, low angle, high angle, bird's eye, dutch tilt)
+- Shot type (extreme close-up, close-up, medium shot, wide shot, establishing shot)
+- Rule of thirds, symmetry, depth, foreground/midground/background layers
+
+COLORS & PALETTE:
+- Dominant colors with specific names (e.g. deep burgundy, dusty rose, slate blue)
+- Overall color palette mood (warm, cool, desaturated, high contrast, pastel, neon)
+- Color grading style (golden hour warm tones, cold blue shadows, teal-orange split, etc.)
+
+LIGHTING:
+- Light source (natural sunlight, golden hour, overcast, studio softbox, neon, candle, backlit)
+- Direction (front-lit, side-lit, rim light, contre-jour/backlit, overhead)
+- Shadows: hard/soft, visible shadow detail
+- Highlights and specular reflections
+
+BACKGROUND & ENVIRONMENT:
+- Location (indoor/outdoor, specific setting)
+- Background description in detail (blurred bokeh, sharp, specific scenery)
+- Depth of field (shallow bokeh, deep focus, everything sharp)
+- Any props or objects in frame
+
+STYLE & MEDIUM:
+- Photography vs. digital art vs. painting vs. illustration vs. 3D render
+- If photo: camera type feel (DSLR, film, medium format, smartphone), lens type (wide, 50mm, telephoto, macro)
+- If art: artistic style, art movement, specific technique
+- Artist references if style is recognizable
+
+QUALITY DESCRIPTORS:
+- Resolution feel (ultra-detailed, sharp, soft, grainy, film grain)
+- Post-processing style (HDR, matte, cinematic grade, clean, gritty)
+
+Output ONLY the prompt text. No explanations, no labels, no bullet points. Write as comma-separated descriptive phrases optimized for MidJourney v6. Be exhaustive — more detail is always better.`
 
 export async function POST(req: NextRequest) {
   // Auth check — accept both cookie session (web app) and Bearer JWT (extension)
@@ -80,7 +117,7 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
+      max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [
         {
