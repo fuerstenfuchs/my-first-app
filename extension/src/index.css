@@ -6,25 +6,17 @@
   box-sizing: border-box;
 }
 
-html {
-  height: 680px;
-  overflow: hidden;
-}
-
 body {
   width: 380px;
-  height: 680px;
   margin: 0;
   background-color: #09090b;
   color: #f4f4f5;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 14px;
-  overflow: hidden;
 }
 
 #root {
   width: 380px;
-  height: 680px;
   display: flex;
   flex-direction: column;
 }

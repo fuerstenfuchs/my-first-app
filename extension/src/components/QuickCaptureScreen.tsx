@@ -244,70 +244,61 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
         </button>
       </div>
 
-      {/* Bild-Preview — fixiert zwischen Header und scrollbarer Form, scrollt nicht weg */}
+      {/* Bild-Preview — kompaktes Panel, kein CSS-Height-Constraint nötig */}
       {coverImageUrl ? (
         <div className="shrink-0 border-b border-zinc-700">
-          <div className="relative h-32 overflow-hidden">
+          {/* Bild: 96px fest */}
+          <div className="relative h-24 overflow-hidden">
             <img src={coverImageUrl} alt="Cover" className="w-full h-full object-contain bg-zinc-900" />
             <button
               type="button"
               onClick={() => setCoverImageUrl(null)}
-              className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors"
+              className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors"
             >
               ×
             </button>
-            <span className="absolute bottom-1.5 left-1.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold">
+            <span className="absolute bottom-1 left-1 text-[10px] bg-amber-500 text-black px-1 py-0.5 rounded font-semibold">
               Cover
             </span>
           </div>
-          <div className="px-3 py-2 flex flex-col gap-2">
-            <div className="flex gap-1 flex-wrap">
-              {ANALYZE_MODELS.map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedModel(m.id)
-                    localStorage.setItem('pdb:analyze-model', m.id)
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
-                    selectedModel === m.id
-                      ? 'bg-violet-600 border-violet-600 text-white'
-                      : 'border-zinc-600 text-zinc-400 hover:border-zinc-400'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={personPlaceholder}
-                  onChange={e => setPersonPlaceholder(e.target.checked)}
-                  className="rounded"
-                />
-                <span className="text-[10px] text-zinc-400">
-                  Person als <code className="bg-zinc-700 px-1 rounded text-zinc-300">[Person]</code> ersetzen
-                </span>
-              </label>
+          {/* Alle Controls in einer kompakten Zeile */}
+          <div className="px-2 py-1.5 flex items-center gap-1.5 flex-wrap">
+            {ANALYZE_MODELS.map(m => (
               <button
+                key={m.id}
                 type="button"
-                onClick={handleAnalyzeImage}
-                disabled={analyzing || saving}
-                className="ml-auto shrink-0 px-2.5 py-1 rounded-lg border border-zinc-600 text-[10px] text-zinc-300 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                onClick={() => {
+                  setSelectedModel(m.id)
+                  localStorage.setItem('pdb:analyze-model', m.id)
+                }}
+                className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${
+                  selectedModel === m.id
+                    ? 'bg-violet-600 border-violet-600 text-white'
+                    : 'border-zinc-600 text-zinc-400 hover:border-zinc-400'
+                }`}
               >
-                {analyzing ? (
-                  <>
-                    <span className="w-2.5 h-2.5 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
-                    Analysiert…
-                  </>
-                ) : (
-                  '✨ Generieren'
-                )}
+                {m.label}
               </button>
-            </div>
+            ))}
+            <label className="flex items-center gap-1 cursor-pointer ml-1">
+              <input
+                type="checkbox"
+                checked={personPlaceholder}
+                onChange={e => setPersonPlaceholder(e.target.checked)}
+                className="rounded w-3 h-3"
+              />
+              <span className="text-[10px] text-zinc-400">[Person]</span>
+            </label>
+            <button
+              type="button"
+              onClick={handleAnalyzeImage}
+              disabled={analyzing || saving}
+              className="ml-auto px-2 py-0.5 rounded border border-violet-600 text-[10px] text-violet-300 hover:bg-violet-900/40 disabled:opacity-50 transition-colors flex items-center gap-1"
+            >
+              {analyzing ? (
+                <><span className="w-2.5 h-2.5 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />Analysiert…</>
+              ) : '✨ Generieren'}
+            </button>
           </div>
         </div>
       ) : (
@@ -342,72 +333,72 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
         onChange={e => { if (e.target.files?.[0]) uploadImage(e.target.files[0]); e.target.value = '' }}
       />
 
-      {/* Form — kein äußeres Scrollen, Textarea wächst in den Restplatz */}
-      <div className="flex-1 flex flex-col p-3 gap-3 overflow-hidden min-h-0">
-
+      {/* Form — kompakte Abstände, natürliche Höhe */}
+      <div className="p-2 flex flex-col gap-2">
         {!content && (
-          <div className="text-xs text-zinc-500 bg-zinc-800/60 rounded-lg px-3 py-2 border border-zinc-700">
-            Kein Text ausgewählt. Inhalt manuell eingeben oder Seite als Referenz speichern.
+          <div className="text-xs text-zinc-500 bg-zinc-800/60 rounded px-2 py-1 border border-zinc-700">
+            Kein Text ausgewählt — Inhalt manuell eingeben.
           </div>
         )}
 
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Titel *</label>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[11px] font-medium text-zinc-400">Titel *</label>
           <input
             ref={titleRef}
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Titel eingeben…"
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+            className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
           />
         </div>
 
-        <div className="flex flex-col gap-1 flex-1 min-h-0">
-          <label className="text-xs font-medium text-zinc-400 shrink-0">Inhalt</label>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[11px] font-medium text-zinc-400">Inhalt</label>
           <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
             placeholder="Prompt-Inhalt…"
-            className="flex-1 min-h-0 w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none overflow-y-auto"
+            rows={4}
+            className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none overflow-y-auto"
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Tags</label>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[11px] font-medium text-zinc-400">Tags</label>
           <input
             type="text"
             value={tags}
             onChange={e => setTags(e.target.value)}
             placeholder="tag1, tag2, tag3"
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+            className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-zinc-400">Quell-Link</label>
+        <div className="flex flex-col gap-0.5">
+          <label className="text-[11px] font-medium text-zinc-400">Quell-Link</label>
           <input
             type="url"
             value={sourceUrl}
             onChange={e => setSourceUrl(e.target.value)}
             placeholder="https://…"
-            className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
+            className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-violet-500 transition-colors"
           />
         </div>
 
         {error && (
-          <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2">
+          <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded px-2 py-1">
             {error}
           </p>
         )}
       </div>
 
       {/* Save button */}
-      <div className="p-3 border-t border-zinc-700 shrink-0">
+      <div className="px-2 pb-2 pt-1 border-t border-zinc-700 shrink-0">
         <button
           onClick={handleSave}
           disabled={saving || saved || !title.trim() || imageUploading}
-          className={`w-full py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors ${
+          className={`w-full py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors ${
             saved ? 'bg-emerald-600' : 'bg-violet-600 hover:bg-violet-500'
           }`}
         >
