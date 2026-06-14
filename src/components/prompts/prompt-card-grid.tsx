@@ -77,8 +77,9 @@ export function PromptCardGrid({
 
   const gradient = gradientForTitle(prompt.title)
   const showGradient = !prompt.cover_image_url || imgError
-  const visibleTags = prompt.tags.slice(0, 3)
-  const badgeTag = prompt.tags[0]
+  const tags = prompt.tags ?? []
+  const visibleTags = tags.slice(0, 3)
+  const badgeTag = tags[0]
 
   const mediaCount = prompt.preview_media.length
   const firstMediaType = prompt.preview_media[0]?.type

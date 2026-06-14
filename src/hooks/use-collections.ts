@@ -241,6 +241,8 @@ export function useCollectionPrompts(collectionId: string) {
             sort_order: r.sort_order as number,
             prompt: {
               ...rest,
+              tags: (rest.tags as string[] | null) ?? [],
+              variant_count: 0,
               preview_media: (prompt_media ?? [])
                 .sort((a, b) => a.sort_order - b.sort_order)
                 .map(m => ({ type: m.type as 'image' | 'video', url: m.url, sort_order: m.sort_order })),
