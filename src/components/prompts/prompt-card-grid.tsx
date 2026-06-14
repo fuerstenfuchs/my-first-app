@@ -378,27 +378,31 @@ export function PromptCardGrid({
             onMouseUp={lbMouseUp}
             onMouseLeave={lbMouseUp}
           >
-            {/* Zoom / pan wrapper */}
+            {/* Entry animation wrapper (framer-motion owns transform here) */}
             <motion.div
-              style={{
-                transform: `scale(${lbZoom}) translate(${lbPan.x}px, ${lbPan.y}px)`,
-                transformOrigin: 'center center',
-                transition: lbDragging ? 'none' : 'transform 0.12s ease',
-                cursor: lbZoom > 1 ? (lbDragging ? 'grabbing' : 'grab') : 'zoom-in',
-              }}
               initial={{ scale: 0.88, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.88, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               onClick={e => e.stopPropagation()}
-              onMouseDown={lbMouseDown}
             >
-              <img
-                src={prompt.cover_image_url!}
-                alt={prompt.title}
-                className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none block"
-                draggable={false}
-              />
+              {/* Zoom / pan wrapper (plain div — framer-motion must NOT own this transform) */}
+              <div
+                style={{
+                  transform: `scale(${lbZoom}) translate(${lbPan.x}px, ${lbPan.y}px)`,
+                  transformOrigin: 'center center',
+                  transition: lbDragging ? 'none' : 'transform 0.12s ease',
+                  cursor: lbZoom > 1 ? (lbDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                }}
+                onMouseDown={lbMouseDown}
+              >
+                <img
+                  src={prompt.cover_image_url!}
+                  alt={prompt.title}
+                  className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none block"
+                  draggable={false}
+                />
+              </div>
             </motion.div>
 
             {/* Close button */}
