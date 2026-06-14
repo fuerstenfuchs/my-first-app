@@ -127,7 +127,7 @@ export function MediaGallery({ items, initialIndex, onClose }: MediaGalleryProps
                 onClick={e => { e.stopPropagation(); setCurrent(idx) }}
                 className={cn(
                   'shrink-0 w-14 h-10 rounded overflow-hidden border-2 transition-all',
-                  idx === current ? 'border-violet-400 opacity-100' : 'border-transparent opacity-40 hover:opacity-70',
+                  idx === current ? 'border-orange-400 opacity-100' : 'border-transparent opacity-40 hover:opacity-70',
                 )}
               >
                 {m.type === 'video' ? (

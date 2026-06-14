@@ -16,13 +16,13 @@ import {
 import type { Prompt } from '@/hooks/use-prompts'
 
 const GRADIENTS = [
-  'from-violet-950 to-indigo-900',
+  'from-emerald-950 to-green-900',
   'from-blue-950 to-cyan-900',
-  'from-emerald-950 to-teal-900',
+  'from-green-950 to-teal-900',
   'from-orange-950 to-red-900',
-  'from-pink-950 to-fuchsia-900',
+  'from-teal-950 to-cyan-900',
   'from-amber-950 to-orange-900',
-  'from-purple-950 to-fuchsia-900',
+  'from-green-950 to-emerald-900',
   'from-slate-900 to-zinc-800',
 ]
 
@@ -106,7 +106,7 @@ export function PromptListRow({
             href={prompt.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-400 transition-colors mt-0.5"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-400 transition-colors mt-0.5"
             onClick={e => e.stopPropagation()}
             title="Quelle öffnen"
           >

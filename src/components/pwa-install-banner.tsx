@@ -50,13 +50,13 @@ export function PwaInstallBanner() {
         className="rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-sm p-4 shadow-xl"
       >
         <div className="flex items-start gap-3">
-          <div className="shrink-0 mt-0.5 rounded-lg bg-violet-600/20 p-2">
-            <Download className="h-4 w-4 text-violet-400" />
+          <div className="shrink-0 mt-0.5 rounded-lg bg-green-600/20 p-2">
+            <Download className="h-4 w-4 text-green-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">PromptDB installieren</p>
+            <p className="text-sm font-medium text-foreground">Prompt Trésor installieren</p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              Installiere PromptDB, um Prompts direkt aus dem Share-Menü zu speichern.
+              Installiere Prompt Trésor, um Prompts direkt aus dem Share-Menü zu speichern.
             </p>
             <div className="flex gap-2 mt-3">
               <Button size="sm" className="h-7 text-xs px-3" onClick={handleInstall}>

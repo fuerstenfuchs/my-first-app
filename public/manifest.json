@@ -1,11 +1,11 @@
 {
-  "name": "PromptDB",
-  "short_name": "PromptDB",
+  "name": "Prompt Trésor",
+  "short_name": "Trésor",
   "description": "Persönliche KI-Prompt-Verwaltung",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#7c3aed",
+  "background_color": "#070f08",
+  "theme_color": "#16a34a",
   "icons": [
     {
       "src": "/icons/icon.svg",

@@ -332,7 +332,7 @@ export function PromptModal({
                       key={m.id}
                       type="button"
                       onClick={() => setGalleryIndex(idx)}
-                      className="shrink-0 w-24 h-16 rounded-md overflow-hidden border border-white/10 hover:border-violet-500 transition-colors bg-black"
+                      className="shrink-0 w-24 h-16 rounded-md overflow-hidden border border-white/10 hover:border-green-500 transition-colors bg-black"
                     >
                       {m.type === 'video' ? (
                         <div className="w-full h-full flex items-center justify-center text-white/50 text-lg">▶</div>
@@ -422,7 +422,7 @@ export function PromptModal({
                       />
                     ) : (
                       <button
-                        className="text-sm font-medium hover:text-violet-400 transition-colors flex items-center gap-1.5 text-left"
+                        className="text-sm font-medium hover:text-green-400 transition-colors flex items-center gap-1.5 text-left"
                         onClick={() => {
                           setVariantNameDraft(activeVariant.name ?? `Variante ${activeVariant.sort_order}`)
                           setVariantNameEditing(true)
@@ -478,7 +478,7 @@ export function PromptModal({
 
               {/* New variant form */}
               {!variantsLoading && showNewForm && (
-                <div className="rounded-md border border-dashed border-violet-500/50 bg-violet-500/5 p-3 space-y-2">
+                <div className="rounded-md border border-dashed border-green-500/50 bg-green-500/5 p-3 space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Neue Variante</p>
                   <Input
                     placeholder="Name (optional, z.B. Mit [Person])"
@@ -555,7 +555,7 @@ export function PromptModal({
                       href={prompt.source_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-violet-400 hover:text-violet-300 transition-colors truncate"
+                      className="text-sm text-green-400 hover:text-green-300 transition-colors truncate"
                     >
                       {prompt.source_url}
                     </a>

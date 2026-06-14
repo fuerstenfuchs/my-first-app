@@ -91,7 +91,7 @@ export default function EinstellungenPage() {
 
   async function handleInstall() {
     const accepted = await install()
-    if (accepted) toast.success('PromptDB wurde installiert')
+    if (accepted) toast.success('Prompt Trésor wurde installiert')
   }
 
   function handleExport() {
@@ -131,11 +131,11 @@ export default function EinstellungenPage() {
       try {
         parsed = JSON.parse(text)
       } catch {
-        toast.error('Ungültige Datei — bitte eine gültige PromptDB-JSON-Datei wählen')
+        toast.error('Ungültige Datei — bitte eine gültige Prompt Trésor-JSON-Datei wählen')
         return
       }
       if (!Array.isArray(parsed)) {
-        toast.error('Ungültige Datei — bitte eine gültige PromptDB-JSON-Datei wählen')
+        toast.error('Ungültige Datei — bitte eine gültige Prompt Trésor-JSON-Datei wählen')
         return
       }
       const valid = parsed.filter(isValidPrompt)
@@ -169,7 +169,7 @@ export default function EinstellungenPage() {
                 <CardHeader>
                   <CardTitle className="text-base">App installieren</CardTitle>
                   <CardDescription>
-                    Installiere PromptDB als App auf deinem Gerät, um Prompts direkt aus dem Share-Menü von Reddit, ChatGPT, Claude und anderen Apps zu speichern.
+                    Installiere Prompt Trésor als App auf deinem Gerät, um Prompts direkt aus dem Share-Menü von Reddit, ChatGPT, Claude und anderen Apps zu speichern.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -179,7 +179,7 @@ export default function EinstellungenPage() {
                     onClick={handleInstall}
                   >
                     <Smartphone className="h-4 w-4" />
-                    PromptDB installieren
+                    Prompt Trésor installieren
                   </Button>
                   {!canInstall && (
                     <p className="mt-3 text-xs text-muted-foreground">
@@ -217,7 +217,7 @@ export default function EinstellungenPage() {
             <CardHeader>
               <CardTitle className="text-base">Daten importieren</CardTitle>
               <CardDescription>
-                Importiere Prompts aus einer zuvor exportierten PromptDB-JSON-Datei. Bestehende Prompts werden nicht verändert — es werden immer neue Einträge angelegt.
+                Importiere Prompts aus einer zuvor exportierten Prompt Trésor-JSON-Datei. Bestehende Prompts werden nicht verändert — es werden immer neue Einträge angelegt.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -248,7 +248,7 @@ export default function EinstellungenPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-violet-500" />
+                <Sparkles className="h-4 w-4 text-green-500" />
                 Semantische Suche
               </CardTitle>
               <CardDescription>
@@ -273,7 +273,7 @@ export default function EinstellungenPage() {
                 <div className="space-y-1.5">
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full bg-violet-500 rounded-full transition-all duration-300"
+                      className="h-full bg-green-500 rounded-full transition-all duration-300"
                       style={{ width: `${prompts.length > 0 ? Math.round((indexingProgress / prompts.length) * 100) : 0}%` }}
                     />
                   </div>

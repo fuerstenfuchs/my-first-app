@@ -1,5 +1,5 @@
 const COLORS = [
-  'bg-violet-500/20 text-violet-300 border border-violet-500/30',
+  'bg-green-500/20 text-green-300 border border-green-500/30',
   'bg-blue-500/20 text-blue-300 border border-blue-500/30',
   'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
   'bg-orange-500/20 text-orange-300 border border-orange-500/30',

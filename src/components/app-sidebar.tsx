@@ -108,8 +108,10 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          <span className="font-semibold text-lg">PromptDB</span>
+          <Database className="h-5 w-5 text-green-400" />
+          <span className="font-semibold text-lg tracking-tight">
+            Prompt <span className="text-orange-400">Trésor</span>
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>

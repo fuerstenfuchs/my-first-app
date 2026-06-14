@@ -15,7 +15,7 @@ export function TagFilterBar({ tags, activeTag, onTagClick }: TagFilterBarProps)
           onClick={() => onTagClick(tag)}
           className={`shrink-0 text-xs px-2 py-0.5 rounded font-mono transition-all
             ${activeTag === tag
-              ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background ' + tagColorClass(tag)
+              ? 'ring-2 ring-green-400 ring-offset-1 ring-offset-background ' + tagColorClass(tag)
               : tagColorClass(tag) + ' hover:opacity-80'
             }`}
         >

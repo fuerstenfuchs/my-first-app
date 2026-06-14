@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
-  title: "PromptDB",
+  title: "Prompt Trésor",
   description: "Persönliche KI-Prompt-Verwaltung",
 }
 
@@ -17,11 +17,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="de" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#7c3aed" />
+        <meta name="theme-color" content="#16a34a" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="PromptDB" />
+        <meta name="apple-mobile-web-app-title" content="Prompt Trésor" />
         <link rel="apple-touch-icon" href="/icons/icon.svg" />
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>

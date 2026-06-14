@@ -270,7 +270,7 @@ export default function PromptsPage() {
             />
             {searchQuery && (isSearching || isEnhanced) && (
               <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none">
-                <Sparkles className={`h-3.5 w-3.5 ${isSearching ? 'text-violet-400 animate-pulse' : 'text-violet-500'}`} />
+                <Sparkles className={`h-3.5 w-3.5 ${isSearching ? 'text-green-400 animate-pulse' : 'text-green-500'}`} />
               </div>
             )}
             {searchQuery && (
@@ -332,7 +332,7 @@ export default function PromptsPage() {
           />
         )}
         {isEnhanced && searchQuery && (
-          <div className="px-4 py-1 flex items-center gap-1.5 text-xs text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/25 border-t border-violet-100 dark:border-violet-900/40">
+          <div className="px-4 py-1 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 bg-green-50/60 dark:bg-green-950/25 border-t border-green-100 dark:border-green-900/40">
             <Sparkles className="h-3 w-3" />
             Erweiterte Ergebnisse
           </div>

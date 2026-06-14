@@ -427,7 +427,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
                       }}
                       className={`px-2 py-0.5 rounded text-xs border transition-colors ${
                         selectedModel === m.id
-                          ? 'bg-violet-600 border-violet-600 text-white'
+                          ? 'bg-green-700 border-green-600 text-white'
                           : 'border-border text-muted-foreground hover:border-foreground/50'
                       }`}
                     >

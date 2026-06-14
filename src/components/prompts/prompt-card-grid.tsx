@@ -18,13 +18,13 @@ import { useCardCarousel } from '@/hooks/use-card-carousel'
 import type { Prompt } from '@/hooks/use-prompts'
 
 const GRADIENTS = [
-  'from-violet-950 via-indigo-900 to-blue-950',
-  'from-blue-950 via-cyan-900 to-teal-950',
   'from-emerald-950 via-green-900 to-teal-950',
+  'from-blue-950 via-cyan-900 to-teal-950',
+  'from-green-950 via-emerald-900 to-cyan-950',
   'from-orange-950 via-red-900 to-rose-950',
-  'from-pink-950 via-rose-900 to-fuchsia-950',
+  'from-teal-950 via-cyan-900 to-blue-950',
   'from-amber-950 via-orange-900 to-yellow-950',
-  'from-purple-950 via-fuchsia-900 to-pink-950',
+  'from-green-950 via-teal-900 to-emerald-950',
   'from-slate-900 via-zinc-800 to-gray-950',
 ]
 
@@ -161,7 +161,7 @@ export function PromptCardGrid({
         variants={cardVariants}
         whileHover={{
           y: -3,
-          boxShadow: '0 0 0 1px rgba(139,92,246,0.7), 0 0 24px rgba(139,92,246,0.12), 0 8px 32px rgba(0,0,0,0.5)',
+          boxShadow: '0 0 0 1px rgba(52,211,153,0.6), 0 0 24px rgba(52,211,153,0.10), 0 8px 32px rgba(0,0,0,0.5)',
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >
@@ -334,7 +334,7 @@ export function PromptCardGrid({
               href={prompt.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-400 transition-colors mt-1"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-400 transition-colors mt-1"
               onClick={e => e.stopPropagation()}
               title="Quelle öffnen"
             >
