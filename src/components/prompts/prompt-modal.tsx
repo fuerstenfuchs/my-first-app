@@ -317,7 +317,13 @@ export function PromptModal({
   return (
     <>
       <Dialog open={open} onOpenChange={o => !o && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto border-border/60"
+          style={{
+            background: 'linear-gradient(160deg, hsl(142,60%,10%) 0%, hsl(130,20%,6%) 45%, hsl(25,50%,9%) 100%)',
+            scrollbarWidth: 'none',
+          } as React.CSSProperties}
+        >
           <DialogHeader>
             <DialogTitle className="pr-6">{dialogTitle}</DialogTitle>
           </DialogHeader>
