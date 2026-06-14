@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, ExternalLink, Heart, Pencil, Trash2, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -80,19 +80,10 @@ export function PromptDetailPanel({
     day: 'numeric', month: 'short', year: 'numeric',
   })
 
-  // Inject webkit scrollbar hiding — cannot be done with inline styles
-  useEffect(() => {
-    const id = 'panel-scrollbar-hide'
-    if (!document.getElementById(id)) {
-      const s = document.createElement('style')
-      s.id = id
-      s.textContent = '.detail-panel-scroll::-webkit-scrollbar{display:none}'
-      document.head.appendChild(s)
-    }
-  }, [])
-
   return (
     <>
+      {/* Hide scrollbar in all browsers — inline JSX style bypasses SW cache */}
+      <style>{`.detail-panel-scroll::-webkit-scrollbar{width:0!important;height:0!important}.detail-panel-scroll{scrollbar-width:none!important}`}</style>
       {/* Animated width wrapper — clips inner panel during slide-in */}
       <motion.div
         className="shrink-0 border-l border-border overflow-hidden h-full"
