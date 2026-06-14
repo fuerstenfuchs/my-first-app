@@ -91,7 +91,7 @@ export function PromptDetailPanel({
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
         style={{
           minWidth: 0,
-          background: 'linear-gradient(160deg, hsl(142 22% 9%) 0%, hsl(130 14% 6%) 50%, hsl(25 18% 5.5%) 100%)',
+          background: 'linear-gradient(160deg, hsl(142 35% 12%) 0%, hsl(130 15% 6%) 55%, hsl(25 30% 7%) 100%)',
         }}
       >
         {/* Inner fixed-width content */}
