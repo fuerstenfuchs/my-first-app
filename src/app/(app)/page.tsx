@@ -120,6 +120,16 @@ export default function PromptsPage() {
     setModalOpen(true)
   }, [])
 
+  // Sync ?tag= URL param from sidebar tag links
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tag = params.get('tag')
+    if (tag) {
+      setActiveTag(decodeURIComponent(tag))
+      window.history.replaceState(null, '', '/')
+    }
+  }, [])
+
   // Open Quick Capture with shared content when redirected from /share or /api/share
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
