@@ -22,7 +22,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Prompt Trésor" />
-        <link rel="apple-touch-icon" href="/icons/icon.svg" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="icon" type="image/png" href="/logo.png" />
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         {children}

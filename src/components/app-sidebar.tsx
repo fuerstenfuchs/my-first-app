@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, Database, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
+import { BarChart2, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -106,13 +106,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-green-400" />
-          <span className="font-semibold text-lg tracking-tight">
-            Prompt <span className="text-orange-400">Trésor</span>
-          </span>
-        </div>
+      <SidebarHeader className="p-3">
+        <img
+          src="/logo.png"
+          alt="Prompt Trésor"
+          className="w-full max-w-[160px] mx-auto object-contain"
+          style={{ height: '52px', objectPosition: 'center' }}
+        />
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>

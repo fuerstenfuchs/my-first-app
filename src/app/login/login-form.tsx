@@ -60,7 +60,11 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Prompt <span className="text-orange-400">Trésor</span></CardTitle>
+        <img
+          src="/logo.png"
+          alt="Prompt Trésor"
+          className="w-40 mx-auto mb-2 object-contain"
+        />
         <CardDescription>Persönliche KI-Prompt-Verwaltung</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
