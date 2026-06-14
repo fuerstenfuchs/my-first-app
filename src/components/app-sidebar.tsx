@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, FolderOpen, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -169,10 +169,20 @@ export function AppSidebar() {
                       <SidebarMenuButton
                         isActive={pathname === `/collections/${col.id}`}
                         asChild
+                        className="h-auto py-1.5"
                       >
-                        <a href={`/collections/${col.id}`}>
-                          <FolderOpen className="h-4 w-4" />
-                          <span className="truncate">{col.name}</span>
+                        <a href={`/collections/${col.id}`} className="flex items-center gap-2.5">
+                          {/* Thumbnail */}
+                          <div className="shrink-0 w-9 h-9 rounded-md overflow-hidden border border-white/10 bg-sidebar-accent">
+                            {col.cover_image_url ? (
+                              <img src={col.cover_image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-sidebar-foreground/60">
+                                {col.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <span className="truncate text-sm">{col.name}</span>
                         </a>
                       </SidebarMenuButton>
                       <DropdownMenu>
