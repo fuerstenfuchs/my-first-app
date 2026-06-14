@@ -91,7 +91,7 @@ export function PromptDetailPanel({
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
         style={{
           minWidth: 0,
-          background: 'linear-gradient(160deg, hsl(142 14% 7%) 0%, hsl(120 10% 4.5%) 60%, hsl(25 12% 5%) 100%)',
+          background: 'linear-gradient(160deg, hsl(142 22% 9%) 0%, hsl(130 14% 6%) 50%, hsl(25 18% 5.5%) 100%)',
         }}
       >
         {/* Inner fixed-width content */}
@@ -138,7 +138,7 @@ export function PromptDetailPanel({
           </div>
 
           {/* Scrollable body — scrollbar hidden */}
-          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex-1 overflow-y-auto no-scrollbar">
 
             {/* Cover image / media (16:9) */}
             {allMedia.length > 0 && (
