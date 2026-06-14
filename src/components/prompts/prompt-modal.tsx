@@ -317,7 +317,7 @@ export function PromptModal({
   return (
     <>
       <Dialog open={open} onOpenChange={o => !o && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
           <DialogHeader>
             <DialogTitle className="pr-6">{dialogTitle}</DialogTitle>
           </DialogHeader>
