@@ -84,18 +84,18 @@ export function PromptDetailPanel({
     <>
       {/* Animated width wrapper — clips inner panel during slide-in */}
       <motion.div
-        className="shrink-0 border-l border-border flex flex-col overflow-hidden"
+        className="shrink-0 border-l border-border overflow-hidden"
         initial={{ width: 0 }}
         animate={{ width: 500 }}
         exit={{ width: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        style={{
-          minWidth: 0,
-          background: 'linear-gradient(160deg, hsl(142 35% 12%) 0%, hsl(130 15% 6%) 55%, hsl(25 30% 7%) 100%)',
-        }}
+        style={{ minWidth: 0 }}
       >
-        {/* Inner fixed-width content */}
-        <div className="w-[500px] flex flex-col h-full overflow-hidden">
+        {/* Inner fixed-width content — gradient lives here so framer-motion can't interfere */}
+        <div
+          className="w-[500px] flex flex-col h-full overflow-hidden"
+          style={{ background: 'linear-gradient(160deg, hsl(142 50% 15%) 0%, hsl(130 20% 7%) 50%, hsl(25 45% 10%) 100%)' }}
+        >
 
           {/* Panel header */}
           <div className="flex items-center gap-1 px-3 py-2.5 border-b border-border shrink-0">
@@ -137,8 +137,11 @@ export function PromptDetailPanel({
             </Button>
           </div>
 
-          {/* Scrollable body — scrollbar hidden */}
-          <div className="flex-1 overflow-y-auto no-scrollbar">
+          {/* Scrollable body — scrollbar hidden via inline style (bypasses SW CSS cache) */}
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+          >
 
             {/* Cover image / media (16:9) */}
             {allMedia.length > 0 && (
