@@ -343,7 +343,8 @@ export default function PromptsPage() {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden relative">
+      <main className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-20px' }}>
         {loading ? (
           <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -403,6 +404,7 @@ export default function PromptsPage() {
           </motion.div>
         )}
       </main>
+      </div>{/* end clip wrapper */}
 
       </div>{/* end left column */}
 
