@@ -63,7 +63,7 @@ export function LoginForm() {
         <img
           src="/logo.png"
           alt="Prompt Trésor"
-          className="w-40 mx-auto mb-2 object-contain"
+          className="w-72 mx-auto mb-2 object-contain"
         />
         <CardDescription>Persönliche KI-Prompt-Verwaltung</CardDescription>
       </CardHeader>

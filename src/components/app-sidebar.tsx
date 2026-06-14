@@ -110,8 +110,7 @@ export function AppSidebar() {
         <img
           src="/logo.png"
           alt="Prompt Trésor"
-          className="w-full max-w-[160px] mx-auto object-contain"
-          style={{ height: '52px', objectPosition: 'center' }}
+          className="w-full mx-auto object-contain"
         />
       </SidebarHeader>
       <SidebarContent>
