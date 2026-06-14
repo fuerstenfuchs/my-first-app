@@ -35,7 +35,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
-import { useCollections } from '@/hooks/use-collections'
+import { useCollections, useCollectionsOverview } from '@/hooks/use-collections'
 import { usePrompts } from '@/hooks/use-prompts'
 import { tagColorClass } from '@/lib/tag-colors'
 
@@ -43,6 +43,9 @@ export function AppSidebar() {
   const router = useRouter()
   const pathname = usePathname()
   const { collections, createCollection, renameCollection, deleteCollection } = useCollections()
+  const { collections: collectionsOverview } = useCollectionsOverview()
+  // Map collection id → first available image (from prompts inside the collection)
+  const collectionImageMap = new Map(collectionsOverview.map(c => [c.id, c.collage_images[0] ?? null]))
   const { prompts } = usePrompts()
 
   const topTags = Object.entries(
@@ -174,8 +177,8 @@ export function AppSidebar() {
                         <a href={`/collections/${col.id}`} className="flex items-center gap-2.5">
                           {/* Thumbnail */}
                           <div className="shrink-0 w-9 h-9 rounded-md overflow-hidden border border-white/10 bg-sidebar-accent">
-                            {col.cover_image_url ? (
-                              <img src={col.cover_image_url} alt="" className="w-full h-full object-cover" />
+                            {(collectionImageMap.get(col.id) ?? col.cover_image_url) ? (
+                              <img src={(collectionImageMap.get(col.id) ?? col.cover_image_url)!} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-sidebar-foreground/60">
                                 {col.name.charAt(0).toUpperCase()}
