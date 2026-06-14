@@ -50,6 +50,7 @@ interface PromptCardGridProps {
   onToggleFavorite: () => void
   onSetRating: (rating: number | null) => void
   dragHandleSlot?: React.ReactNode
+  isSelected?: boolean
 }
 
 export function PromptCardGrid({
@@ -63,6 +64,7 @@ export function PromptCardGrid({
   onToggleFavorite,
   onSetRating,
   dragHandleSlot,
+  isSelected,
 }: PromptCardGridProps) {
   const [imgError, setImgError] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -153,7 +155,8 @@ export function PromptCardGrid({
         style={{
           background: 'rgba(255,255,255,0.04)',
           backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: isSelected ? '1px solid rgba(52,211,153,0.65)' : '1px solid rgba(255,255,255,0.08)',
+          boxShadow: isSelected ? '0 0 0 1px rgba(52,211,153,0.2), 0 0 24px rgba(52,211,153,0.08)' : 'none',
         }}
         onClick={handleCardClick}
         onMouseEnter={handleMouseEnter}
@@ -161,7 +164,7 @@ export function PromptCardGrid({
         variants={cardVariants}
         whileHover={{
           y: -3,
-          boxShadow: '0 0 0 1px rgba(52,211,153,0.6), 0 0 24px rgba(52,211,153,0.10), 0 8px 32px rgba(0,0,0,0.5)',
+          boxShadow: '0 0 0 1px rgba(52,211,153,0.7), 0 0 24px rgba(52,211,153,0.12), 0 8px 32px rgba(0,0,0,0.5)',
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >

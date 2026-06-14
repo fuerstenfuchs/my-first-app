@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PromptCardGrid, cardVariants } from '@/components/prompts/prompt-card-grid'
 import { PromptListRow, rowVariants } from '@/components/prompts/prompt-list-row'
 import { PromptModal } from '@/components/prompts/prompt-modal'
+import { PromptDetailPanel } from '@/components/prompts/prompt-detail-panel'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
 import { TagFilterBar } from '@/components/prompts/tag-filter-bar'
 import { AddToCollectionDialog } from '@/components/collections/add-to-collection-dialog'
@@ -44,6 +45,9 @@ export default function PromptsPage() {
   const [modalMode, setModalMode] = useState<ModalMode>('create')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [addToCollectionId, setAddToCollectionId] = useState<string | null>(null)
+  const [detailPromptId, setDetailPromptId] = useState<string | null>(null)
+
+  const liveDetailPrompt = detailPromptId ? prompts.find(p => p.id === detailPromptId) ?? null : null
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>()
@@ -109,9 +113,7 @@ export default function PromptsPage() {
   }
 
   const openView = useCallback((prompt: Prompt) => {
-    setModalPrompt(prompt)
-    setModalMode('view')
-    setModalOpen(true)
+    setDetailPromptId(prompt.id)
   }, [])
 
   const openEdit = useCallback((prompt: Prompt) => {
@@ -237,7 +239,7 @@ export default function PromptsPage() {
 
   const sharedCardProps = (prompt: Prompt) => ({
     prompt,
-    onClick: () => openView(prompt),
+    onClick: () => setDetailPromptId(id => id === prompt.id ? null : prompt.id),
     onCopy: () => copyPrompt(prompt),
     onEdit: () => openEdit(prompt),
     onDelete: () => setDeleteId(prompt.id),
@@ -247,7 +249,9 @@ export default function PromptsPage() {
   })
 
   return (
-    <div className="flex flex-col h-svh min-w-0">
+    <div className="flex h-svh min-w-0">
+      {/* Left: header + grid */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
       <header className="border-b shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
@@ -376,13 +380,13 @@ export default function PromptsPage() {
         ) : viewMode === 'grid' ? (
           <motion.div
             key="grid"
-            className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+            className={`p-4 md:p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 ${detailPromptId ? 'lg:grid-cols-2 xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}
             variants={gridContainer}
             initial="hidden"
             animate="visible"
           >
             {displayedPrompts.map(prompt => (
-              <PromptCardGrid key={prompt.id} {...sharedCardProps(prompt)} />
+              <PromptCardGrid key={prompt.id} {...sharedCardProps(prompt)} isSelected={prompt.id === detailPromptId} />
             ))}
           </motion.div>
         ) : (
@@ -399,6 +403,22 @@ export default function PromptsPage() {
           </motion.div>
         )}
       </main>
+
+      </div>{/* end left column */}
+
+      {/* Right: detail panel */}
+      <AnimatePresence>
+        {liveDetailPrompt && (
+          <PromptDetailPanel
+            prompt={liveDetailPrompt}
+            onClose={() => setDetailPromptId(null)}
+            onEdit={() => openEdit(liveDetailPrompt)}
+            onDelete={() => { setDetailPromptId(null); setDeleteId(liveDetailPrompt.id) }}
+            onToggleFavorite={() => toggleFavorite(liveDetailPrompt)}
+            onSetRating={r => setRating(liveDetailPrompt, r)}
+          />
+        )}
+      </AnimatePresence>
 
       <PromptModal
         open={modalOpen}
