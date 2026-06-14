@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -266,8 +266,13 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton isActive={pathname === '/'} asChild>
-              <a href="/">Alle Prompts</a>
+            <SidebarMenuButton isActive={pathname === '/'} asChild className="h-auto py-3">
+              <a href="/" className="flex items-center gap-3">
+                <div className="shrink-0 w-12 h-12 rounded-lg border border-white/10 bg-sidebar-accent flex items-center justify-center">
+                  <LayoutGrid className="h-5 w-5 text-sidebar-foreground/70" />
+                </div>
+                <span className="text-sm font-medium">Alle Prompts</span>
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
