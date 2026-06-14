@@ -408,17 +408,20 @@ SidebarSeparator.displayName = "SidebarSeparator"
 const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
+>(({ className, style, ...props }, ref) => {
   return (
-    <div
-      ref={ref}
-      data-sidebar="content"
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
-        className
-      )}
-      {...props}
-    />
+    <div className="flex min-h-0 flex-1 overflow-hidden relative">
+      <div
+        ref={ref}
+        data-sidebar="content"
+        className={cn(
+          "absolute inset-y-0 left-0 flex flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+          className
+        )}
+        style={{ ...style, right: '-17px' }}
+        {...props}
+      />
+    </div>
   )
 })
 SidebarContent.displayName = "SidebarContent"
