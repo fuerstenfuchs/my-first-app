@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, Video, ExternalLink } from 'lucide-react'
@@ -66,6 +66,11 @@ export function PromptCardGrid({
 }: PromptCardGridProps) {
   const [imgError, setImgError] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lbZoom, setLbZoom] = useState(1)
+  const [lbPan, setLbPan] = useState({ x: 0, y: 0 })
+  const [lbDragging, setLbDragging] = useState(false)
+  const lbDragStartRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null)
+  const lbOverlayRef = useRef<HTMLDivElement>(null)
   const [mediaVisible, setMediaVisible] = useState(false)
 
   const { currentIndex, isCarouselActive, onMouseEnter: carouselEnter, onMouseLeave: carouselLeave } = useCardCarousel(prompt.preview_media)
@@ -78,6 +83,53 @@ export function PromptCardGrid({
   const mediaCount = prompt.preview_media.length
   const firstMediaType = prompt.preview_media[0]?.type
   const dotCount = Math.min(mediaCount, 5)
+
+  // Non-passive wheel listener for zoom (React's onWheel is passive by default)
+  useEffect(() => {
+    if (!lightboxOpen) return
+    const el = lbOverlayRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      setLbZoom(z => Math.min(4, Math.max(0.25, z - e.deltaY * 0.001)))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [lightboxOpen])
+
+  function closeLightbox() {
+    setLightboxOpen(false)
+    setLbZoom(1)
+    setLbPan({ x: 0, y: 0 })
+  }
+
+  function lbChangeZoom(delta: number) {
+    setLbZoom(z => {
+      const next = Math.min(4, Math.max(0.25, z + delta))
+      if (next <= 1) setLbPan({ x: 0, y: 0 })
+      return next
+    })
+  }
+
+  function lbMouseDown(e: React.MouseEvent) {
+    if (lbZoom <= 1) return
+    e.preventDefault()
+    setLbDragging(true)
+    lbDragStartRef.current = { mx: e.clientX, my: e.clientY, px: lbPan.x, py: lbPan.y }
+  }
+
+  function lbMouseMove(e: React.MouseEvent) {
+    if (!lbDragStartRef.current) return
+    setLbPan({
+      x: lbDragStartRef.current.px + (e.clientX - lbDragStartRef.current.mx) / lbZoom,
+      y: lbDragStartRef.current.py + (e.clientY - lbDragStartRef.current.my) / lbZoom,
+    })
+  }
+
+  function lbMouseUp() {
+    setLbDragging(false)
+    lbDragStartRef.current = null
+  }
 
   function handleMouseEnter() {
     setMediaVisible(true)
@@ -315,30 +367,72 @@ export function PromptCardGrid({
       {lightboxOpen && typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6"
+            ref={lbOverlayRef}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            onClick={() => setLightboxOpen(false)}
+            onClick={closeLightbox}
+            onMouseMove={lbMouseMove}
+            onMouseUp={lbMouseUp}
+            onMouseLeave={lbMouseUp}
           >
-            <motion.img
-              src={prompt.cover_image_url!}
-              alt={prompt.title}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            {/* Zoom / pan wrapper */}
+            <motion.div
+              style={{
+                transform: `scale(${lbZoom}) translate(${lbPan.x}px, ${lbPan.y}px)`,
+                transformOrigin: 'center center',
+                transition: lbDragging ? 'none' : 'transform 0.12s ease',
+                cursor: lbZoom > 1 ? (lbDragging ? 'grabbing' : 'grab') : 'zoom-in',
+              }}
               initial={{ scale: 0.88, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.88, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               onClick={e => e.stopPropagation()}
-            />
+              onMouseDown={lbMouseDown}
+            >
+              <img
+                src={prompt.cover_image_url!}
+                alt={prompt.title}
+                className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none block"
+                draggable={false}
+              />
+            </motion.div>
+
+            {/* Close button */}
             <button
               className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
-              onClick={() => setLightboxOpen(false)}
+              onClick={closeLightbox}
             >
               <X className="h-5 w-5" />
               <span className="sr-only">Schließen</span>
             </button>
+
+            {/* Zoom controls */}
+            <div
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 rounded-full px-4 py-2 backdrop-blur-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => lbChangeZoom(-0.25)}
+                className="text-white/80 hover:text-white w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-lg leading-none"
+              >−</button>
+              <span className="text-white/70 text-sm w-12 text-center tabular-nums">
+                {Math.round(lbZoom * 100)}%
+              </span>
+              <button
+                onClick={() => lbChangeZoom(0.25)}
+                className="text-white/80 hover:text-white w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-lg leading-none"
+              >+</button>
+              {lbZoom !== 1 && (
+                <button
+                  onClick={() => { setLbZoom(1); setLbPan({ x: 0, y: 0 }) }}
+                  className="text-white/50 hover:text-white/80 text-xs ml-1 px-2 py-0.5 rounded hover:bg-white/10 transition-colors"
+                >Reset</button>
+              )}
+            </div>
           </motion.div>
         </AnimatePresence>,
         document.body
