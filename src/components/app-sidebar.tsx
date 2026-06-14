@@ -265,15 +265,22 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton isActive={pathname === '/'} asChild className="h-auto py-3">
-              <a href="/" className="flex items-center gap-3">
-                <div className="shrink-0 w-12 h-12 rounded-lg border border-white/10 bg-sidebar-accent flex items-center justify-center">
-                  <LayoutGrid className="h-5 w-5 text-sidebar-foreground/70" />
-                </div>
-                <span className="text-sm font-medium">Alle Prompts</span>
-              </a>
-            </SidebarMenuButton>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: 'linear-gradient(#0d1a0e, #111810) padding-box, linear-gradient(135deg, #22c55e 0%, #ea580c 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(34,197,94,0.25), 0 0 18px rgba(234,88,12,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <LayoutGrid className="h-6 w-6 text-orange-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Alle Prompts</span>
+            </a>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton isActive={pathname === '/stats'} asChild>
