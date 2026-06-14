@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, ExternalLink, Heart, Pencil, Trash2, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -82,8 +82,6 @@ export function PromptDetailPanel({
 
   return (
     <>
-      {/* Hide scrollbar in all browsers — inline JSX style bypasses SW cache */}
-      <style>{`.detail-panel-scroll::-webkit-scrollbar{width:0!important;height:0!important}.detail-panel-scroll{scrollbar-width:none!important}`}</style>
       {/* Animated width wrapper — clips inner panel during slide-in */}
       <motion.div
         className="shrink-0 border-l border-border overflow-hidden h-full"
@@ -139,10 +137,11 @@ export function PromptDetailPanel({
             </Button>
           </div>
 
-          {/* Scrollable body — scrollbar hidden via injected style (webkit) + inline (firefox) */}
+          {/* Clip trick: outer clips scrollbar via overflow-hidden, inner extends 20px right */}
+          <div className="flex-1 overflow-hidden relative">
           <div
-            className="detail-panel-scroll flex-1 overflow-y-auto"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+            className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden"
+            style={{ right: '-20px' }}
           >
 
             {/* Cover image / media (16:9) */}
@@ -266,6 +265,7 @@ export function PromptDetailPanel({
 
             </div>
           </div>
+          </div>{/* end clip wrapper */}
 
           {/* Footer — large copy button */}
           <div className="p-3 border-t border-border shrink-0">
