@@ -380,7 +380,7 @@ export default function PromptsPage() {
         ) : viewMode === 'grid' ? (
           <motion.div
             key="grid"
-            className={`p-4 md:p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 ${detailPromptId ? 'lg:grid-cols-2 xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}
+            className={`p-4 md:p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 ${detailPromptId ? 'lg:grid-cols-2 xl:grid-cols-2' : 'lg:grid-cols-3 xl:grid-cols-4'}`}
             variants={gridContainer}
             initial="hidden"
             animate="visible"

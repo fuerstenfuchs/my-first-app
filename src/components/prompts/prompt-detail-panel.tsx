@@ -84,15 +84,18 @@ export function PromptDetailPanel({
     <>
       {/* Animated width wrapper — clips inner panel during slide-in */}
       <motion.div
-        className="shrink-0 border-l border-border bg-card flex flex-col overflow-hidden"
+        className="shrink-0 border-l border-border flex flex-col overflow-hidden"
         initial={{ width: 0 }}
-        animate={{ width: 420 }}
+        animate={{ width: 500 }}
         exit={{ width: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        style={{ minWidth: 0 }}
+        style={{
+          minWidth: 0,
+          background: 'linear-gradient(160deg, hsl(142 14% 7%) 0%, hsl(120 10% 4.5%) 60%, hsl(25 12% 5%) 100%)',
+        }}
       >
         {/* Inner fixed-width content */}
-        <div className="w-[420px] flex flex-col h-full overflow-hidden">
+        <div className="w-[500px] flex flex-col h-full overflow-hidden">
 
           {/* Panel header */}
           <div className="flex items-center gap-1 px-3 py-2.5 border-b border-border shrink-0">
@@ -134,8 +137,8 @@ export function PromptDetailPanel({
             </Button>
           </div>
 
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Scrollable body — scrollbar hidden */}
+          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
             {/* Cover image / media (16:9) */}
             {allMedia.length > 0 && (
