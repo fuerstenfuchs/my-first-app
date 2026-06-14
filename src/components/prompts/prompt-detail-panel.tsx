@@ -80,11 +80,22 @@ export function PromptDetailPanel({
     day: 'numeric', month: 'short', year: 'numeric',
   })
 
+  // Inject webkit scrollbar hiding — cannot be done with inline styles
+  useEffect(() => {
+    const id = 'panel-scrollbar-hide'
+    if (!document.getElementById(id)) {
+      const s = document.createElement('style')
+      s.id = id
+      s.textContent = '.detail-panel-scroll::-webkit-scrollbar{display:none}'
+      document.head.appendChild(s)
+    }
+  }, [])
+
   return (
     <>
       {/* Animated width wrapper — clips inner panel during slide-in */}
       <motion.div
-        className="shrink-0 border-l border-border overflow-hidden"
+        className="shrink-0 border-l border-border overflow-hidden h-full"
         initial={{ width: 0 }}
         animate={{ width: 500 }}
         exit={{ width: 0 }}
@@ -94,7 +105,7 @@ export function PromptDetailPanel({
         {/* Inner fixed-width content — gradient lives here so framer-motion can't interfere */}
         <div
           className="w-[500px] flex flex-col h-full overflow-hidden"
-          style={{ background: 'linear-gradient(160deg, hsl(142 50% 15%) 0%, hsl(130 20% 7%) 50%, hsl(25 45% 10%) 100%)' }}
+          style={{ background: 'linear-gradient(160deg, hsl(142,75%,22%) 0%, hsl(130,25%,9%) 50%, hsl(25,60%,14%) 100%)' }}
         >
 
           {/* Panel header */}
@@ -137,9 +148,9 @@ export function PromptDetailPanel({
             </Button>
           </div>
 
-          {/* Scrollable body — scrollbar hidden via inline style (bypasses SW CSS cache) */}
+          {/* Scrollable body — scrollbar hidden via injected style (webkit) + inline (firefox) */}
           <div
-            className="flex-1 overflow-y-auto"
+            className="detail-panel-scroll flex-1 overflow-y-auto"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
           >
 
