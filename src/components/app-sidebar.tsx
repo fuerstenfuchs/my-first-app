@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -280,6 +280,25 @@ export function AppSidebar() {
               </div>
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">Alle Prompts</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/characters"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/characters')
+                  ? 'linear-gradient(#0d0d1f, #111018) padding-box, linear-gradient(135deg, #818cf8 0%, #c084fc 100%) border-box'
+                  : 'linear-gradient(#0d0d1f, #111018) padding-box, linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(99,102,241,0.2), 0 0 18px rgba(139,92,246,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Users className="h-6 w-6 text-violet-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Charaktere</span>
             </a>
           </SidebarMenuItem>
           <SidebarMenuItem>
