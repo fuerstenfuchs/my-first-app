@@ -19,8 +19,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CharacterForm } from '@/components/characters/character-form'
 import { VariantForm } from '@/components/characters/variant-form'
-import { VariantCard, VariantImageGallery } from '@/components/characters/variant-card'
-import { useCharacters, useCharacterDetail, type Character, type CharacterVariant, type CharacterInput, type VariantInput } from '@/hooks/use-characters'
+import { VariantCard } from '@/components/characters/variant-card'
+import { CharacterMediaManager } from '@/components/characters/character-media-manager'
+import {
+  useCharacters,
+  useCharacterDetail,
+  type Character,
+  type CharacterVariant,
+  type CharacterInput,
+  type VariantInput,
+} from '@/hooks/use-characters'
 
 export default function CharactersPage() {
   const { characters, loading, createCharacter, updateCharacter, deleteCharacter } = useCharacters()
@@ -34,11 +42,14 @@ export default function CharactersPage() {
     character,
     variants,
     loading: detailLoading,
+    uploading,
     createVariant,
     updateVariant,
     deleteVariant,
     uploadImages,
+    addImageUrl,
     deleteImage,
+    reorderImages,
   } = useCharacterDetail(selectedId)
 
   const [variantFormOpen, setVariantFormOpen] = useState(false)
@@ -51,20 +62,17 @@ export default function CharactersPage() {
   )
 
   async function handleCharSave(input: CharacterInput, firstVariantName?: string): Promise<boolean | Character | null> {
-    if (editingCharacter) {
-      const ok = await updateCharacter(editingCharacter.id, input)
-      return ok
-    }
+    if (editingCharacter) return updateCharacter(editingCharacter.id, input)
     const char = await createCharacter(input, firstVariantName)
     if (char) setSelectedId(char.id)
     return char
   }
 
   async function handleVariantSave(input: VariantInput): Promise<boolean | CharacterVariant | null> {
-    if (editingVariant) {
-      return updateVariant(editingVariant.id, input)
-    }
-    return createVariant(input)
+    if (editingVariant) return updateVariant(editingVariant.id, input)
+    const v = await createVariant(input)
+    if (v) setSelectedVariantId(v.id)
+    return v
   }
 
   async function handleDeleteChar() {
@@ -125,9 +133,7 @@ export default function CharactersPage() {
           <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-17px' }}>
             {loading ? (
               <div className="p-2 space-y-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 rounded-lg" />
-                ))}
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-2 text-center px-4">
@@ -149,12 +155,11 @@ export default function CharactersPage() {
                     <button
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors group ${
                         selectedId === char.id
-                          ? 'bg-primary/10 text-primary'
+                          ? 'bg-violet-500/10 text-violet-400'
                           : 'hover:bg-accent/60'
                       }`}
                       onClick={() => { setSelectedId(char.id); setSelectedVariantId(null) }}
                     >
-                      {/* Avatar */}
                       <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-muted border border-border/50">
                         {char.cover_image_url ? (
                           <img src={char.cover_image_url} alt="" className="w-full h-full object-cover" />
@@ -164,14 +169,13 @@ export default function CharactersPage() {
                           </div>
                         )}
                       </div>
-                      {/* Name */}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{char.name}</p>
                         {char.description && (
                           <p className="text-xs text-muted-foreground truncate">{char.description}</p>
                         )}
                       </div>
-                      <ChevronRight className={`h-4 w-4 shrink-0 transition-opacity ${selectedId === char.id ? 'opacity-100 text-primary' : 'opacity-0 group-hover:opacity-40'}`} />
+                      <ChevronRight className={`h-4 w-4 shrink-0 transition-opacity ${selectedId === char.id ? 'opacity-100 text-violet-400' : 'opacity-0 group-hover:opacity-40'}`} />
                     </button>
                   </li>
                 ))}
@@ -200,6 +204,7 @@ export default function CharactersPage() {
               Neuer Charakter
             </Button>
           </div>
+
         ) : detailLoading ? (
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-48" />
@@ -208,12 +213,12 @@ export default function CharactersPage() {
               {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-[4/3] rounded-xl" />)}
             </div>
           </div>
+
         ) : character ? (
           <>
             {/* Character header */}
             <header className="border-b shrink-0 px-6 py-4">
               <div className="flex items-start gap-4">
-                {/* Cover image */}
                 <div className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted border border-border/50">
                   {character.cover_image_url ? (
                     <img src={character.cover_image_url} alt="" className="w-full h-full object-cover" />
@@ -239,103 +244,110 @@ export default function CharactersPage() {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => { setEditingCharacter(character); setCharFormOpen(true) }}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8"
+                    onClick={() => { setEditingCharacter(character); setCharFormOpen(true) }}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => setDeleteCharId(character.id)}
-                  >
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => setDeleteCharId(character.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </header>
 
-            {/* Variants */}
-            <div className="flex-1 overflow-hidden relative">
-              <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-6" style={{ right: '-20px' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Varianten ({variants.length})
-                  </h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => { setEditingVariant(null); setVariantFormOpen(true) }}
-                  >
-                    <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Neue Variante
-                  </Button>
-                </div>
+            {/* Variants + detail */}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full flex flex-col lg:flex-row min-w-0">
 
-                {variants.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-center">
-                    <p className="text-sm text-muted-foreground">Noch keine Varianten</p>
-                    <Button size="sm" onClick={() => { setEditingVariant(null); setVariantFormOpen(true) }}>
-                      <Plus className="mr-1.5 h-3.5 w-3.5" />
-                      Erste Variante anlegen
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {variants.map(v => (
-                        <VariantCard
-                          key={v.id}
-                          variant={v}
-                          isSelected={selectedVariantId === v.id}
-                          onClick={() => setSelectedVariantId(prev => prev === v.id ? null : v.id)}
-                          onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}
-                          onDelete={() => setDeleteVariantId(v.id)}
-                          onUploadImages={files => uploadImages(v.id, files)}
-                          onDeleteImage={(imgId, path) => deleteImage(v.id, imgId, path)}
-                        />
-                      ))}
+                {/* Variant grid */}
+                <div className={`flex-1 min-w-0 overflow-hidden relative ${selectedVariant ? 'lg:flex-none lg:w-[55%]' : ''}`}>
+                  <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-6" style={{ right: '-20px' }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Varianten ({variants.length})
+                      </h3>
+                      <Button size="sm" variant="outline" onClick={() => { setEditingVariant(null); setVariantFormOpen(true) }}>
+                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                        Neue Variante
+                      </Button>
                     </div>
 
-                    {/* Expanded variant detail */}
-                    {selectedVariant && (
-                      <div className="mt-6 rounded-xl border border-border/50 bg-card/40 p-5">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-semibold">{selectedVariant.name}</h4>
-                            {selectedVariant.description && (
-                              <p className="text-sm text-muted-foreground">{selectedVariant.description}</p>
-                            )}
-                          </div>
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelectedVariantId(null)}>
+                    {variants.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-center">
+                        <p className="text-sm text-muted-foreground">Noch keine Varianten</p>
+                        <Button size="sm" onClick={() => { setEditingVariant(null); setVariantFormOpen(true) }}>
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
+                          Erste Variante anlegen
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {variants.map(v => (
+                          <VariantCard
+                            key={v.id}
+                            variant={v}
+                            isSelected={selectedVariantId === v.id}
+                            onClick={() => setSelectedVariantId(prev => prev === v.id ? null : v.id)}
+                            onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}
+                            onDelete={() => setDeleteVariantId(v.id)}
+                            onUploadImages={files => uploadImages(v.id, files)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Variant detail panel */}
+                {selectedVariant && (
+                  <div className="lg:w-[45%] shrink-0 border-t lg:border-t-0 lg:border-l border-border overflow-hidden relative">
+                    <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-5" style={{ right: '-20px' }}>
+                      {/* Panel header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold truncate">{selectedVariant.name}</h4>
+                          {selectedVariant.description && (
+                            <p className="text-sm text-muted-foreground">{selectedVariant.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => { setEditingVariant(selectedVariant); setVariantFormOpen(true) }}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7"
+                            onClick={() => setSelectedVariantId(null)}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
-
-                        {selectedVariant.prompt && (
-                          <div className="mb-4">
-                            <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Prompt</p>
-                            <pre className="text-xs bg-muted/40 rounded-lg p-3 whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">
-                              {selectedVariant.prompt}
-                            </pre>
-                          </div>
-                        )}
-
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">
-                          Bilder ({selectedVariant.images.length})
-                        </p>
-                        <VariantImageGallery
-                          variant={selectedVariant}
-                          onDeleteImage={(imgId, path) => deleteImage(selectedVariant.id, imgId, path)}
-                          onUploadImages={files => uploadImages(selectedVariant.id, files)}
-                        />
                       </div>
-                    )}
-                  </>
+
+                      {/* Prompt */}
+                      {selectedVariant.prompt && (
+                        <div className="mb-5">
+                          <p className="text-xs font-medium text-muted-foreground mb-1.5 uppercase tracking-wide">Prompt</p>
+                          <pre className="text-xs bg-muted/40 rounded-lg p-3 whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto max-h-40">
+                            {selectedVariant.prompt}
+                          </pre>
+                        </div>
+                      )}
+
+                      {/* Media manager */}
+                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+                        Referenzbilder
+                      </p>
+                      <CharacterMediaManager
+                        variantId={selectedVariant.id}
+                        images={selectedVariant.images}
+                        uploading={uploading}
+                        onUpload={files => uploadImages(selectedVariant.id, files)}
+                        onAddUrl={url => addImageUrl(selectedVariant.id, url)}
+                        onDelete={(imgId, path) => deleteImage(selectedVariant.id, imgId, path)}
+                        onReorder={orderedIds => reorderImages(selectedVariant.id, orderedIds)}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -343,7 +355,7 @@ export default function CharactersPage() {
         ) : null}
       </div>
 
-      {/* ── Dialogs ──────────────────────────────────────────────────── */}
+      {/* ── Dialogs ─────────────────────────────────────────────────── */}
       <CharacterForm
         open={charFormOpen}
         onClose={() => { setCharFormOpen(false); setEditingCharacter(null) }}
