@@ -1,7 +1,9 @@
 'use client'
 
 import { useRef } from 'react'
-import { Upload, Pencil, Trash2 } from 'lucide-react'
+import { Upload, Pencil, Trash2, MoreHorizontal, GripVertical } from 'lucide-react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { MoreHorizontal } from 'lucide-react'
 import type { CharacterVariant } from '@/hooks/use-characters'
 
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/gif'
@@ -27,59 +28,80 @@ export function VariantCard({ variant, isSelected, onClick, onEdit, onDelete, on
   const fileRef = useRef<HTMLInputElement>(null)
   const coverImage = variant.images[0]
 
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: variant.id })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+
   return (
     <div
-      className={`rounded-xl border transition-all cursor-pointer group ${
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-lg border transition-all cursor-pointer group relative ${
         isSelected
           ? 'border-violet-500/60 bg-violet-500/5 ring-1 ring-violet-500/30'
           : 'border-border/50 bg-card/60 hover:border-border hover:bg-card'
       }`}
       onClick={onClick}
     >
-      {/* Cover image */}
-      <div className="relative aspect-[4/3] rounded-t-xl overflow-hidden bg-muted/30">
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 left-1 z-10 p-1 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing text-muted-foreground bg-black/40"
+        onClick={e => e.stopPropagation()}
+      >
+        <GripVertical className="h-3 w-3" />
+      </div>
+
+      {/* Cover image — square */}
+      <div className="relative aspect-square rounded-t-lg overflow-hidden bg-muted/30">
         {coverImage ? (
           <img src={coverImage.url} alt={variant.name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
-            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-              <span className="text-xl font-bold">{variant.name.charAt(0).toUpperCase()}</span>
-            </div>
-            <span className="text-xs">Kein Bild</span>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground/40">
+            <span className="text-lg font-bold">{variant.name.charAt(0).toUpperCase()}</span>
           </div>
         )}
 
-        {/* Image count */}
+        {/* Image count badge */}
         {variant.images.length > 1 && (
-          <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-md">
-            {variant.images.length} Bilder
+          <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1 py-0.5 rounded leading-none">
+            {variant.images.length}
           </div>
         )}
 
         {/* Action overlay */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1" onClick={e => e.stopPropagation()}>
+        <div
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5"
+          onClick={e => e.stopPropagation()}
+        >
           <Button
             size="icon"
             variant="secondary"
-            className="h-7 w-7 bg-black/60 hover:bg-black/80 border-0"
+            className="h-6 w-6 bg-black/60 hover:bg-black/80 border-0"
             onClick={() => fileRef.current?.click()}
             title="Bilder hochladen"
           >
-            <Upload className="h-3.5 w-3.5 text-white" />
+            <Upload className="h-3 w-3 text-white" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="secondary" className="h-7 w-7 bg-black/60 hover:bg-black/80 border-0">
-                <MoreHorizontal className="h-3.5 w-3.5 text-white" />
+              <Button size="icon" variant="secondary" className="h-6 w-6 bg-black/60 hover:bg-black/80 border-0">
+                <MoreHorizontal className="h-3 w-3 text-white" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <Pencil className="mr-2 h-3.5 w-3.5" />
                 Bearbeiten
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
                 Löschen
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -87,17 +109,9 @@ export function VariantCard({ variant, isSelected, onClick, onEdit, onDelete, on
         </div>
       </div>
 
-      {/* Info */}
-      <div className="p-3">
-        <p className="font-medium text-sm leading-tight truncate">{variant.name}</p>
-        {variant.description && (
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">{variant.description}</p>
-        )}
-        {variant.prompt && (
-          <p className="text-xs text-muted-foreground/50 mt-1 line-clamp-2 font-mono leading-relaxed">
-            {variant.prompt}
-          </p>
-        )}
+      {/* Name only — compact */}
+      <div className="px-2 py-1.5">
+        <p className="font-medium text-xs leading-tight truncate">{variant.name}</p>
       </div>
 
       <input

@@ -18,7 +18,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Link2, Trash2, Upload } from 'lucide-react'
+import { Crown, GripVertical, Link2, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -27,11 +27,12 @@ import type { CharacterImage } from '@/hooks/use-characters'
 
 interface SortableImageProps {
   image: CharacterImage
-  isCover: boolean
+  isCharacterCover: boolean
   onDelete: () => void
+  onSetCharacterCover?: () => void
 }
 
-function SortableImage({ image, isCover, onDelete }: SortableImageProps) {
+function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover }: SortableImageProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
@@ -48,17 +49,32 @@ function SortableImage({ image, isCover, onDelete }: SortableImageProps) {
           <GripVertical className="h-3 w-3 text-white" />
         </div>
 
-        {/* Cover badge */}
-        {isCover && (
-          <div className="absolute top-1 right-1 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold z-10">
-            Cover
+        {/* Titelbild-Button */}
+        {onSetCharacterCover && !isCharacterCover && (
+          <button
+            type="button"
+            onClick={onSetCharacterCover}
+            title="Als Charakter-Titelbild setzen"
+            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-amber-500 rounded z-10 opacity-30 group-hover:opacity-100 transition-all"
+          >
+            <Crown className="h-3 w-3 text-white" />
+          </button>
+        )}
+
+        {/* Titelbild-Badge */}
+        {isCharacterCover && (
+          <div className="absolute top-1 right-1 flex items-center gap-0.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold z-10">
+            <Crown className="h-2.5 w-2.5" />
+            Titelbild
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-1 mt-1">
-        {isCover ? (
-          <span className="text-[11px] text-amber-400 flex-1 truncate">★ Cover</span>
+        {isCharacterCover ? (
+          <span className="text-[11px] text-amber-400 flex-1 truncate flex items-center gap-0.5">
+            <Crown className="h-2.5 w-2.5" /> Titelbild
+          </span>
         ) : (
           <span className="flex-1" />
         )}
@@ -81,20 +97,24 @@ interface Props {
   variantId: string
   images: CharacterImage[]
   uploading: { id: string; file: File; status: string }[]
+  characterCoverUrl?: string | null
   onUpload: (files: File[]) => void
   onAddUrl: (url: string) => void
   onDelete: (imageId: string, storagePath: string | null) => void
   onReorder: (orderedIds: string[]) => void
+  onSetCharacterCover?: (url: string) => void
 }
 
 export function CharacterMediaManager({
   variantId,
   images,
   uploading,
+  characterCoverUrl,
   onUpload,
   onAddUrl,
   onDelete,
   onReorder,
+  onSetCharacterCover,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -133,7 +153,6 @@ export function CharacterMediaManager({
   }
 
   const hasActiveUploads = uploading.some(u => u.status === 'uploading')
-  const coverUrl = images[0]?.url ?? null
 
   return (
     <div className="space-y-3">
@@ -232,8 +251,9 @@ export function CharacterMediaManager({
                 <SortableImage
                   key={img.id}
                   image={img}
-                  isCover={img.url === coverUrl}
+                  isCharacterCover={!!characterCoverUrl && img.url === characterCoverUrl}
                   onDelete={() => onDelete(img.id, img.storage_path)}
+                  onSetCharacterCover={onSetCharacterCover ? () => onSetCharacterCover(img.url) : undefined}
                 />
               ))}
             </div>

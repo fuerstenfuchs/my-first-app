@@ -2,6 +2,18 @@
 
 import { useState } from 'react'
 import { Plus, Search, User, Pencil, Trash2, X, ChevronRight, Users } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,10 +40,11 @@ import {
   type CharacterVariant,
   type CharacterInput,
   type VariantInput,
+  type InitialSlot,
 } from '@/hooks/use-characters'
 
 export default function CharactersPage() {
-  const { characters, loading, createCharacter, updateCharacter, deleteCharacter } = useCharacters()
+  const { characters, loading, createCharacterWithSlots, updateCharacter, deleteCharacter, patchCharacterCover } = useCharacters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [charFormOpen, setCharFormOpen] = useState(false)
@@ -50,6 +63,8 @@ export default function CharactersPage() {
     addImageUrl,
     deleteImage,
     reorderImages,
+    reorderVariants,
+    updateCharacterCover,
   } = useCharacterDetail(selectedId)
 
   const [variantFormOpen, setVariantFormOpen] = useState(false)
@@ -57,13 +72,15 @@ export default function CharactersPage() {
   const [deleteVariantId, setDeleteVariantId] = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
   const filtered = characters.filter(c =>
     !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  async function handleCharSave(input: CharacterInput, firstVariantName?: string): Promise<boolean | Character | null> {
+  async function handleCharSave(input: CharacterInput, slots: InitialSlot[]): Promise<boolean | Character | null> {
     if (editingCharacter) return updateCharacter(editingCharacter.id, input)
-    const char = await createCharacter(input, firstVariantName)
+    const char = await createCharacterWithSlots(input, slots)
     if (char) setSelectedId(char.id)
     return char
   }
@@ -90,6 +107,18 @@ export default function CharactersPage() {
     await deleteVariant(deleteVariantId)
     if (selectedVariantId === deleteVariantId) setSelectedVariantId(null)
     setDeleteVariantId(null)
+  }
+
+  function handleVariantDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = variants.findIndex(v => v.id === active.id)
+    const newIndex = variants.findIndex(v => v.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const newOrder = [...variants]
+    const [moved] = newOrder.splice(oldIndex, 1)
+    newOrder.splice(newIndex, 0, moved)
+    reorderVariants(newOrder.map(v => v.id))
   }
 
   const selectedVariant = selectedVariantId
@@ -212,8 +241,8 @@ export default function CharactersPage() {
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-64" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-[4/3] rounded-xl" />)}
+            <div className="grid grid-cols-3 gap-3 mt-6">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
             </div>
           </div>
 
@@ -265,8 +294,8 @@ export default function CharactersPage() {
 
                 {/* Variant grid */}
                 <div className={`flex-1 min-w-0 overflow-hidden relative ${selectedVariant ? 'lg:flex-none lg:w-[55%]' : ''}`}>
-                  <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-6" style={{ right: '-20px' }}>
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-4" style={{ right: '-20px' }}>
+                    <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                         Varianten ({variants.length})
                       </h3>
@@ -285,19 +314,27 @@ export default function CharactersPage() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {variants.map(v => (
-                          <VariantCard
-                            key={v.id}
-                            variant={v}
-                            isSelected={selectedVariantId === v.id}
-                            onClick={() => setSelectedVariantId(prev => prev === v.id ? null : v.id)}
-                            onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}
-                            onDelete={() => setDeleteVariantId(v.id)}
-                            onUploadImages={files => uploadImages(v.id, files)}
-                          />
-                        ))}
-                      </div>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleVariantDragEnd}
+                      >
+                        <SortableContext items={variants.map(v => v.id)} strategy={rectSortingStrategy}>
+                          <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
+                            {variants.map(v => (
+                              <VariantCard
+                                key={v.id}
+                                variant={v}
+                                isSelected={selectedVariantId === v.id}
+                                onClick={() => setSelectedVariantId(prev => prev === v.id ? null : v.id)}
+                                onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}
+                                onDelete={() => setDeleteVariantId(v.id)}
+                                onUploadImages={files => uploadImages(v.id, files)}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                     )}
                   </div>
                 </div>
@@ -344,10 +381,14 @@ export default function CharactersPage() {
                         variantId={selectedVariant.id}
                         images={selectedVariant.images}
                         uploading={uploading}
+                        characterCoverUrl={character?.cover_image_url}
                         onUpload={files => uploadImages(selectedVariant.id, files)}
                         onAddUrl={url => addImageUrl(selectedVariant.id, url)}
                         onDelete={(imgId, path) => deleteImage(selectedVariant.id, imgId, path)}
                         onReorder={orderedIds => reorderImages(selectedVariant.id, orderedIds)}
+                        onSetCharacterCover={url =>
+                          updateCharacterCover(url, newUrl => selectedId && patchCharacterCover(selectedId, newUrl))
+                        }
                       />
                     </div>
                   </div>

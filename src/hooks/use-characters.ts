@@ -57,6 +57,11 @@ export interface VariantInput {
   prompt?: string
 }
 
+export interface InitialSlot {
+  name: string
+  file: File
+}
+
 interface UploadingEntry {
   id: string
   file: File
@@ -86,7 +91,10 @@ export function useCharacters() {
 
   useEffect(() => { fetch() }, [fetch])
 
-  async function createCharacter(input: CharacterInput, firstVariantName = 'Standard'): Promise<Character | null> {
+  async function createCharacterWithSlots(
+    input: CharacterInput,
+    slots: InitialSlot[],
+  ): Promise<Character | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
@@ -97,7 +105,6 @@ export function useCharacters() {
         name: input.name.trim(),
         description: input.description?.trim() || null,
         tags: input.tags ?? [],
-        cover_image_url: input.cover_image_url ?? null,
         user_id: user.id,
       })
       .select()
@@ -105,12 +112,46 @@ export function useCharacters() {
 
     if (error) { toast.error('Charakter konnte nicht erstellt werden'); return null }
 
-    await supabase.from('character_variants').insert({
-      character_id: char.id,
-      user_id: user.id,
-      name: firstVariantName.trim() || 'Standard',
-      sort_order: 0,
-    })
+    let firstImageUrl: string | null = null
+
+    for (const [idx, slot] of slots.entries()) {
+      const { data: v } = await supabase
+        .from('character_variants')
+        .insert({ character_id: char.id, user_id: user.id, name: slot.name, sort_order: idx })
+        .select()
+        .single()
+
+      if (!v) continue
+
+      const file = slot.file
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const storagePath = `${user.id}/${v.id}/${crypto.randomUUID()}.${ext}`
+
+      const { error: upErr } = await supabase.storage
+        .from('character-images')
+        .upload(storagePath, file)
+
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('character-images')
+          .getPublicUrl(storagePath)
+
+        await supabase.from('character_images').insert({
+          variant_id: v.id,
+          user_id: user.id,
+          url: publicUrl,
+          storage_path: storagePath,
+          sort_order: 0,
+        })
+
+        if (!firstImageUrl) firstImageUrl = publicUrl
+      }
+    }
+
+    if (firstImageUrl) {
+      await supabase.from('characters').update({ cover_image_url: firstImageUrl }).eq('id', char.id)
+      char.cover_image_url = firstImageUrl
+    }
 
     const normalized = normalizeCharacter(char)
     setCharacters(prev => [...prev, normalized])
@@ -119,14 +160,15 @@ export function useCharacters() {
 
   async function updateCharacter(id: string, input: CharacterInput): Promise<boolean> {
     const supabase = createClient()
+    const patch: Record<string, unknown> = {
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+      tags: input.tags ?? [],
+    }
+    if ('cover_image_url' in input) patch.cover_image_url = input.cover_image_url
     const { data, error } = await supabase
       .from('characters')
-      .update({
-        name: input.name.trim(),
-        description: input.description?.trim() || null,
-        tags: input.tags ?? [],
-        cover_image_url: input.cover_image_url ?? null,
-      })
+      .update(patch)
       .eq('id', id)
       .select()
       .single()
@@ -143,7 +185,11 @@ export function useCharacters() {
     return true
   }
 
-  return { characters, loading, createCharacter, updateCharacter, deleteCharacter, refetch: fetch }
+  function patchCharacterCover(id: string, url: string | null) {
+    setCharacters(prev => prev.map(c => c.id === id ? { ...c, cover_image_url: url } : c))
+  }
+
+  return { characters, loading, createCharacterWithSlots, updateCharacter, deleteCharacter, patchCharacterCover, refetch: fetch }
 }
 
 // ─── useCharacterDetail ──────────────────────────────────────────────────────
@@ -235,6 +281,19 @@ export function useCharacterDetail(characterId: string | null) {
     return true
   }
 
+  async function reorderVariants(orderedIds: string[]): Promise<void> {
+    const supabase = createClient()
+    setVariants(prev => {
+      const byId = Object.fromEntries(prev.map(v => [v.id, v]))
+      return orderedIds.map((id, idx) => ({ ...byId[id], sort_order: idx }))
+    })
+    await Promise.all(
+      orderedIds.map((id, idx) =>
+        supabase.from('character_variants').update({ sort_order: idx }).eq('id', id)
+      )
+    )
+  }
+
   // ── Image management ──
 
   async function uploadImages(variantId: string, files: File[]): Promise<CharacterImage[]> {
@@ -253,14 +312,10 @@ export function useCharacterDetail(characterId: string | null) {
 
     const variant = variants.find(v => v.id === variantId)
     const maxOrder = variant && variant.images.length > 0
-      ? Math.max(...variant.images.map(i => i.sort_order))
-      : -1
+      ? Math.max(...variant.images.map(i => i.sort_order)) : -1
 
     const pending: UploadingEntry[] = validFiles.map(f => ({
-      id: crypto.randomUUID(),
-      file: f,
-      status: 'uploading',
-      progress: 0,
+      id: crypto.randomUUID(), file: f, status: 'uploading', progress: 0,
     }))
     setUploading(prev => [...prev, ...pending])
 
@@ -271,31 +326,19 @@ export function useCharacterDetail(characterId: string | null) {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
       const storagePath = `${user.id}/${variantId}/${crypto.randomUUID()}.${ext}`
 
-      const { error: upErr } = await supabase.storage
-        .from('character-images')
-        .upload(storagePath, file)
-
+      const { error: upErr } = await supabase.storage.from('character-images').upload(storagePath, file)
       if (upErr) {
         setUploading(prev => prev.map(u => u.id === entry.id ? { ...u, status: 'error' } : u))
         toast.error(`${file.name}: Upload fehlgeschlagen`)
         return
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('character-images')
-        .getPublicUrl(storagePath)
+      const { data: { publicUrl } } = supabase.storage.from('character-images').getPublicUrl(storagePath)
 
       const { data: row, error: insertErr } = await supabase
         .from('character_images')
-        .insert({
-          variant_id: variantId,
-          user_id: user.id,
-          url: publicUrl,
-          storage_path: storagePath,
-          sort_order: maxOrder + 1 + idx,
-        })
-        .select()
-        .single()
+        .insert({ variant_id: variantId, user_id: user.id, url: publicUrl, storage_path: storagePath, sort_order: maxOrder + 1 + idx })
+        .select().single()
 
       if (insertErr) {
         setUploading(prev => prev.map(u => u.id === entry.id ? { ...u, status: 'error' } : u))
@@ -311,8 +354,6 @@ export function useCharacterDetail(characterId: string | null) {
       setVariants(prev => prev.map(v =>
         v.id === variantId ? { ...v, images: [...v.images, ...results] } : v
       ))
-
-      // Auto-set character cover from first ever image
       if (!character?.cover_image_url) {
         const first = results[0]
         await supabase.from('characters').update({ cover_image_url: first.url }).eq('id', characterId!)
@@ -335,28 +376,17 @@ export function useCharacterDetail(characterId: string | null) {
 
     const { data: row, error } = await supabase
       .from('character_images')
-      .insert({
-        variant_id: variantId,
-        user_id: user.id,
-        url: url.trim(),
-        storage_path: null,
-        sort_order: maxOrder + 1,
-      })
-      .select()
-      .single()
+      .insert({ variant_id: variantId, user_id: user.id, url: url.trim(), storage_path: null, sort_order: maxOrder + 1 })
+      .select().single()
 
     if (error) { toast.error('URL konnte nicht hinzugefügt werden'); return null }
-
     const img = row as CharacterImage
-    setVariants(prev => prev.map(v =>
-      v.id === variantId ? { ...v, images: [...v.images, img] } : v
-    ))
+    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, images: [...v.images, img] } : v))
 
     if (!character?.cover_image_url) {
       await supabase.from('characters').update({ cover_image_url: img.url }).eq('id', characterId!)
       setCharacter(prev => prev ? { ...prev, cover_image_url: img.url } : prev)
     }
-
     return img
   }
 
@@ -365,25 +395,20 @@ export function useCharacterDetail(characterId: string | null) {
     const { error } = await supabase.from('character_images').delete().eq('id', imageId)
     if (error) { toast.error('Bild konnte nicht gelöscht werden'); return }
 
+    const variant = variants.find(v => v.id === variantId)
+    const deletedImg = variant?.images.find(i => i.id === imageId)
+
     setVariants(prev => prev.map(v =>
       v.id === variantId ? { ...v, images: v.images.filter(i => i.id !== imageId) } : v
     ))
 
-    if (storagePath) {
-      await supabase.storage.from('character-images').remove([storagePath])
-    }
+    if (storagePath) await supabase.storage.from('character-images').remove([storagePath])
 
-    // If deleted image was character cover, update to next available
-    const variant = variants.find(v => v.id === variantId)
-    if (variant) {
-      const remaining = variant.images.filter(i => i.id !== imageId)
-      const currentCover = character?.cover_image_url
-      const deletedImg = variant.images.find(i => i.id === imageId)
-      if (deletedImg?.url === currentCover) {
-        const nextUrl = remaining[0]?.url ?? null
-        await supabase.from('characters').update({ cover_image_url: nextUrl }).eq('id', characterId!)
-        setCharacter(prev => prev ? { ...prev, cover_image_url: nextUrl } : prev)
-      }
+    if (deletedImg?.url === character?.cover_image_url) {
+      const remaining = (variant?.images ?? []).filter(i => i.id !== imageId)
+      const nextUrl = remaining[0]?.url ?? null
+      await supabase.from('characters').update({ cover_image_url: nextUrl }).eq('id', characterId!)
+      setCharacter(prev => prev ? { ...prev, cover_image_url: nextUrl } : prev)
     }
   }
 
@@ -394,18 +419,19 @@ export function useCharacterDetail(characterId: string | null) {
       const byId = Object.fromEntries(v.images.map(i => [i.id, i]))
       return { ...v, images: orderedIds.map((id, idx) => ({ ...byId[id], sort_order: idx })) }
     }))
-    await Promise.all(
-      orderedIds.map((id, idx) =>
-        supabase.from('character_images').update({ sort_order: idx }).eq('id', id)
-      )
-    )
+    await Promise.all(orderedIds.map((id, idx) =>
+      supabase.from('character_images').update({ sort_order: idx }).eq('id', id)
+    ))
   }
 
-  async function updateCharacterCover(url: string | null): Promise<void> {
+  async function updateCharacterCover(url: string | null, onSynced?: (url: string | null) => void): Promise<void> {
     if (!characterId) return
     const supabase = createClient()
-    await supabase.from('characters').update({ cover_image_url: url }).eq('id', characterId)
+    const { error } = await supabase.from('characters').update({ cover_image_url: url }).eq('id', characterId)
+    if (error) { toast.error('Titelbild konnte nicht gesetzt werden'); return }
     setCharacter(prev => prev ? { ...prev, cover_image_url: url } : prev)
+    onSynced?.(url)
+    toast.success('Titelbild gesetzt')
   }
 
   return {
@@ -416,6 +442,7 @@ export function useCharacterDetail(characterId: string | null) {
     createVariant,
     updateVariant,
     deleteVariant,
+    reorderVariants,
     uploadImages,
     addImageUrl,
     deleteImage,
