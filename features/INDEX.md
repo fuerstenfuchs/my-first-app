@@ -35,7 +35,7 @@
 | PROJ-16 | Bilder per Share-Sheet direkt in Quick Capture teilen | Deployed | — | 2026-06-13 |
 | PROJ-17 | Bildanalyse & Reverse Prompting (Bild → Prompt) | Deployed | — | 2026-06-13 |
 | PROJ-18 | Prompt-Varianten | Deployed | [PROJ-18](PROJ-18-prompt-varianten.md) | 2026-06-13 |
-| PROJ-19 | Character Vault (Charakterverwaltung) | In Progress | — | 2026-06-15 |
+| PROJ-19 | Character Vault (Charakterverwaltung) | Deployed | — | 2026-06-15 |
 
 <!-- Add features above this line -->
 
