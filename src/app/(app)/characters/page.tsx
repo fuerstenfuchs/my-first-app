@@ -68,10 +68,13 @@ export default function CharactersPage() {
     return char
   }
 
-  async function handleVariantSave(input: VariantInput): Promise<boolean | CharacterVariant | null> {
+  async function handleVariantSave(input: VariantInput, files: File[]): Promise<boolean | CharacterVariant | null> {
     if (editingVariant) return updateVariant(editingVariant.id, input)
     const v = await createVariant(input)
-    if (v) setSelectedVariantId(v.id)
+    if (v) {
+      setSelectedVariantId(v.id)
+      if (files.length > 0) await uploadImages(v.id, files)
+    }
     return v
   }
 
