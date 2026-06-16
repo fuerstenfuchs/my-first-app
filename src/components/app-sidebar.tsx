@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -337,6 +337,25 @@ export function AppSidebar() {
               </div>
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">Fashion Assets</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/pose-actions"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/pose-actions')
+                  ? 'linear-gradient(#0f0614, #0d0512) padding-box, linear-gradient(135deg, #c084fc 0%, #a855f7 100%) border-box'
+                  : 'linear-gradient(#0f0614, #0d0512) padding-box, linear-gradient(135deg, #9333ea 0%, #7e22ce 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(147,51,234,0.2), 0 0 18px rgba(126,34,206,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Drama className="h-6 w-6 text-purple-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Posen & Aktionen</span>
             </a>
           </SidebarMenuItem>
           <SidebarMenuItem className="px-2 py-1">

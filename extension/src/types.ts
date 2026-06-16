@@ -30,3 +30,10 @@ export interface PendingLocationCapture {
   sourceTitle: string
   timestamp: number
 }
+
+export interface PendingPoseCapture {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+  timestamp: number
+}

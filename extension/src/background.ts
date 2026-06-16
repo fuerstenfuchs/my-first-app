@@ -1,6 +1,7 @@
 const MENU_ID = 'promptdb-save'
 const MENU_FASHION_ID = 'promptdb-fashion-save'
 const MENU_LOCATION_ID = 'promptdb-location-save'
+const MENU_POSE_ID = 'promptdb-pose-save'
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -16,6 +17,11 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: MENU_LOCATION_ID,
     title: 'Als Location speichern',
+    contexts: ['image'],
+  })
+  chrome.contextMenus.create({
+    id: MENU_POSE_ID,
+    title: 'Als Pose / Aktion speichern',
     contexts: ['image'],
   })
 })
@@ -51,6 +57,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       timestamp: Date.now(),
     }
     chrome.storage.local.set({ pendingLocationCapture: locationCapture }, openCaptureWindow)
+    return
+  }
+
+  if (info.menuItemId === MENU_POSE_ID) {
+    const poseCapture = {
+      imageUrl: info.srcUrl ?? '',
+      sourceUrl: tab?.url ?? '',
+      sourceTitle: tab?.title ?? '',
+      timestamp: Date.now(),
+    }
+    chrome.storage.local.set({ pendingPoseCapture: poseCapture }, openCaptureWindow)
     return
   }
 
