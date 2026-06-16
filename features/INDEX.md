@@ -38,7 +38,8 @@
 | PROJ-19 | Character Vault (Charakterverwaltung) | Deployed | — | 2026-06-15 |
 | PROJ-20 | Outfit-Bibliothek | Deployed | — | 2026-06-15 |
 | PROJ-21 | Fashion Assets (Kategoriebasierte Kleidungsverwaltung) | Deployed | — | 2026-06-16 |
+| PROJ-22 | Fashion Capture (Rechtsklick → Fashion Asset via Extension) | Deployed | — | 2026-06-16 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-22
+## Next Available ID: PROJ-23
