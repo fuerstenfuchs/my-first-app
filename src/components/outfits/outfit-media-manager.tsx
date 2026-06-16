@@ -39,9 +39,11 @@ function SortableImage({ image, isOutfitCover, onDelete, onSetOutfitCover, onOpe
           <GripVertical className="h-3 w-3 text-white" />
         </div>
 
+        {/* pointer-events-none so the underlying <img> stays draggable */}
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[5]" />
         <button type="button" onClick={onOpen} title="Vergrößern"
-          className="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-[5]">
-          <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
+          className="absolute bottom-1 right-7 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <ZoomIn className="h-3.5 w-3.5 text-white" />
         </button>
 
         {onSetOutfitCover && !isOutfitCover && (
