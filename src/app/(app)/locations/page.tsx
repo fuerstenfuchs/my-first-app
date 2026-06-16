@@ -275,7 +275,12 @@ export default function LocationsPage() {
                 <span className="text-base leading-none shrink-0">{cat.emoji}</span>
                 <span className="flex-1 truncate text-xs">{cat.label}</span>
                 {count > 0 && (
-                  <span className={cn('text-[11px] tabular-nums shrink-0', isActive ? 'text-teal-400' : 'text-muted-foreground/40')}>
+                  <span className={cn(
+                    'text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
+                    isActive
+                      ? 'bg-teal-500/20 text-teal-300'
+                      : 'bg-muted text-muted-foreground'
+                  )}>
                     {count}
                   </span>
                 )}
