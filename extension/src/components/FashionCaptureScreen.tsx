@@ -111,6 +111,28 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
     setTimeout(() => onSaved(), 800)
   }
 
+  // Full-screen crop mode: replaces the entire form to avoid layout shifts
+  if (showCrop && capture.imageUrl) {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 bg-zinc-950">
+        <div className="shrink-0 flex items-center px-3 py-2.5 border-b border-zinc-700">
+          <span className="flex-1 text-xs font-medium text-zinc-300 text-center">✂ Bereich zuschneiden</span>
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <CropTool
+            imageUrl={capture.imageUrl}
+            onApply={(dataUrl) => {
+              setCroppedDataUrl(dataUrl)
+              setShowCrop(false)
+              if (analysisStatus === 'completed') setAnalysisStatus('outdated')
+            }}
+            onCancel={() => setShowCrop(false)}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header */}
@@ -123,20 +145,10 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
         </span>
       </div>
 
-      {/* Image preview / Crop tool */}
+      {/* Image preview */}
       {capture.imageUrl && (
         <div className="shrink-0 bg-zinc-900 border-b border-zinc-700">
-          {showCrop ? (
-            <CropTool
-              imageUrl={capture.imageUrl}
-              onApply={(dataUrl) => {
-                setCroppedDataUrl(dataUrl)
-                setShowCrop(false)
-                if (analysisStatus === 'completed') setAnalysisStatus('outdated')
-              }}
-              onCancel={() => setShowCrop(false)}
-            />
-          ) : !imageError ? (
+          {!imageError ? (
             <div className="relative">
               <img
                 src={croppedDataUrl ?? capture.imageUrl}

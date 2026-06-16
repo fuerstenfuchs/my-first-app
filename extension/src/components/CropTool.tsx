@@ -60,7 +60,7 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
         img.onload = () => {
           if (cancelled) return
           imgRef.current = img
-          const maxW = 360, maxH = 220
+          const maxW = 360, maxH = 440
           const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1)
           const w = Math.max(1, Math.round(img.naturalWidth  * scale))
           const h = Math.max(1, Math.round(img.naturalHeight * scale))
