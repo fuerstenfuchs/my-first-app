@@ -1,15 +1,17 @@
-const MENU_ID          = 'promptdb-save'
-const MENU_FASHION_ID  = 'promptdb-fashion-save'
-const MENU_OUTFIT_ID   = 'promptdb-outfit-save'
-const MENU_LOCATION_ID = 'promptdb-location-save'
-const MENU_POSE_ID     = 'promptdb-pose-save'
+const MENU_ID               = 'promptdb-save'
+const MENU_FASHION_ID       = 'promptdb-fashion-save'
+const MENU_FASHION_ADD_ID   = 'promptdb-fashion-add-image'
+const MENU_OUTFIT_ID        = 'promptdb-outfit-save'
+const MENU_LOCATION_ID      = 'promptdb-location-save'
+const MENU_POSE_ID          = 'promptdb-pose-save'
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: MENU_ID,          title: 'In PromptDB speichern',         contexts: ['all'] })
-  chrome.contextMenus.create({ id: MENU_FASHION_ID,  title: 'Als Fashion Asset speichern',   contexts: ['image'] })
-  chrome.contextMenus.create({ id: MENU_OUTFIT_ID,   title: 'Als Outfit speichern',          contexts: ['image'] })
-  chrome.contextMenus.create({ id: MENU_LOCATION_ID, title: 'Als Location speichern',        contexts: ['image'] })
-  chrome.contextMenus.create({ id: MENU_POSE_ID,     title: 'Als Pose / Aktion speichern',   contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_ID,             title: 'In PromptDB speichern',              contexts: ['all'] })
+  chrome.contextMenus.create({ id: MENU_FASHION_ID,     title: 'Als Fashion Asset speichern',        contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_FASHION_ADD_ID, title: 'Zu Kleidungsstück hinzufügen',       contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_OUTFIT_ID,      title: 'Als Outfit speichern',               contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_LOCATION_ID,    title: 'Als Location speichern',             contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_POSE_ID,        title: 'Als Pose / Aktion speichern',        contexts: ['image'] })
 })
 
 function openCaptureWindow() {
@@ -27,6 +29,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === MENU_FASHION_ID) {
     chrome.storage.local.set({
       pendingFashionCapture: {
+        imageUrl: info.srcUrl ?? '',
+        sourceUrl: tab?.url ?? '',
+        sourceTitle: tab?.title ?? '',
+        timestamp: Date.now(),
+      }
+    }, openCaptureWindow)
+    return
+  }
+
+  if (info.menuItemId === MENU_FASHION_ADD_ID) {
+    chrome.storage.local.set({
+      pendingFashionImageAdd: {
         imageUrl: info.srcUrl ?? '',
         sourceUrl: tab?.url ?? '',
         sourceTitle: tab?.title ?? '',

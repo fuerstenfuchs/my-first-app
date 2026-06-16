@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { initStorage } from './lib/storage'
-import type { PendingCapture, PendingFashionCapture, PendingLocationCapture, PendingPoseCapture, PendingOutfitCapture } from './types'
+import type { PendingCapture, PendingFashionCapture, PendingLocationCapture, PendingPoseCapture, PendingOutfitCapture, PendingFashionImageAdd } from './types'
 import { LoginScreen } from './components/LoginScreen'
 import { MainScreen } from './components/MainScreen'
 import { QuickCaptureScreen } from './components/QuickCaptureScreen'
 import { FashionCaptureScreen } from './components/FashionCaptureScreen'
+import { AddFashionImageScreen } from './components/AddFashionImageScreen'
 import { LocationCaptureScreen } from './components/LocationCaptureScreen'
 import { PoseCaptureScreen } from './components/PoseCaptureScreen'
 import { OutfitCaptureScreen } from './components/OutfitCaptureScreen'
 
-type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict' | 'fashion-capture' | 'location-capture' | 'pose-capture' | 'outfit-capture'
+type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict' | 'fashion-capture' | 'add-fashion-image' | 'location-capture' | 'pose-capture' | 'outfit-capture'
 
 export function App() {
   const [state, setState] = useState<State>('loading')
@@ -18,6 +19,7 @@ export function App() {
   const [conflictCapture, setConflictCapture] = useState<PendingCapture | null>(null)
   const [captureRestored, setCaptureRestored] = useState(false)
   const [pendingFashionCapture, setPendingFashionCapture] = useState<PendingFashionCapture | null>(null)
+  const [pendingFashionImageAdd, setPendingFashionImageAdd] = useState<PendingFashionImageAdd | null>(null)
   const [pendingLocationCapture, setPendingLocationCapture] = useState<PendingLocationCapture | null>(null)
   const [pendingPoseCapture, setPendingPoseCapture] = useState<PendingPoseCapture | null>(null)
   const [pendingOutfitCapture, setPendingOutfitCapture] = useState<PendingOutfitCapture | null>(null)
@@ -28,18 +30,22 @@ export function App() {
 
       const result = await chrome.storage.local.get([
         'pendingCapture', 'pendingCaptureConflict',
-        'pendingFashionCapture', 'pendingLocationCapture', 'pendingPoseCapture', 'pendingOutfitCapture',
+        'pendingFashionCapture', 'pendingFashionImageAdd', 'pendingLocationCapture', 'pendingPoseCapture', 'pendingOutfitCapture',
       ])
-      const capture        = result.pendingCapture         as PendingCapture        | undefined
-      const conflict       = result.pendingCaptureConflict as PendingCapture        | undefined
-      const fashionCapture = result.pendingFashionCapture  as PendingFashionCapture | undefined
-      const locationCapture= result.pendingLocationCapture as PendingLocationCapture| undefined
-      const poseCapture    = result.pendingPoseCapture     as PendingPoseCapture    | undefined
-      const outfitCapture  = result.pendingOutfitCapture   as PendingOutfitCapture  | undefined
+      const capture          = result.pendingCapture         as PendingCapture          | undefined
+      const conflict         = result.pendingCaptureConflict as PendingCapture          | undefined
+      const fashionCapture   = result.pendingFashionCapture  as PendingFashionCapture   | undefined
+      const fashionImageAdd  = result.pendingFashionImageAdd as PendingFashionImageAdd  | undefined
+      const locationCapture  = result.pendingLocationCapture as PendingLocationCapture  | undefined
+      const poseCapture      = result.pendingPoseCapture     as PendingPoseCapture      | undefined
+      const outfitCapture    = result.pendingOutfitCapture   as PendingOutfitCapture    | undefined
 
       if (outfitCapture && outfitCapture.images.length > 0) {
         setPendingOutfitCapture(outfitCapture)
         setState(session ? 'outfit-capture' : 'unauthenticated')
+      } else if (fashionImageAdd) {
+        setPendingFashionImageAdd(fashionImageAdd)
+        setState(session ? 'add-fashion-image' : 'unauthenticated')
       } else if (poseCapture) {
         setPendingPoseCapture(poseCapture)
         setState(session ? 'pose-capture' : 'unauthenticated')
@@ -65,6 +71,8 @@ export function App() {
   function handleLogin() {
     if (pendingOutfitCapture) {
       setState('outfit-capture')
+    } else if (pendingFashionImageAdd) {
+      setState('add-fashion-image')
     } else if (pendingPoseCapture) {
       setState('pose-capture')
     } else if (pendingLocationCapture) {
@@ -166,6 +174,21 @@ export function App() {
           </button>
         </div>
       </div>
+    )
+  }
+
+  if (state === 'add-fashion-image' && pendingFashionImageAdd) {
+    return (
+      <AddFashionImageScreen
+        capture={pendingFashionImageAdd}
+        onSaved={async () => {
+          await chrome.storage.local.remove('pendingFashionImageAdd')
+          setPendingFashionImageAdd(null)
+          setState('authenticated')
+          setTimeout(() => window.close(), 800)
+        }}
+        onBack={() => setState('authenticated')}
+      />
     )
   }
 

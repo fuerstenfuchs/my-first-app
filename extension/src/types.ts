@@ -48,3 +48,10 @@ export interface PendingOutfitCapture {
   images: OutfitImage[]
   timestamp: number
 }
+
+export interface PendingFashionImageAdd {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+  timestamp: number
+}
