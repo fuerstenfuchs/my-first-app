@@ -138,7 +138,6 @@ export async function POST(req: NextRequest) {
       n: 1,
       size: '1024x1024',
       quality: 'standard',
-      response_format: 'url',
     })
 
     const imageUrl = response.data?.[0]?.url
