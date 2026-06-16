@@ -112,50 +112,13 @@ export function FashionAssetMediaManager({
   const hasActiveUploads = uploading.some(u => u.status === 'uploading')
 
   return (
-    <div className="space-y-3">
-      <div
-        className={cn('rounded-lg border-2 border-dashed transition-colors p-4', isDragOver ? 'border-rose-500 bg-rose-500/10' : 'border-white/10 hover:border-white/20')}
-        onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
-        onDragLeave={() => setIsDragOver(false)}
-        onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFiles(e.dataTransfer.files) }}
-      >
-        <Tabs defaultValue="upload">
-          <TabsList className="h-7 mb-3">
-            <TabsTrigger value="upload" className="text-xs gap-1.5 h-5 px-2"><Upload className="h-3 w-3" />Hochladen</TabsTrigger>
-            <TabsTrigger value="url" className="text-xs gap-1.5 h-5 px-2"><Link2 className="h-3 w-3" />URL</TabsTrigger>
-          </TabsList>
-          <TabsContent value="upload" className="mt-0 space-y-2">
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" className="gap-2 h-8 text-xs" disabled={hasActiveUploads} onClick={() => fileRef.current?.click()}>
-                <Upload className="h-3.5 w-3.5" />{hasActiveUploads ? 'Lädt hoch…' : 'Bilder auswählen'}
-              </Button>
-              <span className="text-xs text-muted-foreground">oder hierher ziehen</span>
-            </div>
-            <p className="text-xs text-muted-foreground">JPG, PNG, WebP, GIF · max. 20 MB</p>
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => { handleFiles(e.target.files!); e.target.value = '' }} />
-          </TabsContent>
-          <TabsContent value="url" className="mt-0">
-            <div className="flex gap-2">
-              <Input value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onAddUrl(urlInput.trim()), setUrlInput(''))} placeholder="https://…" className="text-xs h-8" />
-              <Button type="button" variant="outline" size="sm" className="h-8 text-xs shrink-0" onClick={() => { onAddUrl(urlInput.trim()); setUrlInput('') }} disabled={!urlInput.trim()}>Hinzufügen</Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {uploading.length > 0 && (
-        <div className="space-y-1">
-          {uploading.map(u => (
-            <div key={u.id} className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground truncate flex-1">{u.file.name}</span>
-              {u.status === 'uploading' && <span className="text-muted-foreground animate-pulse shrink-0">Lädt…</span>}
-              {u.status === 'done'      && <span className="text-green-400 shrink-0">✓</span>}
-              {u.status === 'error'     && <span className="text-destructive shrink-0">Fehler</span>}
-            </div>
-          ))}
-        </div>
-      )}
-
+    <div
+      className={cn('space-y-3', isDragOver && 'outline outline-2 outline-rose-500 outline-offset-4 rounded-lg')}
+      onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFiles(e.dataTransfer.files) }}
+    >
+      {/* Images first — always visible without scrolling */}
       {images.length > 0 && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={images.map(i => i.id)} strategy={rectSortingStrategy}>
@@ -175,8 +138,47 @@ export function FashionAssetMediaManager({
         </DndContext>
       )}
 
+      {/* Upload section below images */}
+      <div className="rounded-lg border border-dashed border-white/10 hover:border-white/20 transition-colors p-3">
+        <Tabs defaultValue="upload">
+          <TabsList className="h-7 mb-2.5">
+            <TabsTrigger value="upload" className="text-xs gap-1.5 h-5 px-2"><Upload className="h-3 w-3" />Hochladen</TabsTrigger>
+            <TabsTrigger value="url" className="text-xs gap-1.5 h-5 px-2"><Link2 className="h-3 w-3" />URL</TabsTrigger>
+          </TabsList>
+          <TabsContent value="upload" className="mt-0 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" className="gap-2 h-7 text-xs" disabled={hasActiveUploads} onClick={() => fileRef.current?.click()}>
+                <Upload className="h-3 w-3" />{hasActiveUploads ? 'Lädt hoch…' : 'Bilder hinzufügen'}
+              </Button>
+              <span className="text-xs text-muted-foreground/60">oder hierher ziehen</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/50">JPG, PNG, WebP, GIF · max. 20 MB</p>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={e => { handleFiles(e.target.files!); e.target.value = '' }} />
+          </TabsContent>
+          <TabsContent value="url" className="mt-0">
+            <div className="flex gap-2">
+              <Input value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onAddUrl(urlInput.trim()), setUrlInput(''))} placeholder="https://…" className="text-xs h-7" />
+              <Button type="button" variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={() => { onAddUrl(urlInput.trim()); setUrlInput('') }} disabled={!urlInput.trim()}>Hinzufügen</Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {uploading.length > 0 && (
+        <div className="space-y-1">
+          {uploading.map(u => (
+            <div key={u.id} className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground truncate flex-1">{u.file.name}</span>
+              {u.status === 'uploading' && <span className="text-muted-foreground animate-pulse shrink-0">Lädt…</span>}
+              {u.status === 'done'      && <span className="text-green-400 shrink-0">✓</span>}
+              {u.status === 'error'     && <span className="text-destructive shrink-0">Fehler</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
       {images.length === 0 && !hasActiveUploads && (
-        <p className="text-xs text-muted-foreground text-center py-2">Noch keine Bilder — lade Referenzbilder hoch.</p>
+        <p className="text-xs text-muted-foreground/50 text-center py-1">Noch keine Bilder</p>
       )}
 
       {lightboxIndex !== null && (
