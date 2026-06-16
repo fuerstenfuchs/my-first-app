@@ -1,10 +1,16 @@
 const MENU_ID = 'promptdb-save'
+const MENU_FASHION_ID = 'promptdb-fashion-save'
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: MENU_ID,
     title: 'In PromptDB speichern',
     contexts: ['all'],
+  })
+  chrome.contextMenus.create({
+    id: MENU_FASHION_ID,
+    title: 'Als Fashion Asset speichern',
+    contexts: ['image'],
   })
 })
 
@@ -20,6 +26,17 @@ function openCaptureWindow() {
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === MENU_FASHION_ID) {
+    const fashionCapture = {
+      imageUrl: info.srcUrl ?? '',
+      sourceUrl: tab?.url ?? '',
+      sourceTitle: tab?.title ?? '',
+      timestamp: Date.now(),
+    }
+    chrome.storage.local.set({ pendingFashionCapture: fashionCapture }, openCaptureWindow)
+    return
+  }
+
   if (info.menuItemId !== MENU_ID) return
 
   const content = info.selectionText ?? ''

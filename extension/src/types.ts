@@ -16,3 +16,10 @@ export interface PendingCapture {
   title: string
   timestamp: number
 }
+
+export interface PendingFashionCapture {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+  timestamp: number
+}

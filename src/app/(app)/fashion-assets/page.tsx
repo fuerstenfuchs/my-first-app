@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ChevronRight, ShoppingBag } from 'lucide-react'
+import { Plus, Search, X, Pencil, Trash2, ChevronRight, ShoppingBag, ExternalLink } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
@@ -274,6 +274,17 @@ export default function FashionAssetsPage() {
                   </div>
                   <h2 className="text-xl font-semibold leading-tight mt-0.5">{asset.name}</h2>
                   {asset.description && <p className="text-sm text-muted-foreground mt-0.5">{asset.description}</p>}
+                  {asset.source_url && (
+                    <a
+                      href={asset.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-400 transition-colors mt-0.5"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {asset.source_title || (() => { try { return new URL(asset.source_url).hostname.replace('www.','') } catch { return asset.source_url } })()}
+                    </a>
+                  )}
                   {asset.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {asset.tags.map(tag => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}

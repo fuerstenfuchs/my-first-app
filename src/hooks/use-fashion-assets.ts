@@ -13,6 +13,7 @@ export const FASHION_CATEGORIES = [
   { key: 'schuhe',          label: 'Schuhe',           emoji: '👞' },
   { key: 'accessoires',     label: 'Accessoires',      emoji: '🕶️' },
   { key: 'kopfbedeckungen', label: 'Kopfbedeckungen',  emoji: '🎩' },
+  { key: 'sonstiges',       label: 'Sonstiges',        emoji: '🛍️' },
 ] as const
 
 export type FashionCategory = typeof FASHION_CATEGORIES[number]['key']
@@ -25,6 +26,8 @@ export interface FashionAsset {
   category: FashionCategory
   tags: string[]
   cover_image_url: string | null
+  source_url: string | null
+  source_title: string | null
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
@@ -58,6 +61,8 @@ export interface FashionAssetInput {
   category: FashionCategory
   tags?: string[]
   cover_image_url?: string | null
+  source_url?: string | null
+  source_title?: string | null
 }
 
 export interface FashionAssetVariantInput {
@@ -108,6 +113,9 @@ export function useFashionAssets() {
         category: input.category,
         tags: input.tags ?? [],
         user_id: user.id,
+        source_url: input.source_url ?? null,
+        source_title: input.source_title ?? null,
+        cover_image_url: input.cover_image_url ?? null,
       })
       .select()
       .single()
@@ -126,6 +134,10 @@ export function useFashionAssets() {
           asset.cover_image_url = publicUrl
         }
       }
+    } else if (input.cover_image_url && !asset.cover_image_url) {
+      // External URL provided directly (e.g. from browser extension capture)
+      await supabase.from('fashion_assets').update({ cover_image_url: input.cover_image_url }).eq('id', asset.id)
+      asset.cover_image_url = input.cover_image_url
     }
 
     const normalized = normalizeAsset(asset)
@@ -361,6 +373,8 @@ function normalizeAsset(raw: Record<string, unknown>): FashionAsset {
     category: raw.category as FashionCategory,
     tags: (raw.tags as string[]) ?? [],
     cover_image_url: (raw.cover_image_url as string | null) ?? null,
+    source_url: (raw.source_url as string | null) ?? null,
+    source_title: (raw.source_title as string | null) ?? null,
     metadata: (raw.metadata as Record<string, unknown>) ?? {},
     created_at: raw.created_at as string,
     updated_at: raw.updated_at as string,
