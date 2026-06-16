@@ -1,5 +1,6 @@
 const MENU_ID = 'promptdb-save'
 const MENU_FASHION_ID = 'promptdb-fashion-save'
+const MENU_LOCATION_ID = 'promptdb-location-save'
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -10,6 +11,11 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: MENU_FASHION_ID,
     title: 'Als Fashion Asset speichern',
+    contexts: ['image'],
+  })
+  chrome.contextMenus.create({
+    id: MENU_LOCATION_ID,
+    title: 'Als Location speichern',
     contexts: ['image'],
   })
 })
@@ -34,6 +40,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       timestamp: Date.now(),
     }
     chrome.storage.local.set({ pendingFashionCapture: fashionCapture }, openCaptureWindow)
+    return
+  }
+
+  if (info.menuItemId === MENU_LOCATION_ID) {
+    const locationCapture = {
+      imageUrl: info.srcUrl ?? '',
+      sourceUrl: tab?.url ?? '',
+      sourceTitle: tab?.title ?? '',
+      timestamp: Date.now(),
+    }
+    chrome.storage.local.set({ pendingLocationCapture: locationCapture }, openCaptureWindow)
     return
   }
 

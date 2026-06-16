@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -337,6 +337,25 @@ export function AppSidebar() {
               </div>
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">Fashion Assets</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/locations"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/locations')
+                  ? 'linear-gradient(#061a1a, #061818) padding-box, linear-gradient(135deg, #2dd4bf 0%, #0891b2 100%) border-box'
+                  : 'linear-gradient(#061a1a, #061818) padding-box, linear-gradient(135deg, #0d9488 0%, #0e7490 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(13,148,136,0.2), 0 0 18px rgba(14,116,144,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <MapPin className="h-6 w-6 text-teal-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Locations</span>
             </a>
           </SidebarMenuItem>
           <SidebarMenuItem>

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { initStorage } from './lib/storage'
-import type { PendingCapture, PendingFashionCapture } from './types'
+import type { PendingCapture, PendingFashionCapture, PendingLocationCapture } from './types'
 import { LoginScreen } from './components/LoginScreen'
 import { MainScreen } from './components/MainScreen'
 import { QuickCaptureScreen } from './components/QuickCaptureScreen'
 import { FashionCaptureScreen } from './components/FashionCaptureScreen'
+import { LocationCaptureScreen } from './components/LocationCaptureScreen'
 
-type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict' | 'fashion-capture'
+type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict' | 'fashion-capture' | 'location-capture'
 
 export function App() {
   const [state, setState] = useState<State>('loading')
@@ -15,17 +16,22 @@ export function App() {
   const [conflictCapture, setConflictCapture] = useState<PendingCapture | null>(null)
   const [captureRestored, setCaptureRestored] = useState(false)
   const [pendingFashionCapture, setPendingFashionCapture] = useState<PendingFashionCapture | null>(null)
+  const [pendingLocationCapture, setPendingLocationCapture] = useState<PendingLocationCapture | null>(null)
 
   useEffect(() => {
     initStorage().then(async () => {
       const { data: { session } } = await supabase.auth.getSession()
 
-      const result = await chrome.storage.local.get(['pendingCapture', 'pendingCaptureConflict', 'pendingFashionCapture'])
+      const result = await chrome.storage.local.get(['pendingCapture', 'pendingCaptureConflict', 'pendingFashionCapture', 'pendingLocationCapture'])
       const capture = result.pendingCapture as PendingCapture | undefined
       const conflict = result.pendingCaptureConflict as PendingCapture | undefined
       const fashionCapture = result.pendingFashionCapture as PendingFashionCapture | undefined
+      const locationCapture = result.pendingLocationCapture as PendingLocationCapture | undefined
 
-      if (fashionCapture) {
+      if (locationCapture) {
+        setPendingLocationCapture(locationCapture)
+        setState(session ? 'location-capture' : 'unauthenticated')
+      } else if (fashionCapture) {
         setPendingFashionCapture(fashionCapture)
         setState(session ? 'fashion-capture' : 'unauthenticated')
       } else if (capture && conflict) {
@@ -42,7 +48,9 @@ export function App() {
   }, [])
 
   function handleLogin() {
-    if (pendingFashionCapture) {
+    if (pendingLocationCapture) {
+      setState('location-capture')
+    } else if (pendingFashionCapture) {
       setState('fashion-capture')
     } else if (pendingCapture) {
       setCaptureRestored(true)
@@ -126,6 +134,21 @@ export function App() {
           </button>
         </div>
       </div>
+    )
+  }
+
+  if (state === 'location-capture' && pendingLocationCapture) {
+    return (
+      <LocationCaptureScreen
+        capture={pendingLocationCapture}
+        onSaved={async () => {
+          await chrome.storage.local.remove('pendingLocationCapture')
+          setPendingLocationCapture(null)
+          setState('authenticated')
+          setTimeout(() => window.close(), 800)
+        }}
+        onBack={() => setState('authenticated')}
+      />
     )
   }
 
