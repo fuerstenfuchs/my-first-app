@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { analyzeAsset } from '../lib/analyzeAsset'
+import { CropTool } from './CropTool'
 import type { PendingFashionCapture } from '../types'
 
 const CATEGORIES = [
@@ -15,6 +16,7 @@ const CATEGORIES = [
 ] as const
 
 type Category = typeof CATEGORIES[number]['key']
+type AnalysisStatus = 'pending' | 'completed' | 'outdated'
 
 interface Props {
   capture: PendingFashionCapture
@@ -23,15 +25,18 @@ interface Props {
 }
 
 export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
-  const [name, setName]             = useState('')
+  const [name, setName]               = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory]     = useState<Category>('sonstiges')
-  const [tags, setTags]             = useState('')
-  const [imageError, setImageError] = useState(false)
-  const [saving, setSaving]         = useState(false)
-  const [saved, setSaved]           = useState(false)
-  const [error, setError]           = useState<string | null>(null)
-  const [analyzing, setAnalyzing]   = useState(false)
+  const [category, setCategory]       = useState<Category>('sonstiges')
+  const [tags, setTags]               = useState('')
+  const [imageError, setImageError]   = useState(false)
+  const [saving, setSaving]           = useState(false)
+  const [saved, setSaved]             = useState(false)
+  const [error, setError]             = useState<string | null>(null)
+  const [analyzing, setAnalyzing]     = useState(false)
+  const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>('pending')
+  const [croppedDataUrl, setCroppedDataUrl] = useState<string | null>(null)
+  const [showCrop, setShowCrop]       = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
 
   const hasImage = !!capture.imageUrl && !imageError
@@ -46,11 +51,6 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
     nameRef.current?.focus()
   }, [capture.sourceTitle])
 
-  // Auto-analyse on mount when image is available
-  useEffect(() => {
-    if (capture.imageUrl) handleAnalyze()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   async function handleAnalyze() {
     if (!capture.imageUrl) return
     setAnalyzing(true)
@@ -59,11 +59,12 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
       const { data: { session } } = await supabase.auth.getSession()
       const appUrl = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
       if (!appUrl) { setError('App-URL nicht konfiguriert (VITE_APP_URL).'); return }
-      const result = await analyzeAsset(capture.imageUrl, 'fashion', session?.access_token ?? null, appUrl)
+      const result = await analyzeAsset(capture.imageUrl, 'fashion', session?.access_token ?? null, appUrl, croppedDataUrl ?? undefined)
       if (result.name) setName(result.name)
       if (result.category && CATEGORIES.some(c => c.key === result.category)) setCategory(result.category as Category)
       if (result.tags?.length) setTags(result.tags.join(', '))
       if (result.description) setDescription(result.description)
+      setAnalysisStatus('completed')
     } catch (err) {
       setError(`Analyse fehlgeschlagen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`)
     } finally {
@@ -94,12 +95,13 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
         category,
         tags: parsedTags,
         cover_image_url: hasImage ? capture.imageUrl : null,
+        crop_image_url: croppedDataUrl ?? null,
         source_url: capture.sourceUrl || null,
         source_title: capture.sourceTitle || null,
       })
 
     if (insertError) {
-      setError('Speichern fehlgeschlagen.')
+      setError(`Speichern fehlgeschlagen: ${insertError.message}`)
       setSaving(false)
       return
     }
@@ -116,25 +118,56 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
         <button onClick={onBack} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
           ← Zurück
         </button>
-        <span className="flex-1 text-xs font-medium text-rose-300 text-center flex items-center justify-center gap-1.5">
-          {analyzing && <span className="w-2.5 h-2.5 rounded-full border border-rose-400 border-t-transparent animate-spin shrink-0" />}
+        <span className="flex-1 text-xs font-medium text-rose-300 text-center">
           🛍️ Fashion Asset speichern
         </span>
       </div>
 
-      {/* Image preview */}
+      {/* Image preview / Crop tool */}
       {capture.imageUrl && (
-        <div className="shrink-0 relative bg-zinc-900 border-b border-zinc-700">
-          {!imageError ? (
+        <div className="shrink-0 bg-zinc-900 border-b border-zinc-700">
+          {showCrop ? (
+            <CropTool
+              imageUrl={capture.imageUrl}
+              onApply={(dataUrl) => {
+                setCroppedDataUrl(dataUrl)
+                setShowCrop(false)
+                if (analysisStatus === 'completed') setAnalysisStatus('outdated')
+              }}
+              onCancel={() => setShowCrop(false)}
+            />
+          ) : !imageError ? (
             <div className="relative">
               <img
-                src={capture.imageUrl}
+                src={croppedDataUrl ?? capture.imageUrl}
                 alt=""
                 className="w-full max-h-36 object-contain"
-                onError={() => setImageError(true)}
+                onError={() => { if (!croppedDataUrl) setImageError(true) }}
               />
-              {/* AI analyze button overlay */}
-              <div className="absolute bottom-1.5 right-1.5">
+              {croppedDataUrl && (
+                <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/70 rounded-md px-1.5 py-0.5">
+                  <span className="text-[10px] text-zinc-300">✂ Crop</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCroppedDataUrl(null)
+                      if (analysisStatus === 'completed') setAnalysisStatus('outdated')
+                    }}
+                    className="text-[10px] text-zinc-400 hover:text-white ml-0.5"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <div className="absolute bottom-1.5 right-1.5 flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCrop(true)}
+                  disabled={analyzing || saving}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-700/90 hover:bg-zinc-600 disabled:opacity-50 text-white text-[10px] font-medium transition-colors"
+                >
+                  ✂ {croppedDataUrl ? 'Neu' : 'Zuschneiden'}
+                </button>
                 <button
                   type="button"
                   onClick={handleAnalyze}
@@ -143,7 +176,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
                 >
                   {analyzing
                     ? <><span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />Analysiere…</>
-                    : '✨ KI-Analyse'}
+                    : analysisStatus === 'pending' ? '✨ Analysieren' : '🔄 Neu analysieren'}
                 </button>
               </div>
             </div>
@@ -225,9 +258,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
         </div>
 
         {error && (
-          <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded px-2 py-1">
-            {error}
-          </p>
+          <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded px-2 py-1">{error}</p>
         )}
       </div>
 
