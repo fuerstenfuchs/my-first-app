@@ -124,6 +124,7 @@ export default function FashionAssetsPage() {
     asset, variants, loading: detailLoading, uploading,
     createVariant, updateVariant, deleteVariant, reorderVariants,
     uploadImages, addImageUrl, deleteImage, reorderImages, updateAssetCover,
+    refetch: refetchDetail,
   } = useFashionAssetDetail(selectedAssetId)
 
   const [variantFormOpen, setVariantFormOpen]     = useState(false)
@@ -227,13 +228,16 @@ export default function FashionAssetsPage() {
 
   async function handleApplySuggestion() {
     if (!asset || !aiSuggestion) return
-    await updateAsset(asset.id, {
+    const ok = await updateAsset(asset.id, {
       name:        aiSuggestion.name,
       category:    aiSuggestion.category,
       tags:        aiSuggestion.tags,
       description: aiSuggestion.description,
     })
-    setAiSuggestion(null)
+    if (ok) {
+      setAiSuggestion(null)
+      refetchDetail()
+    }
   }
 
   const currentCategory = FASHION_CATEGORIES.find(c => c.key === selectedCategory)!
