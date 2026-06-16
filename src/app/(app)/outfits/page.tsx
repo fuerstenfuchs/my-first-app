@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, Shirt, Pencil, Trash2, X, Sparkles, Download } from 'lucide-react'
+import { Plus, Search, Shirt, Pencil, Trash2, X, Sparkles, Copy, Check } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
@@ -113,18 +113,16 @@ export default function OutfitsPage() {
   const [deleteVariantId, setDeleteVariantId]     = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
   const [generatingSheet, setGeneratingSheet]     = useState(false)
-  const [generatedSheetUrl, setGeneratedSheetUrl] = useState<string | null>(null)
-  const [generatedSheetBlob, setGeneratedSheetBlob] = useState<Blob | null>(null)
+  const [generatedSheetPrompt, setGeneratedSheetPrompt] = useState<string | null>(null)
+  const [promptCopied, setPromptCopied]           = useState(false)
   const [sheetError, setSheetError]               = useState<string | null>(null)
 
   async function generateSheet(variant: OutfitVariant) {
     if (!outfit) return
     setGeneratingSheet(true)
     setSheetError(null)
-    // Revoke previous blob URL to avoid memory leaks
-    if (generatedSheetUrl) URL.revokeObjectURL(generatedSheetUrl)
-    setGeneratedSheetUrl(null)
-    setGeneratedSheetBlob(null)
+    setGeneratedSheetPrompt(null)
+    setPromptCopied(false)
     try {
       const res = await fetch('/api/generate-outfit-sheet', {
         method: 'POST',
@@ -136,18 +134,21 @@ export default function OutfitsPage() {
           imageUrls: variant.images.map(i => i.url),
         }),
       })
-      const data = await res.json() as { imageBase64?: string; error?: string }
-      if (!res.ok || !data.imageBase64) throw new Error(data.error ?? 'Unbekannter Fehler')
-      // Convert base64 → Blob → object URL for preview
-      const bytes = Uint8Array.from(atob(data.imageBase64), c => c.charCodeAt(0))
-      const blob = new Blob([bytes], { type: 'image/png' })
-      setGeneratedSheetBlob(blob)
-      setGeneratedSheetUrl(URL.createObjectURL(blob))
+      const data = await res.json() as { prompt?: string; error?: string }
+      if (!res.ok || !data.prompt) throw new Error(data.error ?? 'Unbekannter Fehler')
+      setGeneratedSheetPrompt(data.prompt)
     } catch (err) {
       setSheetError(err instanceof Error ? err.message : 'Generierung fehlgeschlagen')
     } finally {
       setGeneratingSheet(false)
     }
+  }
+
+  async function copySheetPrompt() {
+    if (!generatedSheetPrompt) return
+    await navigator.clipboard.writeText(generatedSheetPrompt)
+    setPromptCopied(true)
+    setTimeout(() => setPromptCopied(false), 2000)
   }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -361,48 +362,38 @@ export default function OutfitsPage() {
                         </div>
                       </div>
 
-                      {/* Generated sheet preview */}
+                      {/* Sheet prompt output */}
                       {sheetError && (
                         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                           {sheetError}
                         </div>
                       )}
-                      {generatedSheetUrl && (
+                      {generatedSheetPrompt && (
                         <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 overflow-hidden">
                           <div className="px-3 py-2 flex items-center gap-2 border-b border-orange-500/20">
-                            <span className="text-xs font-medium text-orange-400 flex-1">✨ Generierter Sheet</span>
+                            <span className="text-xs font-medium text-orange-400 flex-1">✨ Ghost-Mannequin Prompt</span>
                             <Button
                               size="sm"
-                              className="h-6 px-2 text-[11px] bg-orange-500 hover:bg-orange-400 text-white gap-1"
-                              onClick={async () => {
-                                if (!generatedSheetBlob) return
-                                const file = new File([generatedSheetBlob], `outfit-sheet-${Date.now()}.png`, { type: 'image/png' })
-                                await uploadImages(selectedVariant.id, [file])
-                                URL.revokeObjectURL(generatedSheetUrl!)
-                                setGeneratedSheetUrl(null)
-                                setGeneratedSheetBlob(null)
-                              }}
+                              className={`h-6 px-2 text-[11px] gap-1 transition-colors ${promptCopied ? 'bg-green-600 hover:bg-green-500' : 'bg-orange-500 hover:bg-orange-400'} text-white`}
+                              onClick={copySheetPrompt}
                             >
-                              <Download className="h-3 w-3" />Speichern
+                              {promptCopied ? <><Check className="h-3 w-3" />Kopiert!</> : <><Copy className="h-3 w-3" />Kopieren</>}
                             </Button>
                             <Button
                               size="icon"
                               variant="ghost"
                               className="h-6 w-6 text-muted-foreground"
-                              onClick={() => {
-                                if (generatedSheetUrl) URL.revokeObjectURL(generatedSheetUrl)
-                                setGeneratedSheetUrl(null)
-                                setGeneratedSheetBlob(null)
-                              }}
+                              onClick={() => setGeneratedSheetPrompt(null)}
                             >
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
-                          <img
-                            src={generatedSheetUrl}
-                            alt="Generierter Outfit-Sheet"
-                            className="w-full object-contain max-h-64"
-                          />
+                          <p className="px-3 py-2.5 text-[11px] text-muted-foreground leading-relaxed select-all">
+                            {generatedSheetPrompt}
+                          </p>
+                          <div className="px-3 pb-2.5 text-[10px] text-muted-foreground/50">
+                            Prompt in Midjourney, Flux, Firefly o.ä. einfügen → generiertes Bild per Rechtsklick zurück ins Outfit laden
+                          </div>
                         </div>
                       )}
 

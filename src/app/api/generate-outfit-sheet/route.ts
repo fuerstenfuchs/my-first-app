@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
@@ -67,8 +66,6 @@ export async function POST(req: NextRequest) {
 
   if (!process.env.ANTHROPIC_API_KEY)
     return NextResponse.json({ error: 'Anthropic API key nicht konfiguriert' }, { status: 503, headers: CORS_HEADERS })
-  if (!process.env.OPENAI_API_KEY)
-    return NextResponse.json({ error: 'OpenAI API key nicht konfiguriert' }, { status: 503, headers: CORS_HEADERS })
 
   try {
     const body = await req.json() as {
@@ -79,73 +76,70 @@ export async function POST(req: NextRequest) {
     }
 
     const { outfitName, outfitDescription, outfitTags = [], imageUrls = [] } = body
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-    // Step 1: Use Claude Vision to analyze outfit images and describe all clothing pieces
-    let outfitPiecesDescription = ''
-
-    const imagesToAnalyze = imageUrls.slice(0, 4) // max 4 images for Claude
-    if (imagesToAnalyze.length > 0) {
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
-      const imageBlocks: Anthropic.MessageParam['content'] = []
-      for (const url of imagesToAnalyze) {
-        const img = await urlToBase64(url)
-        if (img) {
-          imageBlocks.push({
-            type: 'image',
-            source: { type: 'base64', media_type: img.mediaType, data: img.data },
-          })
-        }
-      }
-
-      if (imageBlocks.length > 0) {
+    // Build image blocks for Claude
+    const imageBlocks: Anthropic.MessageParam['content'] = []
+    for (const url of imageUrls.slice(0, 4)) {
+      const img = await urlToBase64(url)
+      if (img) {
         imageBlocks.push({
-          type: 'text',
-          text: `This is an outfit called "${outfitName}". Analyze every visible clothing piece and accessory. List each item with: exact name, color, material (if visible), style details, and any distinctive features. Focus ONLY on the clothing and accessories — ignore the model/person entirely. Output a concise comma-separated list in English, e.g.: "black cropped halter-neck top with fringe trim, black high-waisted tailored shorts, black strappy stiletto heels". Do not mention any person, body, or model.`,
+          type: 'image',
+          source: { type: 'base64', media_type: img.mediaType, data: img.data },
         })
-
-        const msg = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 400,
-          messages: [{ role: 'user', content: imageBlocks as Anthropic.MessageParam['content'] }],
-        })
-        outfitPiecesDescription = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
       }
     }
 
-    // Fallback: use outfit metadata if no images could be analyzed
-    if (!outfitPiecesDescription) {
-      const parts = [outfitName]
-      if (outfitDescription) parts.push(outfitDescription)
-      if (outfitTags.length > 0) parts.push(outfitTags.join(', '))
-      outfitPiecesDescription = parts.join('. ')
-    }
+    const metaParts = [`Outfit name: "${outfitName}"`]
+    if (outfitDescription) metaParts.push(`Description: ${outfitDescription}`)
+    if (outfitTags.length) metaParts.push(`Tags: ${outfitTags.join(', ')}`)
+    const metaText = metaParts.join('. ')
 
-    // Step 2: Generate flat-lay image with gpt-image-1
-    const generationPrompt = [
-      'Top-down flat lay fashion photography on a pure white seamless background.',
-      `Complete outfit: ${outfitPiecesDescription}.`,
-      'All clothing items and accessories carefully arranged on the white surface as if gently laid out, showing the full outfit composition.',
-      'NO person, NO model, NO mannequin, NO body parts, NO hands, NO feet.',
-      'Pure clothing product photography only.',
-      'Professional studio lighting, soft shadows, high-end fashion editorial style, ultra-sharp details.',
-    ].join(' ')
+    const userContent: Anthropic.MessageParam['content'] = [
+      ...imageBlocks,
+      {
+        type: 'text',
+        text: imageBlocks.length > 0
+          ? `${metaText}
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
-    const response = await openai.images.generate({
-      model: 'gpt-image-1',
-      prompt: generationPrompt,
-      n: 1,
-      size: '1024x1024',
+Analyze every clothing piece and accessory visible in these outfit images. Then generate a single, ready-to-use image generation prompt (for Midjourney, Flux, or Stable Diffusion) that shows the complete outfit as a ghost mannequin / invisible mannequin photo.
+
+Requirements for the prompt:
+- Ghost mannequin effect: clothes look worn and 3D-shaped, but NO person, NO model, NO skin, NO face, NO hands, NO feet visible anywhere
+- Front view on the LEFT side, back view on the RIGHT side — both on one image side by side
+- White or very light neutral background
+- Professional fashion product photography style
+- Describe every garment precisely (color, fabric texture, cut, details like buttons/zippers/prints)
+- Do NOT mention any person, body, or model
+
+Output ONLY the prompt text. No explanation, no intro, no quotes around it.`
+          : `${metaText}
+
+Generate a single, ready-to-use image generation prompt (for Midjourney, Flux, or Stable Diffusion) that shows this outfit as a ghost mannequin / invisible mannequin photo.
+
+Requirements:
+- Ghost mannequin effect: clothes look worn and 3D-shaped, but NO person, NO model, NO skin visible
+- Front view on the LEFT, back view on the RIGHT — both on one image
+- White background, professional fashion product photography
+- Describe plausible garments based on the outfit name and tags
+
+Output ONLY the prompt text. No explanation, no intro.`,
+      },
+    ]
+
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{ role: 'user', content: userContent }],
     })
 
-    const b64 = response.data?.[0]?.b64_json
-    if (!b64) throw new Error('Kein Bild generiert')
+    const prompt = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
+    if (!prompt) throw new Error('Kein Prompt generiert')
 
-    return NextResponse.json({ imageBase64: b64 }, { headers: CORS_HEADERS })
+    return NextResponse.json({ prompt }, { headers: CORS_HEADERS })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('generate-outfit-sheet error:', msg)
-    return NextResponse.json({ error: `Generierung fehlgeschlagen: ${msg}` }, { status: 500, headers: CORS_HEADERS })
+    return NextResponse.json({ error: `Prompt-Generierung fehlgeschlagen: ${msg}` }, { status: 500, headers: CORS_HEADERS })
   }
 }
