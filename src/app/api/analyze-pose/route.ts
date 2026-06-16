@@ -14,7 +14,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const POSE_SYSTEM_PROMPT = `You are an expert in body language, movement, and pose analysis for visual reference in film and photography production.
+const POSE_SYSTEM_PROMPT = `You are an expert in body language, movement, and pose analysis for AI image and video prompt generation.
 
 Analyze the image and identify the body pose, movement, gesture, or action shown.
 Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
@@ -24,14 +24,15 @@ JSON schema:
   "name": "string — descriptive name in German (e.g. 'Lässig an Wand lehnen', 'Selbstbewusst stehen')",
   "category": "one of: stehend | gehen | rennen | tanzen | sitzen | liegen | gestik | interaktion | emotion | sonstiges",
   "tags": ["array of 3-6 German tags describing the pose, mood, style"],
-  "description": "string — 1-2 sentences in German describing the pose and its visual character for prompt use"
+  "description": "string — An English prompt building block for AI image/video generation. 2-4 sentences describing exact body position, limb placement, movement direction, and expression. Example: 'Person standing sideways against a wall, one shoulder touching the wall, right leg slightly bent, left hand in pocket, relaxed and confident posture, head slightly turned toward camera.'"
 }
 
 Rules:
 - name: specific and descriptive in German (e.g. 'Arme verschränkt, Blick zur Seite', 'Gehend auf Kamera zu')
 - category: pick the single best matching category
-- tags: lowercase, e.g. ["lässig", "cool", "urban", "selbstbewusst"]
-- description: focus on body position, limb placement, movement direction, expression — useful for image/video prompts
+- tags: lowercase German tags, e.g. ["lässig", "cool", "urban", "selbstbewusst"]
+- description: MUST be in English, written as a ready-to-use prompt fragment for Midjourney, Runway, Flux, etc.
+  Focus on: body position, limb placement, movement direction, gaze direction, expression, energy
 - If multiple people are shown, focus on the primary figure
 - If no clear pose is shown, use category "sonstiges"
 

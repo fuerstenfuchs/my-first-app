@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { analyzeAsset } from '../lib/analyzeAsset'
 import type { PendingLocationCapture } from '../types'
 
 const CATEGORIES = [
@@ -42,11 +43,14 @@ export function LocationCaptureScreen({ capture, onSaved, onBack }: Props) {
   })()
 
   useEffect(() => {
-    if (capture.sourceTitle) {
-      setName(capture.sourceTitle.slice(0, 60).trim())
-    }
+    if (capture.sourceTitle) setName(capture.sourceTitle.slice(0, 60).trim())
     nameRef.current?.focus()
   }, [capture.sourceTitle])
+
+  // Auto-analyse on mount when image is available
+  useEffect(() => {
+    if (capture.imageUrl) handleAnalyze()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAnalyze() {
     if (!capture.imageUrl) return
@@ -56,41 +60,9 @@ export function LocationCaptureScreen({ capture, onSaved, onBack }: Props) {
       const { data: { session } } = await supabase.auth.getSession()
       const appUrl = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
       if (!appUrl) { setError('App-URL nicht konfiguriert (VITE_APP_URL).'); return }
-
-      let requestBody: Record<string, string>
-      try {
-        const imgRes = await fetch(capture.imageUrl)
-        if (!imgRes.ok) throw new Error('fetch failed')
-        const blob = await imgRes.blob()
-        const mediaType = blob.type || 'image/jpeg'
-        const imageBase64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? '')
-          reader.onerror = reject
-          reader.readAsDataURL(blob)
-        })
-        requestBody = { imageBase64, mediaType }
-      } catch {
-        requestBody = { imageUrl: capture.imageUrl }
-      }
-
-      const res = await fetch(`${appUrl}/api/analyze-location`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token ?? ''}`,
-        },
-        body: JSON.stringify(requestBody),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
-      }
-      const result = await res.json() as { name?: string; category?: string; tags?: string[]; description?: string }
+      const result = await analyzeAsset(capture.imageUrl, 'location', session?.access_token ?? null, appUrl)
       if (result.name) setName(result.name)
-      if (result.category && CATEGORIES.some(c => c.key === result.category)) {
-        setCategory(result.category as Category)
-      }
+      if (result.category && CATEGORIES.some(c => c.key === result.category)) setCategory(result.category as Category)
       if (result.tags?.length) setTags(result.tags.join(', '))
       if (result.description) setDescription(result.description)
     } catch (err) {
@@ -137,7 +109,8 @@ export function LocationCaptureScreen({ capture, onSaved, onBack }: Props) {
         <button onClick={onBack} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
           ← Zurück
         </button>
-        <span className="flex-1 text-xs font-medium text-teal-300 text-center">
+        <span className="flex-1 text-xs font-medium text-teal-300 text-center flex items-center justify-center gap-1.5">
+          {analyzing && <span className="w-2.5 h-2.5 rounded-full border border-teal-400 border-t-transparent animate-spin shrink-0" />}
           📍 Location speichern
         </span>
       </div>

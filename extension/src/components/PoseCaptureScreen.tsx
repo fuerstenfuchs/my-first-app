@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { analyzeAsset } from '../lib/analyzeAsset'
 import type { PendingPoseCapture } from '../types'
 
 const CATEGORIES = [
@@ -47,6 +48,11 @@ export function PoseCaptureScreen({ capture, onSaved, onBack }: Props) {
     nameRef.current?.focus()
   }, [capture.sourceTitle])
 
+  // Auto-analyse on mount when image is available
+  useEffect(() => {
+    if (capture.imageUrl) handleAnalyze()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleAnalyze() {
     if (!capture.imageUrl) return
     setAnalyzing(true)
@@ -55,37 +61,7 @@ export function PoseCaptureScreen({ capture, onSaved, onBack }: Props) {
       const { data: { session } } = await supabase.auth.getSession()
       const appUrl = (import.meta.env.VITE_APP_URL as string | undefined)?.replace(/\/$/, '')
       if (!appUrl) { setError('App-URL nicht konfiguriert (VITE_APP_URL).'); return }
-
-      let requestBody: Record<string, string>
-      try {
-        const imgRes = await fetch(capture.imageUrl)
-        if (!imgRes.ok) throw new Error('fetch failed')
-        const blob = await imgRes.blob()
-        const mediaType = blob.type || 'image/jpeg'
-        const imageBase64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? '')
-          reader.onerror = reject
-          reader.readAsDataURL(blob)
-        })
-        requestBody = { imageBase64, mediaType }
-      } catch {
-        requestBody = { imageUrl: capture.imageUrl }
-      }
-
-      const res = await fetch(`${appUrl}/api/analyze-pose`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token ?? ''}`,
-        },
-        body: JSON.stringify(requestBody),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(body.error ?? `HTTP ${res.status}`)
-      }
-      const result = await res.json() as { name?: string; category?: string; tags?: string[]; description?: string }
+      const result = await analyzeAsset(capture.imageUrl, 'pose', session?.access_token ?? null, appUrl)
       if (result.name) setName(result.name)
       if (result.category && CATEGORIES.some(c => c.key === result.category)) setCategory(result.category as Category)
       if (result.tags?.length) setTags(result.tags.join(', '))
@@ -134,7 +110,8 @@ export function PoseCaptureScreen({ capture, onSaved, onBack }: Props) {
         <button onClick={onBack} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">
           ← Zurück
         </button>
-        <span className="flex-1 text-xs font-medium text-purple-300 text-center">
+        <span className="flex-1 text-xs font-medium text-purple-300 text-center flex items-center justify-center gap-1.5">
+          {analyzing && <span className="w-2.5 h-2.5 rounded-full border border-purple-400 border-t-transparent animate-spin shrink-0" />}
           🎭 Pose / Aktion speichern
         </span>
       </div>
@@ -196,12 +173,16 @@ export function PoseCaptureScreen({ capture, onSaved, onBack }: Props) {
             className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-purple-500 transition-colors" />
         </div>
 
-        {/* Description */}
+        {/* Prompt-Baustein */}
         <div>
-          <label className="text-[11px] font-medium text-zinc-400 mb-0.5 block">Beschreibung</label>
+          <label className="text-[11px] font-medium text-zinc-400 mb-0.5 block">
+            Prompt-Baustein
+            <span className="ml-1 text-zinc-600 font-normal">(Englisch)</span>
+          </label>
           <textarea value={description} onChange={e => setDescription(e.target.value)}
-            placeholder="Körperhaltung, Ausdruck, Bewegung…" rows={2}
-            className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-purple-500 transition-colors resize-none" />
+            placeholder="Person standing sideways against a wall, one hand in pocket, relaxed posture…"
+            rows={3}
+            className="w-full px-2 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-purple-500 transition-colors resize-none font-mono" />
         </div>
 
         {/* Tags */}
