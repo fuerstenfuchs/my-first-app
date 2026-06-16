@@ -10,20 +10,22 @@ import {
   sortableKeyboardCoordinates, useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Crown, GripVertical, Link2, Trash2, Upload } from 'lucide-react'
+import { Crown, GripVertical, Link2, Trash2, Upload, ZoomIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { cn } from '@/lib/utils'
 import type { FashionAssetImage } from '@/hooks/use-fashion-assets'
 
 function SortableImage({
-  image, isAssetCover, onDelete, onSetAssetCover,
+  image, isAssetCover, onDelete, onSetAssetCover, onOpen,
 }: {
   image: FashionAssetImage
   isAssetCover: boolean
   onDelete: () => void
   onSetAssetCover?: () => void
+  onOpen: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -32,16 +34,19 @@ function SortableImage({
     <div ref={setNodeRef} style={style} {...attributes} className={cn('relative rounded-md', isDragging && 'opacity-50 z-50')}>
       <div className="relative aspect-video rounded-md overflow-hidden border border-white/10 bg-black group">
         <img src={image.url} alt="" className="w-full h-full object-cover" />
+
         <div {...listeners} className="absolute top-1 left-1 cursor-grab active:cursor-grabbing p-1 bg-black/50 rounded z-10 opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical className="h-3 w-3 text-white" />
         </div>
+
+        <button type="button" onClick={onOpen} title="Vergrößern"
+          className="absolute inset-0 w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-[5]">
+          <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
+        </button>
+
         {onSetAssetCover && !isAssetCover && (
-          <button
-            type="button"
-            onClick={onSetAssetCover}
-            title="Als Titelbild setzen"
-            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-amber-500 rounded z-10 opacity-30 group-hover:opacity-100 transition-all"
-          >
+          <button type="button" onClick={onSetAssetCover} title="Als Titelbild setzen"
+            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-amber-500 rounded z-10 opacity-30 group-hover:opacity-100 transition-all">
             <Crown className="h-3 w-3 text-white" />
           </button>
         )}
@@ -83,7 +88,8 @@ export function FashionAssetMediaManager({
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
-  const [urlInput, setUrlInput] = useState('')
+  const [urlInput, setUrlInput]     = useState('')
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -121,8 +127,7 @@ export function FashionAssetMediaManager({
           <TabsContent value="upload" className="mt-0 space-y-2">
             <div className="flex items-center gap-2">
               <Button type="button" variant="outline" size="sm" className="gap-2 h-8 text-xs" disabled={hasActiveUploads} onClick={() => fileRef.current?.click()}>
-                <Upload className="h-3.5 w-3.5" />
-                {hasActiveUploads ? 'Lädt hoch…' : 'Bilder auswählen'}
+                <Upload className="h-3.5 w-3.5" />{hasActiveUploads ? 'Lädt hoch…' : 'Bilder auswählen'}
               </Button>
               <span className="text-xs text-muted-foreground">oder hierher ziehen</span>
             </div>
@@ -132,9 +137,7 @@ export function FashionAssetMediaManager({
           <TabsContent value="url" className="mt-0">
             <div className="flex gap-2">
               <Input value={urlInput} onChange={e => setUrlInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), onAddUrl(urlInput.trim()), setUrlInput(''))} placeholder="https://…" className="text-xs h-8" />
-              <Button type="button" variant="outline" size="sm" className="h-8 text-xs shrink-0" onClick={() => { onAddUrl(urlInput.trim()); setUrlInput('') }} disabled={!urlInput.trim()}>
-                Hinzufügen
-              </Button>
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs shrink-0" onClick={() => { onAddUrl(urlInput.trim()); setUrlInput('') }} disabled={!urlInput.trim()}>Hinzufügen</Button>
             </div>
           </TabsContent>
         </Tabs>
@@ -146,8 +149,8 @@ export function FashionAssetMediaManager({
             <div key={u.id} className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground truncate flex-1">{u.file.name}</span>
               {u.status === 'uploading' && <span className="text-muted-foreground animate-pulse shrink-0">Lädt…</span>}
-              {u.status === 'done' && <span className="text-green-400 shrink-0">✓</span>}
-              {u.status === 'error' && <span className="text-destructive shrink-0">Fehler</span>}
+              {u.status === 'done'      && <span className="text-green-400 shrink-0">✓</span>}
+              {u.status === 'error'     && <span className="text-destructive shrink-0">Fehler</span>}
             </div>
           ))}
         </div>
@@ -157,13 +160,14 @@ export function FashionAssetMediaManager({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={images.map(i => i.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-3 gap-2">
-              {images.map(img => (
+              {images.map((img, idx) => (
                 <SortableImage
                   key={img.id}
                   image={img}
                   isAssetCover={!!assetCoverUrl && img.url === assetCoverUrl}
                   onDelete={() => onDelete(img.id, img.storage_path)}
                   onSetAssetCover={onSetAssetCover ? () => onSetAssetCover(img.url) : undefined}
+                  onOpen={() => setLightboxIndex(idx)}
                 />
               ))}
             </div>
@@ -173,6 +177,10 @@ export function FashionAssetMediaManager({
 
       {images.length === 0 && !hasActiveUploads && (
         <p className="text-xs text-muted-foreground text-center py-2">Noch keine Bilder — lade Referenzbilder hoch.</p>
+      )}
+
+      {lightboxIndex !== null && (
+        <ImageLightbox images={images} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
     </div>
   )
