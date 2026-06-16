@@ -20,6 +20,7 @@ import { FashionAssetForm } from '@/components/fashion-assets/fashion-asset-form
 import { FashionAssetVariantForm } from '@/components/fashion-assets/fashion-asset-variant-form'
 import { FashionAssetVariantCard } from '@/components/fashion-assets/fashion-asset-variant-card'
 import { FashionAssetMediaManager } from '@/components/fashion-assets/fashion-asset-media-manager'
+import { FashionSheetDialog } from '@/components/fashion-assets/fashion-sheet-dialog'
 import {
   FASHION_CATEGORIES,
   useFashionAssets, useFashionAssetDetail,
@@ -136,6 +137,8 @@ export default function FashionAssetsPage() {
   const [aiSuggestion, setAiSuggestion] = useState<{
     name: string; category: FashionCategory; tags: string[]; description: string
   } | null>(null)
+
+  const [sheetDialogOpen, setSheetDialogOpen] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -380,8 +383,17 @@ export default function FashionAssetsPage() {
           ) : asset ? (
             <>
               {/* Detail header */}
-              <div className="border-b shrink-0 px-4 py-2.5 flex items-center gap-2">
-                <h3 className="text-sm font-semibold flex-1 truncate">{asset.name}</h3>
+              <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{asset.name}</h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 shrink-0 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-[11px] font-medium gap-1"
+                  onClick={() => setSheetDialogOpen(true)}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Sheet
+                </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingAsset(asset); setAssetFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -598,6 +610,13 @@ export default function FashionAssetsPage() {
       )}
 
       {/* ── Dialogs ──────────────────────────────────────────────────── */}
+      {asset && (
+        <FashionSheetDialog
+          open={sheetDialogOpen}
+          onClose={() => setSheetDialogOpen(false)}
+          asset={asset}
+        />
+      )}
       <FashionAssetForm
         open={assetFormOpen}
         onClose={() => { setAssetFormOpen(false); setEditingAsset(null) }}
