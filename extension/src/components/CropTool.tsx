@@ -79,7 +79,7 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
     return () => { cancelled = true }
   }, [imageUrl, drawState])
 
-  // Mouse events via native listeners for smooth canvas updates
+  // Pointer events with setPointerCapture so drag works even outside the popup window
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || loading) return
@@ -88,7 +88,7 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
     let start    = { x: 0, y: 0 }
     let live: CropRect | null = null
 
-    function getPos(e: MouseEvent) {
+    function getPos(e: PointerEvent) {
       const r  = canvas.getBoundingClientRect()
       const sx = canvas.width  / r.width
       const sy = canvas.height / r.height
@@ -98,8 +98,9 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
       }
     }
 
-    function onDown(e: MouseEvent) {
+    function onDown(e: PointerEvent) {
       e.preventDefault()
+      canvas!.setPointerCapture(e.pointerId)  // keeps events on canvas even outside popup
       dragging = true
       start    = getPos(e)
       live     = null
@@ -107,7 +108,7 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
       drawState(null)
     }
 
-    function onMove(e: MouseEvent) {
+    function onMove(e: PointerEvent) {
       if (!dragging) return
       const p = getPos(e)
       live = {
@@ -120,15 +121,20 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
       setRect({ ...live })
     }
 
-    function onUp() { dragging = false }
+    function onUp(e: PointerEvent) {
+      if (canvas!.hasPointerCapture(e.pointerId)) canvas!.releasePointerCapture(e.pointerId)
+      dragging = false
+    }
 
-    canvas.addEventListener('mousedown', onDown)
-    window.addEventListener('mousemove',  onMove)
-    window.addEventListener('mouseup',    onUp)
+    canvas.addEventListener('pointerdown',   onDown)
+    canvas.addEventListener('pointermove',   onMove)
+    canvas.addEventListener('pointerup',     onUp)
+    canvas.addEventListener('pointercancel', onUp)
     return () => {
-      canvas.removeEventListener('mousedown', onDown)
-      window.removeEventListener('mousemove',  onMove)
-      window.removeEventListener('mouseup',    onUp)
+      canvas.removeEventListener('pointerdown',   onDown)
+      canvas.removeEventListener('pointermove',   onMove)
+      canvas.removeEventListener('pointerup',     onUp)
+      canvas.removeEventListener('pointercancel', onUp)
     }
   }, [loading, drawState])
 
@@ -167,7 +173,7 @@ export function CropTool({ imageUrl, onApply, onCancel }: Props) {
         <canvas
           ref={canvasRef}
           className="block select-none cursor-crosshair"
-          style={{ maxWidth: '100%', opacity: loading ? 0 : 1 }}
+          style={{ maxWidth: '100%', opacity: loading ? 0 : 1, touchAction: 'none' }}
         />
       </div>
 
