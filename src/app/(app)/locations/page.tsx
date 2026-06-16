@@ -20,7 +20,7 @@ import { LocationForm } from '@/components/locations/location-form'
 import { LocationVariantForm } from '@/components/locations/location-variant-form'
 import { FashionAssetVariantCard } from '@/components/fashion-assets/fashion-asset-variant-card'
 import {
-  LOCATION_CATEGORIES,
+  LOCATION_CATEGORIES, LOCATION_TYPES,
   useLocations, useLocationDetail,
   type Location, type LocationVariant,
   type LocationInput, type LocationVariantInput, type LocationCategory,
@@ -86,11 +86,16 @@ function LocationCard({
 
       <div className="px-2 py-2">
         <p className="text-xs font-medium leading-tight truncate">{location.name}</p>
-        {location.tags.length > 0 && (
+        {location.location_type ? (
+          <p className="text-[10px] text-teal-500/80 truncate mt-0.5">
+            {LOCATION_TYPES.find(t => t.key === location.location_type)?.emoji}{' '}
+            {LOCATION_TYPES.find(t => t.key === location.location_type)?.label}
+          </p>
+        ) : location.tags.length > 0 ? (
           <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
             {location.tags.slice(0, 3).join(' · ')}
           </p>
-        )}
+        ) : null}
       </div>
     </button>
   )
@@ -461,8 +466,17 @@ export default function LocationsPage() {
 
                   {/* Meta */}
                   <div className="px-4 py-3 border-b border-border space-y-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">{currentCategory.emoji} {currentCategory.label}</span>
+                      {location.location_type && (() => {
+                        const lt = LOCATION_TYPES.find(t => t.key === location.location_type)
+                        return lt ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 font-medium">
+                            <span>{lt.emoji}</span>
+                            <span>{lt.label}</span>
+                          </span>
+                        ) : null
+                      })()}
                     </div>
                     {location.description && (
                       <p className="text-xs text-muted-foreground leading-relaxed">{location.description}</p>

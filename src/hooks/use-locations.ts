@@ -19,12 +19,26 @@ export const LOCATION_CATEGORIES = [
 
 export type LocationCategory = typeof LOCATION_CATEGORIES[number]['key']
 
+export const LOCATION_TYPES = [
+  { key: 'landmark',      label: 'Landmark',       emoji: '🏛️',  description: 'Berühmtes Wahrzeichen (Eiffelturm, Big Ben, …)' },
+  { key: 'stadtgebiet',   label: 'Stadtgebiet',    emoji: '🗺️',  description: 'Viertel oder Straßenzug (Reeperbahn, Times Square, …)' },
+  { key: 'natur',         label: 'Natur',          emoji: '🌿',  description: 'Landschaft, Park, Wald, Küste' },
+  { key: 'innenraum',     label: 'Innenraum',      emoji: '🪟',  description: 'Innenbereich eines Gebäudes' },
+  { key: 'gebaeude',      label: 'Gebäude',        emoji: '🏗️',  description: 'Architektonisches Bauwerk (Arena, Schloss, Fabrik, …)' },
+  { key: 'eventlocation', label: 'Eventlocation',  emoji: '🎪',  description: 'Bühne, Halle, Festival-Gelände' },
+  { key: 'filmset',       label: 'Filmset',        emoji: '🎬',  description: 'Studioset oder gebaute Kulisse' },
+  { key: 'sonstiges',     label: 'Sonstiges',      emoji: '📦',  description: 'Passt in keine andere Kategorie' },
+] as const
+
+export type LocationType = typeof LOCATION_TYPES[number]['key']
+
 export interface Location {
   id: string
   user_id: string
   name: string
   description: string | null
   category: LocationCategory
+  location_type: LocationType | null
   tags: string[]
   cover_image_url: string | null
   source_url: string | null
@@ -60,6 +74,7 @@ export interface LocationInput {
   name: string
   description?: string
   category: LocationCategory
+  location_type?: LocationType | null
   tags?: string[]
   cover_image_url?: string | null
   source_url?: string | null
@@ -112,6 +127,7 @@ export function useLocations() {
         name: input.name.trim(),
         description: input.description?.trim() || null,
         category: input.category,
+        location_type: input.location_type ?? null,
         tags: input.tags ?? [],
         user_id: user.id,
         source_url: input.source_url ?? null,
@@ -151,6 +167,7 @@ export function useLocations() {
       name: input.name.trim(),
       description: input.description?.trim() || null,
       category: input.category,
+      location_type: input.location_type ?? null,
       tags: input.tags ?? [],
     }
     if ('cover_image_url' in input) patch.cover_image_url = input.cover_image_url
@@ -371,6 +388,7 @@ function normalizeLocation(raw: Record<string, unknown>): Location {
     name: raw.name as string,
     description: (raw.description as string | null) ?? null,
     category: raw.category as LocationCategory,
+    location_type: (raw.location_type as LocationType | null) ?? null,
     tags: (raw.tags as string[]) ?? [],
     cover_image_url: (raw.cover_image_url as string | null) ?? null,
     source_url: (raw.source_url as string | null) ?? null,
