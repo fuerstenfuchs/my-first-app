@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ExternalLink, ShoppingBag } from 'lucide-react'
+import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
@@ -130,6 +131,11 @@ export default function FashionAssetsPage() {
   const [deleteVariantId, setDeleteVariantId]     = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
 
+  const [aiAnalyzing, setAiAnalyzing] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    name: string; category: FashionCategory; tags: string[]; description: string
+  } | null>(null)
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const categoryCounts = useMemo(() => {
@@ -171,6 +177,63 @@ export default function FashionAssetsPage() {
     const [moved] = newOrder.splice(oldIndex, 1)
     newOrder.splice(newIndex, 0, moved)
     reorderVariants(newOrder.map(v => v.id))
+  }
+
+  async function handleAnalyzeAsset() {
+    if (!asset?.cover_image_url) return
+    setAiAnalyzing(true)
+    setAiSuggestion(null)
+    try {
+      let body: Record<string, string>
+      try {
+        const imgRes = await fetch(asset.cover_image_url)
+        if (!imgRes.ok) throw new Error('fetch failed')
+        const blob = await imgRes.blob()
+        const mediaType = blob.type || 'image/jpeg'
+        const imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? '')
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        body = { imageBase64, mediaType }
+      } catch {
+        body = { imageUrl: asset.cover_image_url }
+      }
+
+      const res = await fetch('/api/analyze-fashion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(data.error ?? `HTTP ${res.status}`)
+      }
+      const result = await res.json() as { name?: string; category?: string; tags?: string[]; description?: string }
+      const validCategories = FASHION_CATEGORIES.map(c => c.key)
+      setAiSuggestion({
+        name:        result.name        ?? asset.name,
+        category:    (validCategories.includes(result.category as FashionCategory) ? result.category : asset.category) as FashionCategory,
+        tags:        result.tags        ?? asset.tags,
+        description: result.description ?? asset.description ?? '',
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'KI-Analyse fehlgeschlagen')
+    } finally {
+      setAiAnalyzing(false)
+    }
+  }
+
+  async function handleApplySuggestion() {
+    if (!asset || !aiSuggestion) return
+    await updateAsset(asset.id, {
+      name:        aiSuggestion.name,
+      category:    aiSuggestion.category,
+      tags:        aiSuggestion.tags,
+      description: aiSuggestion.description,
+    })
+    setAiSuggestion(null)
   }
 
   const currentCategory = FASHION_CATEGORIES.find(c => c.key === selectedCategory)!
@@ -331,7 +394,7 @@ export default function FashionAssetsPage() {
                 <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-17px' }}>
 
                   {/* Cover image */}
-                  <div className="relative bg-black/20">
+                  <div className="relative bg-black/20 group/cover">
                     {asset.cover_image_url ? (
                       <>
                         <img
@@ -339,6 +402,19 @@ export default function FashionAssetsPage() {
                           alt={asset.name}
                           className="w-full object-contain max-h-80"
                         />
+                        {/* KI-Analyse button (always visible, bottom-left) */}
+                        <button
+                          onClick={handleAnalyzeAsset}
+                          disabled={aiAnalyzing}
+                          className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-600/90 hover:bg-rose-500 disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
+                        >
+                          {aiAnalyzing ? (
+                            <span className="w-2.5 h-2.5 rounded-full border border-white border-t-transparent animate-spin" />
+                          ) : (
+                            <Sparkles className="h-2.5 w-2.5" />
+                          )}
+                          {aiAnalyzing ? 'Analysiere…' : 'KI-Analyse'}
+                        </button>
                         {asset.source_url && (
                           <a
                             href={asset.source_url}
@@ -352,11 +428,70 @@ export default function FashionAssetsPage() {
                         )}
                       </>
                     ) : (
-                      <div className="flex items-center justify-center h-40 text-muted-foreground/20">
+                      <div className="flex flex-col items-center justify-center h-40 text-muted-foreground/20 gap-2">
                         <span className="text-6xl">{currentCategory.emoji}</span>
+                        <p className="text-[10px] text-muted-foreground/40">Kein Cover-Bild</p>
                       </div>
                     )}
                   </div>
+
+                  {/* AI suggestion card */}
+                  {aiSuggestion && (
+                    <div className="mx-3 my-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-rose-400">
+                        <Sparkles className="h-3 w-3" />
+                        <span className="text-[11px] font-semibold">KI-Vorschlag</span>
+                        <button onClick={() => setAiSuggestion(null)} className="ml-auto text-muted-foreground hover:text-foreground">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex gap-2">
+                          <span className="text-muted-foreground/60 w-16 shrink-0">Name</span>
+                          <span className="font-medium text-foreground/90 leading-tight">{aiSuggestion.name}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="text-muted-foreground/60 w-16 shrink-0">Kategorie</span>
+                          <span className="text-foreground/90">
+                            {FASHION_CATEGORIES.find(c => c.key === aiSuggestion.category)?.emoji}{' '}
+                            {FASHION_CATEGORIES.find(c => c.key === aiSuggestion.category)?.label}
+                          </span>
+                        </div>
+                        {aiSuggestion.tags.length > 0 && (
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground/60 w-16 shrink-0">Tags</span>
+                            <span className="text-foreground/80">{aiSuggestion.tags.join(', ')}</span>
+                          </div>
+                        )}
+                        {aiSuggestion.description && (
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground/60 w-16 shrink-0">Beschr.</span>
+                            <span className="text-foreground/80 leading-relaxed">{aiSuggestion.description}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          className="h-7 text-[11px] flex-1 bg-rose-600 hover:bg-rose-500"
+                          onClick={handleApplySuggestion}
+                        >
+                          <Check className="mr-1 h-3 w-3" />
+                          Übernehmen
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-[11px]"
+                          onClick={() => setAiSuggestion(null)}
+                        >
+                          Verwerfen
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Meta */}
                   <div className="px-4 py-3 border-b border-border space-y-2">
