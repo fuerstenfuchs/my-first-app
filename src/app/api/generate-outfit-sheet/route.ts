@@ -121,8 +121,8 @@ export async function POST(req: NextRequest) {
       outfitPiecesDescription = parts.join('. ')
     }
 
-    // Step 2: Generate flat-lay image with DALL-E 3
-    const dallePrompt = [
+    // Step 2: Generate flat-lay image with gpt-image-1
+    const generationPrompt = [
       'Top-down flat lay fashion photography on a pure white seamless background.',
       `Complete outfit: ${outfitPiecesDescription}.`,
       'All clothing items and accessories carefully arranged on the white surface as if gently laid out, showing the full outfit composition.',
@@ -133,17 +133,16 @@ export async function POST(req: NextRequest) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
     const response = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: dallePrompt,
+      model: 'gpt-image-1',
+      prompt: generationPrompt,
       n: 1,
       size: '1024x1024',
-      quality: 'standard',
     })
 
-    const imageUrl = response.data?.[0]?.url
-    if (!imageUrl) throw new Error('Kein Bild generiert')
+    const b64 = response.data?.[0]?.b64_json
+    if (!b64) throw new Error('Kein Bild generiert')
 
-    return NextResponse.json({ imageUrl, prompt: dallePrompt }, { headers: CORS_HEADERS })
+    return NextResponse.json({ imageBase64: b64 }, { headers: CORS_HEADERS })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('generate-outfit-sheet error:', msg)

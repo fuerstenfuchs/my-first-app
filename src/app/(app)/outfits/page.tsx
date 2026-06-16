@@ -114,13 +114,17 @@ export default function OutfitsPage() {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
   const [generatingSheet, setGeneratingSheet]     = useState(false)
   const [generatedSheetUrl, setGeneratedSheetUrl] = useState<string | null>(null)
+  const [generatedSheetBlob, setGeneratedSheetBlob] = useState<Blob | null>(null)
   const [sheetError, setSheetError]               = useState<string | null>(null)
 
   async function generateSheet(variant: OutfitVariant) {
     if (!outfit) return
     setGeneratingSheet(true)
     setSheetError(null)
+    // Revoke previous blob URL to avoid memory leaks
+    if (generatedSheetUrl) URL.revokeObjectURL(generatedSheetUrl)
     setGeneratedSheetUrl(null)
+    setGeneratedSheetBlob(null)
     try {
       const res = await fetch('/api/generate-outfit-sheet', {
         method: 'POST',
@@ -132,9 +136,13 @@ export default function OutfitsPage() {
           imageUrls: variant.images.map(i => i.url),
         }),
       })
-      const data = await res.json() as { imageUrl?: string; error?: string }
-      if (!res.ok || !data.imageUrl) throw new Error(data.error ?? 'Unbekannter Fehler')
-      setGeneratedSheetUrl(data.imageUrl)
+      const data = await res.json() as { imageBase64?: string; error?: string }
+      if (!res.ok || !data.imageBase64) throw new Error(data.error ?? 'Unbekannter Fehler')
+      // Convert base64 → Blob → object URL for preview
+      const bytes = Uint8Array.from(atob(data.imageBase64), c => c.charCodeAt(0))
+      const blob = new Blob([bytes], { type: 'image/png' })
+      setGeneratedSheetBlob(blob)
+      setGeneratedSheetUrl(URL.createObjectURL(blob))
     } catch (err) {
       setSheetError(err instanceof Error ? err.message : 'Generierung fehlgeschlagen')
     } finally {
@@ -367,8 +375,12 @@ export default function OutfitsPage() {
                               size="sm"
                               className="h-6 px-2 text-[11px] bg-orange-500 hover:bg-orange-400 text-white gap-1"
                               onClick={async () => {
-                                await addImageUrl(selectedVariant.id, generatedSheetUrl)
+                                if (!generatedSheetBlob) return
+                                const file = new File([generatedSheetBlob], `outfit-sheet-${Date.now()}.png`, { type: 'image/png' })
+                                await uploadImages(selectedVariant.id, [file])
+                                URL.revokeObjectURL(generatedSheetUrl!)
                                 setGeneratedSheetUrl(null)
+                                setGeneratedSheetBlob(null)
                               }}
                             >
                               <Download className="h-3 w-3" />Speichern
@@ -377,7 +389,11 @@ export default function OutfitsPage() {
                               size="icon"
                               variant="ghost"
                               className="h-6 w-6 text-muted-foreground"
-                              onClick={() => setGeneratedSheetUrl(null)}
+                              onClick={() => {
+                                if (generatedSheetUrl) URL.revokeObjectURL(generatedSheetUrl)
+                                setGeneratedSheetUrl(null)
+                                setGeneratedSheetBlob(null)
+                              }}
                             >
                               <X className="h-3 w-3" />
                             </Button>
