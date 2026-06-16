@@ -255,59 +255,118 @@ export default function FashionAssetsPage() {
           </div>
 
         ) : asset ? (
-          <>
-            {/* Asset header */}
-            <header className="border-b shrink-0 px-6 py-4">
-              <div className="flex items-start gap-4">
-                <div className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted border border-border/50">
-                  {asset.cover_image_url ? (
-                    <img src={asset.cover_image_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl leading-none">
-                      {currentCategory.emoji}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{currentCategory.emoji} {currentCategory.label}</span>
+          <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-w-0">
+
+            {/* ── Left column: image + meta ──────────────────────────── */}
+            <div className="lg:w-[45%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-border overflow-hidden">
+
+              {/* Large cover image */}
+              <div className="relative flex-1 min-h-0 bg-black/20 flex items-center justify-center overflow-hidden">
+                {asset.cover_image_url ? (
+                  <>
+                    <img
+                      src={asset.cover_image_url}
+                      alt={asset.name}
+                      className="max-w-full max-h-full object-contain"
+                      style={{ maxHeight: '60vh' }}
+                    />
+                    {asset.source_url && (
+                      <a
+                        href={asset.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] bg-black/60 hover:bg-black/80 text-white px-2 py-1 rounded-md transition-colors"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Zum Original
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground/30">
+                    <span className="text-6xl leading-none">{currentCategory.emoji}</span>
+                    <span className="text-xs">Kein Bild</span>
                   </div>
-                  <h2 className="text-xl font-semibold leading-tight mt-0.5">{asset.name}</h2>
-                  {asset.description && <p className="text-sm text-muted-foreground mt-0.5">{asset.description}</p>}
-                  {asset.source_url && (
-                    <a
-                      href={asset.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-400 transition-colors mt-0.5"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {asset.source_title || (() => { try { return new URL(asset.source_url).hostname.replace('www.','') } catch { return asset.source_url } })()}
-                    </a>
-                  )}
-                  {asset.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {asset.tags.map(tag => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
+                )}
+              </div>
+
+              {/* Asset meta below image */}
+              <div className="shrink-0 border-t border-border px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs text-muted-foreground">{currentCategory.emoji} {currentCategory.label}</span>
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingAsset(asset); setAssetFormOpen(true) }}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteAssetId(asset.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                    <h2 className="text-base font-semibold leading-tight truncate">{asset.name}</h2>
+                    {asset.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{asset.description}</p>}
+                    {asset.source_url && (
+                      <a
+                        href={asset.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-rose-400 transition-colors mt-0.5"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {asset.source_title || (() => { try { return new URL(asset.source_url).hostname.replace('www.','') } catch { return asset.source_url } })()}
+                      </a>
+                    )}
+                    {asset.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {asset.tags.map(tag => <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingAsset(asset); setAssetFormOpen(true) }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteAssetId(asset.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </header>
+            </div>
 
-            {/* Variants + detail */}
-            <div className="flex-1 overflow-hidden">
-              <div className="h-full flex flex-col lg:flex-row min-w-0">
-
-                {/* Variant grid */}
-                <div className={cn('flex-1 min-w-0 overflow-hidden relative', selectedVariant && 'lg:flex-none lg:w-[55%]')}>
+            {/* ── Right column: variants ─────────────────────────────── */}
+            <div className="flex-1 min-w-0 overflow-hidden">
+              {selectedVariant ? (
+                /* Variant detail */
+                <div className="h-full overflow-hidden relative">
+                  <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-5" style={{ right: '-20px' }}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold truncate">{selectedVariant.name}</h4>
+                        {selectedVariant.description && <p className="text-sm text-muted-foreground">{selectedVariant.description}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingVariant(selectedVariant); setVariantFormOpen(true) }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelectedVariantId(null)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Referenzbilder</p>
+                    <FashionAssetMediaManager
+                      variantId={selectedVariant.id}
+                      images={selectedVariant.images}
+                      uploading={uploading}
+                      assetCoverUrl={asset?.cover_image_url}
+                      onUpload={files => uploadImages(selectedVariant.id, files)}
+                      onAddUrl={url => addImageUrl(selectedVariant.id, url)}
+                      onDelete={(imgId, path) => deleteImage(selectedVariant.id, imgId, path)}
+                      onReorder={orderedIds => reorderImages(selectedVariant.id, orderedIds)}
+                      onSetAssetCover={url =>
+                        updateAssetCover(url, newUrl => selectedAssetId && patchAssetCover(selectedAssetId, newUrl))
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Variant grid */
+                <div className="h-full overflow-hidden relative">
                   <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-4" style={{ right: '-20px' }}>
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -320,11 +379,11 @@ export default function FashionAssetsPage() {
                     </div>
 
                     {variants.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-center">
-                        <p className="text-sm text-muted-foreground">Noch keine Varianten</p>
-                        <Button size="sm" onClick={() => { setEditingVariant(null); setVariantFormOpen(true) }}>
-                          <Plus className="mr-1.5 h-3.5 w-3.5" />
-                          Erste Variante anlegen
+                      <div className="flex flex-col items-center justify-center min-h-[160px] gap-2 text-center text-muted-foreground/50">
+                        <p className="text-xs">Keine Varianten — das Bild links ist das Hauptbild.</p>
+                        <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => { setEditingVariant(null); setVariantFormOpen(true) }}>
+                          <Plus className="mr-1 h-3 w-3" />
+                          Variante hinzufügen
                         </Button>
                       </div>
                     ) : (
@@ -348,46 +407,9 @@ export default function FashionAssetsPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Variant detail panel */}
-                {selectedVariant && (
-                  <div className="lg:w-[45%] shrink-0 border-t lg:border-t-0 lg:border-l border-border overflow-hidden relative">
-                    <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-5" style={{ right: '-20px' }}>
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold truncate">{selectedVariant.name}</h4>
-                          {selectedVariant.description && <p className="text-sm text-muted-foreground">{selectedVariant.description}</p>}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingVariant(selectedVariant); setVariantFormOpen(true) }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelectedVariantId(null)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Referenzbilder</p>
-                      <FashionAssetMediaManager
-                        variantId={selectedVariant.id}
-                        images={selectedVariant.images}
-                        uploading={uploading}
-                        assetCoverUrl={asset?.cover_image_url}
-                        onUpload={files => uploadImages(selectedVariant.id, files)}
-                        onAddUrl={url => addImageUrl(selectedVariant.id, url)}
-                        onDelete={(imgId, path) => deleteImage(selectedVariant.id, imgId, path)}
-                        onReorder={orderedIds => reorderImages(selectedVariant.id, orderedIds)}
-                        onSetAssetCover={url =>
-                          updateAssetCover(url, newUrl => selectedAssetId && patchAssetCover(selectedAssetId, newUrl))
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-          </>
+          </div>
         ) : null}
       </div>
 
