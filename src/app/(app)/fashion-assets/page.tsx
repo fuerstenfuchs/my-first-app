@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, ChevronRight, Crown, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
@@ -139,6 +139,9 @@ export default function FashionAssetsPage() {
   } | null>(null)
 
   const [sheetDialogOpen, setSheetDialogOpen] = useState(false)
+
+  const [galleryImageIndex, setGalleryImageIndex] = useState(0)
+  const variantUploadRef = useRef<HTMLInputElement>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -373,7 +376,7 @@ export default function FashionAssetsPage() {
 
       {/* ── Col 3: Detail panel ──────────────────────────────────────── */}
       {detailOpen && (
-        <div className="w-96 shrink-0 border-l border-border flex flex-col overflow-hidden">
+        <div className="w-[500px] shrink-0 border-l border-border flex flex-col overflow-hidden">
           {detailLoading ? (
             <div className="p-4 space-y-3">
               <Skeleton className="aspect-[3/4] rounded-xl w-full" />
@@ -537,36 +540,174 @@ export default function FashionAssetsPage() {
 
                   {/* Variants */}
                   {selectedVariant ? (
-                    /* Variant media manager */
+                    /* ── Variant image viewer ── */
                     <div className="p-4 space-y-3">
+                      {/* Nav + variant header */}
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate">{selectedVariant.name}</p>
-                          {selectedVariant.description && <p className="text-[11px] text-muted-foreground">{selectedVariant.description}</p>}
-                        </div>
+                        <button
+                          onClick={() => setSelectedVariantId(null)}
+                          className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />Varianten
+                        </button>
+                        <span className="text-xs font-semibold truncate flex-1">{selectedVariant.name}</span>
+                        {selectedVariant.description && (
+                          <span className="text-[11px] text-muted-foreground/60 truncate max-w-[100px]">{selectedVariant.description}</span>
+                        )}
                         <div className="flex gap-0.5 shrink-0">
                           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingVariant(selectedVariant); setVariantFormOpen(true) }}>
                             <Pencil className="h-3 w-3" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setSelectedVariantId(null)}>
-                            <X className="h-3.5 w-3.5" />
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setDeleteVariantId(selectedVariant.id)}>
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
-                      <FashionAssetMediaManager
-                        variantId={selectedVariant.id}
-                        images={selectedVariant.images}
-                        uploading={uploading}
-                        assetCoverUrl={asset.cover_image_url}
-                        onUpload={files => uploadImages(selectedVariant.id, files)}
-                        onAddUrl={url => addImageUrl(selectedVariant.id, url)}
-                        onDelete={(id, path) => deleteImage(selectedVariant.id, id, path)}
-                        onReorder={ids => reorderImages(selectedVariant.id, ids)}
-                        onSetAssetCover={url => updateAssetCover(url, newUrl => { if (selectedAssetId) patchAssetCover(selectedAssetId, newUrl) })}
+
+                      {selectedVariant.images.length > 0 ? (() => {
+                        const safeIdx = Math.min(galleryImageIndex, selectedVariant.images.length - 1)
+                        const currentImg = selectedVariant.images[safeIdx]
+                        const isCover = asset.cover_image_url === currentImg.url
+                        return (
+                          <>
+                            {/* Primary image */}
+                            <div className="relative bg-black/20 rounded-xl overflow-hidden group/img">
+                              <img
+                                src={currentImg.url}
+                                alt=""
+                                className="w-full object-contain max-h-80"
+                              />
+                              {/* Prev/Next arrows */}
+                              {selectedVariant.images.length > 1 && (
+                                <>
+                                  <button
+                                    onClick={() => setGalleryImageIndex((safeIdx - 1 + selectedVariant.images.length) % selectedVariant.images.length)}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronLeft className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setGalleryImageIndex((safeIdx + 1) % selectedVariant.images.length)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronRight className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                              {/* Cover badge / set-cover button */}
+                              {isCover ? (
+                                <div className="absolute top-2 left-2 flex items-center gap-1 text-[10px] bg-amber-500 text-black px-2 py-0.5 rounded-full font-semibold">
+                                  <Crown className="h-2.5 w-2.5" />Titelbild
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => updateAssetCover(currentImg.url, newUrl => { if (selectedAssetId) patchAssetCover(selectedAssetId, newUrl) })}
+                                  className="absolute top-2 left-2 flex items-center gap-1 text-[10px] bg-black/60 hover:bg-amber-500 hover:text-black text-white/80 px-2 py-0.5 rounded-full font-medium transition-colors opacity-0 group-hover/img:opacity-100"
+                                >
+                                  <Crown className="h-2.5 w-2.5" />Als Titelbild
+                                </button>
+                              )}
+                              {/* Image counter */}
+                              {selectedVariant.images.length > 1 && (
+                                <div className="absolute bottom-2 right-2 text-[10px] bg-black/60 text-white/80 px-1.5 py-0.5 rounded-full">
+                                  {safeIdx + 1} / {selectedVariant.images.length}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Thumbnail strip */}
+                            <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                              {selectedVariant.images.map((img, idx) => (
+                                <button
+                                  key={img.id}
+                                  onClick={() => setGalleryImageIndex(idx)}
+                                  className={cn(
+                                    'relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all group/thumb',
+                                    idx === safeIdx ? 'border-rose-500 ring-1 ring-rose-500/30' : 'border-transparent opacity-60 hover:opacity-100'
+                                  )}
+                                >
+                                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                  <div
+                                    onClick={e => { e.stopPropagation(); deleteImage(selectedVariant.id, img.id, img.storage_path) }}
+                                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-white" />
+                                  </div>
+                                </button>
+                              ))}
+                              {/* Upload thumbnail */}
+                              <button
+                                onClick={() => variantUploadRef.current?.click()}
+                                className="shrink-0 w-14 h-14 rounded-lg border-2 border-dashed border-border/40 hover:border-rose-500/50 flex items-center justify-center text-muted-foreground/40 hover:text-rose-400 transition-colors"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </>
+                        )
+                      })() : (
+                        /* No images yet */
+                        <div className="text-center py-10 space-y-3">
+                          <p className="text-xs text-muted-foreground/50">Noch keine Bilder für diese Variante</p>
+                          <Button size="sm" variant="outline" onClick={() => variantUploadRef.current?.click()}>
+                            <Upload className="mr-1.5 h-3.5 w-3.5" />Bilder hochladen
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Hidden upload input */}
+                      <input
+                        ref={variantUploadRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        multiple
+                        className="hidden"
+                        onChange={e => { uploadImages(selectedVariant.id, Array.from(e.target.files ?? [])); e.target.value = '' }}
                       />
+
+                      {/* Upload progress */}
+                      {uploading.length > 0 && (
+                        <div className="space-y-1">
+                          {uploading.map(u => (
+                            <div key={u.id} className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground truncate flex-1">{u.file.name}</span>
+                              {u.status === 'uploading' && <span className="text-muted-foreground animate-pulse">Lädt…</span>}
+                              {u.status === 'done' && <span className="text-emerald-400">✓</span>}
+                              {u.status === 'error' && <span className="text-destructive">Fehler</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* URL add */}
+                      <details className="group">
+                        <summary className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground cursor-pointer select-none list-none flex items-center gap-1">
+                          <Plus className="h-3 w-3" />Bild per URL hinzufügen
+                        </summary>
+                        <div className="flex gap-2 mt-2">
+                          <input
+                            type="url"
+                            placeholder="https://…"
+                            className="flex-1 h-8 px-2 text-xs rounded-md border border-border bg-muted/20 focus:outline-none focus:border-rose-500"
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                const val = (e.target as HTMLInputElement).value.trim()
+                                if (val) { addImageUrl(selectedVariant.id, val); (e.target as HTMLInputElement).value = '' }
+                              }
+                            }}
+                          />
+                          <Button size="sm" variant="outline" className="h-8 text-xs shrink-0"
+                            onClick={e => {
+                              const input = (e.currentTarget.previousElementSibling as HTMLInputElement)
+                              const val = input?.value?.trim()
+                              if (val) { addImageUrl(selectedVariant.id, val); input.value = '' }
+                            }}
+                          >Hinzufügen</Button>
+                        </div>
+                      </details>
                     </div>
                   ) : (
-                    /* Variant grid */
+                    /* ── Variant grid ── */
                     <div className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
@@ -590,7 +731,7 @@ export default function FashionAssetsPage() {
                                   key={v.id}
                                   variant={v}
                                   isSelected={selectedVariantId === v.id}
-                                  onClick={() => setSelectedVariantId(prev => prev === v.id ? null : v.id)}
+                                  onClick={() => { setSelectedVariantId(prev => prev === v.id ? null : v.id); setGalleryImageIndex(0) }}
                                   onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}
                                   onDelete={() => setDeleteVariantId(v.id)}
                                   onUploadImages={files => uploadImages(v.id, files)}
@@ -628,6 +769,7 @@ export default function FashionAssetsPage() {
         open={variantFormOpen}
         onClose={() => { setVariantFormOpen(false); setEditingVariant(null) }}
         variant={editingVariant}
+        defaultName={editingVariant ? undefined : asset?.name}
         onSave={handleVariantSave}
       />
 

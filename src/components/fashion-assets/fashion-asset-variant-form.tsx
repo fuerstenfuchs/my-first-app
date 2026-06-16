@@ -15,10 +15,11 @@ interface Props {
   open: boolean
   onClose: () => void
   variant?: FashionAssetVariant | null
+  defaultName?: string
   onSave: (input: FashionAssetVariantInput, files: File[]) => Promise<boolean | FashionAssetVariant | null>
 }
 
-export function FashionAssetVariantForm({ open, onClose, variant, onSave }: Props) {
+export function FashionAssetVariantForm({ open, onClose, variant, defaultName, onSave }: Props) {
   const isEdit = !!variant
   const [name, setName]             = useState('')
   const [description, setDescription] = useState('')
@@ -30,12 +31,12 @@ export function FashionAssetVariantForm({ open, onClose, variant, onSave }: Prop
 
   useEffect(() => {
     if (open) {
-      setName(variant?.name ?? '')
+      setName(variant?.name ?? defaultName ?? '')
       setDescription(variant?.description ?? '')
       setFiles([])
       setPreviews([])
     }
-  }, [open, variant])
+  }, [open, variant, defaultName])
 
   useEffect(() => {
     return () => { previews.forEach(p => URL.revokeObjectURL(p)) }
