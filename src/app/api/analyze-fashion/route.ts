@@ -37,6 +37,13 @@ Rules:
 
 Output ONLY the JSON object, nothing else.`
 
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+
+function normalizeMediaType(mime: string): Anthropic.Base64ImageSource['media_type'] {
+  const base = mime.split(';')[0].trim().toLowerCase()
+  return (ALLOWED_MIME.has(base) ? base : 'image/jpeg') as Anthropic.Base64ImageSource['media_type']
+}
+
 export async function POST(req: NextRequest) {
   let user = null
   const bearer = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -76,7 +83,7 @@ export async function POST(req: NextRequest) {
     if (body.imageBase64) {
       // Pre-fetched base64 from client (extension)
       imageData = body.imageBase64
-      imageMime = (body.mediaType ?? 'image/jpeg') as Anthropic.Base64ImageSource['media_type']
+      imageMime = normalizeMediaType(body.mediaType ?? 'image/jpeg')
     } else if (body.imageUrl) {
       // Server-side fetch with browser-like headers to pass CDN hotlink checks
       const referer = (() => { try { return new URL(body.imageUrl).origin + '/' } catch { return '' } })()
@@ -99,7 +106,6 @@ export async function POST(req: NextRequest) {
       }
       const ct = res.headers.get('content-type') ?? 'image/jpeg'
       const mime = ct.split(';')[0].trim()
-      // Validate it's actually an image
       if (!mime.startsWith('image/')) {
         return NextResponse.json(
           { error: 'Die URL verweist auf kein gültiges Bild.' },
@@ -108,7 +114,7 @@ export async function POST(req: NextRequest) {
       }
       const buf = await res.arrayBuffer()
       imageData = Buffer.from(buf).toString('base64')
-      imageMime = mime as Anthropic.Base64ImageSource['media_type']
+      imageMime = normalizeMediaType(mime)
     } else {
       return NextResponse.json({ error: 'Kein Bild übergeben.' }, { status: 400, headers: CORS_HEADERS })
     }
