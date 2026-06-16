@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, Shirt, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Search, Shirt, Pencil, Trash2, X, Sparkles, Download } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
@@ -112,6 +112,35 @@ export default function OutfitsPage() {
   const [editingVariant, setEditingVariant]       = useState<OutfitVariant | null>(null)
   const [deleteVariantId, setDeleteVariantId]     = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
+  const [generatingSheet, setGeneratingSheet]     = useState(false)
+  const [generatedSheetUrl, setGeneratedSheetUrl] = useState<string | null>(null)
+  const [sheetError, setSheetError]               = useState<string | null>(null)
+
+  async function generateSheet(variant: OutfitVariant) {
+    if (!outfit) return
+    setGeneratingSheet(true)
+    setSheetError(null)
+    setGeneratedSheetUrl(null)
+    try {
+      const res = await fetch('/api/generate-outfit-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          outfitName: outfit.name,
+          outfitDescription: outfit.description,
+          outfitTags: outfit.tags,
+          imageUrls: variant.images.map(i => i.url),
+        }),
+      })
+      const data = await res.json() as { imageUrl?: string; error?: string }
+      if (!res.ok || !data.imageUrl) throw new Error(data.error ?? 'Unbekannter Fehler')
+      setGeneratedSheetUrl(data.imageUrl)
+    } catch (err) {
+      setSheetError(err instanceof Error ? err.message : 'Generierung fehlgeschlagen')
+    } finally {
+      setGeneratingSheet(false)
+    }
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -302,6 +331,19 @@ export default function OutfitsPage() {
                         </button>
                         <span className="text-xs font-semibold truncate flex-1">{selectedVariant.name}</span>
                         <div className="flex gap-0.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[11px] text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1"
+                            disabled={generatingSheet || selectedVariant.images.length === 0}
+                            onClick={() => generateSheet(selectedVariant)}
+                            title="Flat-Lay Sheet ohne Person generieren"
+                          >
+                            {generatingSheet
+                              ? <><span className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />Sheet…</>
+                              : <><Sparkles className="h-3 w-3" />Sheet</>
+                            }
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingVariant(selectedVariant); setVariantFormOpen(true) }}>
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -310,6 +352,43 @@ export default function OutfitsPage() {
                           </Button>
                         </div>
                       </div>
+
+                      {/* Generated sheet preview */}
+                      {sheetError && (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                          {sheetError}
+                        </div>
+                      )}
+                      {generatedSheetUrl && (
+                        <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 overflow-hidden">
+                          <div className="px-3 py-2 flex items-center gap-2 border-b border-orange-500/20">
+                            <span className="text-xs font-medium text-orange-400 flex-1">✨ Generierter Sheet</span>
+                            <Button
+                              size="sm"
+                              className="h-6 px-2 text-[11px] bg-orange-500 hover:bg-orange-400 text-white gap-1"
+                              onClick={async () => {
+                                await addImageUrl(selectedVariant.id, generatedSheetUrl)
+                                setGeneratedSheetUrl(null)
+                              }}
+                            >
+                              <Download className="h-3 w-3" />Speichern
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-muted-foreground"
+                              onClick={() => setGeneratedSheetUrl(null)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <img
+                            src={generatedSheetUrl}
+                            alt="Generierter Outfit-Sheet"
+                            className="w-full object-contain max-h-64"
+                          />
+                        </div>
+                      )}
 
                       <OutfitMediaManager
                         variantId={selectedVariant.id}
