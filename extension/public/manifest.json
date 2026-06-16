@@ -17,6 +17,7 @@
   ],
   "host_permissions": [
     "https://*.vercel.app/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "<all_urls>"
   ]
 }

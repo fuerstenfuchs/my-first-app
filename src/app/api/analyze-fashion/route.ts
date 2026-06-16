@@ -64,17 +64,54 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { imageUrl } = await req.json() as { imageUrl?: string }
-    if (!imageUrl) {
-      return NextResponse.json({ error: 'No image URL provided' }, { status: 400, headers: CORS_HEADERS })
+    const body = await req.json() as {
+      imageUrl?: string
+      imageBase64?: string
+      mediaType?: string
     }
 
-    const res = await fetch(imageUrl)
-    if (!res.ok) throw new Error('Image fetch failed')
-    const buf = await res.arrayBuffer()
-    const imageData = Buffer.from(buf).toString('base64')
-    const ct = res.headers.get('content-type') ?? 'image/jpeg'
-    const imageMime = ct.split(';')[0].trim() as Anthropic.Base64ImageSource['media_type']
+    let imageData: string
+    let imageMime: Anthropic.Base64ImageSource['media_type']
+
+    if (body.imageBase64) {
+      // Pre-fetched base64 from client (extension)
+      imageData = body.imageBase64
+      imageMime = (body.mediaType ?? 'image/jpeg') as Anthropic.Base64ImageSource['media_type']
+    } else if (body.imageUrl) {
+      // Server-side fetch with browser-like headers to pass CDN hotlink checks
+      const referer = (() => { try { return new URL(body.imageUrl).origin + '/' } catch { return '' } })()
+      const res = await fetch(body.imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+          'Accept': 'image/webp,image/avif,image/*,*/*;q=0.8',
+          'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+          'Referer': referer,
+          'Sec-Fetch-Dest': 'image',
+          'Sec-Fetch-Mode': 'no-cors',
+          'Sec-Fetch-Site': 'same-site',
+        },
+      })
+      if (!res.ok) {
+        return NextResponse.json(
+          { error: `Bild konnte nicht geladen werden (${res.status}). Bitte versuche es mit einem direkten Bild-Link.` },
+          { status: 422, headers: CORS_HEADERS }
+        )
+      }
+      const ct = res.headers.get('content-type') ?? 'image/jpeg'
+      const mime = ct.split(';')[0].trim()
+      // Validate it's actually an image
+      if (!mime.startsWith('image/')) {
+        return NextResponse.json(
+          { error: 'Die URL verweist auf kein gültiges Bild.' },
+          { status: 422, headers: CORS_HEADERS }
+        )
+      }
+      const buf = await res.arrayBuffer()
+      imageData = Buffer.from(buf).toString('base64')
+      imageMime = mime as Anthropic.Base64ImageSource['media_type']
+    } else {
+      return NextResponse.json({ error: 'Kein Bild übergeben.' }, { status: 400, headers: CORS_HEADERS })
+    }
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
     const message = await client.messages.create({
@@ -96,7 +133,10 @@ export async function POST(req: NextRequest) {
     })
 
     const raw = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
-    const parsed = JSON.parse(raw) as {
+    // Strip markdown fences if the model wrapped the JSON
+    const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+    const parsed = JSON.parse(jsonMatch?.[0] ?? jsonStr) as {
       name: string
       category: string
       tags: string[]
@@ -105,7 +145,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(parsed, { headers: CORS_HEADERS })
   } catch (err) {
-    console.error('analyze-fashion error:', err)
-    return NextResponse.json({ error: 'Analyse fehlgeschlagen' }, { status: 500, headers: CORS_HEADERS })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('analyze-fashion error:', msg)
+    return NextResponse.json({ error: `Analyse fehlgeschlagen: ${msg}` }, { status: 500, headers: CORS_HEADERS })
   }
 }

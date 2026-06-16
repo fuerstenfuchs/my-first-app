@@ -59,13 +59,37 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
         setError('App-URL nicht konfiguriert (VITE_APP_URL).')
         return
       }
+
+      // Try to fetch the image in the extension context (avoids server-side CDN blocks).
+      // Falls back to URL-based fetch on the server if the client fetch fails.
+      let requestBody: Record<string, string>
+      try {
+        const imgRes = await fetch(capture.imageUrl)
+        if (!imgRes.ok) throw new Error('fetch failed')
+        const blob = await imgRes.blob()
+        const mediaType = blob.type || 'image/jpeg'
+        const imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => {
+            const result = reader.result as string
+            resolve(result.split(',')[1] ?? '')
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        requestBody = { imageBase64, mediaType }
+      } catch {
+        // Extension context couldn't fetch the image — let the server try with imageUrl
+        requestBody = { imageUrl: capture.imageUrl }
+      }
+
       const res = await fetch(`${appUrl}/api/analyze-fashion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token ?? ''}`,
         },
-        body: JSON.stringify({ imageUrl: capture.imageUrl }),
+        body: JSON.stringify(requestBody),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string }
