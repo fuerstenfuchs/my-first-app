@@ -22,9 +22,10 @@ interface Props {
   capture: PendingFashionCapture
   onSaved: () => void
   onBack: () => void
+  onSwitchToOutfit: (imageUrl: string, sourceUrl: string, sourceTitle: string) => void
 }
 
-export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
+export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfit }: Props) {
   const [name, setName]               = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory]       = useState<Category>('sonstiges')
@@ -189,6 +190,16 @@ export function FashionCaptureScreen({ capture, onSaved, onBack }: Props) {
                   {analyzing
                     ? <><span className="w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />Analysiere…</>
                     : analysisStatus === 'pending' ? '✨ Analysieren' : '🔄 Neu analysieren'}
+                </button>
+              </div>
+              <div className="absolute top-1.5 right-1.5">
+                <button
+                  type="button"
+                  onClick={() => onSwitchToOutfit(capture.imageUrl, capture.sourceUrl, capture.sourceTitle)}
+                  disabled={analyzing || saving}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-600/90 hover:bg-orange-500 disabled:opacity-50 text-white text-[10px] font-medium transition-colors"
+                >
+                  🧥 Als Outfit
                 </button>
               </div>
             </div>

@@ -37,3 +37,14 @@ export interface PendingPoseCapture {
   sourceTitle: string
   timestamp: number
 }
+
+export interface OutfitImage {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+}
+
+export interface PendingOutfitCapture {
+  images: OutfitImage[]
+  timestamp: number
+}

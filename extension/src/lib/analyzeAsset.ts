@@ -1,4 +1,4 @@
-export type AssetAnalysisType = 'fashion' | 'location' | 'pose'
+export type AssetAnalysisType = 'fashion' | 'location' | 'pose' | 'outfit'
 
 export interface AssetAnalysisResult {
   name?: string
@@ -11,6 +11,7 @@ const ENDPOINT: Record<AssetAnalysisType, string> = {
   fashion:  '/api/analyze-fashion',
   location: '/api/analyze-location',
   pose:     '/api/analyze-pose',
+  outfit:   '/api/analyze-outfit',
 }
 
 export async function analyzeAsset(
