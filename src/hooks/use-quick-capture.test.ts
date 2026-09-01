@@ -117,6 +117,24 @@ describe('useQuickCapture', () => {
 
   // ── Guard: modal already open ───────────────────────────────────────────────
 
+  it('Q wird in einer Auswahlliste ignoriert (Radix-Typeahead)', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    const trigger = makeElement('button')
+    trigger.setAttribute('role', 'combobox')
+    act(() => { fireKey('q', trigger) })
+    expect(result.current.isOpen).toBe(false)
+  })
+
+  it('Q wird innerhalb eines offenen Dialogs ignoriert', () => {
+    const { result } = renderHook(() => useQuickCapture())
+    const dialog = makeElement('div')
+    dialog.setAttribute('role', 'dialog')
+    const button = document.createElement('button')
+    dialog.appendChild(button)
+    act(() => { fireKey('q', button) })
+    expect(result.current.isOpen).toBe(false)
+  })
+
   it('Q does nothing if modal is already open', () => {
     const { result } = renderHook(() => useQuickCapture())
     act(() => result.current.open())

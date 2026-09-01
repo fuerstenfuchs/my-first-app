@@ -18,6 +18,12 @@ export function useQuickCapture() {
         target.isContentEditable ||
         target.getAttribute?.('contenteditable') === 'true'
       ) return
+      // Auch in Auswahllisten und offenen Dialogen nicht auslösen: Ein Radix-
+      // SelectTrigger ist ein <button>, und das Tippen von „q" springt dort zum
+      // Eintrag — Quick Capture würde sich zusätzlich über den offenen Dialog
+      // legen. Zwei gestapelte Radix-Dialoge lassen leicht pointer-events am
+      // body hängen.
+      if (target.closest?.('[role="combobox"], [role="listbox"], [role="dialog"]')) return
       e.preventDefault()
       setInitialValues(null)
       setIsOpen(true)
