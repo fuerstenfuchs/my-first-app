@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, DURCHLAEUFE, groesseFuerFormat, formatAnsage,
+  MODELLE, DURCHLAEUFE, groesseFuerFormat, formatAnsage, promptFuerAuftrag,
   type ModellId, type Durchlaeufe,
 } from '@/lib/image-generation'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
@@ -44,7 +44,7 @@ export function QueueButton({ prompt, referenceUrls, aspectRatio, sceneMeta }: Q
     if (!prompt || laeuft) return
     setLaeuft(true)
 
-    const endgueltigerPrompt = ansage ? `${prompt}\n\n${ansage}` : prompt
+    const endgueltigerPrompt = promptFuerAuftrag(prompt, aspectRatio, mitReferenz)
 
     const job = await anlegen({
       prompt:         endgueltigerPrompt,
@@ -113,9 +113,7 @@ export function QueueButton({ prompt, referenceUrls, aspectRatio, sceneMeta }: Q
         <Info className="mt-px h-2.5 w-2.5 shrink-0" />
         <span>
           {mitReferenz ? (
-            aspectRatio
-              ? <>Mit Referenzbildern bestimmt das Modell die Größe selbst — das gewünschte Format steht deshalb zusätzlich im Prompt.</>
-              : <>Mit Referenzbildern bestimmt das Modell die Größe selbst.</>
+            <>Mit Referenzbildern bestimmt das Modell die Größe selbst.</>
           ) : (
             <>
               {zuordnung.size}
@@ -124,6 +122,17 @@ export function QueueButton({ prompt, referenceUrls, aspectRatio, sceneMeta }: Q
           )}
         </span>
       </p>
+
+      {/*
+        Wörtlich zeigen, was zusätzlich abgeschickt wird. Ohne das läge rechts im
+        Prompt-Feld ein anderer Text als der, für den bezahlt wird — sichtbar
+        erst hinterher auf /queue.
+      */}
+      {ansage && (
+        <p className="rounded border border-dashed border-border/60 px-1.5 py-1 font-mono text-[10px] leading-snug text-muted-foreground/60">
+          <span className="not-italic">+ </span>{ansage}
+        </p>
+      )}
     </div>
   )
 }

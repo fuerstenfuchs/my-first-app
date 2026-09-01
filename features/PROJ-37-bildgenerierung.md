@@ -1,6 +1,6 @@
 # PROJ-37: Bildgenerierung (Auftragstabelle + lokaler Arbeiter)
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-09-01
 **Last Updated:** 2026-09-01
 **Grundlage:** BRIEFING-Bildgenerierung.md vom 01.09.2026
@@ -82,6 +82,44 @@ Zwei Aufträge von Hand eingereiht und abgearbeitet:
 
 Beide Bilder liegen in `generated-images` und sind über die öffentliche Adresse
 abrufbar.
+
+## Nachprüfung durch Critic — sieben Befunde behoben
+
+**BLOCKER, nachgemessen und geschlossen:** Beide `security definer`-Funktionen
+waren mit dem öffentlichen anon-Schlüssel aufrufbar (HTTP 200). Damit hätte
+jeder fremde Auftragszeilen auslesen (`returning *`), Versuche verbrennen und
+mit `stale_minutes: 0` laufende Aufträge abbrechen können. Nach dem
+Rechteentzug: HTTP 401. Die `revoke`/`grant`-Zeilen stehen jetzt im
+Migrations-SQL, nicht nur in der Datenbank.
+
+**Doppelte Kosten bei Absturz:** `result_paths` wurde erst nach der ganzen
+Schleife geschrieben. Ein Auftrag mit vier Durchläufen, der beim vierten Bild
+abstürzte, verlor drei bezahlte Bilder — der Neuversuch erzeugte sie erneut.
+Jetzt wird nach jedem Bild fortgeschrieben, und der Neuversuch setzt fort.
+
+**Auftrag, der still für immer wartet:** Beim Abbruch wurde `attempts` nicht
+zurückgenommen. Ein im dritten Versuch abgebrochener Auftrag blieb mit
+attempts = 3 auf `queued` — claim holt ihn nie wieder, requeue sieht ihn nicht,
+auf /queue zeigte er dauerhaft „Wartet". Jetzt eigener Weg
+`auftragZurueckstellen`, der den nicht stattgefundenen Versuch zurückgibt.
+
+**Aufräumgrenze zu knapp:** 10 Minuten bei bis zu 20 Minuten Laufzeit. Bei zwei
+Arbeitern wäre ein laufender Auftrag neu eingereiht und ein zweites Mal erzeugt
+worden. Jetzt 30 Minuten, und `started_at` wird nach jedem Bild aufgefrischt —
+gemessen wird damit die Zeit seit dem letzten Bild, nicht seit Auftragsbeginn.
+
+**Weitere:** Node-Anforderung auf >=22.18 berichtigt (TypeScript ohne Flag gibt
+es erst ab dort), Formatansage wird im Knopf wörtlich angezeigt statt nur
+erwähnt, Löschfehler wird nicht mehr verschluckt, Cache-Brecher an den
+Ergebnisbildern, Abfrage-Intervall stabilisiert. Die Anhängelogik ist als
+`promptFuerAuftrag` aus der Komponente ausgelagert und jetzt geprüft — es ist
+die einzige Stelle im Vorhaben, die den Prompt anfasst.
+
+## Zweite Abnahme nach den Korrekturen
+
+Auftrag `c4e01d96` mit zwei Durchläufen: beide Bilder 1536x1024, 23 s und 26 s.
+In der Datenbank nachgemessen: `status = done`, `attempts = 1`,
+`array_length(result_paths, 1) = 2`, `finished_at` gesetzt.
 
 ## Offen
 

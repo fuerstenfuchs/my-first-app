@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import {
-  groesseFuerFormat, formatAnsage, NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE,
+  groesseFuerFormat, formatAnsage, promptFuerAuftrag,
+  NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE,
 } from './image-generation'
 import { ASPECT_RATIOS } from './scene-builder-options'
 
@@ -61,10 +64,49 @@ describe('Formatansage für den Prompt', () => {
 })
 
 describe('Durchläufe', () => {
-  it('bleibt innerhalb der Schranke der Datenbank (1 bis 4)', () => {
-    // image_jobs hat check (variants between 1 and 4) — ein fünfter Wert in der
-    // Oberfläche würde beim Speichern abgelehnt.
-    expect(Math.min(...DURCHLAEUFE)).toBe(1)
-    expect(Math.max(...DURCHLAEUFE)).toBe(4)
+  it('deckt sich mit der Schranke, die im Migrations-SQL steht', () => {
+    // Ein Test gegen die Konstante selbst würde nichts absichern. Geprüft wird
+    // deshalb gegen die Quelle der Wahrheit: check (variants between 1 and 4)
+    // in docs/proj-37-image-jobs.sql. Ein fünfter Wert in der Oberfläche würde
+    // beim Speichern von der Datenbank abgelehnt.
+    const sql = readFileSync(join(process.cwd(), 'docs/proj-37-image-jobs.sql'), 'utf-8')
+    const treffer = sql.match(/variants between (\d+) and (\d+)/)
+    expect(treffer, 'Schranke im SQL nicht gefunden').toBeTruthy()
+    expect(Math.min(...DURCHLAEUFE)).toBe(Number(treffer![1]))
+    expect(Math.max(...DURCHLAEUFE)).toBe(Number(treffer![2]))
+  })
+})
+
+describe('Prompt für den Auftrag', () => {
+  const PROMPT = 'Indoor scene. Close-up shot. Photorealistic.'
+
+  it('lässt den Prompt ohne Referenzbild unangetastet', () => {
+    // Ohne Referenz wirkt der Größenparameter — die Ansage wäre überflüssig.
+    expect(promptFuerAuftrag(PROMPT, 'landscape_16_9', false)).toBe(PROMPT)
+    expect(promptFuerAuftrag(PROMPT, null, false)).toBe(PROMPT)
+  })
+
+  it('hängt mit Referenzbild die Formatansage an', () => {
+    const ergebnis = promptFuerAuftrag(PROMPT, 'landscape_16_9', true)
+    expect(ergebnis.startsWith(PROMPT)).toBe(true)
+    expect(ergebnis).toContain('16:9')
+    expect(ergebnis).toContain('\n\n')
+  })
+
+  it('hängt ohne gewähltes Format nichts an, auch mit Referenzbild', () => {
+    expect(promptFuerAuftrag(PROMPT, null, true)).toBe(PROMPT)
+  })
+
+  it('verändert den ursprünglichen Prompt nie — er bleibt vollständig enthalten', () => {
+    // Briefing 9: An der Prompt-Erzeugung wird nichts geändert. Angehängt wird
+    // nur, nie ersetzt oder umgeschrieben.
+    for (const format of ASPECT_RATIOS) {
+      for (const mitRef of [true, false]) {
+        expect(
+          promptFuerAuftrag(PROMPT, format.key, mitRef).startsWith(PROMPT),
+          `${format.key}, Referenz: ${mitRef}`,
+        ).toBe(true)
+      }
+    }
   })
 })

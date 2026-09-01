@@ -104,7 +104,10 @@ export default function QueuePage() {
           <div className="mx-auto max-w-4xl space-y-2">
             {jobs.map(job => {
               const aufgeklappt = offen.has(job.id)
-              const bilder = job.result_paths.map(ergebnisUrl)
+              // ?v=attempts als Cache-Brecher: Ein Neuversuch schreibt in denselben
+              // Pfad, und Supabase liefert öffentliche Objekte eine Stunde lang aus
+              // dem Zwischenspeicher — sonst sieht man das alte Ergebnis.
+              const bilder = job.result_paths.map(p => `${ergebnisUrl(p)}?v=${job.attempts}`)
               return (
                 <div key={job.id} className="overflow-hidden rounded-lg border border-border/60 bg-card">
                   <div className="flex items-start gap-3 p-3">

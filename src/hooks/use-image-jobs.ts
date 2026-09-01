@@ -76,13 +76,15 @@ export function useImageJobs(aktiv = true) {
    * Seite kann nicht wissen, wann er etwas tut, aber sie soll auch nicht
    * dauerhaft Anfragen erzeugen.
    */
+  // Abgeleitetes Merkmal statt jobs in der Abhängigkeitsliste: laden() setzt bei
+  // jedem Abruf ein neues Array, der Effekt liefe sonst jede Runde neu an.
+  const etwasOffen = jobs.some(j => j.status === 'queued' || j.status === 'running')
+
   useEffect(() => {
-    if (!aktiv) return
-    const offen = jobs.some(j => j.status === 'queued' || j.status === 'running')
-    if (!offen) return
+    if (!aktiv || !etwasOffen) return
     const timer = setInterval(() => { void laden() }, 5000)
     return () => clearInterval(timer)
-  }, [aktiv, jobs, laden])
+  }, [aktiv, etwasOffen, laden])
 
   const anlegen = useCallback(async (input: ImageJobInput): Promise<ImageJob | null> => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -139,7 +141,13 @@ export function useImageJobs(aktiv = true) {
     // Erst die Bilder, dann die Zeile — andersherum wüsste niemand mehr,
     // welche Dateien zu löschen wären.
     if (job.result_paths.length > 0) {
-      await supabase.storage.from(BUCKET).remove(job.result_paths)
+      const { error: storageError } = await supabase.storage.from(BUCKET).remove(job.result_paths)
+      if (storageError) {
+        // Nicht weitermachen: Ohne die Zeile wüsste niemand mehr, wozu die
+        // zurückgebliebenen Dateien gehören.
+        toast.error(`Bilder konnten nicht gelöscht werden: ${storageError.message}`)
+        return false
+      }
     }
     const { error } = await supabase.from(TABLE).delete().eq('id', job.id)
     if (error) {

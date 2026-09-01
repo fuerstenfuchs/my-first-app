@@ -12,6 +12,7 @@ import {
   naechsterAuftrag,
   auftragFertig,
   auftragFehlgeschlagen,
+  fortschrittMerken,
   ergebnisAblegen,
 } from './supabase.ts'
 
@@ -32,15 +33,21 @@ console.log(`  Prompt:     ${job.prompt.slice(0, 120)}${job.prompt.length > 120 
 console.log(`\nDas dauert bei quality=high ein bis drei Minuten pro Bild.\n`)
 
 try {
-  const pfade: string[] = []
-  for (let i = 0; i < anzahl; i++) {
+  // Gleiches Verhalten wie im Dauerbetrieb: bereits erzeugte Bilder übernehmen
+  // und den Fortschritt nach jedem Bild festhalten.
+  const pfade: string[] = [...job.result_paths]
+  if (pfade.length > 0) {
+    console.log(`  ${pfade.length} Bild(er) aus einem frueheren Versuch uebernommen.`)
+  }
+  for (let i = pfade.length; i < anzahl; i++) {
     const begonnen = Date.now()
     const daten = await bildErzeugen(job)
     const pfad = await ergebnisAblegen(job.user_id, job.id, i, daten)
     pfade.push(pfad)
+    await fortschrittMerken(job.id, pfade)
     console.log(
       `  Bild ${i + 1}/${anzahl}: ${Math.round((Date.now() - begonnen) / 1000)}s, ` +
-      `${Math.round(daten.length / 1024)} kB → ${pfad}`,
+      `${Math.round(daten.byteLength / 1024)} kB → ${pfad}`,
     )
   }
   await auftragFertig(job.id, pfade)

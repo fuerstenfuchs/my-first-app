@@ -119,7 +119,9 @@ as $$
   with wiedereingereiht as (
     update public.image_jobs
     set    status = case when attempts >= 3 then 'failed' else 'queued' end,
-           error  = coalesce(error, 'Arbeiter hat den Auftrag nicht abgeschlossen')
+           error  = coalesce(error, 'Arbeiter hat den Auftrag nicht abgeschlossen'),
+           -- ohne finished_at zeigt /queue bei genau diesen Auftraegen keine Dauer
+           finished_at = case when attempts >= 3 then now() else null end
     where  status = 'running'
       and  started_at < now() - make_interval(mins => stale_minutes)
     returning 1
@@ -155,3 +157,23 @@ create policy "generated delete own" on storage.objects
     bucket_id = 'generated-images'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ---------------------------------------------------------------------------
+-- Ausführungsrechte einschränken.
+--
+-- WICHTIG, nicht weglassen: Beide Funktionen sind `security definer` und
+-- umgehen damit RLS. Postgres vergibt EXECUTE auf neue Funktionen an PUBLIC,
+-- und Supabase reicht anon/authenticated an das public-Schema durch. Der
+-- anon-Schlüssel steht in jedem ausgelieferten Browser-Bündel.
+--
+-- Am 01.09.2026 nachgemessen: Ohne diese Zeilen lieferte ein Aufruf von
+-- claim_next_image_job mit dem anon-Schlüssel HTTP 200 — also die vollständige
+-- Zeile eines fremden Nutzers, samt Sabotagemöglichkeit über attempts und
+-- requeue_stale_image_jobs mit stale_minutes = 0. Nach dem Entzug: HTTP 401.
+--
+-- Nur der Arbeiter braucht sie, und der läuft mit dem Service-Key.
+-- ---------------------------------------------------------------------------
+revoke execute on function public.claim_next_image_job(int)     from public, anon, authenticated;
+revoke execute on function public.requeue_stale_image_jobs(int) from public, anon, authenticated;
+grant  execute on function public.claim_next_image_job(int)     to service_role;
+grant  execute on function public.requeue_stale_image_jobs(int) to service_role;

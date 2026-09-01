@@ -74,6 +74,46 @@ async function auftragAendern(id: string, felder: Record<string, unknown>): Prom
   })
 }
 
+/**
+ * Zwischenstand nach jedem einzelnen Bild festhalten.
+ *
+ * Ohne das wäre ein Auftrag mit vier Durchläufen, der beim vierten Bild
+ * abstürzt, ein Totalverlust: Die drei fertigen Bilder liegen zwar im Speicher,
+ * aber keine Zeile weiß davon. Der Neuversuch begänne wieder bei null und
+ * erzeugte sie ein zweites Mal — bezahlt würden sie zweimal.
+ *
+ * `started_at` wird dabei mit aufgefrischt und wird so zum Lebenszeichen:
+ * requeue_stale_image_jobs misst dann die Zeit seit dem letzten fertigen Bild,
+ * nicht seit dem Beginn des ganzen Auftrags.
+ */
+export async function fortschrittMerken(id: string, resultPaths: string[]): Promise<void> {
+  await auftragAendern(id, {
+    result_paths: resultPaths,
+    started_at: new Date().toISOString(),
+  })
+}
+
+/**
+ * Auftrag zurückstellen, ohne einen Versuch zu verbrauchen.
+ *
+ * Für den Abbruch durch den Bediener: Der Versuch hat ja nicht stattgefunden.
+ * Würde hier nur der Status zurückgesetzt, bliebe ein im dritten Versuch
+ * abgebrochener Auftrag mit attempts = 3 auf 'queued' stehen — claim holt ihn
+ * wegen `attempts < max_attempts` nie wieder, requeue sieht ihn nicht (nur
+ * 'running'), und auf /queue zeigt er für immer „Wartet". Stille, die aussieht
+ * wie Geduld.
+ */
+export async function auftragZurueckstellen(
+  id: string, attempts: number, grund: string,
+): Promise<void> {
+  await auftragAendern(id, {
+    status: 'queued',
+    attempts: Math.max(0, attempts - 1),
+    error: ohneGeheimnis(grund).slice(0, 2000),
+    started_at: null,
+  })
+}
+
 export async function auftragFertig(id: string, resultPaths: string[]): Promise<void> {
   await auftragAendern(id, {
     status: 'done',
@@ -100,7 +140,7 @@ export async function auftragFehlgeschlagen(
 }
 
 /** Referenzbild herunterladen. Die Buckets sind öffentlich lesbar. */
-export async function bildHolen(url: string): Promise<{ daten: Uint8Array; typ: string }> {
+export async function bildHolen(url: string): Promise<{ daten: ArrayBuffer; typ: string }> {
   const antwort = await fetch(url, { signal: AbortSignal.timeout(60_000) })
   if (!antwort.ok) {
     throw new Error(`Referenzbild ${url.slice(0, 80)} → HTTP ${antwort.status}`)
@@ -109,12 +149,12 @@ export async function bildHolen(url: string): Promise<{ daten: Uint8Array; typ: 
   if (!typ.startsWith('image/')) {
     throw new Error(`Referenz ist kein Bild, sondern ${typ}`)
   }
-  return { daten: new Uint8Array(await antwort.arrayBuffer()), typ }
+  return { daten: await antwort.arrayBuffer(), typ }
 }
 
 /** Ergebnis ablegen. Pfadmuster {user_id}/{job_id}/{index}.png. */
 export async function ergebnisAblegen(
-  userId: string, jobId: string, index: number, daten: Uint8Array,
+  userId: string, jobId: string, index: number, daten: ArrayBuffer,
 ): Promise<string> {
   const pfad = `${userId}/${jobId}/${index}.png`
   const antwort = await fetch(

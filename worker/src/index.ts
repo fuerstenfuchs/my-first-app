@@ -16,6 +16,8 @@ import {
   haengendeAuftraegeEinsammeln,
   auftragFertig,
   auftragFehlgeschlagen,
+  auftragZurueckstellen,
+  fortschrittMerken,
   ergebnisAblegen,
 } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
@@ -40,14 +42,22 @@ async function auftragAbarbeiten(job: ImageJob): Promise<void> {
     (referenzen ? ` · ${referenzen} Referenz${referenzen > 1 ? 'en' : ''}` : ' · ohne Referenz'),
   )
 
-  const pfade: string[] = []
-  for (let i = 0; i < anzahl; i++) {
+  // Bereits erzeugte Bilder aus einem früheren Versuch übernehmen, statt sie
+  // noch einmal zu bezahlen. Der Neuversuch ist damit eine Fortsetzung.
+  const pfade: string[] = [...job.result_paths]
+  if (pfade.length > 0) {
+    sage(`  ${pfade.length} Bild(er) aus einem früheren Versuch übernommen.`)
+  }
+
+  for (let i = pfade.length; i < anzahl; i++) {
     const begonnen = Date.now()
     const daten = await bildErzeugen(job, laufenderAbbruch.signal)
     const pfad = await ergebnisAblegen(job.user_id, job.id, i, daten)
     pfade.push(pfad)
+    // Sofort festhalten — sonst wäre alles verloren, wenn das nächste Bild scheitert.
+    await fortschrittMerken(job.id, pfade)
     const sekunden = Math.round((Date.now() - begonnen) / 1000)
-    sage(`  Bild ${i + 1}/${anzahl} fertig nach ${sekunden}s · ${Math.round(daten.length / 1024)} kB`)
+    sage(`  Bild ${i + 1}/${anzahl} fertig nach ${sekunden}s · ${Math.round(daten.byteLength / 1024)} kB`)
   }
 
   await auftragFertig(job.id, pfade)
@@ -69,7 +79,7 @@ async function durchgang(): Promise<boolean> {
     const fehler = e as Error
     if (fehler.name === 'AbortError') {
       sage(`  Abgebrochen — Auftrag ${job.id.slice(0, 8)} wird wieder eingereiht.`)
-      await auftragFehlgeschlagen(job.id, 0, 'Arbeiter wurde beendet')
+      await auftragZurueckstellen(job.id, job.attempts, 'Arbeiter wurde beendet')
       return false
     }
     const status = await auftragFehlgeschlagen(job.id, job.attempts, fehler.message)

@@ -64,6 +64,24 @@ export function formatAnsage(format: AspectRatioKey | null): string | null {
   return format ? FORMAT_ANSAGE[format] ?? null : null
 }
 
+/**
+ * Den fertigen Prompt für den Auftrag zusammensetzen.
+ *
+ * Der Prompt des Scene Builders wird NICHT verändert — angehängt wird nur die
+ * Formatansage, und auch die nur, wenn Referenzbilder mitgehen. Ohne Referenz
+ * wirkt der Größenparameter, dann ist die Ansage überflüssig.
+ *
+ * Als eigene Funktion statt im Knopf, damit sie ohne Oberfläche prüfbar ist:
+ * Es ist die einzige Stelle im ganzen Vorhaben, die den Prompt anfasst.
+ */
+export function promptFuerAuftrag(
+  prompt: string, format: AspectRatioKey | null, mitReferenz: boolean,
+): string {
+  if (!mitReferenz) return prompt
+  const ansage = formatAnsage(format)
+  return ansage ? [prompt, ansage].join('\n\n') : prompt
+}
+
 export const DURCHLAEUFE = [1, 2, 3, 4] as const
 export type Durchlaeufe = typeof DURCHLAEUFE[number]
 

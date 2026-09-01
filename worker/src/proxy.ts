@@ -25,7 +25,7 @@ function dateiEndung(typ: string): string {
  * `signal` kommt von außen, damit ein Abbruch des Arbeiters eine laufende
  * Anfrage nicht verwaist stehen lässt.
  */
-export async function bildErzeugen(job: ImageJob, signal?: AbortSignal): Promise<Uint8Array> {
+export async function bildErzeugen(job: ImageJob, signal?: AbortSignal): Promise<ArrayBuffer> {
   const mitVorlage = job.reference_urls.length > 0
   const zielUrl = `${config.proxyUrl}/v1/images/${mitVorlage ? 'edits' : 'generations'}`
 
@@ -105,7 +105,9 @@ export async function bildErzeugen(job: ImageJob, signal?: AbortSignal): Promise
     )
   }
 
-  const daten = Buffer.from(b64, 'base64')
-  if (daten.length < 100) throw new Error('Die Antwort enthielt zu wenig Daten für ein Bild.')
-  return new Uint8Array(daten)
+  const puffer = Buffer.from(b64, 'base64')
+  if (puffer.length < 100) throw new Error('Die Antwort enthielt zu wenig Daten für ein Bild.')
+  // Eigener ArrayBuffer statt eines Ausschnitts aus dem Node-Pool — sonst
+  // haengt am Blob mehr Speicher als das Bild gross ist.
+  return puffer.buffer.slice(puffer.byteOffset, puffer.byteOffset + puffer.byteLength) as ArrayBuffer
 }
