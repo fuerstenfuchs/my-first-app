@@ -18,6 +18,7 @@ import {
   haengendeAuftraegeEinsammeln,
   auftragFehlgeschlagen,
   auftragZurueckstellen,
+  lebenszeichen,
 } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
 
@@ -28,6 +29,8 @@ function uhrzeit(): string {
 function sage(text: string): void {
   console.log(`${uhrzeit()}  ${text}`)
 }
+
+const VERSION = '2026-09-01'
 
 let beenden = false
 const laufenderAbbruch = new AbortController()
@@ -53,6 +56,16 @@ async function durchgang(): Promise<boolean> {
       await auftragZurueckstellen(job.id, job.attempts, 'Arbeiter wurde beendet')
       return false
     }
+    // Ein nicht erreichbarer Proxy ist kein Fehler des Auftrags — das passiert
+    // beim Hochfahren regelmaessig, weil Arbeiter und Proxy beide im Autostart
+    // liegen und der Arbeiter schneller da ist. Ohne diese Unterscheidung
+    // haetten drei Anlaeufe in den ersten Sekunden einen Auftrag verbrannt.
+    if (fehler.message.includes('Der Proxy war nicht erreichbar')) {
+      sage('  Der Bild-Proxy antwortet noch nicht — Auftrag bleibt liegen.')
+      await auftragZurueckstellen(job.id, job.attempts, 'Bild-Proxy war nicht erreichbar')
+      return true
+    }
+
     const status = await auftragFehlgeschlagen(job.id, job.attempts, fehler.message)
     sage(
       `  Fehlgeschlagen (Versuch ${job.attempts}/${config.maxAttempts}): ${fehler.message}`,
@@ -83,9 +96,14 @@ async function hauptschleife(): Promise<void> {
   sage(`  Supabase: ${config.supabaseUrl}`)
   sage(`  Abfrage alle ${config.pollIntervalMs / 1000}s. Beenden mit Strg+C.`)
 
+  if (!config.userId) {
+    sage('  Hinweis: WORKER_USER_ID fehlt — die App kann nicht anzeigen, dass er läuft.')
+  }
+
   let ruhigSeit = 0
   while (!beenden) {
     try {
+      if (config.userId) await lebenszeichen(config.userId, VERSION)
       const gabArbeit = await durchgang()
       if (gabArbeit) {
         ruhigSeit = 0

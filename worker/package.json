@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Lokaler Arbeiter: holt Bildauftraege aus Supabase und laesst sie vom Bild-Proxy erzeugen",
   "scripts": {
-    "start": "node --env-file=.env src/index.ts",
+    "start": "node --watch --env-file=.env src/index.ts",
     "einmal": "node --env-file=.env src/einmal.ts",
     "pruefen": "node --env-file=.env src/pruefen.ts"
   },

@@ -1,0 +1,3 @@
+# Windows-Startdateien brauchen CRLF, sonst findet cmd.exe die Befehle nicht
+*.cmd text eol=crlf
+*.bat text eol=crlf

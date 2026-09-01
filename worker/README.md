@@ -1,6 +1,41 @@
-# Arbeiter — Einrichtung
+# Der Bild-Arbeiter
 
-Nach dem Klonen einmalig:
+Holt Bildaufträge aus Prompt Trésor ab, lässt sie vom lokalen Proxy erzeugen und
+legt die Ergebnisse zurück. Läuft auf dem PC, weil die App in der Cloud die
+Adresse `127.0.0.1` nie erreichen kann.
+
+## Muss ich ihn selbst starten?
+
+Nein — beides ist eingerichtet:
+
+**Beim Hochfahren** startet er von selbst. Im Autostart-Ordner von Windows liegt
+eine Verknüpfung auf `arbeiter-starten.cmd`; sie öffnet ein minimiertes Fenster.
+
+Wieder loswerden: `Win+R`, `shell:startup` eingeben, die Verknüpfung
+„Prompt Tresor Arbeiter" löschen.
+
+**Nach einer Änderung am Code** startet er ebenfalls von selbst — `npm start`
+läuft mit `--watch`. Früher musste er nach jeder Änderung von Hand neu gestartet
+werden, und wer das vergaß, hatte einen Arbeiter mit altem Stand laufen. Beim
+ersten Mal hat das einen Vergrößerungsauftrag dreimal ans Bildmodell geschickt
+und verbrannt.
+
+**Ob er gerade läuft**, steht in der App: Die Seite *Warteschlange* zeigt oben
+„Arbeiter läuft" oder „Arbeiter zuletzt vor …". Er meldet sich alle fünf
+Sekunden; bleibt die Meldung länger als dreißig Sekunden aus, gilt er als weg.
+
+## Von Hand starten
+
+```bash
+cd worker
+npm start
+```
+
+Beenden mit `Strg+C`. Der laufende **Auftrag** wird noch zu Ende gebracht — bei
+mehreren Durchläufen also bis zu vier Bilder. Nochmal `Strg+C` bricht sofort ab
+und stellt den Auftrag zurück, ohne einen Versuch zu verbrauchen.
+
+## Einrichtung nach einem Klon
 
 ```bash
 cd worker
@@ -11,5 +46,42 @@ npm start
 ```
 
 `node_modules` liegt bewusst nicht im Repository — `sharp` bringt
-plattformabhängige Binärdateien mit, die auf einem anderen Rechner ohnehin
-nicht passen würden.
+plattformabhängige Binärdateien mit, die auf einem anderen Rechner ohnehin nicht
+passen.
+
+## Befehle
+
+| Befehl | Wozu |
+|---|---|
+| `npm start` | Dauerbetrieb, startet bei Code-Änderungen neu |
+| `npm run pruefen` | Prüft Proxy, Datenbank, Ablage — **kostet nichts** |
+| `npm run einmal` | Genau ein Auftrag, dann Schluss. Für die Abnahme. |
+
+## Voraussetzungen
+
+- **Node ab 22.18** — der Arbeiter führt TypeScript ohne Bauschritt aus, und das
+  gibt es ohne Zusatzschalter erst ab dieser Fassung.
+- **EasyCLIProxyAPI** muss laufen (liegt ebenfalls im Autostart). Antwortet er
+  beim Hochfahren noch nicht, bleibt der Auftrag einfach liegen — das kostet
+  keinen Versuch.
+
+## Was in der `.env` steht
+
+| Schlüssel | Bedeutung |
+|---|---|
+| `PROXY_URL` | Adresse des Bild-Proxys, üblicherweise `http://127.0.0.1:8317` |
+| `PROXY_TOKEN` | Zugang zum Proxy |
+| `SUPABASE_URL` | Projekt-Adresse |
+| `SUPABASE_SERVICE_KEY` | **Service-Key**, nicht der anon-Key |
+| `WORKER_USER_ID` | Für wen er läuft — nur fürs Lebenszeichen |
+| `POLL_INTERVAL_MS` | Abstand zwischen zwei Abfragen (5000) |
+| `REQUEST_TIMEOUT_MS` | Zeitgrenze je Bild (300000) |
+| `STALE_MINUTES` | Ab wann ein Auftrag als verwaist gilt (30) |
+| `MAX_ATTEMPTS` | Versuche je Auftrag (3) |
+
+`STALE_MINUTES` muss über der längsten Laufzeit liegen: vier Durchläufe mal fünf
+Minuten sind zwanzig. Ein zu kleiner Wert reiht einen noch laufenden Auftrag neu
+ein — und jedes Bild kostet Geld.
+
+Die Datei ist doppelt von Git ausgeschlossen. Sie enthält den Service-Key, der
+alle Zugriffsregeln umgeht.

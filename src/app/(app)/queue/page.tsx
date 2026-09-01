@@ -19,6 +19,7 @@ import { ImageLightbox } from '@/components/image-lightbox'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
+import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
 
 function zeit(iso: string): string {
@@ -70,6 +71,7 @@ function StatusChip({ status }: { status: JobStatus }) {
 export default function QueuePage() {
   const { jobs, loading, ladefehler, laden, vergroessern, erneutEinreihen, loeschen } = useImageJobs()
   const [laedtHerunter, setLaedtHerunter] = useState<string | null>(null)
+  const arbeiter = useWorkerStatus()
 
   async function herunterladen(job: ImageJob, url: string, index: number) {
     setLaedtHerunter(url)
@@ -110,8 +112,36 @@ export default function QueuePage() {
           )}
         </h1>
         {wartend > 0 && (
-          <span className="text-[11px] text-muted-foreground">
-            {wartend} offen — der Arbeiter holt sie ab
+          <span className="text-[11px] text-muted-foreground">{wartend} offen</span>
+        )}
+
+        {/*
+          Ohne diese Auskunft sieht ein wartender Auftrag gleich aus, egal ob der
+          Arbeiter ihn gleich abholt oder seit gestern aus ist.
+        */}
+        {arbeiter.zustand !== 'unbekannt' && (
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium',
+              arbeiter.zustand === 'laeuft'
+                ? 'bg-emerald-500/15 text-emerald-400'
+                : 'bg-amber-500/15 text-amber-400',
+            )}
+            title={
+              arbeiter.zustand === 'laeuft'
+                ? 'Der Arbeiter auf dem PC meldet sich regelmäßig.'
+                : 'Starte den Arbeiter auf dem PC: cd worker && npm start'
+            }
+          >
+            <span className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              arbeiter.zustand === 'laeuft' ? 'bg-emerald-400' : 'bg-amber-400',
+            )} />
+            {arbeiter.zustand === 'laeuft'
+              ? 'Arbeiter läuft'
+              : arbeiter.zustand === 'nie'
+                ? 'Arbeiter nie gesehen'
+                : `Arbeiter zuletzt ${seitWann(arbeiter.sekundenHer)}`}
           </span>
         )}
       </header>
@@ -140,6 +170,11 @@ export default function QueuePage() {
               Stelle im Scene Builder eine Szene zusammen und klicke dort auf
               „Zur Warteschlange". Der Arbeiter auf dem PC holt den Auftrag ab
               und legt das fertige Bild hier ab.
+              {arbeiter.zustand !== 'laeuft' && arbeiter.zustand !== 'unbekannt' && (
+                <><br /><span className="text-amber-400">
+                  Er läuft gerade nicht — starte ihn mit <code>cd worker</code> und <code>npm start</code>.
+                </span></>
+              )}
             </p>
             <Button asChild size="sm" className="mt-4">
               <Link href="/scene-builder">Zum Scene Builder</Link>

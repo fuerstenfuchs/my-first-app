@@ -63,6 +63,8 @@
 
 | PROJ-40 | Seitenleiste neu geordnet (Kachelraster, 2008px auf 574px) | In Review | [PROJ-40](PROJ-40-seitenleiste.md) | 2026-09-01 |
 
+| PROJ-41 | Arbeiter startet selbst, Lebenszeichen in der Warteschlange | In Review | [PROJ-41](PROJ-41-arbeiter-autostart.md) | 2026-09-01 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-41
+## Next Available ID: PROJ-42

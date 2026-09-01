@@ -50,6 +50,12 @@ export const config = {
   // Arbeitern wird er dann ein zweites Mal erzeugt, und jedes Bild kostet Geld.
   staleMinutes: zahl('STALE_MINUTES', 30),
   maxAttempts: zahl('MAX_ATTEMPTS', 3),
+  /**
+   * Für wen dieser Arbeiter läuft — nur für das Lebenszeichen. Steht die
+   * Kennung nicht in der .env, meldet er sich eben nicht; das ist kein Grund,
+   * nicht zu arbeiten.
+   */
+  userId: (process.env.WORKER_USER_ID ?? '').trim(),
 }
 
 /** Schlüssel aus Fehlertexten entfernen, bevor irgendetwas ausgegeben wird. */

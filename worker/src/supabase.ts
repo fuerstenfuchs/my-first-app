@@ -73,6 +73,30 @@ export async function haengendeAuftraegeEinsammeln(): Promise<number> {
   return typeof anzahl === 'number' ? anzahl : 0
 }
 
+/**
+ * Lebenszeichen setzen — eine Zeile je Nutzer, im Takt der Abfrage überschrieben.
+ *
+ * Damit die Warteschlange in der App sagen kann, ob überhaupt jemand die
+ * Aufträge abholt. Ohne das sieht ein wartender Auftrag genauso aus, egal ob der
+ * Arbeiter gleich zugreift oder seit gestern aus ist — und Stille sieht aus wie
+ * Geduld.
+ *
+ * Fehler werden verschluckt: Ein Lebenszeichen ist eine Nebensache, es darf den
+ * Betrieb nicht anhalten.
+ */
+export async function lebenszeichen(userId: string, version: string): Promise<void> {
+  try {
+    await ruf('/rest/v1/worker_heartbeat', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      // Ohne gesehen_am: Die Spalte hat default now(), die Datenbank stempelt
+      // also selbst. Die PC-Uhr wich am 01.09.2026 um 34 Sekunden ab — ein
+      // Zeitstempel von hier waere in der Zukunft gelandet.
+      body: JSON.stringify({ user_id: userId, version }),
+    })
+  } catch { /* Nebensache */ }
+}
+
 async function auftragAendern(id: string, felder: Record<string, unknown>): Promise<void> {
   await ruf(`/rest/v1/image_jobs?id=eq.${id}`, {
     method: 'PATCH',
