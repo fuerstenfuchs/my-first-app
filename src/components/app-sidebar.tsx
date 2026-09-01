@@ -273,21 +273,28 @@ export function AppSidebar() {
       {/*
         Hoehe begrenzt: Das Logo ist quadratisch angelegt und wurde in voller
         Breite 205px hoch — nach dem Verkuerzen der Leiste war es mit 40 Prozent
-        der groesste Block darin, groesser als Scene Builder und Warteschlange
-        zusammen.
+        der groesste Block darin. Auf Marks Wunsch wieder auf 192px — die 96px
+        des ersten Versuchs waren ihm zu klein.
       */}
       <SidebarHeader className="p-3 pb-1">
         <img
           src="/logo.png"
           alt="Prompt Trésor"
-          className="mx-auto max-h-24 w-auto object-contain"
+          className="mx-auto max-h-48 w-auto object-contain"
         />
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Einstieg: Prompts in voller Breite */}
-        <SidebarMenu>
-          <SidebarMenuItem className="px-2 py-1">
+        {/*
+          In eine SidebarGroup wie die anderen Bloecke: Die Group bringt p-2
+          mit. Ohne sie war diese Kachel 16px breiter als Scene Builder und
+          Warteschlange und lief rechts ueber den Rand — der Farbrand war dort
+          abgeschnitten.
+        */}
+        <SidebarGroup className="py-1">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem className="px-2 py-1">
             <a
               href={PROMPTS.href}
               className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
@@ -299,8 +306,10 @@ export function AppSidebar() {
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">{PROMPTS.label}</span>
             </a>
-          </SidebarMenuItem>
-        </SidebarMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/*
           Die Werkbank steht oben, nicht auf Platz zwölf: Scene Builder und

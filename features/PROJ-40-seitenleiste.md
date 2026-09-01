@@ -88,6 +88,18 @@ mit.
 **Endstand: 724px** statt 2237px mit Logo — passt mit 226px Luft auf einen
 1080p-Bildschirm.
 
+## Zweite Nachbesserung (01.09.2026)
+
+**Die Kachel „Alle Prompts" lief rechts ueber den Rand.** Mark hat es am
+abgeschnittenen Farbrand gesehen. Ursache: Sie stand als einzige nicht in einer
+. Die Group bringt  mit — die Kachel war dadurch 16px breiter
+als Scene Builder und Warteschlange und ragte ueber die Leiste hinaus. Jetzt in
+derselben Struktur; alle drei Bloecke haben 16px Innenabstand.
+
+**Logo wieder groesser.** 96px waren zu klein. Jetzt 192px, also praktisch die
+urspruengliche Groesse. Die Hoehe des Logos war nicht das Problem, der
+ueberstehende Rand war es.
+
 ## Offen
 
 - In der laufenden App abgenommen ist nichts davon — Typen, Tests und Build
