@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, ChevronLeft, Sparkles, User } from 'lucide-react'
+import { Copy, Check, ChevronLeft, Sparkles, User, ImagePlus } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
+import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -185,6 +186,7 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
   const [selected, setSelected] = useState<SheetType | null>(null)
   const [gender, setGender]     = useState<Gender>('woman')
   const [copied, setCopied]     = useState(false)
+  const [bildDialogOffen, setBildDialogOffen] = useState(false)
 
   const prompt = selected ? getPrompt(selected, gender) : ''
 
@@ -325,13 +327,23 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
             </div>
 
             <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-              Kopiere diesen Prompt, ziehe ihn zusammen mit den Referenzbildern in dein Bildgenerator-Tool.
+              Entweder direkt hier erzeugen lassen — der Charakter ist dann schon
+              vorausgewählt — oder kopieren und in ein anderes Werkzeug geben.
               Das fertige Sheet kannst du anschließend als Variante bei diesem Charakter speichern.
             </p>
 
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-500"
+              onClick={() => setBildDialogOffen(true)}
+            >
+              <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+              Bild daraus erzeugen
+            </Button>
+
             <div className="flex gap-2 pt-1">
               <Button
-                className="flex-1 bg-violet-600 hover:bg-violet-500"
+                variant="outline"
+                className="flex-1"
                 onClick={handleCopy}
                 disabled={copied}
               >
@@ -348,6 +360,14 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
           </div>
         )}
       </DialogContent>
+
+      <PromptToImageDialog
+        isOpen={bildDialogOffen}
+        onClose={() => setBildDialogOffen(false)}
+        prompt={prompt}
+        titel={`${character.name} — Sheet`}
+        vorauswahlCharakter={character}
+      />
     </Dialog>
   )
 }

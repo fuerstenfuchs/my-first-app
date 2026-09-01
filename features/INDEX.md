@@ -57,6 +57,8 @@
 
 | PROJ-37 | Bildgenerierung (Auftragstabelle, lokaler Arbeiter, Warteschlange) | In Review | [PROJ-37](PROJ-37-bildgenerierung.md) | 2026-09-01 |
 
+| PROJ-38 | Gespeicherte Prompts erzeugen lassen, Referenz-Zuordnung, Download | In Review | [PROJ-38](PROJ-38-prompt-zu-bild.md) | 2026-09-01 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-38
+## Next Available ID: PROJ-39

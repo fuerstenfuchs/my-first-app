@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, ExternalLink, Heart, Pencil, Trash2, X } from 'lucide-react'
+import { Copy, ExternalLink, Heart, ImagePlus, Pencil, Trash2, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { tagColorClass } from '@/lib/tag-colors'
 import { StarRating } from '@/components/prompts/star-rating'
 import { MediaGallery } from '@/components/prompts/media-gallery'
+import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
 import { createClient } from '@/lib/supabase'
 import { usePromptMedia } from '@/hooks/use-prompt-media'
 import type { Prompt, PromptVariant } from '@/hooks/use-prompts'
@@ -35,6 +36,7 @@ export function PromptDetailPanel({
   const [variantsLoading, setVariantsLoading] = useState(false)
   const [activeVariantId, setActiveVariantId] = useState<string | null>(null)
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
+  const [bildDialogOffen, setBildDialogOffen] = useState(false)
   const { media, fetchMedia } = usePromptMedia()
 
   useEffect(() => {
@@ -267,8 +269,8 @@ export function PromptDetailPanel({
           </div>
           </div>{/* end clip wrapper */}
 
-          {/* Footer — large copy button */}
-          <div className="p-3 border-t border-border shrink-0">
+          {/* Footer — kopieren, und der Weg zum Bild */}
+          <div className="p-3 border-t border-border shrink-0 space-y-2">
             <Button
               className="w-full h-11 text-sm font-semibold gap-2"
               onClick={handleCopy}
@@ -276,10 +278,27 @@ export function PromptDetailPanel({
               <Copy className="h-4 w-4" />
               Prompt kopieren
             </Button>
+            {/* Bisher liess sich ein gespeicherter Prompt nur kopieren — es gab
+                keinen Weg zurueck in die Bilderzeugung. */}
+            <Button
+              variant="outline"
+              className="w-full h-9 text-xs gap-2 border-emerald-700/50 text-emerald-400 hover:bg-emerald-950/40 hover:text-emerald-300"
+              onClick={() => setBildDialogOffen(true)}
+            >
+              <ImagePlus className="h-3.5 w-3.5" />
+              Bild daraus erzeugen
+            </Button>
           </div>
 
         </div>
       </motion.div>
+
+      <PromptToImageDialog
+        isOpen={bildDialogOffen}
+        onClose={() => setBildDialogOffen(false)}
+        prompt={prompt.content}
+        titel={prompt.title}
+      />
 
       {/* Fullscreen gallery */}
       {galleryIndex !== null && allMedia.length > 0 && (
