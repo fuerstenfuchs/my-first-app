@@ -208,6 +208,9 @@ export default function PromptsPage() {
   useEffect(() => {
     function handleQuickCaptureSaved(e: Event) {
       const prompt = (e as CustomEvent<Prompt>).detail
+      // Quittung an das Modal: Wir zeigen die Erfolgsmeldung selbst (mit
+      // Aktionen), es soll keine zweite ohne Aktionen daneben setzen.
+      e.preventDefault()
       prependPrompt(prompt)
       toast.success('Prompt gespeichert', {
         action: {

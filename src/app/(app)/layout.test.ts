@@ -52,6 +52,24 @@ describe('AppLayout — Quick Capture ist eingebunden', () => {
     expect(layoutSource).toMatch(/onClose=\{\s*(\w+\.)?close\s*\}/)
     expect(layoutSource).toMatch(/initialValues=\{\s*(\w+\.)?initialValues\s*\}/)
   })
+
+  it('FAB und Modal hängen an derselben Hook-Instanz', () => {
+    // Sonst öffnet der Knopf ein anderes Modal als das gerenderte, und alle
+    // Einzelprüfungen oben bestünden trotzdem.
+    const prefixOf = (prop: string, value: string) => {
+      const m = layoutSource.match(
+        new RegExp(prop + String.raw`=\{\s*(\w+\.)?` + value + String.raw`\s*\}`),
+      )
+      return m?.[1] ?? ''
+    }
+    const prefixes = [
+      prefixOf('onOpen', 'open'),
+      prefixOf('isOpen', 'isOpen'),
+      prefixOf('onClose', 'close'),
+      prefixOf('initialValues', 'initialValues'),
+    ]
+    expect(new Set(prefixes).size, `uneinheitliche Herkunft: ${prefixes.join(' / ')}`).toBe(1)
+  })
 })
 
 describe('Startseite — der Share-Weg feuert weiterhin an das Layout', () => {
@@ -61,13 +79,45 @@ describe('Startseite — der Share-Weg feuert weiterhin an das Layout', () => {
     expect(pageSource).toContain('quick-capture:open-share')
   })
 
-  it('verzögert den Dispatch, weil Child-Effects vor Parent-Effects laufen', () => {
+  it('verzögert JEDEN Dispatch, weil Child-Effects vor Parent-Effects laufen', () => {
     // Ohne setTimeout(…, 0) wäre der Listener im Layout beim Dispatch noch nicht da.
-    const dispatchBlocks = pageSource.split('quick-capture:open-share').slice(1)
-    expect(dispatchBlocks.length).toBeGreaterThan(0)
-    for (const block of dispatchBlocks) {
-      const before = pageSource.slice(0, pageSource.indexOf(block))
-      expect(before.includes('setTimeout')).toBe(true)
+    // Es wird ein enges Fenster direkt vor jedem Vorkommen geprüft: Eine Prüfung
+    // gegen "irgendwo vorher in der Datei" würde ab dem zweiten Dispatch immer
+    // bestehen, weil der setTimeout des ersten schon dasteht.
+    const positions: number[] = []
+    for (let i = pageSource.indexOf('quick-capture:open-share'); i !== -1;
+         i = pageSource.indexOf('quick-capture:open-share', i + 1)) {
+      positions.push(i)
     }
+    expect(positions.length).toBeGreaterThan(0)
+    for (const pos of positions) {
+      const window_ = pageSource.slice(Math.max(0, pos - 200), pos)
+      expect(
+        window_.includes('setTimeout'),
+        `Dispatch an Position ${pos} ist nicht per setTimeout verzögert`,
+      ).toBe(true)
+    }
+  })
+})
+
+describe('Ereignisname stimmt an beiden Enden überein', () => {
+  // Der Wächter soll Verdrahtungsfehler finden. Würde nur geprüft, dass beide
+  // Seiten irgendein Ereignis benutzen, könnte eine Umbenennung im Hook die
+  // Kette zerreißen, ohne dass ein Test rot wird.
+  const EVENT = 'quick-capture:open-share'
+
+  it('der Hook hört auf genau dieses Ereignis', () => {
+    const hookSource = readSource('src/hooks/use-quick-capture.ts')
+    expect(hookSource).toContain(`addEventListener('${EVENT}'`)
+    expect(hookSource).toContain(`removeEventListener('${EVENT}'`)
+  })
+
+  it('das Modal meldet den gespeicherten Prompt zurück', () => {
+    const modalSource = readSource('src/components/prompts/quick-capture-modal.tsx')
+    expect(modalSource).toContain('quick-capture:saved')
+    // cancelable, damit die Startseite quittieren kann und keine zweite
+    // Erfolgsmeldung entsteht — siehe Kommentar im Modal.
+    expect(modalSource).toContain('cancelable: true')
+    expect(readSource('src/app/(app)/page.tsx')).toContain('quick-capture:saved')
   })
 })

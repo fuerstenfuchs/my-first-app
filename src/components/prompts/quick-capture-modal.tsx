@@ -302,7 +302,20 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       preview_media: allMedia.slice(0, 6),
     }
 
-    window.dispatchEvent(new CustomEvent('quick-capture:saved', { detail: newPrompt }))
+    // Seit der FAB im Layout hängt, ist Quick Capture auf ALLEN App-Seiten
+    // erreichbar — der einzige Zuhörer auf 'quick-capture:saved' ist aber die
+    // Startseite. Ohne Rückmeldung würde das Fenster anderswo wortlos
+    // verschwinden und der Nutzer sicherheitshalber ein zweites Mal speichern.
+    // Der Zuhörer quittiert deshalb mit preventDefault(); bleibt die Quittung
+    // aus, meldet das Modal selbst.
+    const savedEvent = new CustomEvent('quick-capture:saved', {
+      detail: newPrompt,
+      cancelable: true,
+    })
+    const acknowledged = !window.dispatchEvent(savedEvent)
+    if (!acknowledged) {
+      toast.success('Prompt gespeichert')
+    }
     onClose()
   }
 

@@ -14,7 +14,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.redirect(new URL('/login?from=share', request.url))
+    // 303, nicht der Vorgabewert 307: Das Share-Target liefert einen POST, und
+    // 307 erhält die Methode — der Browser würde /login?from=share erneut per
+    // POST anfordern und eine 405 bekommen. 303 erzwingt GET.
+    return NextResponse.redirect(new URL('/login?from=share', request.url), 303)
   }
 
   const formData = await request.formData()
@@ -58,7 +61,10 @@ export async function POST(request: NextRequest) {
     media_urls: mediaUrls,
   }
 
-  const response = NextResponse.redirect(new URL('/?from=share', request.url))
+  // 303 wie oben — der Service Worker macht es in public/sw.js:85 bereits richtig.
+  // Ohne aktiven Service Worker (erster Start der installierten App, abgemeldeter
+  // SW) lief dieser Weg mit 307 ins Leere.
+  const response = NextResponse.redirect(new URL('/?from=share', request.url), 303)
   response.cookies.set('pending_share', JSON.stringify(payload), {
     httpOnly: false,
     maxAge: 60,
