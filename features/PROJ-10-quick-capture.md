@@ -377,3 +377,33 @@ Keine.
 - **Deployed:** 2026-06-12
 - **Production URL:** https://my-first-app-gamma-ecru.vercel.app/
 - **Git Tag:** v1.10.0-PROJ-10
+
+---
+
+## Regression & Reparatur (2026-09-01)
+
+**Befund:** Die Einbindung von `useQuickCapture`, `QuickCaptureFAB` und
+`QuickCaptureModal` in `src/app/(app)/layout.tsx` war verschwunden. Der letzte
+Commit der Datei (142c421, 2026-06-13) enthält sie noch — der Verlust geschah
+danach in einer nie committeten Arbeitsänderung und blieb deshalb in keinem
+Diff sichtbar.
+
+**Auswirkung:** Quick Capture war in der Web-App komplett unerreichbar — kein
+FAB, kein Tastenkürzel `Q`. Betroffen war außerdem PROJ-13/PROJ-16: `page.tsx`
+feuert `quick-capture:open-share` für Inhalte aus dem Share-Target des Handys,
+und ohne den Hook im Layout gab es keinen Empfänger. Geteilte Inhalte wurden
+gespeichert, aber nie angezeigt.
+
+**Warum es niemand bemerkt hat:** Alle E2E-Tests, die es gefunden hätten
+(`tests/proj-10-quick-capture.spec.ts`), rufen `test.skip(SKIP_AUTH)` und
+überspringen sich ohne gesetztes `TEST_PASSWORD`. Die 18 Unit-Tests des Hooks
+prüfen sein Verhalten, nicht seine Verdrahtung.
+
+**Reparatur:** Einbindung wiederhergestellt, identisch zum Stand von 142c421,
+ergänzt um einen Kommentar, der erklärt warum sie im Layout liegen muss.
+
+**Neu:** `src/app/(app)/layout.test.ts` — Verdrahtungs-Wächter, der ohne
+Anmeldedaten läuft. Prüft Hook-Aufruf, FAB, Modal-Props und dass `page.tsx` den
+Dispatch weiterhin per `setTimeout` verzögert (Child-Effects laufen vor
+Parent-Effects). Gegengeprüft: Der Test wird rot, sobald die Verdrahtung fehlt
+oder auskommentiert ist.

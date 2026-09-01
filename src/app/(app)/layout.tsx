@@ -8,6 +8,11 @@ import { PwaInstallBanner } from '@/components/pwa-install-banner'
 import { useQuickCapture } from '@/hooks/use-quick-capture'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  // NICHT auf eine Seite verschieben und nicht entfernen: useQuickCapture hört
+  // auf 'quick-capture:open-share', und page.tsx feuert das Event direkt nach
+  // dem Mount (Share-Target vom Handy). Ohne diesen Aufruf im Layout landet
+  // alles Geteilte im Nichts — genau das war zwischen 06/2026 und 09/2026 der
+  // Fall. Abgesichert durch layout.test.ts.
   const { isOpen, initialValues, open, close } = useQuickCapture()
 
   return (
