@@ -27,7 +27,13 @@ export async function loadRefImages(
     .eq(fk, assetId)
     .order('sort_order', { ascending: true })
 
-  if (error || !data) return []
+  if (error) {
+    // Nicht als "keine Bilder" ausgeben: Netzfehler, RLS-Ablehnung und ein
+    // wirklich leeres Ergebnis sähen für den Benutzer sonst gleich aus.
+    console.error('Referenzbilder konnten nicht geladen werden:', error.message)
+    throw new Error(error.message)
+  }
+  if (!data) return []
 
   const results: RefImage[] = []
   for (const variant of data as Array<{ name: string; images: Array<{ url: string; sort_order: number }> }>) {
@@ -51,7 +57,13 @@ export async function loadArchetypeRefImages(
     .select('url, sort_order')
     .eq('archetype_id', archetypeId)
     .order('sort_order', { ascending: true })
-  if (error || !data) return []
+  if (error) {
+    // Nicht als "keine Bilder" ausgeben: Netzfehler, RLS-Ablehnung und ein
+    // wirklich leeres Ergebnis sähen für den Benutzer sonst gleich aus.
+    console.error('Referenzbilder konnten nicht geladen werden:', error.message)
+    throw new Error(error.message)
+  }
+  if (!data) return []
   return (data as Array<{ url: string }>)
     .filter(img => img.url)
     .map(img => ({ url: img.url, label: 'Referenzbild' }))

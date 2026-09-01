@@ -36,6 +36,12 @@ create table if not exists public.image_jobs (
 
   -- Eingang
   reference_urls    text[] not null default '{}',
+  -- Rolle je Eintrag in reference_urls, GLEICHE Reihenfolge.
+  -- Ohne sie weiss das Bildmodell nicht, welches Bild wofuer steht: Am
+  -- 01.09.2026 nahm gpt-image-2 bei Charakter + Outfit die Person aus dem
+  -- OUTFIT-Bild. Die Bilder gingen unbeschriftet mit, der Prompt sagte nicht,
+  -- welches welches ist.
+  reference_roles   text[] not null default '{}',
   anchor_job_id     uuid references public.image_jobs(id) on delete set null,
 
   -- Herkunft, fürs Archiv

@@ -1106,6 +1106,11 @@ export default function SceneBuilderPage() {
               referenzen={referenzen}
               aspectRatio={scene.aspect_ratio}
               sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}
+              szenenName={
+                scene.character?.name ?? scene.character_archetype?.name ??
+                scene.location?.name ?? scene.location_archetype?.name ??
+                scene.outfit?.name ?? scene.style?.name ?? null
+              }
             />
 
             {/* Szenentyp + Bedingungen badges */}

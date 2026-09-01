@@ -49,6 +49,7 @@ function ReferenzWahl({
 }) {
   const [bilder, setBilder] = useState<RefImage[]>([])
   const [laedt, setLaedt] = useState(false)
+  const [fehler, setFehler] = useState<string | null>(null)
   const [suche, setSuche] = useState('')
 
   const tabelle = rolle === 'character' ? 'character_variants'
@@ -58,9 +59,15 @@ function ReferenzWahl({
 
   const bilderLaden = useCallback(async (assetId: string) => {
     setLaedt(true)
-    const imgs = await loadRefImages(tabelle, fk, assetId)
-    setBilder(imgs)
-    setLaedt(false)
+    setFehler(null)
+    try {
+      setBilder(await loadRefImages(tabelle, fk, assetId))
+    } catch (e) {
+      setBilder([])
+      setFehler((e as Error).message)
+    } finally {
+      setLaedt(false)
+    }
   }, [tabelle, fk])
 
   useEffect(() => {
@@ -124,9 +131,18 @@ function ReferenzWahl({
         <div className="ml-[5.5rem]">
           {laedt ? (
             <p className="text-[11px] text-muted-foreground">Bilder werden geladen…</p>
+          ) : fehler ? (
+            <p className="text-[11px] text-destructive">
+              Bilder konnten nicht geladen werden: {fehler}
+            </p>
           ) : bilder.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground">
-              Keine Bilder hinterlegt — es geht das Titelbild mit.
+            <p className={cn(
+              'text-[11px]',
+              gewaehlt.cover_image_url ? 'text-muted-foreground' : 'text-amber-500',
+            )}>
+              {gewaehlt.cover_image_url
+                ? 'Keine Einzelbilder hinterlegt — es geht das Titelbild mit.'
+                : 'Kein Bild vorhanden — dieser Eintrag geht ohne Referenzbild mit.'}
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
@@ -237,7 +253,7 @@ export function PromptToImageDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={o => !o && onClose()}>
+    <Dialog open={isOpen} onOpenChange={o => { if (!o) { zuruecksetzen(); onClose() } }}>
       <DialogContent className="max-h-[90svh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -281,7 +297,7 @@ export function PromptToImageDialog({
             />
           </div>
 
-          {rollen.length >= 2 && (
+          {rollen.length >= 1 && (
             <div className="rounded border border-dashed border-border/60 px-2 py-1.5">
               <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                 Zuordnung für das Modell
@@ -359,7 +375,12 @@ export function PromptToImageDialog({
           )}
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={onClose}>Abbrechen</Button>
+            <Button
+              variant="ghost" size="sm"
+              onClick={() => { zuruecksetzen(); onClose() }}
+            >
+              Abbrechen
+            </Button>
             <Button
               size="sm"
               onClick={handleQueue}

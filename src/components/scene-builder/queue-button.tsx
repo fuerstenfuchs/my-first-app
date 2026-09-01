@@ -20,6 +20,8 @@ interface QueueButtonProps {
   referenzen: Referenz[]
   aspectRatio: AspectRatioKey | null
   sceneMeta: Record<string, unknown>
+  /** Kurzname der Szene, wandert in den Dateinamen beim Download. */
+  szenenName?: string | null
 }
 
 /**
@@ -29,7 +31,9 @@ interface QueueButtonProps {
  * werden höchstens zwei Blöcke, und beide nur bei Referenzbildern:
  * die Zuordnung, welches Bild wofür steht, und die Formatansage.
  */
-export function QueueButton({ prompt, referenzen, aspectRatio, sceneMeta }: QueueButtonProps) {
+export function QueueButton({
+  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null,
+}: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
   const [modell, setModell] = useState<ModellId>('gpt-image-2')
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
@@ -53,7 +57,9 @@ export function QueueButton({ prompt, referenzen, aspectRatio, sceneMeta }: Queu
       variants:        durchlaeufe,
       reference_urls:  referenzen.map(r => r.url),
       reference_roles: rollen,
-      scene_meta:      sceneMeta,
+      // name fuer den Dateinamen beim Download — ohne ihn hiessen alle Bilder
+      // aus dem Scene Builder nur "tresor-<datum>.png".
+      scene_meta:      { ...sceneMeta, name: szenenName },
     })
 
     setLaeuft(false)
@@ -114,7 +120,7 @@ export function QueueButton({ prompt, referenzen, aspectRatio, sceneMeta }: Queu
         der die Bilder ans Modell gehen. Ohne diese Zuordnung nahm es schon mal
         die Person aus dem Outfit-Bild.
       */}
-      {rollen.length >= 2 && (
+      {rollen.length >= 1 && (
         <div className="rounded border border-dashed border-border/60 px-1.5 py-1">
           <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
             Zuordnung für das Modell

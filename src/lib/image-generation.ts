@@ -115,7 +115,7 @@ export type Referenz = { url: string; rolle: ReferenzRolle }
 const ROLLEN_ANWEISUNG: Record<ReferenzRolle, string> = {
   character: 'CHARACTER — take the face, hair, skin tone and body identity of this person.',
   outfit:    'OUTFIT — take only the garments, their cut, fabric and colour. The person wearing them in this image is a mannequin for the clothes, not the subject.',
-  location:  'LOCATION — take only the setting, architecture and atmosphere of this place.',
+  location:  'LOCATION — take only the setting and architecture of this place. Lighting, time of day and weather are defined in the text above, not by this image.',
 }
 
 export const ROLLEN_LABEL: Record<ReferenzRolle, string> = {
@@ -126,10 +126,14 @@ export const ROLLEN_LABEL: Record<ReferenzRolle, string> = {
 
 /**
  * Der Zuordnungsblock, der dem Modell sagt, welches Bild wofür steht.
- * Nur sinnvoll ab zwei Bildern — bei einem einzigen gibt es nichts zu verwechseln.
+ *
+ * Auch bei EINEM Bild nötig — der ursprüngliche Fehler war nicht die
+ * Verwechslung zweier Bilder, sondern die Frage, welchen Aspekt eines Bildes
+ * das Modell nimmt. Ein einzelnes Outfit-Foto mit Person darin führt ohne
+ * Ansage genauso zur falschen Person wie zwei Bilder.
  */
 export function referenzZuordnung(rollen: ReferenzRolle[]): string | null {
-  if (rollen.length < 2) return null
+  if (rollen.length === 0) return null
   const zeilen = rollen.map((rolle, i) => `Image ${i + 1} = ${ROLLEN_ANWEISUNG[rolle]}`)
   return [
     'REFERENCE IMAGES — they arrive in this exact order:',

@@ -361,13 +361,15 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
         )}
       </DialogContent>
 
-      <PromptToImageDialog
-        isOpen={bildDialogOffen}
+      {/* Erst mounten, wenn gebraucht: Der Dialog laedt drei Bibliotheken,
+          das waeren sonst drei Abfragen bei jedem geoeffneten Prompt. */}
+      {bildDialogOffen && <PromptToImageDialog
+        isOpen
         onClose={() => setBildDialogOffen(false)}
         prompt={prompt}
         titel={`${character.name} — Sheet`}
         vorauswahlCharakter={character}
-      />
+      />}
     </Dialog>
   )
 }

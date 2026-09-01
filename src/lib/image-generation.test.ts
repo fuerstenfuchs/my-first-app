@@ -93,8 +93,15 @@ describe('Prompt für den Auftrag', () => {
     expect(ergebnis).toContain('\n\n')
   })
 
-  it('hängt ohne gewähltes Format keine Formatansage an', () => {
-    expect(promptFuerAuftrag(PROMPT, null, ['character'])).toBe(PROMPT)
+  it('hängt ohne gewähltes Format keine Formatansage an — die Zuordnung aber schon', () => {
+    const ergebnis = promptFuerAuftrag(PROMPT, null, ['character'])
+    for (const ansage of Object.values({
+      a: 'CINEMATIC LANDSCAPE', b: 'VERTICAL', c: 'SQUARE', d: 'CINEMASCOPE',
+    })) {
+      expect(ergebnis, `Formatansage "${ansage}" gehört ohne gewähltes Format nicht hinein`)
+        .not.toContain(ansage)
+    }
+    expect(ergebnis).toContain('Image 1 = CHARACTER')
   })
 
   it('verändert den ursprünglichen Prompt nie — er bleibt am Anfang stehen', () => {
@@ -116,9 +123,27 @@ describe('Zuordnung der Referenzbilder', () => {
   // das Modell die Person aus dem OUTFIT-Bild. Die Bilder gingen unbeschriftet
   // mit, der Prompt sagte nicht, welches welches ist.
 
-  it('bleibt bei einem einzigen Bild stumm — da ist nichts zu verwechseln', () => {
-    expect(referenzZuordnung(['character'])).toBeNull()
+  it('ordnet AUCH ein einzelnes Bild zu', () => {
+    // Erst nach dem Gegenlesen bemerkt: Der Fehler war nicht die Verwechslung
+    // zweier Bilder, sondern die Frage, welchen Aspekt eines Bildes das Modell
+    // nimmt. Ein einzelnes Outfit-Foto mit Person darin fuehrt ohne Ansage
+    // genauso zur falschen Person.
+    const block = referenzZuordnung(['outfit'])
+    expect(block).toBeTruthy()
+    expect(block!).toContain('Image 1 = OUTFIT')
+    expect(block!.toLowerCase()).toContain('not the subject')
+  })
+
+  it('bleibt nur ohne jedes Bild stumm', () => {
     expect(referenzZuordnung([])).toBeNull()
+  })
+
+  it('laesst die Location die Szenenbedingungen nicht ueberschreiben', () => {
+    // "atmosphere" umfasste Licht, Tageszeit und Wetter — das steht aber schon
+    // im Prompt darueber und haette sich widersprochen.
+    const block = referenzZuordnung(['location'])!
+    expect(block.toLowerCase()).not.toContain('atmosphere')
+    expect(block.toLowerCase()).toContain('defined in the text above')
   })
 
   it('nummeriert ab zwei Bildern in der Reihenfolge, in der sie abgeschickt werden', () => {

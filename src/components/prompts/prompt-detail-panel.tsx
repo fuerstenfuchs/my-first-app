@@ -293,12 +293,14 @@ export function PromptDetailPanel({
         </div>
       </motion.div>
 
-      <PromptToImageDialog
-        isOpen={bildDialogOffen}
+      {/* Erst mounten, wenn gebraucht: Der Dialog laedt drei Bibliotheken,
+          das waeren sonst drei Abfragen bei jedem geoeffneten Prompt. */}
+      {bildDialogOffen && <PromptToImageDialog
+        isOpen
         onClose={() => setBildDialogOffen(false)}
         prompt={prompt.content}
         titel={prompt.title}
-      />
+      />}
 
       {/* Fullscreen gallery */}
       {galleryIndex !== null && allMedia.length > 0 && (

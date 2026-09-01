@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download,
+  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download, ExternalLink,
 } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -263,7 +263,7 @@ export default function QueuePage() {
                           {bilder.map((url, i) => (
                             <Button key={url} asChild size="sm" variant="outline" className="h-6 text-[10px]">
                               <a href={url} target="_blank" rel="noopener noreferrer">
-                                <Download className="mr-1 h-2.5 w-2.5" />
+                                <ExternalLink className="mr-1 h-2.5 w-2.5" />
                                 Bild {i + 1} öffnen
                               </a>
                             </Button>
