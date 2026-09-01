@@ -67,6 +67,40 @@ zurück in die Erzeugung. Der Charakter-Sheet-Dialog riet wörtlich, den Prompt
 jetzt von beiden Oberflächen gebraucht. Ausgelagert nach
 `src/lib/reference-images.ts` statt kopiert.
 
+## Nachgebessert nach dem ersten Einsatz (01.09.2026)
+
+**Auswahl über Bilder statt über Namen.** Der erste Entwurf war eine Sucheingabe
+mit kleiner Trefferliste: Man musste erst einen Buchstaben tippen, um überhaupt
+etwas zu sehen, die Zeilen waren winzig — und bei Outfits kennt man die Namen
+gar nicht, man erkennt sie am Bild. Jetzt drei Karten und dahinter eine Galerie
+(`asset-picker-dialog.tsx`), die alle Einträge sofort zeigt. Suchfeld erst ab
+neun Einträgen.
+
+**Der Prompt lässt sich vor dem Abschicken ändern.** Damit ein Widerspruch zum
+Referenzbild entfernt werden kann — etwa eine Outfit-Beschreibung, wenn ohnehin
+ein Outfit-Bild mitgeht. Die Änderung gilt nur für diesen einen Auftrag; der
+gespeicherte Prompt bleibt unberührt, und das steht auch so unter dem Feld.
+
+**Charakter-Sheets bieten keine Location mehr an.** Die Sheet-Prompts
+beschreiben ausdrücklich einen neutralen Hintergrund — eine Location wäre dort
+Ballast und würde dem Prompt widersprechen. Outfit bleibt, das ist dort
+gewollt. Umgesetzt über die neue Eigenschaft `rollen`.
+
+## Was bei Widerspruch gilt
+
+Vorher nicht festgelegt und damit unvorhersehbar: Steht im Prompt „blonde Frau,
+Mitte 30" und die Charakterreferenz zeigt einen älteren Mann, konnte beides
+herauskommen.
+
+Festgelegt: **Für den Aspekt, den ein Bild abdeckt, gewinnt das Bild** — Person,
+Kleidung, Ort. Alles andere (Szene, Licht, Kamera, Stimmung) kommt aus dem Text.
+Der Satz im Prompt nennt nur die Bereiche, für die auch wirklich ein Bild
+mitgeht. Beide Oberflächen sagen es dem Benutzer vor dem Abschicken.
+
+Einschränkung, die im Blick bleiben muss: Das ist eine Ansage an das Modell,
+keine Mechanik. Am verlässlichsten bleibt ein Prompt, der den Widerspruch gar
+nicht erst enthält — dafür ist das Bearbeitungsfeld da.
+
 ## Offen
 
 - In der laufenden App abgenommen ist nur die Referenz-Zuordnung (an einem echten

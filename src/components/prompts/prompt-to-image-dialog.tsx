@@ -8,6 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { AssetPickerDialog, type PickbaresAsset } from '@/components/prompts/asset-picker-dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -32,6 +33,12 @@ interface PromptToImageDialogProps {
   titel?: string | null
   /** Charakter vorauswählen — für den Weg aus einem Charakter-Sheet heraus. */
   vorauswahlCharakter?: { id: string; name: string; cover_image_url?: string | null } | null
+  /**
+   * Welche Referenzarten angeboten werden. Charakter-Sheets beschreiben einen
+   * neutralen Hintergrund — eine Location wäre dort nur Ballast und würde dem
+   * Prompt widersprechen.
+   */
+  rollen?: ReferenzRolle[]
 }
 
 /**
@@ -116,6 +123,7 @@ function ReferenzKarte({
  */
 export function PromptToImageDialog({
   isOpen, onClose, prompt, titel, vorauswahlCharakter = null,
+  rollen: angeboteneRollen = ['character', 'outfit', 'location'],
 }: PromptToImageDialogProps) {
   const { anlegen } = useImageJobs(false)
   const { characters } = useCharacters()
@@ -133,6 +141,11 @@ export function PromptToImageDialog({
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)
+  const [text, setText] = useState(prompt)
+  const geaendert = text.trim() !== prompt.trim()
+
+  // Beim Öffnen mit einem anderen Prompt den Text nachziehen.
+  useEffect(() => { if (isOpen) setText(prompt) }, [isOpen, prompt])
   const [pickerOffen, setPickerOffen] = useState<ReferenzRolle | null>(null)
 
   function pickerFertig(asset: PickbaresAsset, gewaehltesBild: RefImage | null) {
@@ -150,11 +163,17 @@ export function PromptToImageDialog({
   // Reihenfolge = Reihenfolge, in der die Bilder ans Modell gehen.
   const referenzen: { url: string; rolle: ReferenzRolle }[] = []
   const charUrl = charakterBild?.url ?? charakter?.cover_image_url
-  if (charUrl) referenzen.push({ url: charUrl, rolle: 'character' })
+  if (charUrl && angeboteneRollen.includes('character')) {
+    referenzen.push({ url: charUrl, rolle: 'character' })
+  }
   const outUrl = outfitBild?.url ?? outfit?.cover_image_url
-  if (outUrl) referenzen.push({ url: outUrl, rolle: 'outfit' })
+  if (outUrl && angeboteneRollen.includes('outfit')) {
+    referenzen.push({ url: outUrl, rolle: 'outfit' })
+  }
   const locUrl = locationBild?.url ?? location?.cover_image_url
-  if (locUrl) referenzen.push({ url: locUrl, rolle: 'location' })
+  if (locUrl && angeboteneRollen.includes('location')) {
+    referenzen.push({ url: locUrl, rolle: 'location' })
+  }
 
   const rollen = referenzen.map(r => r.rolle)
   const zuordnung = groesseFuerFormat(format)
@@ -173,11 +192,11 @@ export function PromptToImageDialog({
   }
 
   async function handleQueue() {
-    if (!prompt.trim() || laeuft) return
+    if (!text.trim() || laeuft) return
     setLaeuft(true)
 
     const job = await anlegen({
-      prompt:          promptFuerAuftrag(prompt, format, rollen),
+      prompt:          promptFuerAuftrag(text, format, rollen),
       model:           modell,
       size:            zuordnung.size,
       aspect_ratio:    format,
@@ -217,12 +236,37 @@ export function PromptToImageDialog({
 
         <div className="space-y-4">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Prompt
-            </Label>
-            <pre className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded border border-border/60 bg-muted/20 p-2 font-mono text-[11px] leading-relaxed">
-              {prompt}
-            </pre>
+            <div className="flex items-baseline justify-between">
+              <Label htmlFor="auftrag-prompt" className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Prompt
+              </Label>
+              {geaendert && (
+                <button
+                  onClick={() => setText(prompt)}
+                  className="text-[10px] text-muted-foreground/70 underline underline-offset-2 hover:text-foreground"
+                >
+                  Änderungen verwerfen
+                </button>
+              )}
+            </div>
+            {/*
+              Bearbeitbar, damit sich ein Widerspruch zum Referenzbild vor dem
+              Abschicken entfernen lässt — etwa eine Outfit-Beschreibung, wenn
+              ohnehin ein Outfit-Bild mitgeht. Der gespeicherte Prompt bleibt
+              davon unberührt; geändert wird nur, was dieser eine Auftrag bekommt.
+            */}
+            <Textarea
+              id="auftrag-prompt"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              rows={6}
+              className="mt-1 max-h-48 resize-y font-mono text-[11px] leading-relaxed"
+            />
+            <p className="mt-1 text-[10px] leading-snug text-muted-foreground/60">
+              {geaendert
+                ? 'Geändert — gilt nur für diesen Auftrag, der gespeicherte Prompt bleibt wie er ist.'
+                : 'Kann hier angepasst werden, ohne den gespeicherten Prompt zu verändern.'}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -234,25 +278,35 @@ export function PromptToImageDialog({
                 Anklicken öffnet die Galerie
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <ReferenzKarte
-                rolle="character" assets={characters}
-                gewaehlt={charakter} bild={charakterBild}
-                onOeffnen={() => setPickerOffen('character')}
-                onLoeschen={() => { setCharakter(null); setCharakterBild(null) }}
-              />
-              <ReferenzKarte
-                rolle="outfit" assets={outfits}
-                gewaehlt={outfit} bild={outfitBild}
-                onOeffnen={() => setPickerOffen('outfit')}
-                onLoeschen={() => { setOutfit(null); setOutfitBild(null) }}
-              />
-              <ReferenzKarte
-                rolle="location" assets={locations}
-                gewaehlt={location} bild={locationBild}
-                onOeffnen={() => setPickerOffen('location')}
-                onLoeschen={() => { setLocation(null); setLocationBild(null) }}
-              />
+            <div className={cn(
+              'grid gap-2',
+              angeboteneRollen.length === 1 ? 'grid-cols-1'
+                : angeboteneRollen.length === 2 ? 'grid-cols-2' : 'grid-cols-3',
+            )}>
+              {angeboteneRollen.includes('character') && (
+                <ReferenzKarte
+                  rolle="character" assets={characters}
+                  gewaehlt={charakter} bild={charakterBild}
+                  onOeffnen={() => setPickerOffen('character')}
+                  onLoeschen={() => { setCharakter(null); setCharakterBild(null) }}
+                />
+              )}
+              {angeboteneRollen.includes('outfit') && (
+                <ReferenzKarte
+                  rolle="outfit" assets={outfits}
+                  gewaehlt={outfit} bild={outfitBild}
+                  onOeffnen={() => setPickerOffen('outfit')}
+                  onLoeschen={() => { setOutfit(null); setOutfitBild(null) }}
+                />
+              )}
+              {angeboteneRollen.includes('location') && (
+                <ReferenzKarte
+                  rolle="location" assets={locations}
+                  gewaehlt={location} bild={locationBild}
+                  onOeffnen={() => setPickerOffen('location')}
+                  onLoeschen={() => { setLocation(null); setLocationBild(null) }}
+                />
+              )}
             </div>
           </div>
 
@@ -360,7 +414,7 @@ export function PromptToImageDialog({
             <Button
               size="sm"
               onClick={handleQueue}
-              disabled={!prompt.trim() || laeuft}
+              disabled={!text.trim() || laeuft}
               className="bg-emerald-600 hover:bg-emerald-500"
             >
               {laeuft

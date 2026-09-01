@@ -369,6 +369,10 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
         prompt={prompt}
         titel={`${character.name} — Sheet`}
         vorauswahlCharakter={character}
+        // Sheets beschreiben ausdrücklich einen neutralen Hintergrund —
+        // eine Location würde dem Prompt widersprechen. Outfit dagegen ist hier
+        // gewollt.
+        rollen={['character', 'outfit']}
       />}
     </Dialog>
   )
