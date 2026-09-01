@@ -24,6 +24,9 @@ export interface ImageJob {
   reference_roles: ReferenzRolle[]
   scene_meta:     Record<string, unknown> | null
   result_paths:   string[]
+  job_type:       'generate' | 'upscale'
+  source_path:    string | null
+  scale:          number | null
 }
 
 export interface ImageJobInput {
@@ -161,5 +164,53 @@ export function useImageJobs(aktiv = true) {
     return true
   }, [supabase])
 
-  return { jobs, loading, laden, anlegen, erneutEinreihen, loeschen }
+  /**
+   * Ein vorhandenes Ergebnis vergrößern lassen.
+   *
+   * Läuft über dieselbe Warteschlange wie die Erzeugung — der Arbeiter erkennt
+   * am job_type, was zu tun ist. Kostet nichts: Das Vergrößern rechnet der PC
+   * selbst, es geht keine Anfrage an ein Bildmodell.
+   */
+  const vergroessern = useCallback(async (
+    quelle: ImageJob, pfad: string, faktor: 2 | 3 | 4,
+  ): Promise<ImageJob | null> => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error('Nicht angemeldet')
+      return null
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE)
+      .insert({
+        user_id:     user.id,
+        job_type:    'upscale',
+        source_path: pfad,
+        scale:       faktor,
+        // Der Prompt ist bei einer Vergrößerung nur noch Beschriftung — die
+        // Spalte ist aber Pflicht, und ein leeres Feld läse sich auf /queue wie
+        // ein Fehler.
+        prompt:      `${faktor}× vergrößert · ${quelle.prompt.slice(0, 120)}`,
+        model:       'lanczos',
+        size:        quelle.size,
+        variants:    1,
+        scene_meta:  { ...(quelle.scene_meta ?? {}), herkunft: 'upscale', quelle: quelle.id },
+      })
+      .select()
+      .single()
+
+    if (error) {
+      toast.error(`Vergrößerung konnte nicht eingereiht werden: ${error.message}`)
+      return null
+    }
+
+    const job = data as ImageJob
+    setJobs(prev => [job, ...prev])
+    toast.success(`${faktor}× Vergrößerung eingereiht`, {
+      description: 'Der Arbeiter rechnet sie auf dem PC — das kostet nichts.',
+    })
+    return job
+  }, [supabase])
+
+  return { jobs, loading, laden, anlegen, vergroessern, erneutEinreihen, loeschen }
 }

@@ -18,6 +18,9 @@ export type ImageJob = {
   variants: number
   reference_urls: string[]
   reference_roles: string[]
+  job_type: 'generate' | 'upscale'
+  source_path: string | null
+  scale: number | null
   anchor_job_id: string | null
   scene_meta: unknown
   result_paths: string[]
@@ -151,6 +154,22 @@ export async function bildHolen(url: string): Promise<{ daten: ArrayBuffer; typ:
     throw new Error(`Referenz ist kein Bild, sondern ${typ}`)
   }
   return { daten: await antwort.arrayBuffer(), typ }
+}
+
+/** Ein bereits abgelegtes Ergebnis wieder holen — Ausgangspunkt fürs Vergrößern. */
+export async function ergebnisHolen(pfad: string): Promise<ArrayBuffer> {
+  const antwort = await fetch(
+    `${config.supabaseUrl}/storage/v1/object/generated-images/${pfad}`,
+    {
+      headers: { apikey: config.supabaseKey, Authorization: `Bearer ${config.supabaseKey}` },
+      signal: AbortSignal.timeout(120_000),
+    },
+  )
+  if (!antwort.ok) {
+    throw new Error(ohneGeheimnis(
+      `Ausgangsbild ${pfad} nicht abrufbar (HTTP ${antwort.status})`))
+  }
+  return antwort.arrayBuffer()
 }
 
 /** Ergebnis ablegen. Pfadmuster {user_id}/{job_id}/{index}.png. */

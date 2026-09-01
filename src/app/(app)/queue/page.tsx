@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download, ExternalLink,
+  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download, ExternalLink, Maximize2,
 } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
@@ -36,6 +39,13 @@ function dauer(job: ImageJob): string | null {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min`
 }
 
+/** Zeigt vorab, wie groß das Bild würde — 3× klingt abstrakt, 4608×3072 nicht. */
+function masse(size: string, faktor: number): string {
+  const [b, h] = size.split('x').map(Number)
+  if (!b || !h) return ''
+  return `${b * faktor}×${h * faktor}`
+}
+
 function StatusChip({ status }: { status: JobStatus }) {
   return (
     <span className={cn(
@@ -50,7 +60,7 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export default function QueuePage() {
-  const { jobs, loading, erneutEinreihen, loeschen } = useImageJobs()
+  const { jobs, loading, vergroessern, erneutEinreihen, loeschen } = useImageJobs()
   const [laedtHerunter, setLaedtHerunter] = useState<string | null>(null)
 
   async function herunterladen(job: ImageJob, url: string, index: number) {
@@ -202,18 +212,51 @@ export default function QueuePage() {
                               className="h-full w-full object-cover transition group-hover:scale-[1.03]"
                             />
                           </button>
-                          <Button
-                            size="icon"
-                            className="absolute bottom-1.5 right-1.5 h-7 w-7 bg-background/80 text-foreground opacity-0 backdrop-blur transition hover:bg-background focus-visible:opacity-100 group-hover:opacity-100"
-                            title="Bild herunterladen"
-                            aria-label={`Ergebnis ${i + 1} herunterladen`}
-                            disabled={laedtHerunter === url}
-                            onClick={() => void herunterladen(job, url, i)}
-                          >
-                            {laedtHerunter === url
-                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              : <Download className="h-3.5 w-3.5" />}
-                          </Button>
+                          <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+                            {/* Vergrößern nur beim Erzeugnis anbieten — ein bereits
+                                vergrößertes Bild noch einmal zu vergrößern bringt
+                                nichts als Dateigröße. */}
+                            {job.job_type !== 'upscale' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
+                                    title="Vergrößern"
+                                    aria-label={`Ergebnis ${i + 1} vergrößern`}
+                                  >
+                                    <Maximize2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="min-w-44">
+                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
+                                    Rechnerisch vergrößern — kostet nichts
+                                  </DropdownMenuLabel>
+                                  {([2, 3, 4] as const).map(f => (
+                                    <DropdownMenuItem
+                                      key={f}
+                                      className="text-xs"
+                                      onClick={() => void vergroessern(job, job.result_paths[i], f)}
+                                    >
+                                      {f}× {masse(job.size, f)}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            <Button
+                              size="icon"
+                              className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
+                              title="Bild herunterladen"
+                              aria-label={`Ergebnis ${i + 1} herunterladen`}
+                              disabled={laedtHerunter === url}
+                              onClick={() => void herunterladen(job, url, i)}
+                            >
+                              {laedtHerunter === url
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <Download className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>

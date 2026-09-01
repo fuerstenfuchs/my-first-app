@@ -10,15 +10,12 @@
  */
 
 import { config } from './config.ts'
-import { bildErzeugen } from './proxy.ts'
+import { auftragAbarbeiten, beschreibung } from './abarbeiten.ts'
 import {
   naechsterAuftrag,
   haengendeAuftraegeEinsammeln,
-  auftragFertig,
   auftragFehlgeschlagen,
   auftragZurueckstellen,
-  fortschrittMerken,
-  ergebnisAblegen,
 } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
 
@@ -33,37 +30,6 @@ function sage(text: string): void {
 let beenden = false
 const laufenderAbbruch = new AbortController()
 
-async function auftragAbarbeiten(job: ImageJob): Promise<void> {
-  const anzahl = Math.min(Math.max(job.variants ?? 1, 1), 4)
-  const referenzen = job.reference_urls.length
-  sage(
-    `Auftrag ${job.id.slice(0, 8)} · ${job.model} · ${job.size} · ` +
-    `${anzahl} Durchlauf${anzahl > 1 ? 'e' : ''}` +
-    (referenzen ? ` · ${referenzen} Referenz${referenzen > 1 ? 'en' : ''}` : ' · ohne Referenz'),
-  )
-
-  // Bereits erzeugte Bilder aus einem früheren Versuch übernehmen, statt sie
-  // noch einmal zu bezahlen. Der Neuversuch ist damit eine Fortsetzung.
-  const pfade: string[] = [...job.result_paths]
-  if (pfade.length > 0) {
-    sage(`  ${pfade.length} Bild(er) aus einem früheren Versuch übernommen.`)
-  }
-
-  for (let i = pfade.length; i < anzahl; i++) {
-    const begonnen = Date.now()
-    const daten = await bildErzeugen(job, laufenderAbbruch.signal)
-    const pfad = await ergebnisAblegen(job.user_id, job.id, i, daten)
-    pfade.push(pfad)
-    // Sofort festhalten — sonst wäre alles verloren, wenn das nächste Bild scheitert.
-    await fortschrittMerken(job.id, pfade)
-    const sekunden = Math.round((Date.now() - begonnen) / 1000)
-    sage(`  Bild ${i + 1}/${anzahl} fertig nach ${sekunden}s · ${Math.round(daten.byteLength / 1024)} kB`)
-  }
-
-  await auftragFertig(job.id, pfade)
-  sage(`  Auftrag ${job.id.slice(0, 8)} abgeschlossen.`)
-}
-
 async function durchgang(): Promise<boolean> {
   const eingesammelt = await haengendeAuftraegeEinsammeln()
   if (eingesammelt > 0) {
@@ -73,8 +39,11 @@ async function durchgang(): Promise<boolean> {
   const job = await naechsterAuftrag()
   if (!job) return false
 
+  sage(`Auftrag ${job.id.slice(0, 8)} · ${beschreibung(job)}`)
+
   try {
-    await auftragAbarbeiten(job)
+    await auftragAbarbeiten(job, sage, laufenderAbbruch.signal)
+    sage(`  Auftrag ${job.id.slice(0, 8)} abgeschlossen.`)
   } catch (e) {
     const fehler = e as Error
     if (fehler.name === 'AbortError') {
