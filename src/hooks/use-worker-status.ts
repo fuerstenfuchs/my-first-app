@@ -15,8 +15,15 @@ import { createClient } from '@/lib/supabase'
  * Vergleich zweier verschiedener Uhren hätte „vor -34 Sekunden" ergeben.
  */
 
-/** Ab wann er als weg gilt — großzügig gegenüber dem 5-Sekunden-Takt. */
-const SCHWELLE_SEKUNDEN = 30
+/**
+ * Ab wann er als weg gilt.
+ *
+ * Er meldet sich alle 20 Sekunden — unabhängig davon, wie oft er nach Aufträgen
+ * fragt. Das ist wichtig, seit der Auftragstakt sich der Lage anpasst und bei
+ * Ruhe auf eine Minute geht: Sonst hätte die Anzeige ihn für weg gehalten,
+ * obwohl er nur sparsam war.
+ */
+const SCHWELLE_SEKUNDEN = 60
 
 export type WorkerStatus =
   | { zustand: 'laeuft'; sekundenHer: number }

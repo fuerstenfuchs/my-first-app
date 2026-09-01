@@ -35,8 +35,8 @@ const VERSION = '2026-09-01'
 let beenden = false
 const laufenderAbbruch = new AbortController()
 
-async function durchgang(): Promise<boolean> {
-  const eingesammelt = await haengendeAuftraegeEinsammeln()
+async function durchgang(aufraeumen: boolean): Promise<boolean> {
+  const eingesammelt = aufraeumen ? await haengendeAuftraegeEinsammeln() : 0
   if (eingesammelt > 0) {
     sage(`${eingesammelt} hängengebliebene(n) Auftrag wieder eingereiht.`)
   }
@@ -90,33 +90,67 @@ async function schlafen(ms: number): Promise<void> {
   })
 }
 
+/**
+ * Wie lange bis zur nächsten Abfrage.
+ *
+ * Ein starrer Fünf-Sekunden-Takt kostet 17.280 Durchgänge am Tag — gemessen
+ * 36 MB täglich und damit 21 Prozent des Supabase-Kontingents, nur fürs
+ * Nachfragen ins Leere. An einem Tag ohne einen einzigen Auftrag ist das alles
+ * verschenkt.
+ *
+ * Deshalb: schnell, solange etwas los ist, und immer träger, je länger Ruhe
+ * herrscht. Nach dem ersten Auftrag ist er sofort wieder bei fünf Sekunden.
+ */
+function naechsterTakt(ruhigeDurchgaenge: number, grundtakt: number): number {
+  if (ruhigeDurchgaenge < 12)  return grundtakt          //  erste Minute:  5 s
+  if (ruhigeDurchgaenge < 32)  return grundtakt * 3      //  bis ~6 min:   15 s
+  if (ruhigeDurchgaenge < 92)  return grundtakt * 6      //  bis ~35 min:  30 s
+  return grundtakt * 12                                   //  danach:       60 s
+}
+
 async function hauptschleife(): Promise<void> {
   sage('Arbeiter läuft.')
   sage(`  Proxy:    ${config.proxyUrl}`)
   sage(`  Supabase: ${config.supabaseUrl}`)
-  sage(`  Abfrage alle ${config.pollIntervalMs / 1000}s. Beenden mit Strg+C.`)
+  sage(`  Abfrage alle ${config.pollIntervalMs / 1000}s, bei längerer Ruhe seltener.`)
+  sage('  Beenden mit Strg+C.')
 
   if (!config.userId) {
     sage('  Hinweis: WORKER_USER_ID fehlt — die App kann nicht anzeigen, dass er läuft.')
   }
 
   let ruhigSeit = 0
+  let letztesLebenszeichen = 0
+  let letztesAufraeumen = 0
+
   while (!beenden) {
+    const jetzt = Date.now()
     try {
-      if (config.userId) await lebenszeichen(config.userId, VERSION)
-      const gabArbeit = await durchgang()
+      // Das Lebenszeichen hängt nicht am Auftragstakt: Die App soll auch dann
+      // sehen, dass er läuft, wenn er nur noch jede Minute nachfragt.
+      if (config.userId && jetzt - letztesLebenszeichen >= 20_000) {
+        await lebenszeichen(config.userId, VERSION)
+        letztesLebenszeichen = jetzt
+      }
+
+      // Aufräumen ist Vorsorge, keine Eile — einmal pro Minute genügt.
+      const raeumen = jetzt - letztesAufraeumen >= 60_000
+      if (raeumen) letztesAufraeumen = jetzt
+
+      const gabArbeit = await durchgang(raeumen)
       if (gabArbeit) {
+        if (ruhigSeit > 0) sage('Wieder etwas zu tun.')
         ruhigSeit = 0
         continue  // ohne Pause weiter, solange etwas wartet
       }
-      // Nur einmal melden, dass nichts da ist — nicht alle fünf Sekunden.
+      // Nur einmal melden, dass nichts da ist — nicht bei jedem Durchgang.
       if (ruhigSeit === 0) sage('Nichts zu tun. Warte auf Aufträge…')
       ruhigSeit++
     } catch (e) {
       sage(`Durchgang fehlgeschlagen: ${(e as Error).message}`)
       sage('  Versuche es beim nächsten Mal erneut.')
     }
-    await schlafen(config.pollIntervalMs)
+    await schlafen(naechsterTakt(ruhigSeit, config.pollIntervalMs))
   }
   sage('Arbeiter beendet.')
 }

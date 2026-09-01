@@ -46,6 +46,47 @@ liegen, bis der Proxy antwortet.
 gefunden werden". Jetzt CRLF, und `.gitattributes` hält es so — sonst hätte Git
 es beim nächsten Auschecken wieder zerstört.
 
+## Sparsamer Takt (nachgereicht am selben Tag)
+
+Mark: „Kann sein, dass ich ihn den ganzen Tag nicht brauche."
+
+Gemessen, was der starre Fünf-Sekunden-Takt kostet: Ein Leerdurchgang sind drei
+Anfragen und 2209 Bytes. Mal 17.280 Durchgänge am Tag ergibt **36 MB täglich,
+1092 MB im Monat — 21 Prozent des Supabase-Kontingents**, nur fürs Nachfragen
+ins Leere.
+
+Jetzt passt sich der Takt der Lage an:
+
+| Ruhe seit | Abstand |
+|---|---|
+| unter 1 Minute | 5 s |
+| bis ~6 Minuten | 15 s |
+| bis ~35 Minuten | 30 s |
+| danach | 60 s |
+
+Beim ersten Auftrag fällt er sofort auf fünf Sekunden zurück. Dazu läuft das
+Aufräumen nur noch einmal pro Minute statt bei jedem Durchgang, und das
+Lebenszeichen hängt nicht mehr am Auftragstakt (alle 20 Sekunden) — sonst hätte
+die Anzeige ihn für weg gehalten, obwohl er nur sparsam war. Die Schwelle in der
+App steht entsprechend auf 60 Sekunden.
+
+**Ergebnis: 5 MB statt 36 MB am Tag — 86 Prozent weniger, 3 statt 21 Prozent des
+Kontingents.** Der Preis: Nach langer Ruhe dauert es höchstens eine Minute, bis
+er den ersten Auftrag bemerkt.
+
+## Was laufen muss, damit Bilder entstehen
+
+Ausdrücklich **nicht** Claude Code — im ganzen Arbeiter kommt weder „claude" noch
+„anthropic" vor, er spricht nur mit zwei Adressen: dem Bild-Proxy auf
+`127.0.0.1` und Supabase.
+
+Nachgewiesen am 01.09.2026: Auftrag `03442304` wurde über die Autostart-Datei
+abgeholt und in 19 Sekunden erzeugt, ohne jede Beteiligung von Claude Code.
+
+Nötig sind: der PC an, EasyCLIProxyAPI (Autostart), der Arbeiter (Autostart) und
+eine Internetverbindung. Ist der PC aus, bleiben Aufträge liegen und werden
+abgearbeitet, sobald er wieder läuft.
+
 ## Offen
 
 - Der Autostart ist eingerichtet, aber noch nicht durch einen echten Neustart des
