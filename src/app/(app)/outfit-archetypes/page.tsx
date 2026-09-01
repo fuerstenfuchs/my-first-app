@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { Plus, Search, X, Pencil, Trash2, Upload, ImageOff, ZoomIn, Sparkles } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { LibraryTabs } from '@/components/library-tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -187,6 +188,7 @@ export default function OutfitArchetypesPage() {
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
           <SidebarTrigger />
+          <LibraryTabs />
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="font-semibold text-sm">{EMOJI} Outfit Archetypes</span>
             <span className="text-xs text-muted-foreground/60">({filteredItems.length})</span>

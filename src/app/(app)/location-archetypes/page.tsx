@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { Plus, Search, X, Pencil, Trash2, Upload, ImageOff, ZoomIn } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { LibraryTabs } from '@/components/library-tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -195,6 +196,7 @@ export default function LocationArchetypesPage() {
       <div className="w-48 shrink-0 flex flex-col border-r border-border">
         <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
+          <LibraryTabs />
           <span className="text-sm font-semibold flex-1 truncate">Archetypes</span>
           <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={openForm} title="Neuer Archetyp">
             <Plus className="h-4 w-4" />

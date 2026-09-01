@@ -61,6 +61,8 @@
 
 | PROJ-39 | Ergebnisbilder vergroessern (Lanczos 2x/3x/4x, lokal im Arbeiter) | In Review | [PROJ-39](PROJ-39-upscaler.md) | 2026-09-01 |
 
+| PROJ-40 | Seitenleiste neu geordnet (Kachelraster, 2008px auf 574px) | In Review | [PROJ-40](PROJ-40-seitenleiste.md) | 2026-09-01 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-40
+## Next Available ID: PROJ-41

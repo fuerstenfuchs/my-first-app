@@ -10,6 +10,7 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@d
 import { CSS } from '@dnd-kit/utilities'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { LibraryTabs } from '@/components/library-tabs'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -345,6 +346,7 @@ export default function LocationsPage() {
       <div className="w-48 shrink-0 flex flex-col border-r border-border">
         <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
+          <LibraryTabs />
           <span className="text-sm font-semibold flex-1 truncate">Locations</span>
           <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
             onClick={() => { setEditingLocation(null); setFormOpen(true) }} title="Neue Location">

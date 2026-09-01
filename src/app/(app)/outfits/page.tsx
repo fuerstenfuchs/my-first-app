@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { LibraryTabs } from '@/components/library-tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -198,6 +199,7 @@ export default function OutfitsPage() {
         {/* Header */}
         <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
           <SidebarTrigger />
+          <LibraryTabs />
           <span className="text-sm font-semibold shrink-0">Outfits</span>
           <div className="flex-1 min-w-0 relative max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
