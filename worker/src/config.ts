@@ -42,7 +42,13 @@ export const config = {
   pollIntervalMs: zahl('POLL_INTERVAL_MS', 5000),
   // gpt-image-2 braucht bei quality=high oft ein bis drei Minuten pro Bild.
   requestTimeoutMs: zahl('REQUEST_TIMEOUT_MS', 300_000),
-  staleMinutes: zahl('STALE_MINUTES', 10),
+  // Ab wann ein Auftrag auf 'running' als verwaist gilt.
+  //
+  // MUSS über der längstmöglichen Laufzeit liegen: 4 Durchläufe (Höchstwert
+  // laut Datenbankschranke) mal 5 Minuten Zeitgrenze je Bild sind 20 Minuten.
+  // Ein zu kleiner Wert reiht einen noch laufenden Auftrag neu ein — bei zwei
+  // Arbeitern wird er dann ein zweites Mal erzeugt, und jedes Bild kostet Geld.
+  staleMinutes: zahl('STALE_MINUTES', 30),
   maxAttempts: zahl('MAX_ATTEMPTS', 3),
 }
 

@@ -83,8 +83,17 @@ async function durchgang(): Promise<boolean> {
   return true
 }
 
+/**
+ * Warten, aber unterbrechbar. Ohne den Wecker müsste Strg+C bis zu fünf
+ * Sekunden warten, bis die Schleife das Beenden-Flag wieder prüft.
+ */
+let wecker: (() => void) | null = null
+
 async function schlafen(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms))
+  return new Promise(fertig => {
+    const timer = setTimeout(() => { wecker = null; fertig() }, ms)
+    wecker = () => { clearTimeout(timer); wecker = null; fertig() }
+  })
 }
 
 async function hauptschleife(): Promise<void> {
@@ -122,6 +131,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     }
     beenden = true
     sage('Beende nach dem laufenden Bild. Nochmal Strg+C bricht sofort ab.')
+    wecker?.()   // nicht erst die Wartezeit zu Ende sitzen
   })
 }
 

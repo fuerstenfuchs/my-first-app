@@ -106,7 +106,11 @@ $$;
 -- Hängengebliebene Aufträge einsammeln (Arbeiter abgestürzt, Briefing 5).
 -- Läuft im Arbeiter vor jedem Durchgang.
 -- ---------------------------------------------------------------------------
-create or replace function public.requeue_stale_image_jobs(stale_minutes int default 10)
+-- Die Vorgabe MUSS über der längstmöglichen Laufzeit liegen: 4 Durchläufe
+-- (Schranke oben) mal 5 Minuten Zeitgrenze je Bild sind 20 Minuten. Ein zu
+-- kleiner Wert reiht einen noch laufenden Auftrag neu ein — bei zwei Arbeitern
+-- wird er dann ein zweites Mal erzeugt, und jedes Bild kostet Geld.
+create or replace function public.requeue_stale_image_jobs(stale_minutes int default 30)
 returns int
 language sql
 security definer
