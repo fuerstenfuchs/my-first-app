@@ -19,18 +19,24 @@ type Paar = {
   archetyp:  { href: string; label: string }
 }
 
+/**
+ * Kurze Beschriftungen: Die Reiter stehen teils in sehr schmalen Kopfzeilen —
+ * die Locations-Spalte ist 192px breit, die Charakter-Spalte 288px. Mit
+ * „Meine Locations | Archetypen" waere die Zeile breiter als die Spalte gewesen
+ * und haette den Knopf zum Anlegen hinausgedrueckt.
+ */
 const PAARE: Paar[] = [
   {
-    echt:     { href: '/characters',          label: 'Meine Charaktere' },
+    echt:     { href: '/characters',           label: 'Meine' },
     archetyp: { href: '/character-archetypes', label: 'Archetypen' },
   },
   {
-    echt:     { href: '/outfits',             label: 'Meine Outfits' },
-    archetyp: { href: '/outfit-archetypes',   label: 'Archetypen' },
+    echt:     { href: '/outfits',              label: 'Meine' },
+    archetyp: { href: '/outfit-archetypes',    label: 'Archetypen' },
   },
   {
-    echt:     { href: '/locations',           label: 'Meine Locations' },
-    archetyp: { href: '/location-archetypes', label: 'Archetypen' },
+    echt:     { href: '/locations',            label: 'Meine' },
+    archetyp: { href: '/location-archetypes',  label: 'Archetypen' },
   },
 ]
 
@@ -40,7 +46,7 @@ export function LibraryTabs() {
   if (!paar) return null
 
   return (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-md bg-muted/40 p-0.5">
+    <div className="flex min-w-0 shrink items-center gap-0.5 rounded-md bg-muted/40 p-0.5">
       {[paar.echt, paar.archetyp].map(reiter => {
         const aktiv = pathname === reiter.href
         return (
@@ -49,7 +55,7 @@ export function LibraryTabs() {
             href={reiter.href}
             aria-current={aktiv ? 'page' : undefined}
             className={cn(
-              'rounded px-2 py-1 text-[11px] font-medium transition',
+              'truncate rounded px-1.5 py-1 text-[11px] font-medium transition',
               aktiv
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',

@@ -295,11 +295,17 @@ export function PromptDetailPanel({
 
       {/* Erst mounten, wenn gebraucht: Der Dialog laedt drei Bibliotheken,
           das waeren sonst drei Abfragen bei jedem geoeffneten Prompt. */}
+      {/*
+        prompt={displayContent}, nicht prompt.content: Ist eine Variante gewählt,
+        steht sie im Fenster und wird auch kopiert. Der Bild-Dialog bekam bisher
+        den Basis-Prompt — man hätte ein Bild für einen Text bezahlt, den man gar
+        nicht vor sich hatte.
+      */}
       {bildDialogOffen && <PromptToImageDialog
         isOpen
         onClose={() => setBildDialogOffen(false)}
-        prompt={prompt.content}
-        titel={prompt.title}
+        prompt={displayContent}
+        titel={activeVariant ? `${prompt.title} — ${activeVariant.name}` : prompt.title}
       />}
 
       {/* Fullscreen gallery */}

@@ -26,6 +26,17 @@ alter table public.image_jobs drop constraint if exists image_jobs_upscale_needs
 alter table public.image_jobs add constraint image_jobs_upscale_needs_source
   check (job_type <> 'upscale' or (source_path is not null and scale is not null));
 
+-- Zweite Ebene neben der Pruefung im Arbeiter: Ein Vergroesserungsauftrag darf
+-- nur auf ein Bild im eigenen Ordner zeigen. Der Arbeiter holt es mit dem
+-- Service-Key, also unter Umgehung aller Storage-Regeln — ein fremder Pfad
+-- waere ein Weg, sich fremde Bilder in den eigenen Ordner kopieren zu lassen.
+alter table public.image_jobs drop constraint if exists image_jobs_source_gehoert_nutzer;
+alter table public.image_jobs add constraint image_jobs_source_gehoert_nutzer
+  check (
+    source_path is null
+    or (source_path like user_id::text || '/%' and source_path not like '%..%')
+  );
+
 comment on column public.image_jobs.job_type is
   'generate = Bild erzeugen, upscale = vorhandenes Ergebnis rechnerisch vergrößern';
 comment on column public.image_jobs.source_path is

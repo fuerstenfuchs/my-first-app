@@ -46,7 +46,7 @@ async function vergroessern(job: ImageJob, sage: Melder): Promise<void> {
     throw new Error('Vergrößerungsauftrag ohne Ausgangsbild oder Faktor.')
   }
   const begonnen = Date.now()
-  const quelle = await ergebnisHolen(job.source_path)
+  const quelle = await ergebnisHolen(job.source_path, job.user_id)
   const { daten, vorher, nachher } = await bildVergroessern(quelle, job.scale)
   const pfad = await ergebnisAblegen(job.user_id, job.id, 0, daten)
 

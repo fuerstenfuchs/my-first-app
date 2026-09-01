@@ -20,6 +20,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?from=share', request.url), 303)
   }
 
+  // Der Proxy laesst /api/share bewusst durch, damit die Route selbst mit 303
+  // umleiten kann. Damit greift hier aber auch seine zweite Schranke nicht mehr
+  // — die Freigabeliste. Sie wird deshalb nachgebildet.
+  const allowedEmail = process.env.ALLOWED_EMAIL
+  if (allowedEmail && user.email !== allowedEmail) {
+    return NextResponse.redirect(new URL('/login?error=not_allowed', request.url), 303)
+  }
+
+  // Ein Teilen-Vorgang kommt vom Geraet des Nutzers, nie von einer fremden
+  // Seite. Ohne diese Pruefung koennte ein fremdes Formular Bilder in den
+  // eigenen Speicher hochladen — die Sitzungscookies gehen bei einem
+  // Seitenwechsel mit.
+  const herkunft = request.headers.get('origin')
+  if (herkunft && new URL(request.url).origin !== herkunft) {
+    return NextResponse.redirect(new URL('/', request.url), 303)
+  }
+
   const formData = await request.formData()
   const text = (formData.get('text') as string | null) ?? ''
   const url = (formData.get('url') as string | null) ?? ''

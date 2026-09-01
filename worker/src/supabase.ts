@@ -143,8 +143,21 @@ export async function auftragFehlgeschlagen(
   return status
 }
 
-/** Referenzbild herunterladen. Die Buckets sind öffentlich lesbar. */
+/**
+ * Referenzbild herunterladen. Die Buckets sind öffentlich lesbar.
+ *
+ * Nur Adressen aus dem eigenen Supabase-Speicher: Der Arbeiter läuft auf dem PC
+ * und erreicht damit alles im Heimnetz — 127.0.0.1, den Router, den Bild-Proxy.
+ * Die Adresse steht in einer Datenbankzeile, die der Browser schreibt, und der
+ * Fehlertext landet sichtbar auf /queue. Ohne diese Schranke ließe sich von
+ * außen abfragen, welche Geräte hier antworten.
+ */
 export async function bildHolen(url: string): Promise<{ daten: ArrayBuffer; typ: string }> {
+  const erlaubt = `${config.supabaseUrl}/storage/v1/object/public/`
+  if (!url.startsWith(erlaubt)) {
+    throw new Error('Referenzbilder dürfen nur aus dem eigenen Speicher kommen.')
+  }
+
   const antwort = await fetch(url, { signal: AbortSignal.timeout(60_000) })
   if (!antwort.ok) {
     throw new Error(`Referenzbild ${url.slice(0, 80)} → HTTP ${antwort.status}`)
@@ -156,10 +169,29 @@ export async function bildHolen(url: string): Promise<{ daten: ArrayBuffer; typ:
   return { daten: await antwort.arrayBuffer(), typ }
 }
 
-/** Ein bereits abgelegtes Ergebnis wieder holen — Ausgangspunkt fürs Vergrößern. */
-export async function ergebnisHolen(pfad: string): Promise<ArrayBuffer> {
+/**
+ * Ein bereits abgelegtes Ergebnis wieder holen — Ausgangspunkt fürs Vergrößern.
+ *
+ * Der Pfad kommt aus einer Datenbankzeile, die der Browser geschrieben hat, und
+ * geholt wird mit dem Service-Key — also unter Umgehung aller Storage-Regeln.
+ * Deshalb wird hier geprüft, statt zu vertrauen: Der Pfad muss im Ordner des
+ * Auftraggebers liegen, und er darf nichts enthalten, was die Adresse
+ * umschreibt. Ein einziges `../` würde sonst genügen, um eine fremde Ablage zu
+ * lesen — der URL-Parser löst es auf, bevor die Anfrage rausgeht.
+ */
+export async function ergebnisHolen(pfad: string, userId: string): Promise<ArrayBuffer> {
+  if (!pfad.startsWith(`${userId}/`)) {
+    throw new Error('Das Ausgangsbild liegt nicht im eigenen Ordner.')
+  }
+  // Zeichen, die die Adresse umschreiben oder aus dem Ordner führen könnten.
+  const unerlaubt = ['..', '?', '#', '%', '\\']
+  if (unerlaubt.some(z => pfad.includes(z))) {
+    throw new Error('Der Pfad des Ausgangsbildes enthält unerlaubte Zeichen.')
+  }
+
   const antwort = await fetch(
-    `${config.supabaseUrl}/storage/v1/object/generated-images/${pfad}`,
+    `${config.supabaseUrl}/storage/v1/object/generated-images/` +
+      pfad.split('/').map(encodeURIComponent).join('/'),
     {
       headers: { apikey: config.supabaseKey, Authorization: `Bearer ${config.supabaseKey}` },
       signal: AbortSignal.timeout(120_000),
