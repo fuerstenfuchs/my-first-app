@@ -55,6 +55,8 @@
 | PROJ-35 | Character Archetypes & Outfit Archetypes (generische Charaktere/Outfits, KI-Beschreibung mit Recherche-Modus, Scene Builder Kombination) | Deployed | — | 2026-06-22 |
 | PROJ-36 | Character Capture System (Chrome Extension: Rechtsklick → Crop → KI-Analyse → Speichern) | Deployed | — | 2026-06-23 |
 
+| PROJ-37 | Bildgenerierung (Auftragstabelle, lokaler Arbeiter, Warteschlange) | In Progress | [PROJ-37](PROJ-37-bildgenerierung.md) | 2026-09-01 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-37
+## Next Available ID: PROJ-38

@@ -27,6 +27,7 @@ import {
 } from '@/lib/scene-builder-options'
 import { useScenePresets } from '@/hooks/use-scene-presets'
 import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialog'
+import { QueueButton } from '@/components/scene-builder/queue-button'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -762,6 +763,33 @@ export default function SceneBuilderPage() {
     toast.success('Prompt kopiert!')
   }
 
+  // ── Bildgenerierung (PROJ-37) ──────────────────────────────────────────────
+
+  /**
+   * Genau die Bilder, die im Abschnitt „Referenz-Export" angezeigt werden.
+   * Dieselbe Vorrangregel wie dort und in buildPrompt: ein echtes Asset
+   * verdrängt seinen Archetyp, und das gewählte Referenzbild schlägt das
+   * Titelbild des Assets.
+   */
+  const referenceUrls = useMemo(() => {
+    type MitTitelbild = { cover_image_url?: string | null } | null
+    const paare: [MitTitelbild, RefImage | null][] = [
+      [scene.character,          sceneRefs.character],
+      [scene.character ? null : scene.character_archetype, sceneRefs.character_archetype],
+      [scene.outfit,             sceneRefs.outfit],
+      [scene.outfit ? null : scene.outfit_archetype,       sceneRefs.outfit_archetype],
+      [scene.location,           sceneRefs.location],
+      [scene.location ? null : scene.location_archetype,   sceneRefs.location_archetype],
+    ]
+    const urls: string[] = []
+    for (const [asset, ref] of paare) {
+      if (!asset) continue
+      const url = ref?.url ?? asset.cover_image_url
+      if (url && !urls.includes(url)) urls.push(url)
+    }
+    return urls
+  }, [scene, sceneRefs])
+
   // ── Presets (PROJ-31A) ──────────────────────────────────────────────────────
 
   function buildPresetConfigFromScene(): ScenePresetConfig {
@@ -1112,6 +1140,14 @@ export default function SceneBuilderPage() {
 
         <div className="flex-1 overflow-hidden relative">
           <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-3 space-y-4" style={{ right: '-17px' }}>
+
+            {/* Bildgenerierung (PROJ-37) — der Prompt bleibt unverändert, er wird nur weitergereicht */}
+            <QueueButton
+              prompt={prompt}
+              referenceUrls={referenceUrls}
+              aspectRatio={scene.aspect_ratio}
+              sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}
+            />
 
             {/* Szenentyp + Bedingungen badges */}
             <div className="flex flex-wrap items-center gap-1.5">

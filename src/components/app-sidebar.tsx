@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Clapperboard, Palette, Landmark, UserCog, Layers } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Clapperboard, Palette, Landmark, UserCog, Layers, Images } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -489,6 +489,25 @@ export function AppSidebar() {
               </div>
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">Scene Builder</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/queue"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/queue')
+                  ? 'linear-gradient(#04150f, #03120d) padding-box, linear-gradient(135deg, #34d399 0%, #059669 100%) border-box'
+                  : 'linear-gradient(#04150f, #03120d) padding-box, linear-gradient(135deg, #10b981 0%, #047857 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(16,185,129,0.2), 0 0 18px rgba(4,120,87,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Images className="h-6 w-6 text-emerald-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Warteschlange</span>
             </a>
           </SidebarMenuItem>
           <SidebarMenuItem>
