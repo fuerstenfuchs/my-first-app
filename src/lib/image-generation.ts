@@ -75,11 +75,66 @@ export function formatAnsage(format: AspectRatioKey | null): string | null {
  * Es ist die einzige Stelle im ganzen Vorhaben, die den Prompt anfasst.
  */
 export function promptFuerAuftrag(
-  prompt: string, format: AspectRatioKey | null, mitReferenz: boolean,
+  prompt: string, format: AspectRatioKey | null, rollen: ReferenzRolle[],
 ): string {
-  if (!mitReferenz) return prompt
-  const ansage = formatAnsage(format)
-  return ansage ? [prompt, ansage].join('\n\n') : prompt
+  const mitReferenz = rollen.length > 0
+  const teile = [prompt]
+
+  // Zuerst die Zuordnung: Sie sagt, welches Bild wofür steht. Ohne sie nimmt
+  // das Modell schon mal die Person aus dem Outfit-Bild.
+  const zuordnung = referenzZuordnung(rollen)
+  if (zuordnung) teile.push(zuordnung)
+
+  // Die Formatansage nur mit Referenz — ohne Referenz wirkt der Größenparameter.
+  if (mitReferenz) {
+    const ansage = formatAnsage(format)
+    if (ansage) teile.push(ansage)
+  }
+
+  return teile.join('\n\n')
+}
+
+/**
+ * Referenzbilder — wer ist was.
+ *
+ * Am 01.09.2026 an einem echten Ergebnis gesehen: Bei Charakter + Outfit
+ * übernahm gpt-image-2 die Person aus dem OUTFIT-Bild statt aus dem
+ * Charakterbild. Die Ursache war nicht der Prompt, sondern die fehlende
+ * Zuordnung — die Bilder gingen unbeschriftet als image[] mit, und die Sätze
+ * „Use the provided character reference." / „…outfit reference." sagen nicht,
+ * welches Bild gemeint ist. Das Modell hat geraten.
+ *
+ * Deshalb geht jetzt eine ausdrückliche Zuordnung mit, in derselben Reihenfolge
+ * wie die Bilder. Positiv formuliert (nehmen, nicht verbieten) — gpt-image-2
+ * folgt Positiv-Listen zuverlässiger als Verboten.
+ */
+export type ReferenzRolle = 'character' | 'outfit' | 'location'
+
+export type Referenz = { url: string; rolle: ReferenzRolle }
+
+const ROLLEN_ANWEISUNG: Record<ReferenzRolle, string> = {
+  character: 'CHARACTER — take the face, hair, skin tone and body identity of this person.',
+  outfit:    'OUTFIT — take only the garments, their cut, fabric and colour. The person wearing them in this image is a mannequin for the clothes, not the subject.',
+  location:  'LOCATION — take only the setting, architecture and atmosphere of this place.',
+}
+
+export const ROLLEN_LABEL: Record<ReferenzRolle, string> = {
+  character: 'Charakter',
+  outfit:    'Outfit',
+  location:  'Location',
+}
+
+/**
+ * Der Zuordnungsblock, der dem Modell sagt, welches Bild wofür steht.
+ * Nur sinnvoll ab zwei Bildern — bei einem einzigen gibt es nichts zu verwechseln.
+ */
+export function referenzZuordnung(rollen: ReferenzRolle[]): string | null {
+  if (rollen.length < 2) return null
+  const zeilen = rollen.map((rolle, i) => `Image ${i + 1} = ${ROLLEN_ANWEISUNG[rolle]}`)
+  return [
+    'REFERENCE IMAGES — they arrive in this exact order:',
+    ...zeilen,
+  ].join('\n')
 }
 
 export const DURCHLAEUFE = [1, 2, 3, 4] as const

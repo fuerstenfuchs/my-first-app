@@ -28,6 +28,7 @@ import {
 import { useScenePresets } from '@/hooks/use-scene-presets'
 import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialog'
 import { QueueButton } from '@/components/scene-builder/queue-button'
+import type { Referenz, ReferenzRolle } from '@/lib/image-generation'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -771,23 +772,25 @@ export default function SceneBuilderPage() {
    * verdrängt seinen Archetyp, und das gewählte Referenzbild schlägt das
    * Titelbild des Assets.
    */
-  const referenceUrls = useMemo(() => {
+  const referenzen = useMemo(() => {
     type MitTitelbild = { cover_image_url?: string | null } | null
-    const paare: [MitTitelbild, RefImage | null][] = [
-      [scene.character,          sceneRefs.character],
-      [scene.character ? null : scene.character_archetype, sceneRefs.character_archetype],
-      [scene.outfit,             sceneRefs.outfit],
-      [scene.outfit ? null : scene.outfit_archetype,       sceneRefs.outfit_archetype],
-      [scene.location,           sceneRefs.location],
-      [scene.location ? null : scene.location_archetype,   sceneRefs.location_archetype],
+    // Die Rolle geht mit, sonst weiß das Bildmodell nicht, welches Bild wofür
+    // steht — und nimmt schon mal die Person aus dem Outfit-Bild.
+    const paare: [MitTitelbild, RefImage | null, ReferenzRolle][] = [
+      [scene.character,          sceneRefs.character,           'character'],
+      [scene.character ? null : scene.character_archetype, sceneRefs.character_archetype, 'character'],
+      [scene.outfit,             sceneRefs.outfit,              'outfit'],
+      [scene.outfit ? null : scene.outfit_archetype,       sceneRefs.outfit_archetype,    'outfit'],
+      [scene.location,           sceneRefs.location,            'location'],
+      [scene.location ? null : scene.location_archetype,   sceneRefs.location_archetype,  'location'],
     ]
-    const urls: string[] = []
-    for (const [asset, ref] of paare) {
+    const gesammelt: Referenz[] = []
+    for (const [asset, ref, rolle] of paare) {
       if (!asset) continue
       const url = ref?.url ?? asset.cover_image_url
-      if (url && !urls.includes(url)) urls.push(url)
+      if (url && !gesammelt.some(r => r.url === url)) gesammelt.push({ url, rolle })
     }
-    return urls
+    return gesammelt
   }, [scene, sceneRefs])
 
   // ── Presets (PROJ-31A) ──────────────────────────────────────────────────────
@@ -1144,7 +1147,7 @@ export default function SceneBuilderPage() {
             {/* Bildgenerierung (PROJ-37) — der Prompt bleibt unverändert, er wird nur weitergereicht */}
             <QueueButton
               prompt={prompt}
-              referenceUrls={referenceUrls}
+              referenzen={referenzen}
               aspectRatio={scene.aspect_ratio}
               sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}
             />

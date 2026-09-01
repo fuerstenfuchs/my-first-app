@@ -17,6 +17,7 @@ export type ImageJob = {
   input_fidelity: string | null
   variants: number
   reference_urls: string[]
+  reference_roles: string[]
   anchor_job_id: string | null
   scene_meta: unknown
   result_paths: string[]

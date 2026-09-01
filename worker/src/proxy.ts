@@ -50,10 +50,14 @@ export async function bildErzeugen(job: ImageJob, signal?: AbortSignal): Promise
     const einzeln = job.reference_urls.length === 1
     for (const [i, url] of job.reference_urls.entries()) {
       const { daten, typ } = await bildHolen(url)
+      // Sprechender Dateiname statt "referenz-0": Die eigentliche Zuordnung
+      // steht im Prompt, aber ein Name wie "1-character.png" kann nur helfen —
+      // und er macht die Fehlersuche lesbar.
+      const rolle = job.reference_roles?.[i] ?? 'reference'
       form.append(
         einzeln ? 'image' : 'image[]',
         new Blob([daten], { type: typ }),
-        `referenz-${i}.${dateiEndung(typ)}`,
+        `${i + 1}-${rolle}.${dateiEndung(typ)}`,
       )
     }
     rumpf = form

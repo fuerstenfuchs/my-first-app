@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
-import type { JobStatus } from '@/lib/image-generation'
+import type { JobStatus, ReferenzRolle } from '@/lib/image-generation'
 
 export interface ImageJob {
   id:             string
@@ -21,6 +21,7 @@ export interface ImageJob {
   input_fidelity: string | null
   variants:       number
   reference_urls: string[]
+  reference_roles: ReferenzRolle[]
   scene_meta:     Record<string, unknown> | null
   result_paths:   string[]
 }
@@ -32,6 +33,7 @@ export interface ImageJobInput {
   aspect_ratio?:   string | null
   variants:        number
   reference_urls?: string[]
+  reference_roles?: ReferenzRolle[]
   scene_meta?:     Record<string, unknown> | null
   preset_id?:      string | null
 }
@@ -102,7 +104,8 @@ export function useImageJobs(aktiv = true) {
         size:           input.size,
         aspect_ratio:   input.aspect_ratio ?? null,
         variants:       input.variants,
-        reference_urls: input.reference_urls ?? [],
+        reference_urls:  input.reference_urls ?? [],
+        reference_roles: input.reference_roles ?? [],
         scene_meta:     input.scene_meta ?? null,
         preset_id:      input.preset_id ?? null,
       })

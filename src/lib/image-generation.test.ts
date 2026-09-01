@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  groesseFuerFormat, formatAnsage, promptFuerAuftrag,
-  NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE,
+  groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
+  NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE, type ReferenzRolle,
 } from './image-generation'
 import { ASPECT_RATIOS } from './scene-builder-options'
 
@@ -82,31 +82,69 @@ describe('Prompt für den Auftrag', () => {
 
   it('lässt den Prompt ohne Referenzbild unangetastet', () => {
     // Ohne Referenz wirkt der Größenparameter — die Ansage wäre überflüssig.
-    expect(promptFuerAuftrag(PROMPT, 'landscape_16_9', false)).toBe(PROMPT)
-    expect(promptFuerAuftrag(PROMPT, null, false)).toBe(PROMPT)
+    expect(promptFuerAuftrag(PROMPT, 'landscape_16_9', [])).toBe(PROMPT)
+    expect(promptFuerAuftrag(PROMPT, null, [])).toBe(PROMPT)
   })
 
   it('hängt mit Referenzbild die Formatansage an', () => {
-    const ergebnis = promptFuerAuftrag(PROMPT, 'landscape_16_9', true)
+    const ergebnis = promptFuerAuftrag(PROMPT, 'landscape_16_9', ['character'])
     expect(ergebnis.startsWith(PROMPT)).toBe(true)
     expect(ergebnis).toContain('16:9')
     expect(ergebnis).toContain('\n\n')
   })
 
-  it('hängt ohne gewähltes Format nichts an, auch mit Referenzbild', () => {
-    expect(promptFuerAuftrag(PROMPT, null, true)).toBe(PROMPT)
+  it('hängt ohne gewähltes Format keine Formatansage an', () => {
+    expect(promptFuerAuftrag(PROMPT, null, ['character'])).toBe(PROMPT)
   })
 
-  it('verändert den ursprünglichen Prompt nie — er bleibt vollständig enthalten', () => {
+  it('verändert den ursprünglichen Prompt nie — er bleibt am Anfang stehen', () => {
     // Briefing 9: An der Prompt-Erzeugung wird nichts geändert. Angehängt wird
     // nur, nie ersetzt oder umgeschrieben.
     for (const format of ASPECT_RATIOS) {
-      for (const mitRef of [true, false]) {
+      for (const rollen of [[], ['character'], ['character', 'outfit']] as ReferenzRolle[][]) {
         expect(
-          promptFuerAuftrag(PROMPT, format.key, mitRef).startsWith(PROMPT),
-          `${format.key}, Referenz: ${mitRef}`,
+          promptFuerAuftrag(PROMPT, format.key, rollen).startsWith(PROMPT),
+          `${format.key}, ${rollen.length} Referenzen`,
         ).toBe(true)
       }
+    }
+  })
+})
+
+describe('Zuordnung der Referenzbilder', () => {
+  // Am 01.09.2026 an einem echten Ergebnis gesehen: Bei Charakter + Outfit nahm
+  // das Modell die Person aus dem OUTFIT-Bild. Die Bilder gingen unbeschriftet
+  // mit, der Prompt sagte nicht, welches welches ist.
+
+  it('bleibt bei einem einzigen Bild stumm — da ist nichts zu verwechseln', () => {
+    expect(referenzZuordnung(['character'])).toBeNull()
+    expect(referenzZuordnung([])).toBeNull()
+  })
+
+  it('nummeriert ab zwei Bildern in der Reihenfolge, in der sie abgeschickt werden', () => {
+    const block = referenzZuordnung(['character', 'outfit'])!
+    expect(block).toContain('Image 1 = CHARACTER')
+    expect(block).toContain('Image 2 = OUTFIT')
+    expect(block.indexOf('Image 1')).toBeLessThan(block.indexOf('Image 2'))
+  })
+
+  it('sagt beim Outfit ausdrücklich, dass die abgebildete Person nicht gemeint ist', () => {
+    // Genau der Fehler, der aufgetreten ist.
+    const block = referenzZuordnung(['character', 'outfit'])!
+    expect(block.toLowerCase()).toContain('not the subject')
+  })
+
+  it('landet vollständig im Prompt', () => {
+    const ergebnis = promptFuerAuftrag('Basis.', 'square_1_1', ['character', 'outfit', 'location'])
+    for (const wort of ['Image 1 = CHARACTER', 'Image 2 = OUTFIT', 'Image 3 = LOCATION']) {
+      expect(ergebnis).toContain(wort)
+    }
+  })
+
+  it('deckt jede mögliche Rolle mit einer Anweisung ab', () => {
+    const block = referenzZuordnung(['character', 'outfit', 'location'])!
+    for (const rolle of ['CHARACTER', 'OUTFIT', 'LOCATION']) {
+      expect(block).toContain(rolle)
     }
   })
 })

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import {
   Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download,
 } from 'lucide-react'
@@ -13,7 +14,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
-import { STATUS_TEXT, STATUS_FARBE, type JobStatus } from '@/lib/image-generation'
+import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
+import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
 import { cn } from '@/lib/utils'
 
 function zeit(iso: string): string {
@@ -49,6 +51,22 @@ function StatusChip({ status }: { status: JobStatus }) {
 
 export default function QueuePage() {
   const { jobs, loading, erneutEinreihen, loeschen } = useImageJobs()
+  const [laedtHerunter, setLaedtHerunter] = useState<string | null>(null)
+
+  async function herunterladen(job: ImageJob, url: string, index: number) {
+    setLaedtHerunter(url)
+    try {
+      const hinweis = (job.scene_meta as { name?: string } | null)?.name ?? null
+      await bildHerunterladen(
+        url,
+        dateinameFuerBild(job.created_at, index, job.result_paths.length, hinweis),
+      )
+    } catch (e) {
+      toast.error(`Download fehlgeschlagen: ${(e as Error).message}`)
+    } finally {
+      setLaedtHerunter(null)
+    }
+  }
   const [offen, setOffen] = useState<Set<string>>(new Set())
   const [loeschKandidat, setLoeschKandidat] = useState<ImageJob | null>(null)
   const [lightbox, setLightbox] = useState<{ urls: string[]; start: number } | null>(null)
@@ -170,16 +188,33 @@ export default function QueuePage() {
                   {bilder.length > 0 && (
                     <div className="grid grid-cols-2 gap-1.5 px-3 pb-3 sm:grid-cols-3 md:grid-cols-4">
                       {bilder.map((url, i) => (
-                        <button
+                        <div
                           key={url}
-                          onClick={() => setLightbox({ urls: bilder, start: i })}
                           className="group relative aspect-square overflow-hidden rounded border border-border/40 bg-muted/20"
                         >
-                          <img
-                            src={url} alt={`Ergebnis ${i + 1}`} loading="lazy"
-                            className="h-full w-full object-cover transition group-hover:scale-[1.03]"
-                          />
-                        </button>
+                          <button
+                            onClick={() => setLightbox({ urls: bilder, start: i })}
+                            className="h-full w-full"
+                            aria-label={`Ergebnis ${i + 1} vergrößern`}
+                          >
+                            <img
+                              src={url} alt={`Ergebnis ${i + 1}`} loading="lazy"
+                              className="h-full w-full object-cover transition group-hover:scale-[1.03]"
+                            />
+                          </button>
+                          <Button
+                            size="icon"
+                            className="absolute bottom-1.5 right-1.5 h-7 w-7 bg-background/80 text-foreground opacity-0 backdrop-blur transition hover:bg-background focus-visible:opacity-100 group-hover:opacity-100"
+                            title="Bild herunterladen"
+                            aria-label={`Ergebnis ${i + 1} herunterladen`}
+                            disabled={laedtHerunter === url}
+                            onClick={() => void herunterladen(job, url, i)}
+                          >
+                            {laedtHerunter === url
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Download className="h-3.5 w-3.5" />}
+                          </Button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -200,17 +235,25 @@ export default function QueuePage() {
                           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Verwendete Referenzen
                           </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {job.reference_urls.map((url, i) => (
-                              <button
-                                key={url}
-                                onClick={() => setLightbox({ urls: job.reference_urls, start: i })}
-                                className="h-14 w-14 overflow-hidden rounded border border-border/40"
-                              >
-                                <img src={url} alt={`Referenz ${i + 1}`} loading="lazy"
-                                  className="h-full w-full object-cover" />
-                              </button>
-                            ))}
+                          <div className="flex flex-wrap gap-2">
+                            {job.reference_urls.map((url, i) => {
+                              const rolle = job.reference_roles?.[i]
+                              return (
+                                <div key={url} className="w-14">
+                                  <button
+                                    onClick={() => setLightbox({ urls: job.reference_urls, start: i })}
+                                    className="h-14 w-14 overflow-hidden rounded border border-border/40"
+                                    aria-label={`Referenz ${i + 1}${rolle ? `, ${ROLLEN_LABEL[rolle]}` : ''}`}
+                                  >
+                                    <img src={url} alt={`Referenz ${i + 1}`} loading="lazy"
+                                      className="h-full w-full object-cover" />
+                                  </button>
+                                  <p className="mt-0.5 text-center text-[9px] leading-tight text-muted-foreground/70">
+                                    {i + 1} · {rolle ? ROLLEN_LABEL[rolle] : '—'}
+                                  </p>
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
