@@ -6,7 +6,9 @@
  * sich die Arbeit ab, statt dass die Cloud sie schickt.
  *
  * Start:  npm start   (im Ordner worker/)
- * Ende:   Strg+C — ein laufendes Bild wird noch zu Ende gebracht.
+ * Ende:   Strg+C — der laufende Auftrag wird noch zu Ende gebracht,
+ *         bei mehreren Durchlaeufen also bis zu vier Bilder. Nochmal Strg+C
+ *         bricht sofort ab und stellt den Auftrag zurueck.
  */
 
 import { config } from './config.ts'
@@ -104,12 +106,19 @@ async function hauptschleife(): Promise<void> {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     if (beenden) {
-      // Zweites Strg+C: sofort raus, laufendes Bild verwerfen.
+      // Zweites Strg+C: laufendes Bild verwerfen. Der Abbruch braucht einen
+      // Moment, um den Auftrag zurueckzustellen — process.exit() direkt hier
+      // war synchron und hat genau das verhindert: Der Auftrag blieb mit
+      // erhoehtem Versuchszaehler auf 'running' liegen und wurde erst nach der
+      // Aufraeumfrist eingesammelt.
+      sage('Wird abgebrochen, der Auftrag wird zurueckgestellt…')
       laufenderAbbruch.abort()
-      process.exit(130)
+      // Notausgang, falls das Zurueckstellen selbst haengt.
+      setTimeout(() => process.exit(130), 5000).unref()
+      return
     }
     beenden = true
-    sage('Beende nach dem laufenden Bild. Nochmal Strg+C bricht sofort ab.')
+    sage('Beende nach dem laufenden Auftrag. Nochmal Strg+C bricht sofort ab.')
     wecker?.()   // nicht erst die Wartezeit zu Ende sitzen
   })
 }

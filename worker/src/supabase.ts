@@ -65,7 +65,10 @@ export async function naechsterAuftrag(): Promise<ImageJob | null> {
 export async function haengendeAuftraegeEinsammeln(): Promise<number> {
   const anzahl = await ruf('/rest/v1/rpc/requeue_stale_image_jobs', {
     method: 'POST',
-    body: JSON.stringify({ stale_minutes: config.staleMinutes }),
+    body: JSON.stringify({
+      stale_minutes: config.staleMinutes,
+      max_attempts: config.maxAttempts,
+    }),
   })
   return typeof anzahl === 'number' ? anzahl : 0
 }

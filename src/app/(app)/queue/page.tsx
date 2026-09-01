@@ -39,9 +39,17 @@ function dauer(job: ImageJob): string | null {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min`
 }
 
-/** Zeigt vorab, wie groß das Bild würde — 3× klingt abstrakt, 4608×3072 nicht. */
-function masse(size: string, faktor: number): string {
-  const [b, h] = size.split('x').map(Number)
+/**
+ * Zeigt vorab, wie groß das Bild würde — 3× klingt abstrakt, 4608×3072 nicht.
+ *
+ * Nur wenn die Größe auch stimmt: Mit Referenzbild ignoriert gpt-image-2 den
+ * Größenparameter und richtet sich nach der Vorlage (am 01.09.2026 gemessen,
+ * 1024x1024 angefordert, 1122x1402 bekommen). Dann wäre jede Rechnung aus
+ * `size` erfunden, und die Kachel verspräche Maße, die nicht eintreten.
+ */
+function masse(job: ImageJob, faktor: number): string {
+  if (job.reference_urls.length > 0) return ''
+  const [b, h] = job.size.split('x').map(Number)
   if (!b || !h) return ''
   return `${b * faktor}×${h * faktor}`
 }
@@ -60,7 +68,7 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export default function QueuePage() {
-  const { jobs, loading, vergroessern, erneutEinreihen, loeschen } = useImageJobs()
+  const { jobs, loading, ladefehler, laden, vergroessern, erneutEinreihen, loeschen } = useImageJobs()
   const [laedtHerunter, setLaedtHerunter] = useState<string | null>(null)
 
   async function herunterladen(job: ImageJob, url: string, index: number) {
@@ -94,7 +102,7 @@ export default function QueuePage() {
   return (
     <div className="flex h-svh flex-col overflow-hidden">
       <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger />
         <h1 className="flex-1 text-sm font-semibold">
           Warteschlange
           {jobs.length > 0 && (
@@ -114,6 +122,15 @@ export default function QueuePage() {
             {[0, 1, 2].map(i => (
               <div key={i} className="h-20 animate-pulse rounded-lg bg-muted/30" />
             ))}
+          </div>
+        ) : ladefehler ? (
+          <div className="mx-auto mt-16 max-w-md text-center">
+            <ImageOff className="mx-auto h-10 w-10 text-destructive/50" />
+            <p className="mt-4 text-sm font-medium">Aufträge konnten nicht geladen werden</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{ladefehler}</p>
+            <Button size="sm" className="mt-4" onClick={() => void laden()}>
+              Erneut versuchen
+            </Button>
           </div>
         ) : jobs.length === 0 ? (
           <div className="mx-auto mt-16 max-w-md text-center">
@@ -153,7 +170,8 @@ export default function QueuePage() {
                         <StatusChip status={job.status} />
                         <span className="text-[11px] text-muted-foreground">{zeit(job.created_at)}</span>
                         <span className="text-[11px] text-muted-foreground/60">
-                          {job.model} · {job.size}
+                          {job.model}
+                          {job.reference_urls.length === 0 && ` · ${job.size}`}
                           {job.aspect_ratio ? ` · ${job.aspect_ratio.replace(/_/g, ':').replace(/^[a-z]+:/, '')}` : ''}
                           {job.variants > 1 ? ` · ${job.variants}×` : ''}
                           {job.reference_urls.length > 0 ? ` · ${job.reference_urls.length} Ref.` : ''}
@@ -212,7 +230,15 @@ export default function QueuePage() {
                               className="h-full w-full object-cover transition group-hover:scale-[1.03]"
                             />
                           </button>
-                          <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+                          <div /*
+                            Ohne Zeigegeraet gibt es kein Ueberfahren: Auf dem
+                            Handy waren die Knoepfe nie sichtbar — aber weiterhin
+                            anklickbar, weil opacity-0 keine Klicks abschaltet.
+                            Ein Tipp aufs Bild loeste dort einen unsichtbaren
+                            Download aus. Jetzt dauerhaft sichtbar, sobald das
+                            Geraet kein Ueberfahren kennt.
+                          */
+                          className="absolute bottom-1.5 right-1.5 flex gap-1 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
                             {/* Vergrößern nur beim Erzeugnis anbieten — ein bereits
                                 vergrößertes Bild noch einmal zu vergrößern bringt
                                 nichts als Dateigröße. */}
@@ -238,7 +264,7 @@ export default function QueuePage() {
                                       className="text-xs"
                                       onClick={() => void vergroessern(job, job.result_paths[i], f)}
                                     >
-                                      {f}× {masse(job.size, f)}
+                                      {f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>

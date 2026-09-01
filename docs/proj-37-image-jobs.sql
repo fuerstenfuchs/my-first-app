@@ -116,7 +116,13 @@ $$;
 -- (Schranke oben) mal 5 Minuten Zeitgrenze je Bild sind 20 Minuten. Ein zu
 -- kleiner Wert reiht einen noch laufenden Auftrag neu ein — bei zwei Arbeitern
 -- wird er dann ein zweites Mal erzeugt, und jedes Bild kostet Geld.
-create or replace function public.requeue_stale_image_jobs(stale_minutes int default 30)
+-- Die alte Fassung mit nur einem Parameter muss weg: create or replace legt bei
+-- geaenderter Signatur eine ZWEITE Funktion an, die alte bliebe mit der fest
+-- verdrahteten Drei bestehen.
+drop function if exists public.requeue_stale_image_jobs(int);
+
+create or replace function public.requeue_stale_image_jobs(
+  stale_minutes int default 30, max_attempts int default 3)
 returns int
 language sql
 security definer
@@ -124,10 +130,15 @@ set search_path = public
 as $$
   with wiedereingereiht as (
     update public.image_jobs
-    set    status = case when attempts >= 3 then 'failed' else 'queued' end,
+    -- max_attempts statt einer festen Drei: Der Arbeiter kann die Grenze ueber
+    -- MAX_ATTEMPTS setzen. Stand hier eine 3 und dort eine 2, blieb ein
+    -- eingesammelter Auftrag mit attempts = 2 auf 'queued' liegen — claim holt
+    -- ihn wegen attempts < max_attempts nie wieder, und /queue zeigte fuer
+    -- immer "Wartet". Genau die stille Geduld, die anderswo schon behoben war.
+    set    status = case when attempts >= max_attempts then 'failed' else 'queued' end,
            error  = coalesce(error, 'Arbeiter hat den Auftrag nicht abgeschlossen'),
            -- ohne finished_at zeigt /queue bei genau diesen Auftraegen keine Dauer
-           finished_at = case when attempts >= 3 then now() else null end
+           finished_at = case when attempts >= max_attempts then now() else null end
     where  status = 'running'
       and  started_at < now() - make_interval(mins => stale_minutes)
     returning 1
@@ -180,6 +191,6 @@ create policy "generated delete own" on storage.objects
 -- Nur der Arbeiter braucht sie, und der läuft mit dem Service-Key.
 -- ---------------------------------------------------------------------------
 revoke execute on function public.claim_next_image_job(int)     from public, anon, authenticated;
-revoke execute on function public.requeue_stale_image_jobs(int) from public, anon, authenticated;
+revoke execute on function public.requeue_stale_image_jobs(int, int) from public, anon, authenticated;
 grant  execute on function public.claim_next_image_job(int)     to service_role;
-grant  execute on function public.requeue_stale_image_jobs(int) to service_role;
+grant  execute on function public.requeue_stale_image_jobs(int, int) to service_role;

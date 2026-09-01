@@ -47,10 +47,11 @@ interface PromptToImageDialogProps {
  * als Sucheingabe.
  */
 function ReferenzKarte({
-  rolle, assets, gewaehlt, bild, onOeffnen, onLoeschen,
+  rolle, assets, laedt, gewaehlt, bild, onOeffnen, onLoeschen,
 }: {
   rolle: ReferenzRolle
   assets: PickbaresAsset[]
+  laedt: boolean
   gewaehlt: PickbaresAsset | null
   bild: RefImage | null
   onOeffnen: () => void
@@ -77,7 +78,7 @@ function ReferenzKarte({
 
       <button
         onClick={onOeffnen}
-        disabled={assets.length === 0}
+        disabled={laedt || assets.length === 0}
         className="group block w-full text-left disabled:cursor-not-allowed disabled:opacity-50"
       >
         <div className="aspect-[3/4] w-full overflow-hidden bg-muted/20">
@@ -90,9 +91,11 @@ function ReferenzKarte({
             <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
               <ImagePlus className="h-6 w-6" />
               <span className="px-2 text-center text-[10px] leading-tight">
-                {assets.length === 0
-                  ? 'nichts in der Bibliothek'
-                  : `${ROLLEN_LABEL[rolle]} wählen`}
+                {laedt
+                  ? 'wird geladen…'
+                  : assets.length === 0
+                    ? 'nichts in der Bibliothek'
+                    : `${ROLLEN_LABEL[rolle]} wählen`}
               </span>
             </div>
           )}
@@ -126,9 +129,9 @@ export function PromptToImageDialog({
   rollen: angeboteneRollen = ['character', 'outfit', 'location'],
 }: PromptToImageDialogProps) {
   const { anlegen } = useImageJobs(false)
-  const { characters } = useCharacters()
-  const { outfits } = useOutfits()
-  const { locations } = useLocations()
+  const { characters, loading: charLaedt } = useCharacters()
+  const { outfits, loading: outfitLaedt } = useOutfits()
+  const { locations, loading: locLaedt } = useLocations()
 
   const [charakter, setCharakter] = useState<PickbaresAsset | null>(vorauswahlCharakter)
   const [charakterBild, setCharakterBild] = useState<RefImage | null>(null)
@@ -229,7 +232,7 @@ export function PromptToImageDialog({
             Bild aus diesem Prompt
           </DialogTitle>
           <DialogDescription className="text-xs">
-            {titel ? `„${titel}" ` : ''}wird unverändert an das Modell geschickt.
+            {titel ? `„${titel}" — ` : ''}der Prompt lässt sich unten noch ändern.
             Referenzbilder sind freiwillig.
           </DialogDescription>
         </DialogHeader>
@@ -285,7 +288,7 @@ export function PromptToImageDialog({
             )}>
               {angeboteneRollen.includes('character') && (
                 <ReferenzKarte
-                  rolle="character" assets={characters}
+                  rolle="character" assets={characters} laedt={charLaedt}
                   gewaehlt={charakter} bild={charakterBild}
                   onOeffnen={() => setPickerOffen('character')}
                   onLoeschen={() => { setCharakter(null); setCharakterBild(null) }}
@@ -293,7 +296,7 @@ export function PromptToImageDialog({
               )}
               {angeboteneRollen.includes('outfit') && (
                 <ReferenzKarte
-                  rolle="outfit" assets={outfits}
+                  rolle="outfit" assets={outfits} laedt={outfitLaedt}
                   gewaehlt={outfit} bild={outfitBild}
                   onOeffnen={() => setPickerOffen('outfit')}
                   onLoeschen={() => { setOutfit(null); setOutfitBild(null) }}
@@ -301,7 +304,7 @@ export function PromptToImageDialog({
               )}
               {angeboteneRollen.includes('location') && (
                 <ReferenzKarte
-                  rolle="location" assets={locations}
+                  rolle="location" assets={locations} laedt={locLaedt}
                   gewaehlt={location} bild={locationBild}
                   onOeffnen={() => setPickerOffen('location')}
                   onLoeschen={() => { setLocation(null); setLocationBild(null) }}
@@ -360,7 +363,9 @@ export function PromptToImageDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto" className="text-xs">Format: quadratisch</SelectItem>
+                <SelectItem value="auto" className="text-xs">
+                  {referenzen.length > 0 ? 'Format: das Modell entscheidet' : 'Format: quadratisch'}
+                </SelectItem>
                 {ASPECT_RATIOS.map(f => (
                   <SelectItem key={f.key} value={f.key} className="text-xs">
                     {f.emoji} {f.label}
@@ -387,9 +392,11 @@ export function PromptToImageDialog({
           <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground/70">
             <Info className="mt-px h-2.5 w-2.5 shrink-0" />
             <span>
-              {referenzen.length > 0
-                ? 'Mit Referenzbildern bestimmt das Modell die Größe selbst — das gewünschte Format geht deshalb im Prompt mit.'
-                : `${zuordnung.size}${zuordnung.hinweis ? ` — ${zuordnung.hinweis}` : ''}`}
+              {referenzen.length === 0
+                ? `${zuordnung.size}${zuordnung.hinweis ? ` — ${zuordnung.hinweis}` : ''}`
+                : format
+                  ? 'Mit Referenzbildern bestimmt das Modell die Größe selbst — das gewünschte Format geht deshalb im Prompt mit.'
+                  : 'Mit Referenzbildern bestimmt das Modell die Größe selbst. Wähle ein Format, wenn du eins erzwingen willst.'}
             </span>
           </p>
 

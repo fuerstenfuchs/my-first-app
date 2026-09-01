@@ -2,7 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Clapperboard, Palette, Landmark, UserCog, Layers, Images, ChevronRight } from 'lucide-react'
+import {
+  BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2,
+  GripVertical, ChevronRight,
+} from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -37,8 +40,6 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useCollections, useCollectionsOverview, type Collection } from '@/hooks/use-collections'
-import { usePrompts } from '@/hooks/use-prompts'
-import { tagColorClass } from '@/lib/tag-colors'
 import { PROMPTS, BAUSTEINE, PRODUKTION, kachelStil } from '@/lib/sidebar-nav'
 import {
   DndContext,
@@ -167,9 +168,8 @@ export function AppSidebar() {
   const collectionImageMap = new Map(collectionsOverview.map(c => [c.id, c.collage_images[0] ?? null]))
   const collectionCountMap = new Map(collectionsOverview.map(c => [c.id, c.prompt_count]))
 
-  const { prompts } = usePrompts()
-
-  // topTags entfernt: Die Tag-Leiste steht jetzt nur noch über der Galerie.
+  // usePrompts entfernt: Seit die Tag-Leiste weg ist, wurde das Ergebnis
+  // nirgends mehr benutzt — die Abfrage lief auf jeder Seite der App mit.
 
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -297,6 +297,7 @@ export function AppSidebar() {
               <SidebarMenuItem className="px-2 py-1">
             <a
               href={PROMPTS.href}
+              aria-current={pathname === '/' ? 'page' : undefined}
               className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
               style={kachelStil(PROMPTS.farben, pathname === '/')}
             >
@@ -323,6 +324,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={e.href} className="px-2 py-1">
                   <a
                     href={e.href}
+                    aria-current={pathname.startsWith(e.href) ? 'page' : undefined}
                     className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
                     style={kachelStil(e.farben, pathname.startsWith(e.href))}
                   >
@@ -339,7 +341,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/*
-          Bibliotheken zweispaltig. Acht Kacheln in vier Reihen statt acht —
+          Bibliotheken zweispaltig. Sieben Kacheln in vier Reihen statt sieben —
           die Farbigkeit bleibt, die Höhe halbiert sich. Die Archetypen stehen
           nicht mehr einzeln hier, sie sind Reiter auf der jeweiligen Seite.
         */}
@@ -348,7 +350,12 @@ export function AppSidebar() {
           <SidebarGroupContent className="px-2">
             <div className="grid grid-cols-2 gap-1.5">
               {BAUSTEINE.map((e, i) => {
-                const aktiv = pathname.startsWith(e.href) && e.href !== '/'
+                // Auch die Archetyp-Seite gehoert zu ihrer Kachel: Sonst leuchtet
+                // dort gar nichts, und die Leiste widerspricht dem Reiter oben.
+                const aktiv = pathname.startsWith(e.href)
+                  || (e.href === '/characters' && pathname.startsWith('/character-archetypes'))
+                  || (e.href === '/outfits' && pathname.startsWith('/outfit-archetypes'))
+                  || (e.href === '/locations' && pathname.startsWith('/location-archetypes'))
                 // Bei ungerader Anzahl die letzte Kachel ueber beide Spalten —
                 // eine halb leere Reihe sieht aus wie ein Fehler.
                 const letzteAllein = i === BAUSTEINE.length - 1 && BAUSTEINE.length % 2 === 1
@@ -357,6 +364,7 @@ export function AppSidebar() {
                     key={e.href}
                     href={e.href}
                     title={e.label}
+                    aria-current={aktiv ? 'page' : undefined}
                     className={cn(
                       'flex flex-col items-center justify-center gap-1 rounded-lg h-[52px] overflow-hidden transition-opacity hover:opacity-90',
                       letzteAllein && 'col-span-2 flex-row gap-2',

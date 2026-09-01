@@ -52,6 +52,10 @@ export function ergebnisUrl(pfad: string): string {
 export function useImageJobs(aktiv = true) {
   const [jobs, setJobs] = useState<ImageJob[]>([])
   const [loading, setLoading] = useState(true)
+  // Eigener Zustand: Ohne ihn zeigte die Seite nach einem Netzfehler den
+  // Leertext „Noch keine Auftraege" — eine Aussage ueber die Datenlage, die
+  // die Messung gar nicht hergibt.
+  const [ladefehler, setLadefehler] = useState<string | null>(null)
   const supabase = createClient()
 
   const laden = useCallback(async () => {
@@ -63,9 +67,11 @@ export function useImageJobs(aktiv = true) {
 
     if (error) {
       toast.error('Aufträge konnten nicht geladen werden')
+      setLadefehler(error.message)
       setLoading(false)
       return
     }
+    setLadefehler(null)
     setJobs((data ?? []) as ImageJob[])
     setLoading(false)
   }, [supabase])
@@ -212,5 +218,5 @@ export function useImageJobs(aktiv = true) {
     return job
   }, [supabase])
 
-  return { jobs, loading, laden, anlegen, vergroessern, erneutEinreihen, loeschen }
+  return { jobs, loading, ladefehler, laden, anlegen, vergroessern, erneutEinreihen, loeschen }
 }
