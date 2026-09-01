@@ -27,10 +27,16 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   // /share is public so ShareHandler can run client-side and redirect to /login?from=share itself
+  // /api/share likewise: it is a POST target from the mobile share sheet and checks
+  // auth itself (route.ts:12-19), redirecting with 303 so the browser switches to GET.
+  // Without this exception the proxy answered first with a 307, which preserves the
+  // method — the browser then POSTed to /login and got a 405. The route's own
+  // redirect was unreachable dead code.
   const isPublicPath =
     pathname.startsWith('/login') ||
     pathname.startsWith('/auth/') ||
-    pathname === '/share'
+    pathname === '/share' ||
+    pathname === '/api/share'
 
   if (!isPublicPath && !user) {
     const url = request.nextUrl.clone()
