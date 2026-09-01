@@ -270,8 +270,18 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-3">
-        <img src="/logo.png" alt="Prompt Trésor" className="w-full mx-auto object-contain" />
+      {/*
+        Hoehe begrenzt: Das Logo ist quadratisch angelegt und wurde in voller
+        Breite 205px hoch — nach dem Verkuerzen der Leiste war es mit 40 Prozent
+        der groesste Block darin, groesser als Scene Builder und Warteschlange
+        zusammen.
+      */}
+      <SidebarHeader className="p-3 pb-1">
+        <img
+          src="/logo.png"
+          alt="Prompt Trésor"
+          className="mx-auto max-h-24 w-auto object-contain"
+        />
       </SidebarHeader>
 
       <SidebarContent>
@@ -328,19 +338,28 @@ export function AppSidebar() {
           <SidebarGroupLabel>Bausteine</SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
             <div className="grid grid-cols-2 gap-1.5">
-              {BAUSTEINE.map(e => {
+              {BAUSTEINE.map((e, i) => {
                 const aktiv = pathname.startsWith(e.href) && e.href !== '/'
+                // Bei ungerader Anzahl die letzte Kachel ueber beide Spalten —
+                // eine halb leere Reihe sieht aus wie ein Fehler.
+                const letzteAllein = i === BAUSTEINE.length - 1 && BAUSTEINE.length % 2 === 1
                 return (
                   <a
                     key={e.href}
                     href={e.href}
                     title={e.label}
-                    className="flex flex-col items-center justify-center gap-1 rounded-lg h-[52px] overflow-hidden transition-opacity hover:opacity-90"
+                    className={cn(
+                      'flex flex-col items-center justify-center gap-1 rounded-lg h-[52px] overflow-hidden transition-opacity hover:opacity-90',
+                      letzteAllein && 'col-span-2 flex-row gap-2',
+                    )}
                     style={kachelStil(e.farben, aktiv)}
                   >
-                    <e.icon className={cn('h-4 w-4 shrink-0', e.farben.symbol)} />
-                    <span className="text-[10px] font-semibold text-white leading-tight text-center px-1 truncate w-full">
-                      {e.kurz ?? e.label}
+                    <e.icon className={cn('shrink-0', letzteAllein ? 'h-5 w-5' : 'h-4 w-4', e.farben.symbol)} />
+                    <span className={cn(
+                      'font-semibold text-white leading-tight truncate',
+                      letzteAllein ? 'text-xs' : 'text-[10px] text-center px-1 w-full',
+                    )}>
+                      {letzteAllein ? e.label : (e.kurz ?? e.label)}
                     </span>
                   </a>
                 )
@@ -441,6 +460,14 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton isActive={pathname === '/stats'} asChild>
+              <a href="/stats">
+                <BarChart2 className="h-4 w-4" />
+                Statistiken
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton isActive={pathname === '/einstellungen'} asChild>
               <a href="/einstellungen">

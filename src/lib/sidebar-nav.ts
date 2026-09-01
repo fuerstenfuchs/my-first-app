@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Palette,
-  Clapperboard, Images, BarChart2, type LucideIcon,
+  Clapperboard, Images, type LucideIcon,
 } from 'lucide-react'
 
 /**
@@ -90,12 +90,14 @@ export const BAUSTEINE: NavEintrag[] = [
     farben: f(['#1a0617', '#170614'], ['#f0abfc', '#d946ef'], ['#c026d3', '#a21caf'],
       '0 0 18px rgba(192,38,211,0.2), 0 0 18px rgba(162,28,175,0.15)', 'text-fuchsia-400'),
   },
-  {
-    href: '/stats', label: 'Statistiken', kurz: 'Statistik', icon: BarChart2,
-    farben: f(['#0c1512', '#0a1310'], ['#94a3b8', '#64748b'], ['#475569', '#334155'],
-      '0 0 18px rgba(71,85,105,0.2), 0 0 18px rgba(51,65,85,0.15)', 'text-slate-400'),
-  },
 ]
+
+/**
+ * Statistiken gehören nicht zu den Bausteinen — sie sind eine Auswertung, kein
+ * Material. Sie standen dort nur, damit acht Kacheln ein sauberes Raster
+ * ergeben; das ist ein Grund aus der Gestaltung, keiner aus der Sache. Jetzt in
+ * der Fußzeile bei Einstellungen und Abmelden.
+ */
 
 /** Die Werkbank — steht jetzt oben statt auf Platz zwölf. */
 export const PRODUKTION: NavEintrag[] = [

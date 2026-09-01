@@ -63,6 +63,31 @@ gewachsen: Ein neuer Bereich hieß „vierzehn Zeilen kopieren und anpassen".
 Jetzt Daten in `src/lib/sidebar-nav.ts` und eine Stelle, die daraus Kacheln
 baut. Ein neuer Bereich ist ein Eintrag im Array.
 
+## Nachgebessert nach dem ersten Blick (01.09.2026)
+
+Mark hat die fertige Leiste angesehen. Zwei Punkte:
+
+**Statistiken standen bei den Bausteinen — falsch einsortiert.** Sie sind eine
+Auswertung, kein Material. Sie standen dort nur, damit acht Kacheln ein sauberes
+Raster ergeben: ein Grund aus der Gestaltung, keiner aus der Sache. Die graue
+Kachel zwischen sieben farbigen hat es sichtbar gemacht — sie sah aus wie
+ausgegraut. Jetzt in der Fusszeile bei Einstellungen und Abmelden.
+
+Damit bleiben sieben Bausteine. Die letzte Kachel laeuft ueber beide Spalten,
+statt eine halb leere Reihe zu hinterlassen.
+
+**Das Logo war nach dem Umbau der groesste Block.** Quadratisch angelegt und in
+voller Breite dargestellt wurde es 205px hoch — 40 Prozent der verkuerzten
+Leiste, mehr als Scene Builder und Warteschlange zusammen. Jetzt auf 96px
+begrenzt.
+
+Die Datei war ausserdem **1795 kB** gross fuer ein Logo, das mit 256px angezeigt
+wird. Auf 512px Breite verkleinert: **240 kB**. Das laedt bei jedem Seitenaufruf
+mit.
+
+**Endstand: 724px** statt 2237px mit Logo — passt mit 226px Luft auf einen
+1080p-Bildschirm.
+
 ## Offen
 
 - In der laufenden App abgenommen ist nichts davon — Typen, Tests und Build
