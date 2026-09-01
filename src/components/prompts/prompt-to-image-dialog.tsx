@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Send, X, ImagePlus, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { AssetPickerDialog, type PickbaresAsset } from '@/components/prompts/asset-picker-dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -16,7 +16,7 @@ import { useCharacters } from '@/hooks/use-characters'
 import { useOutfits } from '@/hooks/use-outfits'
 import { useLocations } from '@/hooks/use-locations'
 import { useImageJobs } from '@/hooks/use-image-jobs'
-import { loadRefImages, type RefImage } from '@/lib/reference-images'
+import { type RefImage } from '@/lib/reference-images'
 import {
   MODELLE, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag, referenzZuordnung,
   ROLLEN_LABEL,
@@ -34,137 +34,73 @@ interface PromptToImageDialogProps {
   vorauswahlCharakter?: { id: string; name: string; cover_image_url?: string | null } | null
 }
 
-type AssetLeicht = { id: string; name: string; cover_image_url?: string | null }
-
-/** Eine Zeile im Dialog: Bibliothek wählen, dann das konkrete Bild. */
-function ReferenzWahl({
-  rolle, assets, gewaehlt, onWaehlen, bild, onBildWaehlen,
+/**
+ * Eine Karte je Rolle. Zeigt das gewählte Bild groß oder lädt zur Auswahl ein.
+ * Die eigentliche Auswahl passiert im AssetPickerDialog — als Galerie, nicht
+ * als Sucheingabe.
+ */
+function ReferenzKarte({
+  rolle, assets, gewaehlt, bild, onOeffnen, onLoeschen,
 }: {
   rolle: ReferenzRolle
-  assets: AssetLeicht[]
-  gewaehlt: AssetLeicht | null
-  onWaehlen: (a: AssetLeicht | null) => void
+  assets: PickbaresAsset[]
+  gewaehlt: PickbaresAsset | null
   bild: RefImage | null
-  onBildWaehlen: (b: RefImage | null) => void
+  onOeffnen: () => void
+  onLoeschen: () => void
 }) {
-  const [bilder, setBilder] = useState<RefImage[]>([])
-  const [laedt, setLaedt] = useState(false)
-  const [fehler, setFehler] = useState<string | null>(null)
-  const [suche, setSuche] = useState('')
-
-  const tabelle = rolle === 'character' ? 'character_variants'
-    : rolle === 'outfit' ? 'outfit_variants' : 'location_variants'
-  const fk = rolle === 'character' ? 'character_id'
-    : rolle === 'outfit' ? 'outfit_id' : 'location_id'
-
-  const bilderLaden = useCallback(async (assetId: string) => {
-    setLaedt(true)
-    setFehler(null)
-    try {
-      setBilder(await loadRefImages(tabelle, fk, assetId))
-    } catch (e) {
-      setBilder([])
-      setFehler((e as Error).message)
-    } finally {
-      setLaedt(false)
-    }
-  }, [tabelle, fk])
-
-  useEffect(() => {
-    if (!gewaehlt) { setBilder([]); return }
-    void bilderLaden(gewaehlt.id)
-  }, [gewaehlt, bilderLaden])
-
-  const gefiltert = suche
-    ? assets.filter(a => a.name.toLowerCase().includes(suche.toLowerCase()))
-    : assets
+  const anzeigeBild = bild?.url ?? gewaehlt?.cover_image_url ?? null
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <Label className="w-20 shrink-0 text-xs text-muted-foreground">
+    <div className="overflow-hidden rounded-lg border border-border/60 bg-card">
+      <div className="flex items-center justify-between border-b border-border/40 px-2 py-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {ROLLEN_LABEL[rolle]}
-        </Label>
-        {gewaehlt ? (
-          <div className="flex flex-1 items-center gap-2 rounded border border-border/60 bg-muted/20 px-2 py-1">
-            <span className="flex-1 truncate text-xs font-medium">{gewaehlt.name}</span>
-            <Button
-              size="icon" variant="ghost" className="h-5 w-5"
-              onClick={() => { onWaehlen(null); onBildWaehlen(null); setSuche('') }}
-              aria-label={`${ROLLEN_LABEL[rolle]} entfernen`}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <Input
-            value={suche}
-            onChange={e => setSuche(e.target.value)}
-            placeholder={`${ROLLEN_LABEL[rolle]} suchen…`}
-            className="h-7 flex-1 text-xs"
-          />
+        </span>
+        {gewaehlt && (
+          <Button
+            size="icon" variant="ghost" className="h-5 w-5"
+            onClick={onLoeschen}
+            aria-label={`${ROLLEN_LABEL[rolle]} entfernen`}
+          >
+            <X className="h-3 w-3" />
+          </Button>
         )}
       </div>
 
-      {/* Trefferliste, solange nichts gewählt ist */}
-      {!gewaehlt && suche && (
-        <div className="ml-[5.5rem] max-h-28 space-y-px overflow-y-auto rounded border border-border/60">
-          {gefiltert.length === 0 ? (
-            <p className="px-2 py-1.5 text-[11px] text-muted-foreground">Nichts gefunden</p>
-          ) : gefiltert.slice(0, 8).map(a => (
-            <button
-              key={a.id}
-              onClick={() => { onWaehlen(a); setSuche('') }}
-              className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-muted/40"
-            >
-              {a.cover_image_url
-                ? <img src={a.cover_image_url} alt="" className="h-6 w-6 shrink-0 rounded object-cover" />
-                : <div className="h-6 w-6 shrink-0 rounded bg-muted" />}
-              <span className="truncate text-[11px]">{a.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Bildauswahl — genau das „Charaktersheet-Bild dazu" */}
-      {gewaehlt && (
-        <div className="ml-[5.5rem]">
-          {laedt ? (
-            <p className="text-[11px] text-muted-foreground">Bilder werden geladen…</p>
-          ) : fehler ? (
-            <p className="text-[11px] text-destructive">
-              Bilder konnten nicht geladen werden: {fehler}
-            </p>
-          ) : bilder.length === 0 ? (
-            <p className={cn(
-              'text-[11px]',
-              gewaehlt.cover_image_url ? 'text-muted-foreground' : 'text-amber-500',
-            )}>
-              {gewaehlt.cover_image_url
-                ? 'Keine Einzelbilder hinterlegt — es geht das Titelbild mit.'
-                : 'Kein Bild vorhanden — dieser Eintrag geht ohne Referenzbild mit.'}
-            </p>
+      <button
+        onClick={onOeffnen}
+        disabled={assets.length === 0}
+        className="group block w-full text-left disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <div className="aspect-[3/4] w-full overflow-hidden bg-muted/20">
+          {anzeigeBild ? (
+            <img
+              src={anzeigeBild} alt={gewaehlt?.name ?? ''}
+              className="h-full w-full object-cover transition group-hover:scale-[1.03]"
+            />
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {bilder.map(b => (
-                <button
-                  key={b.url}
-                  onClick={() => onBildWaehlen(bild?.url === b.url ? null : b)}
-                  title={b.label}
-                  className={cn(
-                    'h-12 w-12 overflow-hidden rounded border-2 transition',
-                    bild?.url === b.url
-                      ? 'border-emerald-500 ring-1 ring-emerald-500/40'
-                      : 'border-transparent opacity-60 hover:opacity-100',
-                  )}
-                >
-                  <img src={b.url} alt={b.label} className="h-full w-full object-cover" />
-                </button>
-              ))}
+            <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
+              <ImagePlus className="h-6 w-6" />
+              <span className="px-2 text-center text-[10px] leading-tight">
+                {assets.length === 0
+                  ? 'nichts in der Bibliothek'
+                  : `${ROLLEN_LABEL[rolle]} wählen`}
+              </span>
             </div>
           )}
         </div>
-      )}
+        <div className="px-2 py-1.5">
+          <p className="truncate text-[11px] font-medium leading-tight">
+            {gewaehlt?.name ?? <span className="text-muted-foreground">— keins —</span>}
+          </p>
+          {gewaehlt && (
+            <p className="truncate text-[9px] text-muted-foreground/70">
+              {bild ? bild.label : 'Titelbild'} · zum Ändern klicken
+            </p>
+          )}
+        </div>
+      </button>
     </div>
   )
 }
@@ -186,17 +122,30 @@ export function PromptToImageDialog({
   const { outfits } = useOutfits()
   const { locations } = useLocations()
 
-  const [charakter, setCharakter] = useState<AssetLeicht | null>(vorauswahlCharakter)
+  const [charakter, setCharakter] = useState<PickbaresAsset | null>(vorauswahlCharakter)
   const [charakterBild, setCharakterBild] = useState<RefImage | null>(null)
-  const [outfit, setOutfit] = useState<AssetLeicht | null>(null)
+  const [outfit, setOutfit] = useState<PickbaresAsset | null>(null)
   const [outfitBild, setOutfitBild] = useState<RefImage | null>(null)
-  const [location, setLocation] = useState<AssetLeicht | null>(null)
+  const [location, setLocation] = useState<PickbaresAsset | null>(null)
   const [locationBild, setLocationBild] = useState<RefImage | null>(null)
 
   const [modell, setModell] = useState<ModellId>('gpt-image-2')
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)
+  const [pickerOffen, setPickerOffen] = useState<ReferenzRolle | null>(null)
+
+  function pickerFertig(asset: PickbaresAsset, gewaehltesBild: RefImage | null) {
+    if (pickerOffen === 'character') { setCharakter(asset); setCharakterBild(gewaehltesBild) }
+    if (pickerOffen === 'outfit')    { setOutfit(asset);    setOutfitBild(gewaehltesBild) }
+    if (pickerOffen === 'location')  { setLocation(asset);  setLocationBild(gewaehltesBild) }
+  }
+
+  const pickerAssets: PickbaresAsset[] =
+    pickerOffen === 'character' ? characters
+    : pickerOffen === 'outfit'  ? outfits
+    : pickerOffen === 'location' ? locations
+    : []
 
   // Reihenfolge = Reihenfolge, in der die Bilder ans Modell gehen.
   const referenzen: { url: string; rolle: ReferenzRolle }[] = []
@@ -276,26 +225,53 @@ export function PromptToImageDialog({
             </pre>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Referenzbilder (optional)
-            </Label>
-            <ReferenzWahl
-              rolle="character" assets={characters}
-              gewaehlt={charakter} onWaehlen={setCharakter}
-              bild={charakterBild} onBildWaehlen={setCharakterBild}
-            />
-            <ReferenzWahl
-              rolle="outfit" assets={outfits}
-              gewaehlt={outfit} onWaehlen={setOutfit}
-              bild={outfitBild} onBildWaehlen={setOutfitBild}
-            />
-            <ReferenzWahl
-              rolle="location" assets={locations}
-              gewaehlt={location} onWaehlen={setLocation}
-              bild={locationBild} onBildWaehlen={setLocationBild}
-            />
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Referenzbilder (optional)
+              </Label>
+              <span className="text-[10px] text-muted-foreground/60">
+                Anklicken öffnet die Galerie
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <ReferenzKarte
+                rolle="character" assets={characters}
+                gewaehlt={charakter} bild={charakterBild}
+                onOeffnen={() => setPickerOffen('character')}
+                onLoeschen={() => { setCharakter(null); setCharakterBild(null) }}
+              />
+              <ReferenzKarte
+                rolle="outfit" assets={outfits}
+                gewaehlt={outfit} bild={outfitBild}
+                onOeffnen={() => setPickerOffen('outfit')}
+                onLoeschen={() => { setOutfit(null); setOutfitBild(null) }}
+              />
+              <ReferenzKarte
+                rolle="location" assets={locations}
+                gewaehlt={location} bild={locationBild}
+                onOeffnen={() => setPickerOffen('location')}
+                onLoeschen={() => { setLocation(null); setLocationBild(null) }}
+              />
+            </div>
           </div>
+
+          {rollen.length >= 1 && (
+            <div className="rounded border border-dashed border-amber-700/40 bg-amber-950/10 px-2 py-1.5">
+              <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-amber-500/80">
+                Was gilt bei Widerspruch
+              </p>
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                Beschreibt der Prompt {rollen.includes('character') && 'die Person'}
+                {rollen.includes('character') && rollen.length > 1 && ', '}
+                {rollen.includes('outfit') && 'die Kleidung'}
+                {rollen.includes('outfit') && rollen.includes('location') && ' oder '}
+                {rollen.includes('location') && 'den Ort'} anders als das Referenzbild,
+                {' '}<strong className="text-foreground">gewinnt das Bild</strong> — für genau
+                diesen Punkt. Szene, Licht, Kamera und Stimmung kommen weiter aus dem Text.
+              </p>
+            </div>
+          )}
 
           {rollen.length >= 1 && (
             <div className="rounded border border-dashed border-border/60 px-2 py-1.5">
@@ -394,6 +370,16 @@ export function PromptToImageDialog({
           </div>
         </div>
       </DialogContent>
+
+      {pickerOffen && (
+        <AssetPickerDialog
+          isOpen={!!pickerOffen}
+          onClose={() => setPickerOffen(null)}
+          rolle={pickerOffen}
+          assets={pickerAssets}
+          onFertig={pickerFertig}
+        />
+      )}
     </Dialog>
   )
 }

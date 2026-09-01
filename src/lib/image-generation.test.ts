@@ -166,6 +166,27 @@ describe('Zuordnung der Referenzbilder', () => {
     }
   })
 
+  it('sagt ausdrücklich, was bei Widerspruch zum Prompt gilt', () => {
+    // Ohne diese Ansage entscheidet das Modell selbst, ob der Text oder das Bild
+    // gewinnt — und das ist unvorhersehbar. Festgelegt: Für den Aspekt, den ein
+    // Bild abdeckt, gewinnt das Bild.
+    const block = referenzZuordnung(['character'])!
+    expect(block.toLowerCase()).toContain('follow the reference image')
+    expect(block.toLowerCase()).toContain('ignore the conflicting words')
+    // Szene, Licht und Kamera bleiben beim Text.
+    expect(block.toLowerCase()).toContain('comes from the text')
+  })
+
+  it('nennt im Vorrang-Satz nur die Bereiche, für die auch ein Bild mitgeht', () => {
+    expect(referenzZuordnung(['character'])!).toContain('the person')
+    expect(referenzZuordnung(['character'])!).not.toContain('the clothing')
+    expect(referenzZuordnung(['outfit'])!).toContain('the clothing')
+    const alle = referenzZuordnung(['character', 'outfit', 'location'])!
+    for (const b of ['the person', 'the clothing', 'the place']) {
+      expect(alle).toContain(b)
+    }
+  })
+
   it('deckt jede mögliche Rolle mit einer Anweisung ab', () => {
     const block = referenzZuordnung(['character', 'outfit', 'location'])!
     for (const rolle of ['CHARACTER', 'OUTFIT', 'LOCATION']) {

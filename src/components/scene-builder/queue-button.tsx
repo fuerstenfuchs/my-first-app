@@ -121,6 +121,14 @@ export function QueueButton({
         die Person aus dem Outfit-Bild.
       */}
       {rollen.length >= 1 && (
+        <p className="rounded border border-dashed border-amber-700/40 bg-amber-950/10 px-1.5 py-1 text-[9px] leading-snug text-muted-foreground">
+          <span className="font-semibold text-amber-500/80">Bei Widerspruch gewinnt das Bild.</span>{' '}
+          Beschreibt der Prompt die Person, die Kleidung oder den Ort anders als das
+          Referenzbild, folgt das Modell dem Bild — Szene, Licht und Kamera weiter dem Text.
+        </p>
+      )}
+
+      {rollen.length >= 1 && (
         <div className="rounded border border-dashed border-border/60 px-1.5 py-1">
           <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
             Zuordnung für das Modell

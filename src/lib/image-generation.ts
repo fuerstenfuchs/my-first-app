@@ -138,7 +138,33 @@ export function referenzZuordnung(rollen: ReferenzRolle[]): string | null {
   return [
     'REFERENCE IMAGES — they arrive in this exact order:',
     ...zeilen,
+    vorrangSatz(rollen),
   ].join('\n')
+}
+
+/**
+ * Was gilt, wenn der Prompt etwas anderes beschreibt als das Referenzbild zeigt?
+ *
+ * Ohne Ansage entscheidet das Modell selbst — und das ist unvorhersehbar. Steht
+ * im Prompt „blonde Frau, Mitte 30" und die Charakterreferenz zeigt einen
+ * älteren Mann, kann beides herauskommen, auch eine Mischung.
+ *
+ * Festgelegt: Für den Aspekt, den ein Bild abdeckt, gewinnt das Bild. Alles
+ * andere — Szene, Licht, Kamera, Stimmung — kommt weiter aus dem Text. Das ist
+ * die Regel, die zum Zweck passt: Wer ein Referenzbild anhängt, will genau
+ * diese Person, dieses Kleidungsstück, diesen Ort.
+ */
+function vorrangSatz(rollen: ReferenzRolle[]): string {
+  const bereiche: string[] = []
+  if (rollen.includes('character')) bereiche.push('the person')
+  if (rollen.includes('outfit'))    bereiche.push('the clothing')
+  if (rollen.includes('location'))  bereiche.push('the place')
+  return (
+    'If the text above describes ' + bereiche.join(' or ') +
+    ' differently, follow the reference image for that aspect and ignore the ' +
+    'conflicting words. Everything else — scene, lighting, camera, mood — ' +
+    'comes from the text.'
+  )
 }
 
 export const DURCHLAEUFE = [1, 2, 3, 4] as const
