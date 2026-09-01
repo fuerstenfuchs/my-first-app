@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, ChevronRight, Crown, Upload, MapPin } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, Crown, Upload, GripVertical, ZoomIn } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,14 +21,19 @@ import {
 } from '@/components/ui/alert-dialog'
 import { LocationForm } from '@/components/locations/location-form'
 import { LocationVariantForm } from '@/components/locations/location-variant-form'
+import { LocationSheetDialog } from '@/components/locations/location-sheet-dialog'
+import { LocationImportWizard } from '@/components/locations/location-import-wizard'
 import { FashionAssetVariantCard } from '@/components/fashion-assets/fashion-asset-variant-card'
+import { CustomCategoryDialog } from '@/components/categories/custom-category-dialog'
+import { useCustomCategories } from '@/hooks/use-custom-categories'
 import {
   LOCATION_CATEGORIES, LOCATION_TYPES,
   useLocations, useLocationDetail,
-  type Location, type LocationVariant,
+  type Location, type LocationVariant, type LocationImage,
   type LocationInput, type LocationVariantInput, type LocationCategory,
 } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
+import { useCappedImageSrc } from '@/hooks/use-capped-image-src'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -101,16 +109,77 @@ function LocationCard({
   )
 }
 
+// ── Sortable image card (variant viewer) ──────────────────────────────────────
+
+function SortableVariantImage({
+  image, isCover, onSetCover, onDelete, onOpen,
+}: {
+  image: LocationImage
+  isCover: boolean
+  onSetCover: () => void
+  onDelete: () => void
+  onOpen: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+  const src = useCappedImageSrc(image.url)
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className={cn('relative rounded-md', isDragging && 'opacity-50 z-50')}>
+      <div className="relative aspect-[4/3] rounded-md overflow-hidden border border-white/10 bg-black group">
+        <img src={src} alt="" className="w-full h-full object-cover" />
+
+        {/* pointer-events-none until hovered, so these invisible hit-areas don't block native image drag-out */}
+        <div {...listeners} className="absolute top-1 left-1 cursor-grab active:cursor-grabbing p-1 bg-black/50 rounded z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
+          <GripVertical className="h-3 w-3 text-white" />
+        </div>
+
+        {/* pointer-events-none so the underlying <img> stays draggable */}
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[5]" />
+
+        <button type="button" onClick={onOpen} title="Vergrößern"
+          className="absolute bottom-1 right-7 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">
+          <ZoomIn className="h-3.5 w-3.5 text-white" />
+        </button>
+        <button type="button" onClick={onDelete} title="Löschen"
+          className="absolute bottom-1 right-1 p-1 rounded bg-black/50 hover:bg-red-600/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">
+          <Trash2 className="h-3 w-3 text-white" />
+        </button>
+
+        {isCover ? (
+          <div className="absolute top-1 right-1 flex items-center gap-0.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold z-10 pointer-events-none">
+            <Crown className="h-2.5 w-2.5" />Titelbild
+          </div>
+        ) : (
+          <button type="button" onClick={onSetCover} title="Als Titelbild setzen"
+            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-amber-500 rounded z-10 opacity-30 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all">
+            <Crown className="h-3 w-3 text-white" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
-  const { locations, loading, createLocation, updateLocation, deleteLocation, patchLocationCover } = useLocations()
+  const { locations, loading, createLocation, updateLocation, deleteLocation, patchLocationCover, refetch: refetchLocations } = useLocations()
+  const { categories: customCategories, createCategory: createCustomCategory, deleteCategory: deleteCustomCategory } = useCustomCategories('location')
 
   const [selectedCategory, setSelectedCategory] = useState<LocationCategory>('stadt')
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null)
+
+  const allCategories = useMemo(() => [
+    ...LOCATION_CATEGORIES.map(c => ({ ...c, id: undefined as string | undefined })),
+    ...customCategories.map(c => ({ key: c.key, label: c.label, emoji: c.emoji, id: c.id as string | undefined })),
+  ], [customCategories])
 
   const [formOpen, setFormOpen]           = useState(false)
+  const [importWizardOpen, setImportWizardOpen] = useState(false)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null)
 
@@ -126,12 +195,22 @@ export default function LocationsPage() {
   const [deleteVariantId, setDeleteVariantId]     = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
 
+  const [sheetDialogOpen, setSheetDialogOpen] = useState(false)
   const [aiAnalyzing, setAiAnalyzing] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
   const [aiSuggestion, setAiSuggestion] = useState<{
     name: string; category: LocationCategory; tags: string[]; description: string
   } | null>(null)
+  const [applyFields, setApplyFields] = useState({ name: false, category: true, tags: true, description: true })
+  const suggestionRef = useRef<HTMLDivElement>(null)
 
-  const [galleryImageIndex, setGalleryImageIndex] = useState(0)
+  useEffect(() => {
+    if (aiSuggestion) {
+      setTimeout(() => suggestionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+    }
+  }, [aiSuggestion])
+
+  const [lightboxVariantIndex, setLightboxVariantIndex] = useState<number | null>(null)
   const variantUploadRef = useRef<HTMLInputElement>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -168,6 +247,17 @@ export default function LocationsPage() {
     return v
   }
 
+  function handleVariantImageDragEnd(event: DragEndEvent) {
+    if (!selectedVariant) return
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const imgs = selectedVariant.images
+    const oldIdx = imgs.findIndex(i => i.id === active.id)
+    const newIdx = imgs.findIndex(i => i.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) return
+    reorderImages(selectedVariant.id, arrayMove(imgs, oldIdx, newIdx).map(i => i.id))
+  }
+
   function handleVariantDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -184,6 +274,7 @@ export default function LocationsPage() {
     if (!location?.cover_image_url) return
     setAiAnalyzing(true)
     setAiSuggestion(null)
+    setAiError(null)
     try {
       let body: Record<string, string>
       try {
@@ -211,15 +302,18 @@ export default function LocationsPage() {
         throw new Error(data.error ?? `HTTP ${res.status}`)
       }
       const result = await res.json() as { name?: string; category?: string; tags?: string[]; description?: string }
-      const validCategories = LOCATION_CATEGORIES.map(c => c.key)
+      const validCategories: string[] = allCategories.map(c => c.key)
+      setApplyFields({ name: false, category: true, tags: true, description: true })
       setAiSuggestion({
         name:        result.name        ?? location.name,
-        category:    (validCategories.includes(result.category as LocationCategory) ? result.category : location.category) as LocationCategory,
+        category:    (result.category && validCategories.includes(result.category) ? result.category : location.category),
         tags:        result.tags        ?? location.tags,
         description: result.description ?? location.description ?? '',
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'KI-Analyse fehlgeschlagen')
+      const msg = err instanceof Error ? err.message : 'KI-Analyse fehlgeschlagen'
+      toast.error(msg)
+      setAiError(msg)
     } finally {
       setAiAnalyzing(false)
     }
@@ -227,19 +321,20 @@ export default function LocationsPage() {
 
   async function handleApplySuggestion() {
     if (!location || !aiSuggestion) return
-    const ok = await updateLocation(location.id, {
-      name:        aiSuggestion.name,
-      category:    aiSuggestion.category,
-      tags:        aiSuggestion.tags,
-      description: aiSuggestion.description,
-    })
+    const patch: LocationInput = {
+      name:        applyFields.name        ? aiSuggestion.name        : location.name,
+      category:    applyFields.category    ? aiSuggestion.category    : location.category,
+      tags:        applyFields.tags        ? aiSuggestion.tags        : location.tags,
+      description: applyFields.description ? aiSuggestion.description : (location.description ?? undefined),
+    }
+    const ok = await updateLocation(location.id, patch)
     if (ok) {
       setAiSuggestion(null)
       refetchDetail()
     }
   }
 
-  const currentCategory = LOCATION_CATEGORIES.find(c => c.key === selectedCategory)!
+  const currentCategory = allCategories.find(c => c.key === selectedCategory) ?? { key: selectedCategory, label: selectedCategory, emoji: '📦', id: undefined }
   const selectedVariant  = selectedVariantId ? variants.find(v => v.id === selectedVariantId) ?? null : null
   const detailOpen       = !!selectedLocationId
 
@@ -258,35 +353,52 @@ export default function LocationsPage() {
         </header>
 
         <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          {LOCATION_CATEGORIES.map(cat => {
+          {allCategories.map(cat => {
             const count    = categoryCounts[cat.key] ?? 0
             const isActive = selectedCategory === cat.key
             return (
-              <button
-                key={cat.key}
-                onClick={() => { setSelectedCategory(cat.key); setSelectedLocationId(null); setSearch('') }}
-                className={cn(
-                  'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
-                  isActive
-                    ? 'bg-teal-500/10 text-teal-300 font-medium'
-                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                )}
-              >
-                <span className="text-base leading-none shrink-0">{cat.emoji}</span>
-                <span className="flex-1 truncate text-xs">{cat.label}</span>
-                {count > 0 && (
-                  <span className={cn(
-                    'text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
+              <div key={cat.key} className="group relative">
+                <button
+                  onClick={() => { setSelectedCategory(cat.key); setSelectedLocationId(null); setSearch('') }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
                     isActive
-                      ? 'bg-teal-500/20 text-teal-300'
-                      : 'bg-muted text-muted-foreground'
-                  )}>
-                    {count}
-                  </span>
+                      ? 'bg-teal-500/10 text-teal-300 font-medium'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                  )}
+                >
+                  <span className="text-base leading-none shrink-0">{cat.emoji}</span>
+                  <span className="flex-1 truncate text-xs">{cat.label}</span>
+                  {count > 0 && (
+                    <span className={cn(
+                      'text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
+                      isActive
+                        ? 'bg-teal-500/20 text-teal-300'
+                        : 'bg-muted text-muted-foreground'
+                    )}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+                {cat.id && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setDeleteCategoryId(cat.id!) }}
+                    title="Kategorie löschen"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity p-0.5"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 )}
-              </button>
+              </div>
             )
           })}
+          <button
+            onClick={() => setCategoryDialogOpen(true)}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm text-muted-foreground/60 hover:bg-accent/50 hover:text-foreground transition-colors text-left"
+          >
+            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex-1 truncate text-xs">Neue Kategorie</span>
+          </button>
         </nav>
       </div>
 
@@ -311,9 +423,14 @@ export default function LocationsPage() {
               </button>
             )}
           </div>
-          <Button size="sm" className="shrink-0 ml-auto" onClick={() => { setEditingLocation(null); setFormOpen(true) }}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />Neue Location
-          </Button>
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <Button size="sm" variant="outline" onClick={() => setImportWizardOpen(true)}>
+              <Search className="mr-1.5 h-3.5 w-3.5" />Location importieren
+            </Button>
+            <Button size="sm" onClick={() => { setEditingLocation(null); setFormOpen(true) }}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Neue Location
+            </Button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-hidden relative">
@@ -379,6 +496,11 @@ export default function LocationsPage() {
               {/* Detail header */}
               <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
                 <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{location.name}</h3>
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] border-teal-500/40 text-teal-300 hover:bg-teal-500/10 hover:text-teal-200 shrink-0"
+                  onClick={() => setSheetDialogOpen(true)}>
+                  <Sparkles className="h-3 w-3" />
+                  Sheet
+                </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingLocation(location); setFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -423,9 +545,19 @@ export default function LocationsPage() {
                     )}
                   </div>
 
+                  {/* AI error card */}
+                  {aiError && (
+                    <div className="mx-3 my-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3 flex items-start gap-2">
+                      <span className="text-red-400 text-xs flex-1 leading-relaxed">{aiError}</span>
+                      <button onClick={() => setAiError(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+
                   {/* AI suggestion card */}
                   {aiSuggestion && (
-                    <div className="mx-3 my-2 rounded-xl border border-teal-500/30 bg-teal-500/5 p-3 space-y-2">
+                    <div ref={suggestionRef} className="mx-3 my-2 rounded-xl border border-teal-500/30 bg-teal-500/5 p-3 space-y-2">
                       <div className="flex items-center gap-1.5 text-teal-400">
                         <Sparkles className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">KI-Vorschlag</span>
@@ -433,33 +565,40 @@ export default function LocationsPage() {
                           <X className="h-3 w-3" />
                         </button>
                       </div>
+                      <p className="text-[10px] text-muted-foreground/50">Markiere, welche Felder beim Übernehmen aktualisiert werden sollen.</p>
                       <div className="space-y-1.5 text-xs">
-                        <div className="flex gap-2">
+                        <label className="flex gap-2 items-start cursor-pointer">
+                          <Checkbox checked={applyFields.name} onCheckedChange={v => setApplyFields(prev => ({ ...prev, name: !!v }))} className="mt-0.5 shrink-0" />
                           <span className="text-muted-foreground/60 w-16 shrink-0">Name</span>
                           <span className="font-medium text-foreground/90 leading-tight">{aiSuggestion.name}</span>
-                        </div>
-                        <div className="flex gap-2">
+                        </label>
+                        <label className="flex gap-2 items-start cursor-pointer">
+                          <Checkbox checked={applyFields.category} onCheckedChange={v => setApplyFields(prev => ({ ...prev, category: !!v }))} className="mt-0.5 shrink-0" />
                           <span className="text-muted-foreground/60 w-16 shrink-0">Kategorie</span>
                           <span className="text-foreground/90">
                             {LOCATION_CATEGORIES.find(c => c.key === aiSuggestion.category)?.emoji}{' '}
                             {LOCATION_CATEGORIES.find(c => c.key === aiSuggestion.category)?.label}
                           </span>
-                        </div>
+                        </label>
                         {aiSuggestion.tags.length > 0 && (
-                          <div className="flex gap-2">
+                          <label className="flex gap-2 items-start cursor-pointer">
+                            <Checkbox checked={applyFields.tags} onCheckedChange={v => setApplyFields(prev => ({ ...prev, tags: !!v }))} className="mt-0.5 shrink-0" />
                             <span className="text-muted-foreground/60 w-16 shrink-0">Tags</span>
                             <span className="text-foreground/80">{aiSuggestion.tags.join(', ')}</span>
-                          </div>
+                          </label>
                         )}
                         {aiSuggestion.description && (
-                          <div className="flex gap-2">
+                          <label className="flex gap-2 items-start cursor-pointer">
+                            <Checkbox checked={applyFields.description} onCheckedChange={v => setApplyFields(prev => ({ ...prev, description: !!v }))} className="mt-0.5 shrink-0" />
                             <span className="text-muted-foreground/60 w-16 shrink-0">Beschr.</span>
                             <span className="text-foreground/80 leading-relaxed">{aiSuggestion.description}</span>
-                          </div>
+                          </label>
                         )}
                       </div>
                       <div className="flex gap-2 pt-1">
-                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-teal-600 hover:bg-teal-500" onClick={handleApplySuggestion}>
+                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-teal-600 hover:bg-teal-500"
+                          disabled={!applyFields.name && !applyFields.category && !applyFields.tags && !applyFields.description}
+                          onClick={handleApplySuggestion}>
                           <Check className="mr-1 h-3 w-3" />Übernehmen
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiSuggestion(null)}>
@@ -523,69 +662,35 @@ export default function LocationsPage() {
                         </div>
                       </div>
 
-                      {selectedVariant.images.length > 0 ? (() => {
-                        const safeIdx = Math.min(galleryImageIndex, selectedVariant.images.length - 1)
-                        const currentImg = selectedVariant.images[safeIdx]
-                        const isCover = location.cover_image_url === currentImg.url
-                        return (
-                          <>
-                            <div className="relative bg-black/20 rounded-xl overflow-hidden group/img">
-                              <img src={currentImg.url} alt="" className="w-full object-contain max-h-80" />
-                              {selectedVariant.images.length > 1 && (
-                                <>
-                                  <button
-                                    onClick={() => setGalleryImageIndex((safeIdx - 1 + selectedVariant.images.length) % selectedVariant.images.length)}
-                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
-                                  >
-                                    <ChevronLeft className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setGalleryImageIndex((safeIdx + 1) % selectedVariant.images.length)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
-                                  >
-                                    <ChevronRight className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                              {isCover ? (
-                                <div className="absolute top-2 left-2 flex items-center gap-1 text-[10px] bg-amber-500 text-black px-2 py-0.5 rounded-full font-semibold">
-                                  <Crown className="h-2.5 w-2.5" />Titelbild
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => updateLocationCover(currentImg.url, newUrl => { if (selectedLocationId) patchLocationCover(selectedLocationId, newUrl) })}
-                                  className="absolute top-2 left-2 flex items-center gap-1 text-[10px] bg-black/60 hover:bg-amber-500 hover:text-black text-white/80 px-2 py-0.5 rounded-full font-medium transition-colors opacity-0 group-hover/img:opacity-100"
-                                >
-                                  <Crown className="h-2.5 w-2.5" />Als Titelbild
-                                </button>
-                              )}
-                              {selectedVariant.images.length > 1 && (
-                                <div className="absolute bottom-2 right-2 text-[10px] bg-black/60 text-white/80 px-1.5 py-0.5 rounded-full">
-                                  {safeIdx + 1} / {selectedVariant.images.length}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                              {selectedVariant.images.map((img, idx) => (
-                                <button key={img.id} onClick={() => setGalleryImageIndex(idx)}
-                                  className={cn('relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all group/thumb',
-                                    idx === safeIdx ? 'border-teal-500 ring-1 ring-teal-500/30' : 'border-transparent opacity-60 hover:opacity-100')}>
-                                  <img src={img.url} alt="" className="w-full h-full object-cover" />
-                                  <div onClick={e => { e.stopPropagation(); deleteImage(selectedVariant.id, img.id, img.storage_path) }}
-                                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
-                                    <Trash2 className="h-3.5 w-3.5 text-white" />
-                                  </div>
-                                </button>
-                              ))}
-                              <button onClick={() => variantUploadRef.current?.click()}
-                                className="shrink-0 w-14 h-14 rounded-lg border-2 border-dashed border-border/40 hover:border-teal-500/50 flex items-center justify-center text-muted-foreground/40 hover:text-teal-400 transition-colors">
-                                <Plus className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </>
-                        )
-                      })() : (
+                      {selectedVariant.images.length > 0 ? (
+                        <>
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleVariantImageDragEnd}>
+                            <SortableContext items={selectedVariant.images.map(i => i.id)} strategy={rectSortingStrategy}>
+                              <div className="grid grid-cols-2 gap-2">
+                                {selectedVariant.images.map((img, idx) => (
+                                  <SortableVariantImage
+                                    key={img.id}
+                                    image={img}
+                                    isCover={location.cover_image_url === img.url}
+                                    onSetCover={() => updateLocationCover(img.url, newUrl => {
+                                      if (selectedLocationId) patchLocationCover(selectedLocationId, newUrl)
+                                    })}
+                                    onDelete={() => deleteImage(selectedVariant.id, img.id, img.storage_path)}
+                                    onOpen={() => setLightboxVariantIndex(idx)}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                          {lightboxVariantIndex !== null && (
+                            <ImageLightbox
+                              images={selectedVariant.images}
+                              initialIndex={lightboxVariantIndex}
+                              onClose={() => setLightboxVariantIndex(null)}
+                            />
+                          )}
+                        </>
+                      ) : (
                         <div className="text-center py-10 space-y-3">
                           <p className="text-xs text-muted-foreground/50">Noch keine Bilder für diese Variante</p>
                           <Button size="sm" variant="outline" onClick={() => variantUploadRef.current?.click()}>
@@ -593,6 +698,10 @@ export default function LocationsPage() {
                           </Button>
                         </div>
                       )}
+
+                      <Button type="button" variant="outline" size="sm" className="gap-1.5 h-7 text-xs" onClick={() => variantUploadRef.current?.click()}>
+                        <Upload className="h-3 w-3" />Bilder hochladen
+                      </Button>
 
                       <input ref={variantUploadRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden"
                         onChange={e => { uploadImages(selectedVariant.id, Array.from(e.target.files ?? [])); e.target.value = '' }} />
@@ -650,7 +759,7 @@ export default function LocationsPage() {
                                   key={v.id}
                                   variant={v as unknown as Parameters<typeof FashionAssetVariantCard>[0]['variant']}
                                   isSelected={selectedVariantId === v.id}
-                                  onClick={() => { setSelectedVariantId(prev => prev === v.id ? null : v.id); setGalleryImageIndex(0) }}
+                                  onClick={() => { setSelectedVariantId(prev => prev === v.id ? null : v.id); setLightboxVariantIndex(null) }}
                                   onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}
                                   onDelete={() => setDeleteVariantId(v.id)}
                                   onUploadImages={files => uploadImages(v.id, files)}
@@ -669,14 +778,69 @@ export default function LocationsPage() {
         </div>
       )}
 
+      {/* ── Import Wizard ── */}
+      <LocationImportWizard
+        open={importWizardOpen}
+        onClose={() => setImportWizardOpen(false)}
+        categories={allCategories}
+        onCreated={(locationId, category) => {
+          setImportWizardOpen(false)
+          refetchLocations()
+          setSelectedCategory(category)
+          setSelectedLocationId(locationId)
+          setSelectedVariantId(null)
+        }}
+      />
+
       {/* ── Dialogs ── */}
       <LocationForm
         open={formOpen}
         onClose={() => { setFormOpen(false); setEditingLocation(null) }}
         location={editingLocation}
         defaultCategory={selectedCategory}
+        categories={allCategories}
         onSave={handleLocationSave}
       />
+
+      <CustomCategoryDialog
+        open={categoryDialogOpen}
+        onClose={() => setCategoryDialogOpen(false)}
+        onSave={async (label, emoji) => {
+          const created = await createCustomCategory(label, emoji, allCategories.map(c => c.key))
+          if (created) setSelectedCategory(created.key)
+          return created
+        }}
+      />
+
+      <AlertDialog open={!!deleteCategoryId} onOpenChange={open => !open && setDeleteCategoryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kategorie löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Locations mit dieser Kategorie bleiben erhalten, zeigen die Kategorie danach aber nur noch als Text an.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteCategoryId) return
+                await deleteCustomCategory(deleteCategoryId)
+                if (selectedCategory === allCategories.find(c => c.id === deleteCategoryId)?.key) {
+                  setSelectedCategory(LOCATION_CATEGORIES[0].key)
+                }
+                setDeleteCategoryId(null)
+              }}>Löschen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {location && (
+        <LocationSheetDialog
+          open={sheetDialogOpen}
+          onClose={() => setSheetDialogOpen(false)}
+          location={location}
+        />
+      )}
       <LocationVariantForm
         open={variantFormOpen}
         onClose={() => { setVariantFormOpen(false); setEditingVariant(null) }}

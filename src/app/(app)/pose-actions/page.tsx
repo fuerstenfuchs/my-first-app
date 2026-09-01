@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useRef } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, ChevronRight, Crown, Upload } from 'lucide-react'
+import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, ChevronRight, Crown, Upload, ZoomIn } from 'lucide-react'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { toast } from 'sonner'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
@@ -127,6 +128,7 @@ export default function PoseActionsPage() {
   } | null>(null)
 
   const [galleryImageIndex, setGalleryImageIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const variantUploadRef = useRef<HTMLInputElement>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -512,6 +514,10 @@ export default function PoseActionsPage() {
                           <>
                             <div className="relative bg-black/20 rounded-xl overflow-hidden group/img">
                               <img src={currentImg.url} alt="" className="w-full object-contain max-h-80" />
+                              <button onClick={() => setLightboxOpen(true)} title="Vergrößern"
+                                className="absolute bottom-2 left-2 p-1.5 rounded bg-black/60 hover:bg-black/80 opacity-0 group-hover/img:opacity-100 transition-opacity z-10">
+                                <ZoomIn className="h-3.5 w-3.5 text-white" />
+                              </button>
                               {selectedVariant.images.length > 1 && (
                                 <>
                                   <button
@@ -564,6 +570,14 @@ export default function PoseActionsPage() {
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
+
+                            {lightboxOpen && (
+                              <ImageLightbox
+                                images={selectedVariant.images}
+                                initialIndex={safeIdx}
+                                onClose={() => setLightboxOpen(false)}
+                              />
+                            )}
                           </>
                         )
                       })() : (

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { LOCATION_CATEGORIES, LOCATION_TYPES, type Location, type LocationInput, type LocationCategory, type LocationType } from '@/hooks/use-locations'
+import type { Location, LocationInput, LocationCategory } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -14,15 +14,15 @@ interface Props {
   onClose: () => void
   location?: Location | null
   defaultCategory?: LocationCategory
+  categories: { key: string; label: string; emoji: string }[]
   onSave: (input: LocationInput, coverFile?: File | null) => Promise<Location | boolean | null>
 }
 
-export function LocationForm({ open, onClose, location, defaultCategory, onSave }: Props) {
+export function LocationForm({ open, onClose, location, defaultCategory, categories, onSave }: Props) {
   const isEdit = !!location
   const [name, setName]             = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory]     = useState<LocationCategory>(defaultCategory ?? 'sonstiges')
-  const [locationType, setLocationType] = useState<LocationType | null>(null)
   const [tagsRaw, setTagsRaw]       = useState('')
   const [sourceUrl, setSourceUrl]   = useState('')
   const [sourceTitle, setSourceTitle] = useState('')
@@ -36,7 +36,6 @@ export function LocationForm({ open, onClose, location, defaultCategory, onSave 
       setName(location?.name ?? '')
       setDescription(location?.description ?? '')
       setCategory(location?.category ?? defaultCategory ?? 'sonstiges')
-      setLocationType(location?.location_type ?? null)
       setTagsRaw(location?.tags.join(', ') ?? '')
       setSourceUrl(location?.source_url ?? '')
       setSourceTitle(location?.source_title ?? '')
@@ -63,7 +62,7 @@ export function LocationForm({ open, onClose, location, defaultCategory, onSave 
       name: name.trim(),
       description: description.trim() || undefined,
       category,
-      location_type: locationType,
+      location_type: null,
       tags: tagsRaw.split(',').map(t => t.trim()).filter(Boolean),
       source_url: sourceUrl.trim() || null,
       source_title: sourceTitle.trim() || null,
@@ -85,7 +84,7 @@ export function LocationForm({ open, onClose, location, defaultCategory, onSave 
           <div className="space-y-1.5">
             <Label>Kategorie</Label>
             <div className="grid grid-cols-3 gap-1.5">
-              {LOCATION_CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <button
                   key={cat.key}
                   type="button"
@@ -99,33 +98,6 @@ export function LocationForm({ open, onClose, location, defaultCategory, onSave 
                 >
                   <span className="text-base leading-none shrink-0">{cat.emoji}</span>
                   <span className="truncate">{cat.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Location Type */}
-          <div className="space-y-1.5">
-            <Label>
-              Location-Typ
-              <span className="ml-1.5 text-muted-foreground font-normal text-[11px]">(optional)</span>
-            </Label>
-            <div className="grid grid-cols-4 gap-1">
-              {LOCATION_TYPES.map(lt => (
-                <button
-                  key={lt.key}
-                  type="button"
-                  onClick={() => setLocationType(locationType === lt.key ? null : lt.key)}
-                  title={lt.description}
-                  className={cn(
-                    'flex flex-col items-center px-1 py-1.5 rounded-lg border text-[10px] transition-colors',
-                    locationType === lt.key
-                      ? 'bg-teal-500/15 border-teal-500/50 text-teal-300'
-                      : 'border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
-                  )}
-                >
-                  <span className="text-base leading-none shrink-0">{lt.emoji}</span>
-                  <span className="truncate w-full text-center mt-0.5 leading-tight">{lt.label}</span>
                 </button>
               ))}
             </div>

@@ -27,9 +27,22 @@ JSON schema:
   "description": "string — 1-2 sentences in German describing the location and its visual character"
 }
 
+CATEGORY DEFINITIONS — pick exactly one, the single best match. Do not default to "gebaeude" unless a building is clearly the dominant subject:
+- stadt: streets, city districts, urban skylines, plazas — outdoor, man-made, but not one single building
+- natur: landscapes, mountains, forests, lakes, islands, fields, rivers, parks — anywhere nature dominates, even if small structures are visible in the distance
+- strand: beaches, coastlines, seaside, boardwalks by the water
+- innenraum: any interior space (room, hall, lobby, restaurant interior) — regardless of what kind of building it is in
+- gebaeude: ONE specific building or architectural structure, photographed mainly from the OUTSIDE, where the building itself (not its surroundings) is the clear main subject (e.g. a castle, a stadium, a skyscraper, a landmark building)
+- eventlocation: stages, concert venues, festival grounds, sports arenas during an event
+- nachtlocation: bars, clubs, nightlife venues, neon-lit night scenes
+- filmset: built sets, studio backlots, green-screen stages
+- sonstiges: anything that doesn't clearly fit the above, or if no location is shown at all
+
+When a photo shows a landscape, island, or natural area that merely contains a building or settlement (e.g. an island with a castle, a village in a valley), classify it as "natur" — the building is a detail, not the subject. Only use "gebaeude" when the building itself fills the frame and is unmistakably the photographic subject.
+
 Rules:
 - name: descriptive and specific, in German (e.g. 'Regennasse Stadtstraße bei Nacht', 'Verlassenes Lagerhaus Industriestil')
-- category: pick the single best matching category
+- category: pick the single best matching category using the definitions above
 - tags: lowercase, e.g. ["nacht", "neon", "regen", "urban", "cinematic"]
 - description: factual, focus on visual qualities useful for film/photo reference
 - If the image shows multiple environments, focus on the dominant one

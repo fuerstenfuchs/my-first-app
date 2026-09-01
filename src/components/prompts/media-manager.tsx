@@ -18,12 +18,13 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Link2, Trash2, Upload, Video } from 'lucide-react'
+import { GripVertical, Link2, Trash2, Upload, Video, ZoomIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { usePromptMedia, type PromptMedia } from '@/hooks/use-prompt-media'
 import { cn } from '@/lib/utils'
 
@@ -43,9 +44,10 @@ interface SortableItemProps {
   isCover: boolean
   onSetCover: (item: PromptMedia) => void
   onDelete: (item: PromptMedia) => void
+  onOpen?: () => void
 }
 
-function SortableMediaItem({ item, isCover, onSetCover, onDelete }: SortableItemProps) {
+function SortableMediaItem({ item, isCover, onSetCover, onDelete, onOpen }: SortableItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
@@ -72,6 +74,13 @@ function SortableMediaItem({ item, isCover, onSetCover, onDelete }: SortableItem
         >
           <GripVertical className="h-3 w-3 text-white" />
         </div>
+        {/* pointer-events-none so the underlying <img> stays draggable */}
+        {item.type === 'image' && onOpen && (
+          <button type="button" onClick={onOpen} title="Vergrößern"
+            className="absolute bottom-1 right-1 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">
+            <ZoomIn className="h-3.5 w-3.5 text-white" />
+          </button>
+        )}
         {/* Cover badge */}
         {isCover && (
           <div className="absolute top-1 right-1 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold z-10">
@@ -114,7 +123,9 @@ function MediaManager({ promptId, coverImageUrl, onCoverChange, deferred = false
   const { media, uploading, fetchMedia, uploadFiles, deleteMedia, reorderMedia, setCoverImage, addMediaUrl, commitDeferredMedia } = usePromptMedia()
   const [urlInput, setUrlInput] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageItems = media.filter(m => m.type === 'image')
 
   useImperativeHandle(ref, () => ({
     commitDeferredMedia: () => commitDeferredMedia(promptId),
@@ -300,11 +311,16 @@ function MediaManager({ promptId, coverImageUrl, onCoverChange, deferred = false
                   isCover={item.url === coverImageUrl}
                   onSetCover={handleSetCover}
                   onDelete={handleDelete}
+                  onOpen={item.type === 'image' ? () => setLightboxIndex(imageItems.findIndex(i => i.id === item.id)) : undefined}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {lightboxIndex !== null && (
+        <ImageLightbox images={imageItems} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
     </div>
   )

@@ -18,11 +18,13 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Crown, GripVertical, Link2, Trash2, Upload } from 'lucide-react'
+import { Crown, GripVertical, Link2, Trash2, Upload, ZoomIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { cn } from '@/lib/utils'
+import { useCappedImageSrc } from '@/hooks/use-capped-image-src'
 import type { CharacterImage } from '@/hooks/use-characters'
 
 interface SortableImageProps {
@@ -30,24 +32,32 @@ interface SortableImageProps {
   isCharacterCover: boolean
   onDelete: () => void
   onSetCharacterCover?: () => void
+  onOpen: () => void
 }
 
-function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover }: SortableImageProps) {
+function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover, onOpen }: SortableImageProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
+  const src = useCappedImageSrc(image.url)
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} className={cn('relative rounded-md overflow-visible', isDragging && 'opacity-50 z-50')}>
       <div className="relative aspect-video rounded-md overflow-hidden border border-white/10 bg-black group">
-        <img src={image.url} alt="" className="w-full h-full object-cover" />
+        <img src={src} alt="" className="w-full h-full object-cover" />
 
         {/* Drag handle */}
         <div
           {...listeners}
-          className="absolute top-1 left-1 cursor-grab active:cursor-grabbing p-1 bg-black/50 rounded z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1 left-1 cursor-grab active:cursor-grabbing p-1 bg-black/50 rounded z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
         >
           <GripVertical className="h-3 w-3 text-white" />
         </div>
+
+        {/* pointer-events-none so the underlying <img> stays draggable */}
+        <button type="button" onClick={onOpen} title="Vergrößern"
+          className="absolute bottom-1 right-7 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">
+          <ZoomIn className="h-3.5 w-3.5 text-white" />
+        </button>
 
         {/* Titelbild-Button */}
         {onSetCharacterCover && !isCharacterCover && (
@@ -55,7 +65,7 @@ function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover 
             type="button"
             onClick={onSetCharacterCover}
             title="Als Charakter-Titelbild setzen"
-            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-amber-500 rounded z-10 opacity-30 group-hover:opacity-100 transition-all"
+            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-amber-500 rounded z-10 opacity-30 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all"
           >
             <Crown className="h-3 w-3 text-white" />
           </button>
@@ -63,7 +73,7 @@ function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover 
 
         {/* Titelbild-Badge */}
         {isCharacterCover && (
-          <div className="absolute top-1 right-1 flex items-center gap-0.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold z-10">
+          <div className="absolute top-1 right-1 flex items-center gap-0.5 text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-semibold z-10 pointer-events-none">
             <Crown className="h-2.5 w-2.5" />
             Titelbild
           </div>
@@ -119,6 +129,7 @@ export function CharacterMediaManager({
   const fileRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [urlInput, setUrlInput] = useState('')
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -247,13 +258,14 @@ export function CharacterMediaManager({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={images.map(i => i.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-3 gap-2">
-              {images.map(img => (
+              {images.map((img, idx) => (
                 <SortableImage
                   key={img.id}
                   image={img}
                   isCharacterCover={!!characterCoverUrl && img.url === characterCoverUrl}
                   onDelete={() => onDelete(img.id, img.storage_path)}
                   onSetCharacterCover={onSetCharacterCover ? () => onSetCharacterCover(img.url) : undefined}
+                  onOpen={() => setLightboxIndex(idx)}
                 />
               ))}
             </div>
@@ -265,6 +277,10 @@ export function CharacterMediaManager({
         <p className="text-xs text-muted-foreground text-center py-2">
           Noch keine Bilder — lade Referenzbilder dieser Variante hoch.
         </p>
+      )}
+
+      {lightboxIndex !== null && (
+        <ImageLightbox images={images} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
     </div>
   )

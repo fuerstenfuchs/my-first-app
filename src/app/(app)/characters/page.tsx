@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, User, Pencil, Trash2, X, ChevronRight, Users } from 'lucide-react'
+import { Plus, Search, User, Pencil, Trash2, X, ChevronRight, Users, Sparkles, ExternalLink } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -33,6 +33,7 @@ import { CharacterForm } from '@/components/characters/character-form'
 import { VariantForm } from '@/components/characters/variant-form'
 import { VariantCard } from '@/components/characters/variant-card'
 import { CharacterMediaManager } from '@/components/characters/character-media-manager'
+import { CharacterSheetDialog } from '@/components/characters/character-sheet-dialog'
 import {
   useCharacters,
   useCharacterDetail,
@@ -71,6 +72,7 @@ export default function CharactersPage() {
   const [editingVariant, setEditingVariant] = useState<CharacterVariant | null>(null)
   const [deleteVariantId, setDeleteVariantId] = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
+  const [sheetDialogOpen, setSheetDialogOpen] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -273,9 +275,21 @@ export default function CharactersPage() {
                       ))}
                     </div>
                   )}
+                  {character.source_url && (
+                    <a href={character.source_url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-400 transition-colors mt-1.5">
+                      <ExternalLink className="h-3 w-3" />
+                      {character.source_title || (() => { try { return new URL(character.source_url).hostname.replace('www.', '') } catch { return character.source_url } })()}
+                    </a>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-500/40 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
+                    onClick={() => setSheetDialogOpen(true)}>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Sheets
+                  </Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8"
                     onClick={() => { setEditingCharacter(character); setCharFormOpen(true) }}>
                     <Pencil className="h-4 w-4" />
@@ -413,6 +427,14 @@ export default function CharactersPage() {
         variant={editingVariant}
         onSave={handleVariantSave}
       />
+
+      {character && (
+        <CharacterSheetDialog
+          open={sheetDialogOpen}
+          onClose={() => setSheetDialogOpen(false)}
+          character={character}
+        />
+      )}
 
       <AlertDialog open={!!deleteCharId} onOpenChange={open => !open && setDeleteCharId(null)}>
         <AlertDialogContent>

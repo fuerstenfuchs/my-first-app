@@ -39,7 +39,22 @@
 | PROJ-20 | Outfit-Bibliothek | Deployed | — | 2026-06-15 |
 | PROJ-21 | Fashion Assets (Kategoriebasierte Kleidungsverwaltung) | Deployed | — | 2026-06-16 |
 | PROJ-22 | Fashion Capture (Rechtsklick → Fashion Asset via Extension) | Deployed | — | 2026-06-16 |
+| PROJ-23 | Kamera & Licht (Camera & Lighting Library) | Deployed | — | 2026-06-17 |
+| PROJ-24 | Scene Builder (MVP + Referenz-Auswahl) | Deployed | — | 2026-06-17 |
+| PROJ-25A | Scene Type (Indoor / Outdoor) | Deployed | — | 2026-06-17 |
+| PROJ-25B | Gesichtsausdruck & Szenenbedingungen | Deployed | — | 2026-06-17 |
+| PROJ-26 | Indoor/Outdoor Lichtlogik (Phase 1) | Deployed | — | 2026-06-17 |
+| PROJ-27 | Kameramodul (Phase 2) | Deployed | — | 2026-06-17 |
+| PROJ-28 | Character Sheets-Button (Kopf/Ausdrücke/Körper, fest definierte Prompts) | Deployed | — | 2026-06-17 |
+| PROJ-29 | Look & Grading System (Stil + Grading, Standard + eigene Einträge, KI-Erzeugung) | Deployed | — | 2026-06-17 |
+| PROJ-30 | Studio-Hintergrund (Farbwahl als Location-Fallback) | Deployed | — | 2026-06-17 |
+| PROJ-31A | Preset-System für Scene Builder (Speichern/Laden/Duplizieren/Export/Import, 9 Standard-Presets) | Deployed | — | 2026-06-18 |
+| PROJ-32 | Location Archetypes (generische Locations, KI-Beschreibung, Scene Builder Kombination) | Deployed | — | 2026-06-18 |
+| PROJ-33 | Location Sheets-Button (Location/Cinematic/Gebäude, feste Prompts aus Prompt Tresor) | Deployed | — | 2026-06-18 |
+| PROJ-34 | Eigene Kategorien für Locations & Location Archetypes (Standard + selbst erstellte) | Deployed | — | 2026-06-18 |
+| PROJ-35 | Character Archetypes & Outfit Archetypes (generische Charaktere/Outfits, KI-Beschreibung mit Recherche-Modus, Scene Builder Kombination) | Deployed | — | 2026-06-22 |
+| PROJ-36 | Character Capture System (Chrome Extension: Rechtsklick → Crop → KI-Analyse → Speichern) | Deployed | — | 2026-06-23 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-23
+## Next Available ID: PROJ-37

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { CropTool } from './CropTool'
 import type { PendingFashionImageAdd } from '../types'
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -30,6 +31,8 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
   const [saved, setSaved]       = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
+  const [croppedDataUrl, setCroppedDataUrl] = useState<string | null>(null)
+  const [showCrop, setShowCrop] = useState(false)
 
   useEffect(() => {
     supabase
@@ -90,7 +93,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
       const { error: imgErr } = await supabase.from('fashion_asset_images').insert({
         variant_id: variantId,
         user_id: user.id,
-        url: capture.imageUrl,
+        url: croppedDataUrl ?? capture.imageUrl,
         storage_path: null,
         sort_order: count ?? 0,
       })
@@ -110,6 +113,26 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
     }
   }
 
+  if (showCrop && capture.imageUrl) {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 bg-zinc-950">
+        <div className="shrink-0 flex items-center px-3 py-2.5 border-b border-zinc-700">
+          <span className="flex-1 text-xs font-medium text-zinc-300 text-center">✂ Bereich zuschneiden</span>
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <CropTool
+            imageUrl={capture.imageUrl}
+            onApply={(dataUrl) => {
+              setCroppedDataUrl(dataUrl)
+              setShowCrop(false)
+            }}
+            onCancel={() => setShowCrop(false)}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
       {/* Header */}
@@ -124,13 +147,32 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
 
       {/* Image preview */}
       {capture.imageUrl && !imageError && (
-        <div className="shrink-0 bg-zinc-900 border-b border-zinc-700">
+        <div className="shrink-0 bg-zinc-900 border-b border-zinc-700 relative">
           <img
-            src={capture.imageUrl}
+            src={croppedDataUrl ?? capture.imageUrl}
             alt=""
             className="w-full max-h-28 object-contain"
-            onError={() => setImageError(true)}
+            onError={() => { if (!croppedDataUrl) setImageError(true) }}
           />
+          {croppedDataUrl && (
+            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/70 rounded-md px-1.5 py-0.5">
+              <span className="text-[10px] text-zinc-300">✂ Crop</span>
+              <button
+                type="button"
+                onClick={() => setCroppedDataUrl(null)}
+                className="text-[10px] text-zinc-400 hover:text-white ml-0.5"
+              >
+                ×
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowCrop(true)}
+            className="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-700/90 hover:bg-zinc-600 text-white text-[10px] font-medium transition-colors"
+          >
+            ✂ {croppedDataUrl ? 'Neu zuschneiden' : 'Zuschneiden'}
+          </button>
         </div>
       )}
 

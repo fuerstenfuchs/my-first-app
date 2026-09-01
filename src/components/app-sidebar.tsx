@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama } from 'lucide-react'
+import { BarChart2, LogOut, Plus, MoreHorizontal, Pencil, Settings, Trash2, GripVertical, LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Clapperboard, Palette, Landmark, UserCog, Layers } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -303,6 +303,25 @@ export function AppSidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem className="px-2 py-1">
             <a
+              href="/character-archetypes"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/character-archetypes')
+                  ? 'linear-gradient(#100d1f, #130f1c) padding-box, linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%) border-box'
+                  : 'linear-gradient(#100d1f, #130f1c) padding-box, linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(109,40,217,0.2), 0 0 18px rgba(91,33,182,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <UserCog className="h-6 w-6 text-violet-300" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Character Archetypes</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
               href="/outfits"
               className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
               style={{
@@ -318,6 +337,25 @@ export function AppSidebar() {
               </div>
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">Outfits</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/outfit-archetypes"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/outfit-archetypes')
+                  ? 'linear-gradient(#1f130a, #1c1109) padding-box, linear-gradient(135deg, #fdba74 0%, #fb923c 100%) border-box'
+                  : 'linear-gradient(#1f130a, #1c1109) padding-box, linear-gradient(135deg, #c2410c 0%, #9a3412 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(194,65,12,0.2), 0 0 18px rgba(154,52,18,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Layers className="h-6 w-6 text-orange-300" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Outfit Archetypes</span>
             </a>
           </SidebarMenuItem>
           <SidebarMenuItem className="px-2 py-1">
@@ -360,6 +398,44 @@ export function AppSidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem className="px-2 py-1">
             <a
+              href="/visual-assets"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/visual-assets')
+                  ? 'linear-gradient(#061318, #061116) padding-box, linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) border-box'
+                  : 'linear-gradient(#061318, #061116) padding-box, linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(14,165,233,0.2), 0 0 18px rgba(3,105,161,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Camera className="h-6 w-6 text-sky-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Kamera, Licht & Mimik</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/look-grading"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/look-grading')
+                  ? 'linear-gradient(#1a0617, #170614) padding-box, linear-gradient(135deg, #f0abfc 0%, #d946ef 100%) border-box'
+                  : 'linear-gradient(#1a0617, #170614) padding-box, linear-gradient(135deg, #c026d3 0%, #a21caf 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(192,38,211,0.2), 0 0 18px rgba(162,28,175,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Palette className="h-6 w-6 text-fuchsia-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Look & Grading</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
               href="/locations"
               className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
               style={{
@@ -375,6 +451,44 @@ export function AppSidebar() {
               </div>
               <div className="w-px self-stretch bg-white/15 shrink-0" />
               <span className="text-base font-semibold text-white px-4">Locations</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/location-archetypes"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/location-archetypes')
+                  ? 'linear-gradient(#0a1a18, #091715) padding-box, linear-gradient(135deg, #5eead4 0%, #14b8a6 100%) border-box'
+                  : 'linear-gradient(#0a1a18, #091715) padding-box, linear-gradient(135deg, #0d9488 0%, #115e59 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(13,148,136,0.2), 0 0 18px rgba(17,94,89,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Landmark className="h-6 w-6 text-teal-300" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Location Archetypes</span>
+            </a>
+          </SidebarMenuItem>
+          <SidebarMenuItem className="px-2 py-1">
+            <a
+              href="/scene-builder"
+              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
+              style={{
+                background: pathname.startsWith('/scene-builder')
+                  ? 'linear-gradient(#1a1206, #181006) padding-box, linear-gradient(135deg, #fbbf24 0%, #d97706 100%) border-box'
+                  : 'linear-gradient(#1a1206, #181006) padding-box, linear-gradient(135deg, #f59e0b 0%, #b45309 100%) border-box',
+                border: '2px solid transparent',
+                boxShadow: '0 0 18px rgba(245,158,11,0.2), 0 0 18px rgba(180,83,9,0.15)',
+              }}
+            >
+              <div className="flex items-center justify-center w-14 h-14 shrink-0">
+                <Clapperboard className="h-6 w-6 text-amber-400" />
+              </div>
+              <div className="w-px self-stretch bg-white/15 shrink-0" />
+              <span className="text-base font-semibold text-white px-4">Scene Builder</span>
             </a>
           </SidebarMenuItem>
           <SidebarMenuItem>

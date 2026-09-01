@@ -38,6 +38,13 @@ export interface PendingPoseCapture {
   timestamp: number
 }
 
+export interface PendingCharacterCapture {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+  timestamp: number
+}
+
 export interface OutfitImage {
   imageUrl: string
   sourceUrl: string
@@ -50,6 +57,20 @@ export interface PendingOutfitCapture {
 }
 
 export interface PendingFashionImageAdd {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+  timestamp: number
+}
+
+export interface PendingLocationImageAdd {
+  imageUrl: string
+  sourceUrl: string
+  sourceTitle: string
+  timestamp: number
+}
+
+export interface PendingCharacterImageAdd {
   imageUrl: string
   sourceUrl: string
   sourceTitle: string

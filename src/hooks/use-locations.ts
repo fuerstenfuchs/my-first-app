@@ -17,7 +17,10 @@ export const LOCATION_CATEGORIES = [
   { key: 'sonstiges',      label: 'Sonstiges',       emoji: '📦' },
 ] as const
 
-export type LocationCategory = typeof LOCATION_CATEGORIES[number]['key']
+// Widened to a plain string (not the literal union of standard keys) because users can
+// create their own custom categories (see use-custom-categories.ts) whose keys aren't
+// known at compile time — the DB column itself is unconstrained text.
+export type LocationCategory = string
 
 export const LOCATION_TYPES = [
   { key: 'landmark',      label: 'Landmark',       emoji: '🏛️',  description: 'Berühmtes Wahrzeichen (Eiffelturm, Big Ben, …)' },

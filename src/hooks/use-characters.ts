@@ -15,6 +15,8 @@ export interface Character {
   description: string | null
   tags: string[]
   cover_image_url: string | null
+  source_url: string | null
+  source_title: string | null
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
@@ -49,6 +51,8 @@ export interface CharacterInput {
   description?: string
   tags?: string[]
   cover_image_url?: string | null
+  source_url?: string | null
+  source_title?: string | null
 }
 
 export interface VariantInput {
@@ -105,6 +109,8 @@ export function useCharacters() {
         name: input.name.trim(),
         description: input.description?.trim() || null,
         tags: input.tags ?? [],
+        source_url: input.source_url ?? null,
+        source_title: input.source_title ?? null,
         user_id: user.id,
       })
       .select()
@@ -462,6 +468,8 @@ function normalizeCharacter(raw: Record<string, unknown>): Character {
     description: (raw.description as string | null) ?? null,
     tags: (raw.tags as string[] | null) ?? [],
     cover_image_url: (raw.cover_image_url as string | null) ?? null,
+    source_url: (raw.source_url as string | null) ?? null,
+    source_title: (raw.source_title as string | null) ?? null,
     metadata: (raw.metadata as Record<string, unknown>) ?? {},
     created_at: raw.created_at as string,
     updated_at: raw.updated_at as string,

@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { initStorage } from './lib/storage'
-import type { PendingCapture, PendingFashionCapture, PendingLocationCapture, PendingPoseCapture, PendingOutfitCapture, PendingFashionImageAdd } from './types'
+import type { PendingCapture, PendingFashionCapture, PendingLocationCapture, PendingPoseCapture, PendingCharacterCapture, PendingOutfitCapture, PendingFashionImageAdd, PendingLocationImageAdd, PendingCharacterImageAdd } from './types'
 import { LoginScreen } from './components/LoginScreen'
 import { MainScreen } from './components/MainScreen'
 import { QuickCaptureScreen } from './components/QuickCaptureScreen'
 import { FashionCaptureScreen } from './components/FashionCaptureScreen'
 import { AddFashionImageScreen } from './components/AddFashionImageScreen'
+import { AddLocationImageScreen } from './components/AddLocationImageScreen'
+import { AddCharacterImageScreen } from './components/AddCharacterImageScreen'
 import { LocationCaptureScreen } from './components/LocationCaptureScreen'
 import { PoseCaptureScreen } from './components/PoseCaptureScreen'
+import { CharacterCaptureScreen } from './components/CharacterCaptureScreen'
 import { OutfitCaptureScreen } from './components/OutfitCaptureScreen'
 
-type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict' | 'fashion-capture' | 'add-fashion-image' | 'location-capture' | 'pose-capture' | 'outfit-capture'
+type State = 'loading' | 'unauthenticated' | 'authenticated' | 'quick-capture' | 'conflict' | 'fashion-capture' | 'add-fashion-image' | 'add-location-image' | 'add-character-image' | 'location-capture' | 'pose-capture' | 'character-capture' | 'outfit-capture'
 
 export function App() {
   const [state, setState] = useState<State>('loading')
@@ -20,8 +23,11 @@ export function App() {
   const [captureRestored, setCaptureRestored] = useState(false)
   const [pendingFashionCapture, setPendingFashionCapture] = useState<PendingFashionCapture | null>(null)
   const [pendingFashionImageAdd, setPendingFashionImageAdd] = useState<PendingFashionImageAdd | null>(null)
+  const [pendingLocationImageAdd, setPendingLocationImageAdd] = useState<PendingLocationImageAdd | null>(null)
+  const [pendingCharacterImageAdd, setPendingCharacterImageAdd] = useState<PendingCharacterImageAdd | null>(null)
   const [pendingLocationCapture, setPendingLocationCapture] = useState<PendingLocationCapture | null>(null)
   const [pendingPoseCapture, setPendingPoseCapture] = useState<PendingPoseCapture | null>(null)
+  const [pendingCharacterCapture, setPendingCharacterCapture] = useState<PendingCharacterCapture | null>(null)
   const [pendingOutfitCapture, setPendingOutfitCapture] = useState<PendingOutfitCapture | null>(null)
 
   useEffect(() => {
@@ -30,15 +36,18 @@ export function App() {
 
       const result = await chrome.storage.local.get([
         'pendingCapture', 'pendingCaptureConflict',
-        'pendingFashionCapture', 'pendingFashionImageAdd', 'pendingLocationCapture', 'pendingPoseCapture', 'pendingOutfitCapture',
+        'pendingFashionCapture', 'pendingFashionImageAdd', 'pendingLocationImageAdd', 'pendingCharacterImageAdd', 'pendingLocationCapture', 'pendingPoseCapture', 'pendingCharacterCapture', 'pendingOutfitCapture',
       ])
-      const capture          = result.pendingCapture         as PendingCapture          | undefined
-      const conflict         = result.pendingCaptureConflict as PendingCapture          | undefined
-      const fashionCapture   = result.pendingFashionCapture  as PendingFashionCapture   | undefined
-      const fashionImageAdd  = result.pendingFashionImageAdd as PendingFashionImageAdd  | undefined
-      const locationCapture  = result.pendingLocationCapture as PendingLocationCapture  | undefined
-      const poseCapture      = result.pendingPoseCapture     as PendingPoseCapture      | undefined
-      const outfitCapture    = result.pendingOutfitCapture   as PendingOutfitCapture    | undefined
+      const capture             = result.pendingCapture            as PendingCapture            | undefined
+      const conflict            = result.pendingCaptureConflict    as PendingCapture            | undefined
+      const fashionCapture      = result.pendingFashionCapture     as PendingFashionCapture     | undefined
+      const fashionImageAdd     = result.pendingFashionImageAdd    as PendingFashionImageAdd    | undefined
+      const locationImageAdd    = result.pendingLocationImageAdd   as PendingLocationImageAdd   | undefined
+      const characterImageAdd   = result.pendingCharacterImageAdd  as PendingCharacterImageAdd  | undefined
+      const locationCapture     = result.pendingLocationCapture    as PendingLocationCapture    | undefined
+      const poseCapture         = result.pendingPoseCapture        as PendingPoseCapture        | undefined
+      const characterCapture    = result.pendingCharacterCapture   as PendingCharacterCapture   | undefined
+      const outfitCapture       = result.pendingOutfitCapture      as PendingOutfitCapture      | undefined
 
       if (outfitCapture && outfitCapture.images.length > 0) {
         setPendingOutfitCapture(outfitCapture)
@@ -46,9 +55,18 @@ export function App() {
       } else if (fashionImageAdd) {
         setPendingFashionImageAdd(fashionImageAdd)
         setState(session ? 'add-fashion-image' : 'unauthenticated')
+      } else if (locationImageAdd) {
+        setPendingLocationImageAdd(locationImageAdd)
+        setState(session ? 'add-location-image' : 'unauthenticated')
+      } else if (characterImageAdd) {
+        setPendingCharacterImageAdd(characterImageAdd)
+        setState(session ? 'add-character-image' : 'unauthenticated')
       } else if (poseCapture) {
         setPendingPoseCapture(poseCapture)
         setState(session ? 'pose-capture' : 'unauthenticated')
+      } else if (characterCapture) {
+        setPendingCharacterCapture(characterCapture)
+        setState(session ? 'character-capture' : 'unauthenticated')
       } else if (locationCapture) {
         setPendingLocationCapture(locationCapture)
         setState(session ? 'location-capture' : 'unauthenticated')
@@ -73,8 +91,14 @@ export function App() {
       setState('outfit-capture')
     } else if (pendingFashionImageAdd) {
       setState('add-fashion-image')
+    } else if (pendingLocationImageAdd) {
+      setState('add-location-image')
+    } else if (pendingCharacterImageAdd) {
+      setState('add-character-image')
     } else if (pendingPoseCapture) {
       setState('pose-capture')
+    } else if (pendingCharacterCapture) {
+      setState('character-capture')
     } else if (pendingLocationCapture) {
       setState('location-capture')
     } else if (pendingFashionCapture) {
@@ -187,7 +211,49 @@ export function App() {
           setState('authenticated')
           setTimeout(() => window.close(), 800)
         }}
-        onBack={() => setState('authenticated')}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingFashionImageAdd')
+          setPendingFashionImageAdd(null)
+          setState('authenticated')
+        }}
+      />
+    )
+  }
+
+  if (state === 'add-location-image' && pendingLocationImageAdd) {
+    return (
+      <AddLocationImageScreen
+        capture={pendingLocationImageAdd}
+        onSaved={async () => {
+          await chrome.storage.local.remove('pendingLocationImageAdd')
+          setPendingLocationImageAdd(null)
+          setState('authenticated')
+          setTimeout(() => window.close(), 800)
+        }}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingLocationImageAdd')
+          setPendingLocationImageAdd(null)
+          setState('authenticated')
+        }}
+      />
+    )
+  }
+
+  if (state === 'add-character-image' && pendingCharacterImageAdd) {
+    return (
+      <AddCharacterImageScreen
+        capture={pendingCharacterImageAdd}
+        onSaved={async () => {
+          await chrome.storage.local.remove('pendingCharacterImageAdd')
+          setPendingCharacterImageAdd(null)
+          setState('authenticated')
+          setTimeout(() => window.close(), 800)
+        }}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingCharacterImageAdd')
+          setPendingCharacterImageAdd(null)
+          setState('authenticated')
+        }}
       />
     )
   }
@@ -202,7 +268,11 @@ export function App() {
           setState('authenticated')
           setTimeout(() => window.close(), 800)
         }}
-        onBack={() => setState('authenticated')}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingOutfitCapture')
+          setPendingOutfitCapture(null)
+          setState('authenticated')
+        }}
       />
     )
   }
@@ -217,7 +287,30 @@ export function App() {
           setState('authenticated')
           setTimeout(() => window.close(), 800)
         }}
-        onBack={() => setState('authenticated')}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingPoseCapture')
+          setPendingPoseCapture(null)
+          setState('authenticated')
+        }}
+      />
+    )
+  }
+
+  if (state === 'character-capture' && pendingCharacterCapture) {
+    return (
+      <CharacterCaptureScreen
+        capture={pendingCharacterCapture}
+        onSaved={async () => {
+          await chrome.storage.local.remove('pendingCharacterCapture')
+          setPendingCharacterCapture(null)
+          setState('authenticated')
+          setTimeout(() => window.close(), 800)
+        }}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingCharacterCapture')
+          setPendingCharacterCapture(null)
+          setState('authenticated')
+        }}
       />
     )
   }
@@ -232,7 +325,11 @@ export function App() {
           setState('authenticated')
           setTimeout(() => window.close(), 800)
         }}
-        onBack={() => setState('authenticated')}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingLocationCapture')
+          setPendingLocationCapture(null)
+          setState('authenticated')
+        }}
       />
     )
   }
@@ -247,7 +344,11 @@ export function App() {
           setState('authenticated')
           setTimeout(() => window.close(), 800)
         }}
-        onBack={() => setState('authenticated')}
+        onBack={async () => {
+          await chrome.storage.local.remove('pendingFashionCapture')
+          setPendingFashionCapture(null)
+          setState('authenticated')
+        }}
         onSwitchToOutfit={handleSwitchToOutfit}
       />
     )
