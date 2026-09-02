@@ -61,6 +61,7 @@ passen.
 | `npm run pruefen` | Prüft Proxy, Datenbank, Ablage — **kostet nichts** |
 | `npm run einmal` | Genau ein Auftrag, dann Schluss. Für die Abnahme. |
 | `npm test` | Prüft die Adressschranke der fal.ai-Anbindung — **kostet nichts** |
+| `npm run gross -- <bild> [ziel] [4K]` | Bild über Gemini in hoher Auflösung nachbauen |
 
 ## Voraussetzungen
 
@@ -93,15 +94,49 @@ ein — und jedes Bild kostet Geld.
 Die Datei ist doppelt von Git ausgeschlossen. Sie enthält den Service-Key, der
 alle Zugriffsregeln umgeht.
 
-## Die zwei Wege beim Vergrößern
+## Der dritte Weg: Gemini (`npm run gross`)
 
-| | Rechnen (`lanczos`) | KI (`seedvr2`) |
-|---|---|---|
-| Wo | auf diesem PC | fal.ai |
-| Kosten | nichts | ca. 0,5 ct (2×) bis 2 ct (4×) |
-| Was passiert | vorhandene Bildpunkte klüger verteilt | Struktur wird rekonstruiert: Haut, Haar, Stoff |
-| Ohne Internet | läuft | läuft nicht |
-| Bild verlässt den PC | nein | **ja** |
+Kein Vergrößern, sondern ein **Nachbau**: Gemini rechnet das Bild neu. Dafür
+kommt mehr Auflösung heraus als bei jedem Upscaler — aus 1122×1402 werden
+3712×4608 — und es kostet nichts extra, weil es über die antigravity-Anmeldung
+im lokalen Proxy läuft.
+
+```bash
+npm run gross -- bild.png ergebnis.jpg 4K
+```
+
+**Bei Gesichtern Vorsicht.** Am 02.09.2026 an einem Porträt geprüft: dieselbe
+Frau, aber Brauenform und Lidfalte saßen anders. Für eine Figur, die über viele
+Einstellungen gleich aussehen muss, ist das ein Risiko. Für Landschaften, Räume
+und Gegenstände nicht.
+
+**Zwei Dinge sind darin erarbeitet und stecken in `gemini.ts`:**
+
+Der Prompt sagt ausdrücklich „nicht glätten, nicht verschönern, nicht
+verjüngen". Ohne das hat Gemini die Falten weggerechnet.
+
+Der Farbstich lässt sich **nicht** wegformulieren. Gemessen: mit Farbanweisung
+im Prompt 6,10 Abstand, ohne sie 5,76 — also wirkungslos. Deshalb werden die
+Farben hinterher rechnerisch zurückgeführt (`farbeAngleichen`), und damit fällt
+der Abstand auf 0,92. Zum Vergleich: SeedVR2 liegt bei 0,44.
+
+## Die Wege beim Vergrößern
+
+| | `lanczos` | `seedvr2` | `crystal` |
+|---|---|---|---|
+| Wo | dieser PC | fal.ai | fal.ai |
+| Kosten (2×) | nichts | **0,7 ct** | **9,6 ct** |
+| Was passiert | Bildpunkte verteilt | Struktur rekonstruiert | schärfer, erfindet mehr |
+| Bild verlässt den PC | nein | ja | ja |
+| Im Menü | **nein** | ja | ja |
+
+Preise gemessen am 02.09.2026 an einem Bild von 1122×1402, nicht geschätzt.
+
+`lanczos` steht seit dem 02.09.2026 nicht mehr im Menü. Mark nach dem Vergleich
+an einem Porträt: „sehe ich kaum einen Unterschied, ist zwar größer, aber
+genauso unscharf … werde ich nie nutzen." Der Wert bleibt in Datenbank und
+Arbeiter erhalten, damit die vorhandenen Aufträge weiter stimmen — weggenommen
+ist nur das Angebot, nicht die Vergangenheit.
 
 Das Verfahren steht **im Auftrag**, nicht in dieser `.env`. Der Arbeiter rät es
 nie: Fehlt es, scheitert der Auftrag mit einer Ansage. Eine stille Voreinstellung

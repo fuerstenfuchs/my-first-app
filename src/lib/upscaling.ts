@@ -25,6 +25,21 @@
  */
 export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal'
 
+/**
+ * Was im Menü angeboten wird — und in welcher Reihenfolge.
+ *
+ * `lanczos` steht bewusst NICHT mehr drin. Mark am 02.09.2026, nach dem
+ * Vergleich an einem Porträt: „sehe ich kaum einen Unterschied, ist zwar
+ * größer, aber genauso unscharf … werde ich nie nutzen." Gemessen stimmt das:
+ * Lanczos verteilt vorhandene Bildpunkte, es kann keine Struktur hinzufügen.
+ *
+ * Der Wert bleibt im Typ, in der Datenbank und im Arbeiter erhalten — sonst
+ * würden die bereits vorhandenen Aufträge in der Warteschlange ihre
+ * Beschriftung verlieren und sich nicht mehr erneut einreihen lassen.
+ * Weggenommen wird nur das Angebot, nicht die Vergangenheit.
+ */
+export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'crystal']
+
 /** Die bezahlten Verfahren — an einer Stelle, damit niemand eins vergisst. */
 export const KOSTET_GELD: readonly Upscaler[] = ['seedvr2', 'crystal']
 
@@ -40,9 +55,9 @@ export const VERFAHREN_NAME: Record<Upscaler, string> = {
 
 /** Was im Menü unter der Überschrift steht. */
 export const VERFAHREN_HINWEIS: Record<Upscaler, string> = {
-  lanczos: 'kostet nichts',
-  seedvr2: 'nah am Original, günstig',
-  crystal: 'erfindet mehr Details, teuer',
+  lanczos: 'nur rechnerisch',
+  seedvr2: 'treu und günstig — der Regelfall',
+  crystal: 'schärfer, erfindet mehr, teuer',
 }
 
 /**

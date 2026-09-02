@@ -21,7 +21,7 @@ import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
 import {
-  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld,
+  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld, IM_MENUE,
 } from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
@@ -320,7 +320,7 @@ export default function QueuePage() {
                                       wäre sonst genau die Kopie entstanden, an
                                       der Preis und Beschriftung auseinander-
                                       driften. */}
-                                  {(['lanczos', 'seedvr2', 'crystal'] as const).map((v, nr) => (
+                                  {IM_MENUE.map((v, nr) => (
                                     <div key={v}>
                                       {nr > 0 && <DropdownMenuSeparator />}
                                       <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
