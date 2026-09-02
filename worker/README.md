@@ -24,6 +24,14 @@ und verbrannt.
 „Arbeiter läuft" oder „Arbeiter zuletzt vor …". Er meldet sich alle zwanzig
 Sekunden; bleibt die Meldung länger als sechzig Sekunden aus, gilt er als weg.
 
+**Fallstrick, gefunden am 02.09.2026:** Der Zeitstempel war seit dem Bau
+eingefroren — die Anzeige sagte „zuletzt vor 18 Stunden", während der Arbeiter
+gerade Aufträge abarbeitete. Grund: `gesehen_am` hat `default now()`, und der
+Arbeiter schickt die Spalte bewusst nicht mit (die PC-Uhr geht 34 s vor). Ein
+DEFAULT gilt aber **nur beim Einfügen** — beim Upsert wurde die Spalte nie
+angefasst. Behoben mit einem Trigger (`docs/proj-41b-lebenszeichen-trigger.sql`),
+der bei jedem Schreiben die Serverzeit setzt.
+
 Das Lebenszeichen hängt bewusst **nicht** am Auftragstakt: Der wird bei längerer
 Ruhe träger (bis 60 s), und sonst hätte die Anzeige einen sparsamen Arbeiter für
 einen abgestürzten gehalten.
