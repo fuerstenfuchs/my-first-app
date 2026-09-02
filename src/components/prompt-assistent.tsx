@@ -220,8 +220,13 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
             Eigene Rollhöhe statt „wächst ins Unendliche": Die Spalte rollt zwar
             schon, aber ein langes Gespräch schöbe den Erzeugen-Knopf sonst
             beliebig weit nach oben aus dem Blick.
+
+            60 % statt der ursprünglichen 38 %: Eine vollständige Antwort auf
+            „gib mir zwölf Prompts" hat rund 10 000 Zeichen (am 03.09.2026
+            gemessen). In einem Drittel Bildschirm sieht das aus wie
+            abgeschnitten, obwohl nur gerollt werden muss.
           */
-          <div className="max-h-[38dvh] min-w-0 space-y-1.5 overflow-y-auto pr-0.5">
+          <div className="max-h-[60dvh] min-w-0 space-y-1.5 overflow-y-auto pr-0.5">
             {verlauf.map((n, i) => (
               n.rolle === 'nutzer' ? (
                 <p

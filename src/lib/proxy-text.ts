@@ -124,26 +124,81 @@ export async function promptSchreiben(
   if (!proxyBereit()) throw new ProxyAus()
 
   const modell = optionen.modell ?? textModellLesen()
-  const frist = AbortSignal.timeout(120_000)
+  // Eine Frist für den GANZEN Vorgang, Fortsetzungen eingeschlossen. Die
+  // längste gemessene Antwort brauchte 74 Sekunden.
+  const frist = AbortSignal.timeout(GESAMTFRIST_MS)
   const abbruch = optionen.signal
     ? AbortSignal.any([optionen.signal, frist])
     : frist
 
+  const nachrichten: { role: string; content: string }[] = [
+    { role: 'system', content: anweisung(z) },
+    ...verlauf.map(n => ({
+      role: n.rolle === 'nutzer' ? 'user' : 'assistant',
+      content: n.text,
+    })),
+  ]
+
+  let gesamt = ''
+  for (let runde = 0; runde <= MAX_FORTSETZUNGEN; runde++) {
+    const { text, abgeschnitten } = await einRuf(nachrichten, modell, e, abbruch)
+    gesamt += text
+
+    if (!abgeschnitten) break
+
+    if (runde === MAX_FORTSETZUNGEN) {
+      // Nach so vielen Runden nicht weiter — aber AUCH NICHT SCHWEIGEN. Genau
+      // das stille Abschneiden hat Mark gemeldet: Man sieht der Antwort nicht
+      // an, ob das Modell fertig war oder abgewürgt wurde.
+      gesamt += '\n\n[Hier bricht es ab — auch nach '
+        + `${MAX_FORTSETZUNGEN + 1} Anläufen war die Antwort noch nicht zu Ende. `
+        + 'Frag nach dem Rest.]'
+      break
+    }
+
+    // Fortsetzen: Das bisher Geschriebene geht als Zug des Assistenten mit,
+    // damit das Modell weiß, wo es stand.
+    nachrichten.push({ role: 'assistant', content: text })
+    nachrichten.push({
+      role: 'user',
+      content: 'Mach genau dort weiter, wo du aufgehört hast. Keine Wiederholung, '
+        + 'keine Einleitung, kein erneutes Nummerieren — setz den Satz fort.',
+    })
+  }
+
+  return saeubern(gesamt)
+}
+
+/**
+ * Wie lang eine Antwort werden darf.
+ *
+ * WARUM 8000 UND NICHT 1200: Mark am 03.09.2026 — „die wurden aber irgendwann
+ * abgeschnitten … der sollte beliebig lang sein". Nachgestellt mit einer Frage
+ * nach zwölf ausführlichen Prompts:
+ *
+ *   max_tokens 1200  ->  finish_reason „length",   2802 Zeichen, mitten im Satz
+ *   max_tokens 8000  ->  finish_reason „stop",    10795 Zeichen, vollständig
+ *
+ * Und weil auch 8000 irgendwann nicht reichen, wird bei „length" von selbst
+ * fortgesetzt. Erst das macht die Antwort wirklich beliebig lang — eine höhere
+ * feste Grenze wäre nur eine Grenze weiter hinten.
+ */
+const MAX_WORTE = 8000
+const MAX_FORTSETZUNGEN = 3
+const GESAMTFRIST_MS = 300_000
+
+/** Ein einzelner Ruf. Meldet mit, ob das Modell mittendrin aufhören musste. */
+async function einRuf(
+  nachrichten: { role: string; content: string }[],
+  modell: string,
+  e: { url: string; token: string },
+  signal: AbortSignal,
+): Promise<{ text: string; abgeschnitten: boolean }> {
   const antwort = await fetch(`${_basis(e.url)}/v1/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${e.token}`, 'Content-Type': 'application/json' },
-    signal: abbruch,
-    body: JSON.stringify({
-      model: modell,
-      max_tokens: 1200,
-      messages: [
-        { role: 'system', content: anweisung(z) },
-        ...verlauf.map(n => ({
-          role: n.rolle === 'nutzer' ? 'user' : 'assistant',
-          content: n.text,
-        })),
-      ],
-    }),
+    signal,
+    body: JSON.stringify({ model: modell, max_tokens: MAX_WORTE, messages: nachrichten }),
   })
 
   if (!antwort.ok) {
@@ -155,12 +210,23 @@ export async function promptSchreiben(
     )
   }
 
-  const j = await antwort.json() as { choices?: { message?: { content?: string } }[] }
-  const text = j.choices?.[0]?.message?.content?.trim()
-  if (!text) throw new Error('Der Proxy hat einen leeren Prompt zurückgegeben.')
+  const j = await antwort.json() as {
+    choices?: { message?: { content?: string }; finish_reason?: string }[]
+  }
+  const wahl = j.choices?.[0]
+  const text = wahl?.message?.content
+  if (!text) throw new Error('Der Proxy hat eine leere Antwort zurückgegeben.')
 
-  // Manche Modelle setzen trotz Anweisung Anführungszeichen oder einen Zaun
-  // darum. Das wäre im Prompt-Feld sichtbarer Unrat.
+  return { text, abgeschnitten: wahl?.finish_reason === 'length' }
+}
+
+/**
+ * Zaun und Anführungszeichen abstreifen.
+ *
+ * Manche Modelle setzen sie trotz Anweisung darum — im Prompt-Feld wäre das
+ * sichtbarer Unrat.
+ */
+function saeubern(text: string): string {
   return text
     .replace(/^```(?:\w+)?\n?/, '')
     .replace(/\n?```$/, '')
