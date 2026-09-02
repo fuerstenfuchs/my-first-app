@@ -300,13 +300,19 @@ export function WerkbankDialog({
    */
   const vergleichAn = (e: React.PointerEvent) => {
     if (reiter !== 'regler' || e.button !== 0) return
-    e.currentTarget.setPointerCapture(e.pointerId)
+    // Der Fang haelt das Loslassen fest, auch wenn die Maus dabei die Buehne
+    // verlassen hat — sonst bliebe das Original stehen. Er darf aber nicht
+    // ueber den Vergleich entscheiden: Bei einem nicht mehr aktiven Zeiger
+    // wirft er (NotFoundError), und dann waere die Geste ganz ausgefallen.
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* egal */ }
     setVergleich(true)
   }
   const vergleichAus = (e: React.PointerEvent) => {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId)
-    }
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+    } catch { /* egal */ }
     setVergleich(false)
   }
 
