@@ -23,7 +23,7 @@ export const MODELLE = [
   {
     id: 'gemini-3.1-flash-image',
     label: 'Gemini 3.1 Flash Image',
-    note: 'Alle fünf Formate, bis 4K — ohne Referenzbilder',
+    note: 'Alle sieben Formate, bis 4K — ohne Referenzbilder',
     // Der nativen Gemini-Anbindung werden nur Prompt und Format übergeben.
     // Referenzbilder gingen dort lautlos verloren, während der Prompt weiter
     // „Image 1 = CHARACTER …" diktiert — das Ergebnis wäre eine erfundene
@@ -70,7 +70,7 @@ export type KlassenId = typeof KLASSEN[number]['id']
  *
  * - gpt-image-2 kennt nur DREI Größen. 16:9 wird zu 3:2 (1,50 statt 1,78),
  *   9:16 zu 2:3 — das sind 16 Prozent daneben.
- * - Gemini kennt alle fünf Verhältnisse, trifft sie aber auch nicht auf die
+ * - Gemini kennt alle sieben Verhältnisse, trifft sie aber auch nicht auf die
  *   Stelle: Am 02.09.2026 gemessen ergab 16:9 ein Bild von 2752×1536, also
  *   1,7917 statt 1,7778 — 0,78 Prozent zu breit.
  *
@@ -101,6 +101,10 @@ const ZUORDNUNG: Record<AspectRatioKey, FormatZuordnung> = {
   story_9_16:      { size: '1024x1536', exakt: false, hinweis: 'wird 2:3 — nächstliegende Größe' },
   portrait_4_5:    { size: '1024x1536', exakt: false, hinweis: 'wird 2:3 — etwas höher als 4:5' },
   cinematic_21_9:  { size: '1536x1024', exakt: false, hinweis: 'wird 3:2 — deutlich weniger breit als 21:9' },
+  // 4:3 ist 1,333, die nächstliegende native Größe 1536x1024 ist 1,5 —
+  // spürbar breiter. 3:4 entsprechend bei 1024x1536.
+  classic_4_3:     { size: '1536x1024', exakt: false, hinweis: 'wird 3:2 — breiter als 4:3' },
+  classic_3_4:     { size: '1024x1536', exakt: false, hinweis: 'wird 2:3 — höher als 3:4' },
 }
 
 /** Ohne gewähltes Format: quadratisch, die einzige Größe ohne Richtungsannahme. */
@@ -121,6 +125,8 @@ const FORMAT_ANSAGE: Record<AspectRatioKey, string> = {
   landscape_16_9: 'Output a WIDE 16:9 CINEMATIC LANDSCAPE frame.',
   story_9_16:     'Output a TALL 9:16 VERTICAL frame.',
   portrait_4_5:   'Output a VERTICAL 4:5 PORTRAIT frame.',
+  classic_4_3:    'Output a CLASSIC 4:3 LANDSCAPE frame.',
+  classic_3_4:    'Output a CLASSIC 3:4 VERTICAL frame.',
   cinematic_21_9: 'Output an ULTRA-WIDE 21:9 CINEMASCOPE frame.',
 }
 

@@ -33,6 +33,7 @@ import {
 import { CharacterForm } from '@/components/characters/character-form'
 import { VariantForm } from '@/components/characters/variant-form'
 import { VariantCard } from '@/components/characters/variant-card'
+import { AlleVariantenBilder } from '@/components/characters/alle-varianten-bilder'
 import { CharacterMediaManager } from '@/components/characters/character-media-manager'
 import { CharacterSheetDialog } from '@/components/characters/character-sheet-dialog'
 import {
@@ -352,6 +353,23 @@ export default function CharactersPage() {
                         </SortableContext>
                       </DndContext>
                     )}
+
+                    {/*
+                      Alle Bilder des Charakters, über alle Varianten hinweg.
+                      Steht UNTER den Varianten und ersetzt sie nicht: Die
+                      Varianten tragen Prompt und Beschreibung, das ist ihr
+                      Zweck. Was fehlte, war die Übersicht darüber — wer wissen
+                      wollte, welche Bilder es zu einem Charakter gibt, musste
+                      jede Variante einzeln anklicken.
+                    */}
+                    <AlleVariantenBilder
+                      varianten={variants.map(v => ({
+                        id: v.id,
+                        name: v.name,
+                        images: (v.images ?? []).map(b => ({ id: b.id, url: b.url })),
+                      }))}
+                      onVariante={id => setSelectedVariantId(id)}
+                    />
                   </div>
                 </div>
 

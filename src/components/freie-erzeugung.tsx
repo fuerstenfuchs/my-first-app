@@ -35,7 +35,9 @@ function titelVorschlag(prompt: string): string {
   return ersteZeile.length > 70 ? `${ersteZeile.slice(0, 67).trimEnd()}…` : ersteZeile
 }
 
-export function FreieErzeugung({ onEingereiht }: { onEingereiht?: () => void }) {
+export function FreieErzeugung(
+  { onEingereiht, breite }: { onEingereiht?: () => void; breite?: number },
+) {
   const { anlegen } = useImageJobs(false)
   const supabase = createClient()
 
@@ -135,7 +137,14 @@ export function FreieErzeugung({ onEingereiht }: { onEingereiht?: () => void }) 
   }
 
   return (
-    <aside className="flex w-full shrink-0 flex-col gap-2.5 border-b border-border/50 bg-muted/10 p-3 lg:w-[260px] lg:border-b-0 lg:border-r">
+    <aside
+      // Auf schmalen Bildschirmen liegt es über den Bildern und ist so breit
+      // wie die Seite; erst ab lg wird es zur Spalte, deren Breite am Trenner
+      // hängt. Deshalb kommt die Breite per Stil und nicht als Klasse — eine
+      // Tailwind-Klasse mit einer Zahl aus dem Zustand gäbe es nicht.
+      style={breite ? ({ ['--panel-breite' as string]: `${breite}px` }) : undefined}
+      className="flex w-full shrink-0 flex-col gap-2.5 border-b border-border/50 bg-muted/10 p-3 lg:w-[var(--panel-breite,260px)] lg:border-b-0"
+    >
       <div className="flex items-center gap-1.5">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
         <h2 className="text-xs font-semibold">Erzeugen</h2>
@@ -145,8 +154,8 @@ export function FreieErzeugung({ onEingereiht }: { onEingereiht?: () => void }) 
         value={prompt}
         onChange={e => setPrompt(e.target.value)}
         placeholder="Was soll entstehen? Zum Beispiel: Eine ältere Frau mit kurzem weißem Haar, Dreiviertelporträt vor heller Wand, weiches Fensterlicht von links …"
-        rows={6}
-        className="resize-y text-xs"
+        rows={10}
+        className="min-h-[9rem] flex-1 resize-y text-xs leading-relaxed"
       />
 
       <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
@@ -220,7 +229,7 @@ export function FreieErzeugung({ onEingereiht }: { onEingereiht?: () => void }) 
           {inKlassen ? `${formatLabel} · ${hinweis}` : hinweis}
         </span>
         {inKlassen
-          ? ' — Gemini kennt alle fünf Verhältnisse.'
+          ? ' — Gemini kennt alle sieben Verhältnisse.'
           : ' — gpt-image-2 kennt nur drei Größen.'}
       </p>
 

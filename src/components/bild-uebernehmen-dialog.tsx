@@ -7,9 +7,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { BAUSTEINE, baustein, type BausteinSchluessel } from '@/lib/bausteine'
 import { useBildUebernehmen, type Eintrag, type Variante } from '@/hooks/use-bild-uebernehmen'
 import { cn } from '@/lib/utils'
@@ -201,18 +198,37 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
           )}
         </div>
 
-        {/* Variante — nur wenn es überhaupt eine Wahl gibt */}
+        {/*
+          Die Variante als sichtbare Auswahl, nicht als Aufklappmenü.
+
+          Mark am 02.09.2026: „Allerdings werden die dann immer nur unter einem
+          Bild abgelegt, also bei den Charakteren ist es das erste, das mit Kopf
+          betitelt ist." Genau das war der Grund — das Menü stand klein am
+          unteren Rand, vorbelegt mit der ersten Variante, und wurde übersehen.
+          Eine Vorbelegung ist bequem; unsichtbar darf sie nicht sein.
+        */}
         {gewaehlt && b.varianten && varianten.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-xs text-muted-foreground">Variante</span>
-            <Select value={variantId ?? ''} onValueChange={setVariantId}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {varianten.map(v => (
-                  <SelectItem key={v.id} value={v.id} className="text-xs">{v.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              In welche Variante?
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {varianten.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setVariantId(v.id)}
+                  aria-pressed={variantId === v.id}
+                  className={cn(
+                    'rounded border px-2 py-1 text-[11px] transition',
+                    variantId === v.id
+                      ? 'border-primary bg-primary/10 font-medium text-primary'
+                      : 'border-border/60 text-muted-foreground hover:border-border hover:text-foreground',
+                  )}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -228,7 +244,13 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
           </Button>
           <Button size="sm" onClick={() => void bestaetigen()} disabled={!bereit}>
             {laeuft && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-            {gewaehlt ? `Nach „${gewaehlt.name}" übernehmen` : 'Übernehmen'}
+            {gewaehlt
+              ? `Nach „${gewaehlt.name}${
+                  varianten.length > 1 && variantId
+                    ? ` · ${varianten.find(v => v.id === variantId)?.name ?? ''}`
+                    : ''
+                }" übernehmen`
+              : 'Übernehmen'}
           </Button>
         </DialogFooter>
       </DialogContent>

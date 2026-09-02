@@ -198,6 +198,37 @@ unbekanntem Format · die widerlegte „exakt"-Zusage stand noch im Arbeiter ·
 fehlende Beschriftungen · der Speichern-Knopf ließ sich in eine Sackgasse
 fahren, wenn man nach dem Speichern den Titel korrigierte.
 
+## Nach Marks erstem Durchgang (02.09.2026)
+
+**Der Erzeugen-Bereich war zu schmal.** „Ich kann hier fast nichts lesen, was
+dort alles steht." Jetzt ein Trennbalken zwischen Feld und Bildern: ziehen,
+Pfeiltasten, Doppelklick setzt zurück. Die Breite bleibt im Browser gespeichert.
+Das Bildraster nimmt entsprechend weniger Spalten.
+
+**Bilder landeten immer in der ersten Variante.** „Bei den Charakteren ist es
+das erste, das mit Kopf betitelt ist. Da werden die alle abgelegt." Der Grund:
+Die Variantenwahl war ein kleines Aufklappmenü am unteren Rand, vorbelegt mit
+der ersten — und wurde übersehen. Jetzt sichtbare Schaltflächen, und der
+Bestätigungsknopf nennt das Ziel mitsamt Variante.
+
+**Alle Bilder eines Charakters auf einen Blick.** „Man sollte eigentlich schon
+alle Bilder sehen können, die den jeweiligen Charakter betreffen, ohne dass man
+immer klicken muss." Unter dem Variantenraster steht jetzt eine Übersicht über
+alle Bilder aller Varianten; jedes trägt die Marke seiner Variante und bringt
+einen mit einem Klick dorthin. Die Varianten bleiben — sie tragen Prompt und
+Beschreibung, das ist ihr Zweck. Was fehlte, war die Übersicht darüber.
+
+**Zwei Formate dazu: 4:3 und 3:4.** Gemini kennt beide nativ; gpt-image-2 macht
+daraus die nächstliegende seiner drei Größen (4:3 → 3:2, spürbar breiter — das
+steht als Hinweis am Feld).
+
+**Nano Banana Pro gibt es nicht.** Am 02.09.2026 gemessen: Sechs Namen
+durchprobiert (`gemini-3-pro-image`, `nano-banana-pro`, `imagen-4.0-…` und
+weitere), alle kommen mit „unknown provider for model" zurück. Der Proxy führt
+nur, was in seinem Katalog steht — und dort ist `gemini-3.1-flash-image` das
+einzige Bildmodell von Google. Das IST die Nano-Banana-Reihe, aber die
+Flash-Fassung, nicht Pro.
+
 ## Offen
 
 - Einen Baustein direkt aus dem Dialog neu anlegen geht noch nicht — bisher nur

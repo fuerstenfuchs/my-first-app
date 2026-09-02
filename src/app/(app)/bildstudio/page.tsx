@@ -9,6 +9,7 @@ import { ImageLightbox } from '@/components/image-lightbox'
 import { ErgebnisKachel } from '@/components/ergebnis-kachel'
 import { BildUebernehmenDialog } from '@/components/bild-uebernehmen-dialog'
 import { FreieErzeugung } from '@/components/freie-erzeugung'
+import { ZiehTrenner, gemerkteBreite } from '@/components/zieh-trenner'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
@@ -68,6 +69,16 @@ export default function BildstudioPage() {
   const [abgelegt, setAbgelegt] = useState<Set<string>>(new Set())
   const [lightbox, setLightbox] = useState<{ urls: string[]; start: number } | null>(null)
   const [uebernahme, setUebernahme] = useState<{ url: string; pfad: string } | null>(null)
+  /**
+   * Breite des Erzeugen-Bereichs.
+   *
+   * Startet mit der Vorgabe und wird erst nach dem ersten Rendern aus dem
+   * Browser nachgeladen — `localStorage` gibt es beim Rendern auf dem Server
+   * nicht, und ein Unterschied zwischen Server- und Browserfassung würde
+   * React beim Abgleich anmeckern.
+   */
+  const [panelBreite, setPanelBreite] = useState(300)
+  useEffect(() => { setPanelBreite(gemerkteBreite('bildstudio-panel', 300)) }, [])
 
   const abgelegteHolen = useCallback(() => {
     void abgelegteLaden().then(setAbgelegt)
@@ -167,7 +178,15 @@ export default function BildstudioPage() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <FreieErzeugung onEingereiht={laden} />
+        <FreieErzeugung onEingereiht={laden} breite={panelBreite} />
+
+        <ZiehTrenner
+          merkschluessel="bildstudio-panel"
+          breite={panelBreite}
+          onBreite={setPanelBreite}
+          min={240}
+          max={720}
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {loading ? (
@@ -198,7 +217,7 @@ export default function BildstudioPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {gefiltert.map((b, i) => (
               <div key={`${b.job.id}-${b.index}`} className="space-y-1">
                 <ErgebnisKachel

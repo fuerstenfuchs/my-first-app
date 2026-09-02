@@ -16,7 +16,8 @@ export type ShotTypeKey = 'extreme_closeup' | 'closeup' | 'headshot' | 'portrait
 export type CameraAngleKey = 'eye_level' | 'slight_low' | 'low_angle' | 'slight_high' | 'high_angle' | 'birds_eye' | 'worms_eye' | 'overhead'
 export type LensKey = '24mm' | '35mm' | '50mm' | '85mm' | '135mm' | '200mm'
 export type DepthOfFieldKey = 'deep_focus' | 'moderate_dof' | 'shallow_dof' | 'ultra_shallow_dof'
-export type AspectRatioKey = 'portrait_4_5' | 'landscape_16_9' | 'square_1_1' | 'cinematic_21_9' | 'story_9_16'
+export type AspectRatioKey = 'portrait_4_5' | 'landscape_16_9' | 'square_1_1'
+  | 'cinematic_21_9' | 'story_9_16' | 'classic_4_3' | 'classic_3_4'
 
 export const SCENE_TYPES: { key: SceneType; label: string; emoji: string }[] = [
   { key: 'outdoor', label: 'Outdoor', emoji: '🌳' },
@@ -154,4 +155,8 @@ export const ASPECT_RATIOS: { key: AspectRatioKey; label: string; emoji: string;
   { key: 'square_1_1',      label: 'Square (1:1)',      emoji: '⬛', prompt: 'balanced square framing (1:1)' },
   { key: 'cinematic_21_9',  label: 'Cinematic (21:9)',  emoji: '🎬', prompt: 'cinematic ultra-wide composition (21:9)' },
   { key: 'story_9_16',      label: 'Story Format (9:16)', emoji: '📲', prompt: 'vertical smartphone-style composition (9:16)' },
+  // Am 02.09.2026 auf Marks Wunsch dazu. Gemini kennt 4:3 und 3:4 nativ —
+  // gpt-image-2 nicht, dort wird daraus die nächstliegende der drei Größen.
+  { key: 'classic_4_3',     label: 'Klassisch (4:3)',    emoji: '🖼️', prompt: 'classic 4:3 composition' },
+  { key: 'classic_3_4',     label: 'Klassisch hoch (3:4)', emoji: '🖼', prompt: 'classic vertical 3:4 composition' },
 ]

@@ -42,7 +42,7 @@ export const GROESSENKLASSEN = ['512', '512P', '512PX', '1K', '2K', '4K'] as con
 /**
  * Die Trésor-Formate auf Geminis Seitenverhältnisse.
  *
- * Gemini kennt alle fünf, gpt-image-2 nur drei Größen (aus 16:9 wird dort 3:2,
+ * Gemini kennt alle sieben, gpt-image-2 nur drei Größen (aus 16:9 wird dort 3:2,
  * also 16 Prozent daneben).
  *
  * ABER NICHT „EXAKT": Hier stand zuerst „Wer ein Format exakt braucht, ist hier
@@ -57,6 +57,8 @@ export const FORMAT_ZU_VERHAELTNIS: Record<string, string | undefined> = {
   story_9_16:     '9:16',
   portrait_4_5:   '4:5',
   cinematic_21_9: '21:9',
+  classic_4_3:    '4:3',
+  classic_3_4:    '3:4',
 }
 
 /**
