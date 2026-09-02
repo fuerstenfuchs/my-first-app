@@ -9,6 +9,7 @@ import { ImageLightbox } from '@/components/image-lightbox'
 import { ErgebnisKachel } from '@/components/ergebnis-kachel'
 import { BildUebernehmenDialog } from '@/components/bild-uebernehmen-dialog'
 import { FreieErzeugung } from '@/components/freie-erzeugung'
+import { WerkbankDialog } from '@/components/werkbank-dialog'
 import { ZiehTrenner, gemerkteBreite } from '@/components/zieh-trenner'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
@@ -69,6 +70,7 @@ export default function BildstudioPage() {
   const [abgelegt, setAbgelegt] = useState<Set<string>>(new Set())
   const [lightbox, setLightbox] = useState<{ urls: string[]; start: number } | null>(null)
   const [uebernahme, setUebernahme] = useState<{ url: string; pfad: string } | null>(null)
+  const [werkbank, setWerkbank] = useState<{ job: ImageJob; url: string; pfad: string } | null>(null)
   /**
    * Breite des Erzeugen-Bereichs.
    *
@@ -229,6 +231,7 @@ export default function BildstudioPage() {
                   abgelegt={abgelegt.has(b.pfad)}
                   onAnsehen={() => setLightbox({ urls, start: i })}
                   onUebernehmen={url => setUebernahme({ url, pfad: b.pfad })}
+                  onBearbeiten={(url, pfad) => setWerkbank({ job: b.job, url, pfad })}
                   onVergroessern={(pfad, stufe, verfahren) =>
                     void vergroessern(b.job, pfad, stufe, verfahren)}
                 />
@@ -241,6 +244,15 @@ export default function BildstudioPage() {
           )}
         </div>
       </div>
+
+      <WerkbankDialog
+        offen={!!werkbank}
+        job={werkbank?.job ?? null}
+        bildUrl={werkbank?.url ?? null}
+        quellPfad={werkbank?.pfad ?? null}
+        onClose={() => setWerkbank(null)}
+        onGespeichert={() => { void laden(); abgelegteHolen() }}
+      />
 
       <BildUebernehmenDialog
         offen={!!uebernahme}

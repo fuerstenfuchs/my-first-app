@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Loader2, Maximize2, FolderInput, Check } from 'lucide-react'
+import { Download, Loader2, Maximize2, FolderInput, Check, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
@@ -31,6 +31,8 @@ export type KachelAktionen = {
   onVergroessern: (pfad: string, stufe: Stufe, verfahren: Upscaler) => void
   /** In einen Baustein übernehmen. */
   onUebernehmen: (url: string) => void
+  /** Zuschneiden und Regler — fehlt sie, wird der Knopf nicht gezeigt. */
+  onBearbeiten?: (url: string, pfad: string) => void
   /** Groß ansehen. */
   onAnsehen: () => void
 }
@@ -62,7 +64,7 @@ function zielMasse(job: ImageJob, faktor: number): string {
 
 export function ErgebnisKachel({
   job, url, pfad, index, gesamt, abgelegt,
-  onVergroessern, onUebernehmen, onAnsehen,
+  onVergroessern, onUebernehmen, onAnsehen, onBearbeiten,
 }: Props) {
   const [laedt, setLaedt] = useState(false)
 
@@ -150,6 +152,18 @@ export function ErgebnisKachel({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        )}
+
+        {onBearbeiten && (
+          <Button
+            size="icon"
+            className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
+            title="Zuschneiden und anpassen"
+            aria-label={`Ergebnis ${index + 1} bearbeiten`}
+            onClick={() => onBearbeiten(url, pfad)}
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+          </Button>
         )}
 
         <Button

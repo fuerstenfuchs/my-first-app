@@ -27,7 +27,7 @@ export interface ImageJob {
   reference_roles: ReferenzRolle[]
   scene_meta:     Record<string, unknown> | null
   result_paths:   string[]
-  job_type:       'generate' | 'upscale'
+  job_type:       'generate' | 'upscale' | 'bearbeitet'
   source_path:    string | null
   scale:          number | null
   upscaler:       Upscaler | null
@@ -35,6 +35,8 @@ export interface ImageJob {
   ziel_klasse:    '1K' | '2K' | '4K' | null
   /** Auftragsnummer bei fal.ai — damit ein Neuversuch nicht zweimal zahlt. */
   external_ref:   Record<string, unknown> | null
+  /** Zuschnitt und Reglerstellungen — nur bei job_type = bearbeitet. */
+  bearbeitung:    Record<string, unknown> | null
 }
 
 export interface ImageJobInput {
