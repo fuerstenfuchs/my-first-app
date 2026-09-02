@@ -32,10 +32,22 @@ interface Props {
 export function ZiehTrenner({ merkschluessel, breite, onBreite, min = 220, max = 720 }: Props) {
   const [zieht, setZieht] = useState(false)
   const start = useRef<{ x: number; breite: number } | null>(null)
+  /**
+   * Der zuletzt gesetzte Wert — für das Merken beim Loslassen.
+   *
+   * `breite` kommt als Eigenschaft herein und ist in einem Handler immer der
+   * Stand des letzten Renderns. Zieht man schnell, folgen mehrere
+   * Bewegungsereignisse aufeinander, bevor React neu zeichnet — dann speichert
+   * `merken(breite)` den ALTEN Wert. Nachgemessen am 02.09.2026: gezogen von
+   * 300 auf 520, gespeichert wurde 300.
+   */
+  const aktuell = useRef(breite)
 
   const merken = useCallback((px: number) => {
     try { localStorage.setItem(merkschluessel, String(px)) } catch { /* egal */ }
   }, [merkschluessel])
+
+  useEffect(() => { aktuell.current = breite }, [breite])
 
   useEffect(() => {
     if (!zieht) return
@@ -70,25 +82,28 @@ export function ZiehTrenner({ merkschluessel, breite, onBreite, min = 220, max =
       }}
       onPointerMove={e => {
         if (!start.current) return
-        onBreite(begrenzen(start.current.breite + (e.clientX - start.current.x)))
+        const neu = begrenzen(start.current.breite + (e.clientX - start.current.x))
+        aktuell.current = neu
+        onBreite(neu)
       }}
       onPointerUp={e => {
         e.currentTarget.releasePointerCapture(e.pointerId)
         start.current = null
         setZieht(false)
-        merken(breite)
+        merken(aktuell.current)
       }}
       // Auch ohne Maus bedienbar: Pfeiltasten verschieben in Zehnerschritten.
       onKeyDown={e => {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
         e.preventDefault()
         const neu = begrenzen(breite + (e.key === 'ArrowRight' ? 16 : -16))
+        aktuell.current = neu
         onBreite(neu)
         merken(neu)
       }}
       // Doppelklick stellt die Vorgabe wieder her — wer sich verzogen hat,
       // muss nicht zurückzielen.
-      onDoubleClick={() => { onBreite(min + 40); merken(min + 40) }}
+      onDoubleClick={() => { aktuell.current = min + 40; onBreite(min + 40); merken(min + 40) }}
       title="Ziehen zum Verbreitern · Doppelklick setzt zurück"
       className={cn(
         'group relative hidden w-1.5 shrink-0 cursor-col-resize touch-none lg:block',
