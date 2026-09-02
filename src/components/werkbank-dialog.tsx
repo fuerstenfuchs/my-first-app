@@ -176,6 +176,22 @@ export function WerkbankDialog({
     }
   }
 
+  /**
+   * Ausschnitt setzen — und den sichtbaren Rahmen gleich mit.
+   *
+   * WARUM BEIDES ZUSAMMEN: `ausschnitt` ist die Wahrheit fuer das Speichern,
+   * `crop` ist das, was react-image-crop zeichnet. Setzt man nur den einen,
+   * behauptet die Kopfzeile einen Zuschnitt, den man im Bild nicht sieht —
+   * genau das war am 02.09.2026 im Browser zu sehen: „Ausschnitt 1122 x 631",
+   * daneben ein Rahmen ueber dem ganzen Hochformat.
+   */
+  function ausschnittSetzen(a: Ausschnitt) {
+    setAusschnitt(a)
+    setCrop(istGanzesBild(a)
+      ? undefined
+      : { unit: '%', x: a.x * 100, y: a.y * 100, width: a.breite * 100, height: a.hoehe * 100 })
+  }
+
   function automatisch() {
     const bitmap = bitmapRef.current
     if (!bitmap) return
@@ -184,8 +200,7 @@ export function WerkbankDialog({
     const a = seitenverhaeltnis
       ? bestesFenster(bitmap, seitenverhaeltnis)
       : raenderWeg(bitmap)
-    setAusschnitt(a)
-    setCrop({ unit: '%', x: a.x * 100, y: a.y * 100, width: a.breite * 100, height: a.hoehe * 100 })
+    ausschnittSetzen(a)
     if (istGanzesBild(a)) {
       toast.info(seitenverhaeltnis
         ? 'Kein besserer Ausschnitt gefunden — das Bild bleibt, wie es ist.'
@@ -346,14 +361,13 @@ export function WerkbankDialog({
                         key={v.key}
                         onClick={() => {
                           setVerhaeltnis(v.key)
-                          setCrop(undefined)
                           // Der Rahmen springt SOFORT in das gewählte Format —
                           // mittig, so groß wie er hineinpasst. Ein Knopf, nach
                           // dem sichtbar nichts geschieht, ist ein kaputter
                           // Knopf; und den alten freien Zuschnitt einfach
                           // stehen zu lassen wäre noch schlechter: Für den
                           // Betrachter aufgehoben, beim Speichern angewandt.
-                          setAusschnitt(
+                          ausschnittSetzen(
                             v.wert && masse
                               ? zentriertesFenster(masse.b, masse.h, v.wert)
                               : GANZES_BILD,
