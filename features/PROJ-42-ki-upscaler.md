@@ -176,11 +176,57 @@ gegen `https://queue.fal.run@boese.de/` und `fal.media.angreifer.de` · der
 FAL_KEY landet in keiner Meldung, keinem Log und keiner Datenbankzeile · die
 Warteschleife hängt nicht und bricht nicht zu früh ab.
 
+## Zweites KI-Verfahren: Crystal (Clarity AI) — 02.09.2026
+
+Auf Marks Wunsch dazugebaut, `fal-ai/crystal-upscaler`. Statt eines zweiten
+if-Zweigs eine Modelltabelle in `fal.ts`: Die Modelle sprechen nicht dieselbe
+Sprache — SeedVR2 will `upscale_factor` und liefert `image`, Crystal will
+`scale_factor` und liefert `images` als Liste. Der Ablauf drumherum ist gleich
+und steht nur einmal da. Crystal hat zusaetzlich `creativity` (0 bis 10); wir
+fahren auf 0, also nah am Original.
+
+### Die Preise, gemessen statt geschaetzt
+
+Beide auf demselben Bild (1122x1402, Faktor 2), Preis aus dem Guthaben bei
+fal.ai vorher und nachher:
+
+| Verfahren | Kosten | Ergebnis | je Megapixel |
+|---|---|---|---|
+| SeedVR2 | **0,7 ct** | 2256x2816 | ~$0,0011 |
+| Crystal | **9,6 ct** | 2244x2804 | ~$0,0152 |
+
+**Crystal kostet das Vierzehnfache.** Im Menue stand vorher fuer beide
+„ca. 0,5 ct" — eine aus der Recherche uebernommene Zahl, die fuer Crystal um
+das Neunzehnfache danebenlag. Bei einem Preis, der vor dem Klick steht, ist das
+eine falsche Auskunft. `KI_PREIS` ist jetzt je Verfahren.
+
+Die Werte fuer 3x und 4x sind hochgerechnet (Flaeche waechst quadratisch), nicht
+gemessen. Mit einem Messpunkt laesst sich nicht entscheiden, ob Crystal
+ueberhaupt nach Megapixeln abrechnet oder pauschal je Bild.
+
+### Zwei Fallstricke, die dabei aufgefallen sind
+
+**fal bucht verzoegert ab.** SeedVR2 zeigte unmittelbar nach dem Lauf noch
+0,00 Cent; der Abzug kam rund eine Minute spaeter. Wer sofort nachmisst, misst
+falsch — und haette hier faelschlich „kostenlos" notiert.
+
+**Das Format kann wechseln.** Die Bildpruefung akzeptiert jetzt PNG, JPEG und
+WEBP statt nur PNG. Google lieferte am selben Tag auf eine Anfrage, die PNG
+erwarten liess, ein JPEG. Ein Anbieter, der das Format wechselt, soll keinen
+bezahlten Auftrag zum Scheitern bringen.
+
+Das Menue wird aus der Verfahrensliste erzeugt statt dreimal abgeschrieben —
+beim zweiten KI-Verfahren waere sonst genau die Kopie entstanden, an der Preis
+und Beschriftung auseinanderdriften (Critic-Befund 11).
+
 ## Offen
 
 - **Noch nicht gegen die echte API gemessen.** Es fehlt der Schlüssel: Konto auf
   fal.ai anlegen, Guthaben aufladen, `FAL_KEY` in `worker/.env` eintragen. Dann
   `npm run pruefen` (kostet nichts) und ein echter 2×-Lauf.
+- Crystals Preis fuer 3x und 4x ist hochgerechnet, nicht gemessen.
+- Ob Crystals `creativity` ueber 0 lohnt, ist ungeprueft. Waere eine
+  Einstellung in der Oberflaeche, wenn Mark es will.
 - **Ungemessen: die Größe des Datenrumpfs.** Das PNG geht als Base64 im
   JSON-Rumpf hinaus — bei einem 1536×1024-Bild sind das 3 bis 5,5 MB. Fals
   Grenze ist nicht belegt. Das ist der eine Punkt, der beim ersten echten Lauf
