@@ -384,6 +384,13 @@ export class BildWerk {
   }
 
   /** In das Canvas des Konstruktors zeichnen (Vorschau). */
+  /**
+   * Vorschau zeichnen.
+   *
+   * Die Grösse des Canvas bestimmt der Aufrufer — hier wird sie nur gelesen.
+   * Ein Canvas ohne gesetzte Masse ist 300×150 gross; genau so sah die erste
+   * Fassung am 02.09.2026 im Browser aus.
+   */
   zeichnen(r: Regler): void {
     this.pruefeLebend()
     const gl = this.gl
@@ -553,7 +560,15 @@ export class BildWerk {
     gl.uniform1i(f.ort('uFarbe'), 0)
     gl.uniform1i(f.ort('uUnscharf'), 1)
     gl.uniform1f(f.ort('uMenge'), menge)
-    gl.uniform1f(f.ort('uFlipY'), ziel ? -1 : 1)
+    // Die Vorschau braucht die Spiegelung, der Export nicht — nicht umgekehrt.
+    //
+    // Am 02.09.2026 am laufenden Browser gemessen: Mit `ziel ? -1 : 1` stand das
+    // Bild in der Vorschau auf dem Kopf. Der Grund ist die Kette aus drei
+    // Spiegelungen: UNPACK_FLIP_Y_WEBGL beim Hochladen, die Bildpunktrichtung
+    // des Vollbild-Vierecks, und beim Export zusaetzlich readPixels, das von
+    // unten nach oben liest. Hergeleitet hatte ich es andersherum — die Messung
+    // hat entschieden.
+    gl.uniform1f(f.ort('uFlipY'), ziel ? 1 : -1)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
     gl.activeTexture(gl.TEXTURE0)

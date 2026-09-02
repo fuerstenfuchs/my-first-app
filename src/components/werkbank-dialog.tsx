@@ -115,6 +115,20 @@ export function WerkbankDialog({
     const bitmap = bitmapRef.current
     if (!canvas || !bitmap) return
     try {
+      // Das Canvas muss BEMASST werden, sonst ist es 300×150 — die Vorgabe von
+      // HTML. Genau so sah die erste Fassung aus: das Bild in eine Briefmarke
+      // gequetscht. `BildWerk` liest die Maße nur, es setzt sie nicht.
+      //
+      // 1600 Pixel lange Kante reichen für die Vorschau; das volle Bild wird
+      // erst beim Speichern gerechnet, durch denselben Shader.
+      const lang = Math.max(bitmap.width, bitmap.height)
+      const f = Math.min(1, 1600 / lang)
+      const b = Math.max(1, Math.round(bitmap.width * f))
+      const h = Math.max(1, Math.round(bitmap.height * f))
+      if (canvas.width !== b || canvas.height !== h) {
+        canvas.width = b
+        canvas.height = h
+      }
       if (!werkRef.current) {
         werkRef.current = new BildWerk(canvas)
         werkRef.current.laden(bitmap)
@@ -244,10 +258,10 @@ export function WerkbankDialog({
                 className="max-h-full"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <canvas ref={canvasRef} className="max-h-[70vh] w-auto object-contain" />
+                <canvas ref={canvasRef} className="block max-h-[70vh] max-w-full object-contain" />
               </ReactCrop>
             ) : (
-              <canvas ref={canvasRef} className="max-h-full w-auto object-contain" />
+              <canvas ref={canvasRef} className="block max-h-full max-w-full object-contain" />
             )}
           </div>
 
