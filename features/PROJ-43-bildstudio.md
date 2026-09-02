@@ -73,10 +73,33 @@ Nutzerkennung ist.
 Scheitert das Eintragen der Zeile, wird die bereits hochgeladene Datei wieder
 weggeräumt. Sonst läge sie im Eimer, ohne dass jemand wüsste, wozu sie gehört.
 
+### Neun Ziele, drei Bauarten (nachgereicht auf Marks Wunsch)
+
+Prompts und die drei Archetypen-Bibliotheken sind dazugekommen. Sie sind anders
+gebaut als die fünf Bibliotheken, und diese Unterschiede stehen jetzt als
+Felder in der Tabelle statt als `if` im Ablauf:
+
+| | Bibliotheken | Archetypen | Prompts |
+|---|---|---|---|
+| Bild hängt an | `variant_id` | `archetype_id` | `prompt_id` |
+| Varianten | ja | **nein** | **nein** |
+| `storage_path` | ja | ja | **nein** |
+| Pflichtfeld | — | — | **`type` ('image')** |
+| Namensspalte | `name` | `name` | **`title`** |
+
+Die Namensspalte war der stillste Fallstrick: `prompts` heißt die Spalte
+`title`. Eine Abfrage auf `name` hätte einen Fehler geliefert, keine leere
+Liste — der Alias `name:title` macht daraus für die Oberfläche wieder einen
+einheitlichen Namen.
+
+Und „keine Varianten" heißt hier ausdrücklich NICHT „geht nicht": Der Warnsatz
+„hat noch keine Variante" erscheint nur bei Bausteinen, die überhaupt welche
+haben.
+
 ## Offen
 
-- Archetypen (Charakter-, Outfit-, Location-Archetypen) und Prompt-Medien sind
-  noch keine Ziele. Sie haben keine Varianten, brauchen also einen zweiten Weg
-  in derselben Tabelle.
 - Einen Baustein direkt aus dem Dialog neu anlegen geht noch nicht — bisher nur
   in vorhandene übernehmen.
+- Sammlungen, Kamera/Licht und Look & Grading sind keine Ziele. Sie haben nur
+  ein Titelbild und keine Bilderliste — dorthin zu übernehmen hieße, das
+  Titelbild zu überschreiben, und genau das soll nicht passieren.

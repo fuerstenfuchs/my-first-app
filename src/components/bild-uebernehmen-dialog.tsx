@@ -44,7 +44,7 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
   const [suche, setSuche] = useState('')
   const [gewaehlt, setGewaehlt] = useState<Eintrag | null>(null)
   const [varianten, setVarianten] = useState<Variante[]>([])
-  const [variantId, setVariantId] = useState<string>('')
+  const [variantId, setVariantId] = useState<string | null>(null)
 
   const b = baustein(art)
 
@@ -55,7 +55,7 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
     setLaedt(true)
     setGewaehlt(null)
     setVarianten([])
-    setVariantId('')
+    setVariantId(null)
     void eintraegeLaden(b).then(liste => {
       if (!abgebrochen) { setEintraege(liste); setLaedt(false) }
     })
@@ -69,8 +69,10 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
     void variantenLaden(b, gewaehlt.id).then(liste => {
       if (abgebrochen) return
       setVarianten(liste)
-      // Hat der Eintrag nur eine Variante, ist die Wahl keine Frage.
-      setVariantId(liste[0]?.id ?? '')
+      // Hat der Eintrag nur eine Variante, ist die Wahl keine Frage. Gibt es
+      // gar keine (Archetypen, Prompts), bleibt es null — dort hängt das Bild
+      // direkt am Eintrag.
+      setVariantId(liste[0]?.id ?? null)
     })
     return () => { abgebrochen = true }
   }, [gewaehlt, b, variantenLaden])
@@ -81,7 +83,9 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
   }, [eintraege, suche])
 
   const bestaetigen = useCallback(async () => {
-    if (!bildUrl || !gewaehlt || !variantId) return
+    if (!bildUrl || !gewaehlt) return
+    // Ein Baustein MIT Varianten braucht eine gewählte; einer ohne nicht.
+    if (b.varianten && !variantId) return
     const ok = await uebernehmen(bildUrl, {
       baustein: art,
       parentId: gewaehlt.id,
@@ -89,9 +93,9 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
       variantId,
     })
     if (ok) { onFertig?.(); onClose() }
-  }, [bildUrl, gewaehlt, variantId, art, uebernehmen, onFertig, onClose])
+  }, [bildUrl, gewaehlt, variantId, art, b, uebernehmen, onFertig, onClose])
 
-  const bereit = !!gewaehlt && !!variantId && !laeuft
+  const bereit = !!gewaehlt && (!b.varianten || !!variantId) && !laeuft
 
   return (
     <Dialog open={offen} onOpenChange={o => !o && onClose()}>
@@ -104,8 +108,9 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
           </DialogDescription>
         </DialogHeader>
 
-        {/* Wohin — fünf Kacheln, immer sichtbar */}
-        <div className="grid grid-cols-5 gap-1.5">
+        {/* Wohin — neun Ziele in drei Reihen, immer sichtbar. Reihe 1 und 2 sind
+            die Bibliotheken und die Prompts, Reihe 3 die Archetypen. */}
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-3">
           {BAUSTEINE.map(eintrag => {
             const Icon = eintrag.icon
             const aktiv = eintrag.schluessel === art
@@ -194,10 +199,10 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
         </div>
 
         {/* Variante — nur wenn es überhaupt eine Wahl gibt */}
-        {gewaehlt && varianten.length > 1 && (
+        {gewaehlt && b.varianten && varianten.length > 1 && (
           <div className="flex items-center gap-2">
             <span className="shrink-0 text-xs text-muted-foreground">Variante</span>
-            <Select value={variantId} onValueChange={setVariantId}>
+            <Select value={variantId ?? ''} onValueChange={setVariantId}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {varianten.map(v => (
@@ -208,7 +213,7 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
           </div>
         )}
 
-        {gewaehlt && varianten.length === 0 && (
+        {gewaehlt && b.varianten && varianten.length === 0 && (
           <p className="text-xs text-destructive">
             „{gewaehlt.name}" hat noch keine Variante — dort lässt sich kein Bild ablegen.
           </p>

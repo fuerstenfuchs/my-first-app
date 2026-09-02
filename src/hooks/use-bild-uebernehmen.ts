@@ -30,8 +30,8 @@ export type Ziel = {
   /** Der vorhandene Eintrag, in den es soll. */
   parentId: string
   parentName: string
-  /** Die Variante darin. */
-  variantId: string
+  /** Die Variante darin — null bei Archetypen und Prompts, die keine haben. */
+  variantId: string | null
 }
 
 export type Eintrag = { id: string; name: string; cover_image_url: string | null }
@@ -49,25 +49,31 @@ export function useBildUebernehmen() {
 
   /** Die Einträge eines Bausteins, für die Auswahlliste. */
   const eintraegeLaden = useCallback(async (b: Baustein): Promise<Eintrag[]> => {
+    // `prompts` nennt die Spalte `title`, alle anderen `name`. Der Alias macht
+    // daraus für die Oberfläche wieder einen einheitlichen `name`.
+    const spalte = b.namensSpalte === 'title' ? 'name:title' : 'name'
     const { data, error } = await supabase
       .from(b.tabelle)
-      .select('id, name, cover_image_url')
-      .order('name', { ascending: true })
+      .select(`id, ${spalte}, cover_image_url`)
+      .order(b.namensSpalte, { ascending: true })
       .limit(500)
     if (error) {
       toast.error(`${b.label} konnten nicht geladen werden: ${error.message}`)
       return []
     }
-    return (data ?? []) as Eintrag[]
+    return (data ?? []) as unknown as Eintrag[]
   }, [supabase])
 
   const variantenLaden = useCallback(async (
     b: Baustein, parentId: string,
   ): Promise<Variante[]> => {
+    // Archetypen und Prompts haben keine Varianten — dort hängen die Bilder
+    // direkt am Eintrag. Eine leere Liste heißt hier also NICHT „geht nicht".
+    if (!b.varianten) return []
     const { data, error } = await supabase
-      .from(b.variantenTabelle)
+      .from(b.varianten.tabelle)
       .select('id, name, sort_order')
-      .eq(b.variantenFk, parentId)
+      .eq(b.varianten.fk, parentId)
       .order('sort_order', { ascending: true })
     if (error) {
       toast.error(`Varianten konnten nicht geladen werden: ${error.message}`)
@@ -109,6 +115,9 @@ export function useBildUebernehmen() {
 
       // 2. Ablegen, im Eimer des Bausteins.
       const pfad = ablagepfad(user.id, ziel.parentId, ziel.variantId, endungAus(quellUrl))
+      // Woran die Bildzeile hängt: an der Variante, am Archetyp oder am Prompt.
+      const anker = b.varianten ? ziel.variantId : ziel.parentId
+      if (!anker) { toast.error('Kein Ziel für das Bild gefunden.'); return false }
       const { error: hochErr } = await supabase.storage
         .from(b.bucket)
         .upload(pfad, blob, { contentType: blob.type || 'image/png', upsert: false })
@@ -123,17 +132,20 @@ export function useBildUebernehmen() {
       const { data: letzte } = await supabase
         .from(b.bildTabelle)
         .select('sort_order')
-        .eq('variant_id', ziel.variantId)
+        .eq(b.bildFk, anker)
         .order('sort_order', { ascending: false })
         .limit(1)
       const naechste = ((letzte?.[0]?.sort_order as number | undefined) ?? -1) + 1
 
       const { error: zeileErr } = await supabase.from(b.bildTabelle).insert({
-        variant_id: ziel.variantId,
+        [b.bildFk]: anker,
         user_id: user.id,
         url: publicUrl,
-        storage_path: pfad,
+        // `prompt_media` hat diese Spalte nicht — sie einfach mitzuschicken
+        // wäre ein Fehler, kein stiller Zusatz.
+        ...(b.hatStoragePath ? { storage_path: pfad } : {}),
         sort_order: naechste,
+        ...(b.zusatz ?? {}),
       })
       if (zeileErr) {
         // Die Datei liegt schon im Eimer — ohne Zeile wüsste niemand mehr,
