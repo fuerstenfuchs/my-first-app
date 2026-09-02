@@ -155,7 +155,18 @@ export function FreieErzeugung(
         onChange={e => setPrompt(e.target.value)}
         placeholder="Was soll entstehen? Zum Beispiel: Eine ältere Frau mit kurzem weißem Haar, Dreiviertelporträt vor heller Wand, weiches Fensterlicht von links …"
         rows={10}
-        className="min-h-[9rem] flex-1 resize-y text-xs leading-relaxed"
+        /*
+          KEIN `flex-1`. Mark am 02.09.2026: „Das Promp Fenster beim Lichttisch
+          sollte nicht ganz so groß sein … in der Höhe vielleicht nur halb so
+          hoch. Dann scrolle ich lieber da ein bisschen. Ansonsten verschiebt
+          sich ja alles zu weit nach unten."
+
+          `flex-1` liess das Feld die ganze Spalte fuellen — Modellwahl, Format
+          und der Erzeugen-Knopf wurden dadurch an den unteren Rand gedrueckt.
+          Jetzt eine feste Hoehe, in der gerollt wird; `resize-y` bleibt, wer
+          mehr sehen will, zieht es groesser.
+        */
+        className="h-[min(34vh,20rem)] shrink-0 resize-y overflow-y-auto text-xs leading-relaxed"
       />
 
       <Select value={modell} onValueChange={v => setModell(v as ModellId)}>

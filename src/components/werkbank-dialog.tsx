@@ -91,6 +91,24 @@ export function WerkbankDialog({
   const [ausschnitt, setAusschnitt] = useState<Ausschnitt>(GANZES_BILD)
   const [regler, setRegler] = useState<Regler>(REGLER_VORGABE)
 
+  /**
+   * Vergroesserung der Ansicht. 1 = eingepasst.
+   *
+   * Mark am 02.09.2026: „ein Zoomen auf das Bild, in dem ich mir den Mausrad
+   * einfach groesser oder kleiner mache".
+   *
+   * WARUM NICHT PER CSS-TRANSFORM: Der Rahmen von react-image-crop misst das
+   * Kind, ueber dem er liegt. Ein `scale()` liesse den Rahmen an der alten
+   * Stelle und die Maus an der falschen — die Bibliothek rechnet in
+   * Elementkoordinaten. Stattdessen waechst das Canvas selbst, und die Buehne
+   * bekommt Rollbalken. Damit stimmt jede Zeigerposition von allein.
+   */
+  const [zoom, setZoom] = useState(1)
+  /** Solange gedrueckt: das unbearbeitete Bild. */
+  const [vergleich, setVergleich] = useState(false)
+  const buehneRef = useRef<HTMLDivElement>(null)
+  const [buehne, setBuehne] = useState<{ b: number; h: number } | null>(null)
+
   // ── Laden ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!offen || !bildUrl) return
@@ -98,6 +116,7 @@ export function WerkbankDialog({
     setLaedt(true); setFehler(null)
     setRegler(REGLER_VORGABE); setAusschnitt(GANZES_BILD)
     setCrop(undefined); setVerhaeltnis('frei'); setReiter('zuschnitt')
+    setZoom(1); setVergleich(false)
 
     // Über fetch statt <img>: Ein ImageBitmap aus einem lokalen Blob kann das
     // Canvas gar nicht verunreinigen — die Herkunftsfrage entfällt damit. Und
@@ -124,8 +143,37 @@ export function WerkbankDialog({
     }
   }, [offen, bildUrl])
 
+  // ── Anzeigegroesse ───────────────────────────────────────────────────────
+  /**
+   * Wie gross das Bild auf dem Schirm steht.
+   *
+   * Ohne Zoom war das Sache von zwei Tailwind-Klassen (`max-h`, `max-w`). Mit
+   * Zoom muss die Groesse berechnet werden — und sie muss AUSGERECHNET
+   * vorliegen, nicht vom Browser eingepasst, sonst weiss niemand, wie weit
+   * bereits vergroessert ist.
+   */
+  useEffect(() => {
+    const el = buehneRef.current
+    if (!el || !offen) return
+    const messen = () => setBuehne({ b: el.clientWidth, h: el.clientHeight })
+    messen()
+    const ro = new ResizeObserver(messen)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [offen, laedt, fehler])
+
+  const anzeige = useMemo(() => {
+    if (!masse || !buehne || buehne.b < 2 || buehne.h < 2) return null
+    // Einpassen, aber ein kleines Bild nicht kuenstlich aufblasen.
+    const passt = Math.min(1, Math.min(buehne.b / masse.b, buehne.h / masse.h))
+    return {
+      b: Math.max(1, Math.round(masse.b * passt * zoom)),
+      h: Math.max(1, Math.round(masse.h * passt * zoom)),
+    }
+  }, [masse, buehne, zoom])
+
   // ── Vorschau zeichnen ────────────────────────────────────────────────────
-  const zeichnen = useCallback((r: Regler) => {
+  const zeichnen = useCallback((r: Regler, breiteAufSchirm?: number) => {
     const canvas = canvasRef.current
     const bitmap = bitmapRef.current
     if (!canvas || !bitmap) return
@@ -136,8 +184,20 @@ export function WerkbankDialog({
       //
       // 1600 Pixel lange Kante reichen für die Vorschau; das volle Bild wird
       // erst beim Speichern gerechnet, durch denselben Shader.
+      // Beim Hineinzoomen darf die Vorschau nicht einfach hochskaliert werden —
+      // dann sieht man die eigene Unschaerfe statt der des Bildes, und genau
+      // fuer das Hinsehen ist der Zoom da. Also waechst die gerechnete Aufloesung
+      // mit, bis 2048: Bei Marks ueblichen Groessen (1122 bis 1536) liegt die
+      // Grenze ueber dem Bild selbst, es wird also in voller Aufloesung
+      // gerechnet. Weiter hinauf nicht — vier Zwischenpuffer in 16 Bit je Kanal
+      // sind bei 2048 schon rund 100 MB auf der Grafikeinheit.
       const lang = Math.max(bitmap.width, bitmap.height)
-      const f = Math.min(1, 1600 / lang)
+      const dpr = typeof window === 'undefined' ? 1 : (window.devicePixelRatio || 1)
+      const gewuenscht = breiteAufSchirm
+        ? (breiteAufSchirm / bitmap.width) * lang * dpr
+        : 1600
+      const kante = Math.min(2048, Math.max(1600, gewuenscht))
+      const f = Math.min(1, kante / lang)
       const b = Math.max(1, Math.round(bitmap.width * f))
       const h = Math.max(1, Math.round(bitmap.height * f))
       if (canvas.width !== b || canvas.height !== h) {
@@ -157,9 +217,74 @@ export function WerkbankDialog({
   useEffect(() => {
     if (laedt || fehler || !masse) return
     // Ein Bild pro Rahmen genügt; ohne das rechnet jeder Reglerschritt sofort.
-    const id = requestAnimationFrame(() => zeichnen(regler))
+    const id = requestAnimationFrame(() =>
+      zeichnen(vergleich ? REGLER_VORGABE : regler, anzeige?.b))
     return () => cancelAnimationFrame(id)
-  }, [regler, laedt, fehler, masse, zeichnen])
+  }, [regler, vergleich, anzeige, laedt, fehler, masse, zeichnen])
+
+  /**
+   * Mausrad zoomt — und zwar auf die Stelle unter dem Zeiger.
+   *
+   * WARUM EIN EIGENER LAUSCHER STATT `onWheel`: React haengt Radereignisse
+   * passiv ein. Ein passiver Lauscher darf `preventDefault` nicht aufrufen,
+   * also rollte die Seite mit, waehrend das Bild zoomte. Mit
+   * `{ passive: false }` gehoert das Rad der Buehne.
+   *
+   * Der Zeiger bleibt auf demselben Bildpunkt stehen: Der Abstand vom linken
+   * Rand waechst mit demselben Faktor wie das Bild, also muss die Rolle um die
+   * Differenz nachgezogen werden. Ohne das wandert einem beim Hineinzoomen
+   * genau die Stelle aus dem Bild, die man sich ansehen wollte.
+   */
+  useEffect(() => {
+    const el = buehneRef.current
+    if (!el || !offen) return
+    const amRad = (e: WheelEvent) => {
+      if (e.ctrlKey) return  // Browser-Zoom bleibt Browser-Zoom
+      e.preventDefault()
+      const x = e.clientX - el.getBoundingClientRect().left
+      const y = e.clientY - el.getBoundingClientRect().top
+      setZoom(alt => {
+        const neu = Math.min(8, Math.max(1, alt * Math.exp(-e.deltaY * 0.0015)))
+        if (neu === alt) return alt
+        const v = neu / alt
+        // Nach dem Neuzeichnen nachziehen, sonst rollt man gegen die alte Groesse.
+        requestAnimationFrame(() => {
+          el.scrollLeft = (el.scrollLeft + x) * v - x
+          el.scrollTop  = (el.scrollTop  + y) * v - y
+        })
+        return neu
+      })
+    }
+    el.addEventListener('wheel', amRad, { passive: false })
+    return () => el.removeEventListener('wheel', amRad)
+  }, [offen, laedt, fehler])
+
+  /**
+   * Gedrueckt halten zeigt das Original.
+   *
+   * Mark am 02.09.2026: „ein Vorher Nachher Vergleich, indem ich einfach nur
+   * auf das Bild klicke und die Maustaste halte. Sobald ich loslasse, ist es
+   * wieder, wie es aussieht nach der Bearbeitung."
+   *
+   * NUR IM REGLER-REITER: Im Zuschnitt-Reiter gehoert dieselbe Geste dem
+   * Rahmen — dort zieht ein gedrueckter Knopf den Ausschnitt auf. Zwei
+   * Bedeutungen fuer eine Geste waeren ein Fehler, kein Merkmal. Verglichen
+   * wird ohnehin, was die Regler tun.
+   *
+   * Der Zoom bleibt dabei stehen: Es wird nur neu gezeichnet, nicht neu
+   * eingepasst. „Und das auch in jeder Größe."
+   */
+  const vergleichAn = (e: React.PointerEvent) => {
+    if (reiter !== 'regler' || e.button !== 0) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setVergleich(true)
+  }
+  const vergleichAus = (e: React.PointerEvent) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    setVergleich(false)
+  }
 
   // ── Zuschnitt ────────────────────────────────────────────────────────────
   const seitenverhaeltnis = useMemo(() => {
@@ -302,7 +427,23 @@ export function WerkbankDialog({
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
           {/* Bühne */}
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-black/40 p-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-1">
+          <div
+            ref={buehneRef}
+            onPointerDown={vergleichAn}
+            onPointerUp={vergleichAus}
+            onPointerCancel={vergleichAus}
+            // Doppelklick setzt den Zoom zurueck — wer sich verfahren hat, muss
+            // nicht zurueckrollen. Dieselbe Geste wie beim Ziehtrenner.
+            onDoubleClick={() => setZoom(1)}
+            className={cn(
+              'flex min-h-0 flex-1 items-center justify-center rounded-md bg-black/40 p-2',
+              // Erst beim Hineinzoomen Rollbalken. Bei 1 waeren sie nur Rand,
+              // der die Buehne kleiner misst als sie ist.
+              zoom > 1 ? 'overflow-auto' : 'overflow-hidden',
+              reiter === 'regler' && !laedt && !fehler && 'cursor-pointer',
+            )}
+          >
             {laedt ? (
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             ) : fehler ? (
@@ -333,9 +474,26 @@ export function WerkbankDialog({
                 disabled={reiter !== 'zuschnitt'}
                 className="max-h-full"
               >
-                <canvas ref={canvasRef} className="block max-h-[68vh] max-w-full object-contain" />
+                <canvas
+                  ref={canvasRef}
+                  // Ausgerechnete Groesse statt `max-h`/`max-w`: Der Browser
+                  // soll nicht selbst einpassen, sonst weiss niemand, bei
+                  // welcher Vergroesserung man gerade steht. Erst wenn die
+                  // Buehne gemessen ist, greift der Stil — bis dahin die alten
+                  // Klassen, damit nichts aufblitzt.
+                  style={anzeige ? { width: anzeige.b, height: anzeige.h } : undefined}
+                  className={anzeige ? 'block' : 'block max-h-[68vh] max-w-full object-contain'}
+                />
               </ReactCrop>
             )}
+          </div>
+
+          {/* Was man hier tun kann, steht nirgends sonst. */}
+          <p className="shrink-0 text-center text-[10px] leading-tight text-muted-foreground">
+            Mausrad zoomt
+            {zoom > 1 && <> · <span className="text-foreground">{Math.round(zoom * 100)} %</span> · Doppelklick setzt zurück</>}
+            {reiter === 'regler' && ' · Maustaste gedrückt halten zeigt das Original'}
+          </p>
           </div>
 
           {/* Werkzeuge */}
