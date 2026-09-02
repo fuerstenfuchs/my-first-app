@@ -13,6 +13,7 @@
 import { bildErzeugen } from './proxy.ts'
 import { bildVergroessern } from './upscale.ts'
 import { bildVergroessernKi, type KiVerfahren } from './fal.ts'
+import { bildNachbauen } from './gemini.ts'
 import {
   auftragFertig, ergebnisAblegen, ergebnisHolen, externeAnfrageMerken, fortschrittMerken,
 } from './supabase.ts'
@@ -23,7 +24,13 @@ export type Melder = (text: string) => void
 
 export function beschreibung(job: ImageJob): string {
   if (job.job_type === 'upscale') {
-    return `vergrößern ${job.scale}× · ${job.upscaler ?? 'ohne Verfahren'}`
+    // Ohne die Rückfalltexte stünde bei einem Auftrag, der die Schranke
+    // umgangen hat, „vergrößern null" — eine Meldung, die in die Irre führt
+    // statt auf die Ursache.
+    const ziel = job.upscaler === 'gemini'
+      ? (job.ziel_klasse ?? 'ohne Größenklasse')
+      : (job.scale ? `${job.scale}×` : 'ohne Faktor')
+    return `vergrößern ${ziel} · ${job.upscaler ?? 'ohne Verfahren'}`
   }
   const anzahl = durchlaeufe(job)
   const referenzen = job.reference_urls.length
@@ -49,10 +56,10 @@ export function durchlaeufe(job: ImageJob): number {
 async function vergroessern(
   job: ImageJob, sage: Melder, signal?: AbortSignal,
 ): Promise<void> {
-  if (!job.source_path || !job.scale) {
-    throw new Error('Vergrößerungsauftrag ohne Ausgangsbild oder Faktor.')
+  if (!job.source_path) {
+    throw new Error('Vergrößerungsauftrag ohne Ausgangsbild.')
   }
-  const bekannt = ['lanczos', 'seedvr2', 'crystal']
+  const bekannt = ['lanczos', 'seedvr2', 'crystal', 'gemini']
   if (!job.upscaler || !bekannt.includes(job.upscaler)) {
     throw new Error(`Unbekanntes Vergrößerungsverfahren: ${job.upscaler ?? 'keins angegeben'}`)
   }
@@ -62,8 +69,28 @@ async function vergroessern(
 
   let daten: ArrayBuffer
   let nachher: { breite: number; hoehe: number }
+  // Was im Protokoll steht: bei Gemini die Klasse, sonst der Faktor.
+  let ziel: string
 
-  if (job.upscaler !== 'lanczos') {
+  if (job.upscaler === 'gemini') {
+    // Kein Fortschreiben und kein Wiederaufnehmen: Der Weg läuft über Marks
+    // eigene Anmeldung im lokalen Proxy und kostet nichts extra. Ein
+    // Neuversuch ist deshalb harmlos — anders als bei fal.
+    if (!job.ziel_klasse) {
+      throw new Error('Gemini-Auftrag ohne Größenklasse.')
+    }
+    ziel = job.ziel_klasse
+    sage(`  Gemini baut das Bild in ${job.ziel_klasse} nach…`)
+    const ergebnis = await bildNachbauen(Buffer.from(quelle), job.ziel_klasse, { signal })
+    daten = ergebnis.daten.buffer.slice(
+      ergebnis.daten.byteOffset,
+      ergebnis.daten.byteOffset + ergebnis.daten.byteLength,
+    ) as ArrayBuffer
+    nachher = { breite: ergebnis.breite, hoehe: ergebnis.hoehe }
+    sage(`  Seitenverhältnis ${ergebnis.verhaeltnis}, Farben auf das Original zurückgerechnet.`)
+  } else if (job.upscaler !== 'lanczos') {
+    if (!job.scale) throw new Error('Vergrößerungsauftrag ohne Faktor.')
+    ziel = `${job.scale}×`
     sage(`  KI-Vergrößerung bei fal.ai (${job.upscaler})…`)
     const ergebnis = await bildVergroessernKi(quelle, job.scale, job.upscaler as KiVerfahren, {
       signal,
@@ -78,6 +105,8 @@ async function vergroessern(
     daten = ergebnis.daten
     nachher = ergebnis.nachher
   } else {
+    if (!job.scale) throw new Error('Vergrößerungsauftrag ohne Faktor.')
+    ziel = `${job.scale}×`
     const ergebnis = await bildVergroessern(quelle, job.scale)
     daten = ergebnis.daten
     nachher = ergebnis.nachher
@@ -86,7 +115,7 @@ async function vergroessern(
   const pfad = await ergebnisAblegen(job.user_id, job.id, 0, daten)
 
   sage(
-    `  ${job.upscaler} · ${job.scale}× → ${nachher.breite}×${nachher.hoehe} ` +
+    `  ${job.upscaler} · ${ziel} → ${nachher.breite}×${nachher.hoehe} ` +
     `in ${Math.round((Date.now() - begonnen) / 1000)}s · ` +
     `${Math.round(daten.byteLength / 1024)} kB`,
   )

@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import type { JobStatus, ReferenzRolle } from '@/lib/image-generation'
-import { kostenSatz, type Upscaler } from '@/lib/upscaling'
+import { kostenSatz, stufeLabel, type Upscaler, type Stufe } from '@/lib/upscaling'
 
-export type { Upscaler }
+export type { Upscaler, Stufe }
 
 export interface ImageJob {
   id:             string
@@ -31,6 +31,8 @@ export interface ImageJob {
   source_path:    string | null
   scale:          number | null
   upscaler:       Upscaler | null
+  /** Nur bei Gemini: Größenklasse statt Faktor. */
+  ziel_klasse:    '1K' | '2K' | '4K' | null
   /** Auftragsnummer bei fal.ai — damit ein Neuversuch nicht zweimal zahlt. */
   external_ref:   Record<string, unknown> | null
 }
@@ -187,7 +189,7 @@ export function useImageJobs(aktiv = true) {
    * genau die Stelle, an der ein Klick unbemerkt etwas auslöst.
    */
   const vergroessern = useCallback(async (
-    quelle: ImageJob, pfad: string, faktor: 2 | 3 | 4, verfahren: Upscaler,
+    quelle: ImageJob, pfad: string, stufe: Stufe, verfahren: Upscaler,
   ): Promise<ImageJob | null> => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -201,12 +203,15 @@ export function useImageJobs(aktiv = true) {
         user_id:     user.id,
         job_type:    'upscale',
         source_path: pfad,
-        scale:       faktor,
+        // Genau eines von beiden, passend zum Verfahren — die Datenbank setzt
+        // das durch, damit der Arbeiter nie raten muss, was gemeint ist.
+        scale:       stufe.art === 'faktor' ? stufe.wert : null,
+        ziel_klasse: stufe.art === 'klasse' ? stufe.wert : null,
         upscaler:    verfahren,
         // Der Prompt ist bei einer Vergrößerung nur noch Beschriftung — die
         // Spalte ist aber Pflicht, und ein leeres Feld läse sich auf /queue wie
         // ein Fehler.
-        prompt:      `${faktor}× vergrößert · ${quelle.prompt.slice(0, 120)}`,
+        prompt:      `${stufeLabel(stufe)} vergrößert · ${quelle.prompt.slice(0, 120)}`,
         model:       verfahren,
         size:        quelle.size,
         variants:    1,
@@ -222,8 +227,8 @@ export function useImageJobs(aktiv = true) {
 
     const job = data as ImageJob
     setJobs(prev => [job, ...prev])
-    toast.success(`${faktor}× Vergrößerung eingereiht`, {
-      description: kostenSatz(verfahren, faktor),
+    toast.success(`Vergrößerung auf ${stufeLabel(stufe)} eingereiht`, {
+      description: kostenSatz(verfahren, stufe),
     })
     return job
   }, [supabase])

@@ -122,15 +122,26 @@ der Abstand auf 0,92. Zum Vergleich: SeedVR2 liegt bei 0,44.
 
 ## Die Wege beim Vergrößern
 
-| | `lanczos` | `seedvr2` | `crystal` |
-|---|---|---|---|
-| Wo | dieser PC | fal.ai | fal.ai |
-| Kosten (2×) | nichts | **0,7 ct** | **9,6 ct** |
-| Was passiert | Bildpunkte verteilt | Struktur rekonstruiert | schärfer, erfindet mehr |
-| Bild verlässt den PC | nein | ja | ja |
-| Im Menü | **nein** | ja | ja |
+| | `lanczos` | `seedvr2` | `gemini` | `crystal` |
+|---|---|---|---|---|
+| Wo | dieser PC | fal.ai | Google, über den Proxy | fal.ai |
+| Ziel | Faktor 2–4× | Faktor 2–4× | **Klasse 2K/4K** | Faktor 2–4× |
+| Kosten (2×) | nichts | **0,7 ct** | nichts extra | **9,6 ct** |
+| Was passiert | Bildpunkte verteilt | Struktur rekonstruiert | **baut das Bild neu** | schärfer, erfindet mehr |
+| Bild verlässt den PC | nein | ja | ja | ja |
+| Im Menü | **nein** | ja | ja | ja |
 
 Preise gemessen am 02.09.2026 an einem Bild von 1122×1402, nicht geschätzt.
+
+`gemini` kennt **keine Faktoren**. Es rechnet in Seitenverhältnis plus
+Größenklasse — aus 1122×1402 werden 3712×4608, also 3,31×. Deshalb hat es in
+`image_jobs` eine eigene Spalte `ziel_klasse`, und die Schranke
+`image_jobs_upscale_ziel` setzt durch, dass genau eine der beiden Zielangaben
+gefüllt ist. Ein Gemini-Auftrag mit Faktor wird von der Datenbank abgelehnt.
+
+Es nutzt bewusst **kein** `external_ref`: Ein Neuversuch kostet nichts, also
+gibt es nichts zu retten. Bei Gesichtern gilt weiter der Vorbehalt oben — es
+ist ein Nachbau.
 
 `lanczos` steht seit dem 02.09.2026 nicht mehr im Menü. Mark nach dem Vergleich
 an einem Porträt: „sehe ich kaum einen Unterschied, ist zwar größer, aber

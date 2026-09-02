@@ -5,6 +5,7 @@
 
 import { config, ohneGeheimnis } from './config.ts'
 import type { FalAnfrage } from './fal.ts'
+import { bildart } from './netz.ts'
 
 export type ImageJob = {
   id: string
@@ -22,7 +23,9 @@ export type ImageJob = {
   job_type: 'generate' | 'upscale'
   source_path: string | null
   scale: number | null
-  upscaler: 'lanczos' | 'seedvr2' | 'crystal' | null
+  upscaler: 'lanczos' | 'seedvr2' | 'crystal' | 'gemini' | null
+  /** Nur bei Gemini: Groessenklasse statt Faktor. */
+  ziel_klasse: '1K' | '2K' | '4K' | null
   external_ref: FalAnfrage | null
   anchor_job_id: string | null
   scene_meta: unknown
@@ -254,7 +257,14 @@ export async function ergebnisHolen(pfad: string, userId: string): Promise<Array
 export async function ergebnisAblegen(
   userId: string, jobId: string, index: number, daten: ArrayBuffer,
 ): Promise<string> {
-  const pfad = `${userId}/${jobId}/${index}.png`
+  // Endung und Typ folgen dem INHALT, nicht der Annahme. Vorher stand hier
+  // fest `.png` mit `Content-Type: image/png` — Gemini liefert aber JPEG.
+  // Ein JPEG unter PNG-Namen zeigt der Browser richtig an (er rät), aber ein
+  // Bildprogramm oder eine Druckerei lehnt es ab, und der Fehler fällt erst
+  // außerhalb der App auf.
+  const art = bildart(daten)
+  if (!art) throw new Error('Das Ergebnis ist kein erkennbares Bild — nicht abgelegt.')
+  const pfad = `${userId}/${jobId}/${index}.${art.endung}`
   const antwort = await fetch(
     `${config.supabaseUrl}/storage/v1/object/generated-images/${pfad}`,
     {
@@ -262,7 +272,7 @@ export async function ergebnisAblegen(
       headers: {
         apikey: config.supabaseKey,
         Authorization: `Bearer ${config.supabaseKey}`,
-        'Content-Type': 'image/png',
+        'Content-Type': art.typ,
         'x-upsert': 'true',
       },
       body: daten,

@@ -219,6 +219,90 @@ Das Menue wird aus der Verfahrensliste erzeugt statt dreimal abgeschrieben —
 beim zweiten KI-Verfahren waere sonst genau die Kopie entstanden, an der Preis
 und Beschriftung auseinanderdriften (Critic-Befund 11).
 
+## Viertes Verfahren: Gemini — 02.09.2026
+
+Nach Marks Vergleich an einem Porträt. Seine Reihenfolge-Änderung: erst das
+Upscaling abschließen, dann das Bildstudio (PROJ-43).
+
+**Gemini ist grundsätzlich anders gebaut als die drei anderen.** Es läuft nicht
+über fal.ai, sondern über Marks antigravity-Anmeldung im lokalen Proxy, kostet
+nichts extra — und es kennt **keine Faktoren**. Aus 1122×1402 werden 3712×4608,
+also 3,31×. Diese Zahl in eine 2/3/4-Auswahl zu pressen wäre eine Lüge auf dem
+Knopf.
+
+Deshalb:
+
+- Neue Spalte `ziel_klasse` (`1K`/`2K`/`4K`) neben `scale`
+- Schranke `image_jobs_upscale_ziel` setzt durch: bei `gemini` genau
+  `ziel_klasse` und **kein** `scale`, bei allen anderen umgekehrt. An der
+  laufenden Datenbank geprüft — ein Gemini-Auftrag mit Faktor wird mit HTTP 400
+  abgelehnt.
+- `STUFEN` in `src/lib/upscaling.ts`: jedes Verfahren bringt seine eigenen
+  Stufen mit, das Menü liest sie aus. Kein `if` in der Oberfläche.
+- Kein `external_ref`, kein Wiederaufnehmen: Ein Neuversuch kostet nichts.
+
+Angenommen an einem echten Auftrag durch die ganze Kette (Einfügen → Arbeiter →
+Ablage): `2d4d5f7d`, Ergebnis 3712×4608.
+
+**Menüreihenfolge** nach Marks Urteil: SeedVR2 (der Regelfall), Gemini (gratis,
+höchste Auflösung), Crystal (teuer). Lanczos steht weiterhin nicht im Menü.
+
+## Zweiter Critic-Durchgang zu Gemini — und ein Fehler, den ich wiederholt habe
+
+Der schwerste Befund war einer, den es in diesem Projekt schon einmal gab:
+
+```ts
+signal: optionen.signal ?? AbortSignal.timeout(...)
+```
+
+Damit fällt die Zeitgrenze weg, sobald ein Abbruchsignal übergeben wird — und
+der Dauerbetrieb übergibt immer eines. **Genau dieser Fehler war in `fal.ts`
+bereits gefunden, behoben und mit einem ausführlichen Kommentar versehen
+worden.** Beim Schreiben von `gemini.ts` habe ich ihn trotzdem noch einmal
+gemacht, weil man beim Schreiben einer neuen Datei den Kommentar in einer
+anderen nicht aufschlägt.
+
+Daraus die eigentliche Lehre, und die Änderung, die zählt: **Eine Regel, die man
+befolgen MUSS, gehört nicht in einen Kommentar, sondern in eine Funktion, die
+man aufruft.** `mitFrist()`, `uebersetzeFehler()` und die Bildkennung stehen
+jetzt in `worker/src/netz.ts`; `fal.ts` und `gemini.ts` benutzen beide dieselbe
+Fassung. Dazu `worker/src/netz.test.ts` mit acht Prüfungen — mutationsgeprüft:
+Baut man `signal ?? frist` wieder ein, wird der Test rot.
+
+Weitere Befunde, alle behoben:
+
+- **Kein `try/catch` um den fetch.** Ein Abbruch beim Lesen des Antwortrumpfs
+  wirft bei undici einen `TypeError`, keinen `AbortError` — `index.ts` hätte
+  daraus einen verbrannten Versuch gemacht statt einer Rückstellung.
+- **JPEG unter PNG-Namen.** `farbeAngleichen` schrieb JPEG, die Ablage legte es
+  als `.png` mit `Content-Type: image/png` ab. Browser raten das richtig, ein
+  Bildprogramm oder eine Druckerei lehnt es ab — und der Fehler fällt erst
+  außerhalb der App auf. Jetzt schreibt Gemini PNG, **und** die Ablage bestimmt
+  Endung und Typ aus dem Inhalt statt aus einer Annahme.
+- **`farbeAngleichen` griff ungeprüft auf drei Kanäle zu** — ein Graustufenbild
+  hätte den Auftrag dreimal scheitern lassen, mit einer Meldung, die nichts über
+  die Ursache sagt.
+- **Keine Bildprüfung.** `Buffer.from(x, 'base64')` wirft nie; ungültige Zeichen
+  werden still verworfen.
+- **Ablehnungstext von Gemini wurde weggeworfen.** Bei einem Porträt ist ein
+  Sicherheitsfilter der wahrscheinlichste Fehlerfall — der Grund steht jetzt in
+  der Meldung.
+- **Der Vorbehalt stand erst nach dem Klick.** Im Menü steht jetzt
+  „gratis, bis 4K — rechnet das Bild NEU, bei Gesichtern prüfen". „Gratis" und
+  „höchste Auflösung" sind die beiden Wörter, die den Klick auslösen.
+- **Die Schranke trug sich nicht selbst:** Bei `upscaler is null` ergibt sie
+  NULL und gilt damit als erfüllt. Geschlossen wurde das bisher von einer
+  Nachbarschranke — die in dieser Datei schon zweimal ersetzt wurde. Jetzt steht
+  die Bedingung ausdrücklich drin (`docs/proj-42c-schranken-nachziehen.sql`).
+- **Gemini-Stufen ohne Größenangabe.** „4K" liest sich wie weniger als „4×" und
+  liefert mehr. Jetzt steht die gemessene Fläche daneben.
+
+Bestätigt in Ordnung: die Weiche fällt in keinem Pfad durch, die
+Buffer-Umwandlung beachtet den `byteOffset`, kein fal-Auftrag verliert durch den
+Umbau seine Wiederaufnahme, und die Altaufträge funktionieren unverändert.
+
+Gemessen an echten Läufen: **2K → 1856×2304**, **4K → 3712×4608**.
+
 ## Offen
 
 - **Noch nicht gegen die echte API gemessen.** Es fehlt der Schlüssel: Konto auf

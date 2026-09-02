@@ -1,3 +1,10 @@
+-- ACHTUNG: Diese Datei ist eine HISTORIE, kein wiederholbares Skript.
+--
+-- Die Schranken werden im Verlauf mehrfach neu gesetzt (erst zwei Verfahren,
+-- dann drei). Sie von oben bis unten erneut einzuspielen scheitert deshalb:
+-- Die frueheren Fassungen schliessen Zeilen aus, die inzwischen existieren.
+-- Nachtraege gehoeren ab jetzt in eine eigene Datei — proj-42b, proj-42c, …
+--
 -- PROJ-42: Vergrößern wahlweise rechnerisch oder mit KI-Detailrekonstruktion.
 --
 -- Bis hierher gab es genau ein Verfahren (Lanczos, im Arbeiter gerechnet). Ein

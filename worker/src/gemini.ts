@@ -19,6 +19,7 @@
 
 import sharp from 'sharp'
 import { config, ohneGeheimnis } from './config.ts'
+import { mitFrist, uebersetzeFehler, bildart } from './netz.ts'
 
 const MODELL = 'gemini-3.1-flash-image'
 
@@ -102,11 +103,24 @@ export async function farbeAngleichen(
     sharp(vorbild).stats(),
     sharp(ergebnis).stats(),
   ])
-  const kanaele = [0, 1, 2]
+  // Nicht blind drei Kanäle annehmen: Ein Graustufenbild hat einen, ein Bild
+  // mit Transparenz vier. `sharp.linear()` braucht genau so viele Werte, wie
+  // das Bild Kanäle hat — sonst wirft es, und der Auftrag scheitert dreimal
+  // mit einer Meldung, die nichts über die Ursache sagt.
+  const anzahl = Math.min(z.channels.length, q.channels.length, 3)
+  if (anzahl < 1) return sharp(ergebnis).png({ compressionLevel: 9 }).toBuffer()
+
+  const kanaele = [...Array(anzahl).keys()]
   const faktor = kanaele.map(i => z.channels[i].stdev / (q.channels[i].stdev || 1))
   const versatz = kanaele.map(i => z.channels[i].mean - faktor[i] * q.channels[i].mean)
 
-  return sharp(ergebnis).linear(faktor, versatz).jpeg({ quality: 95 }).toBuffer()
+  // PNG, nicht JPEG. Vorher stand hier `.jpeg()`, und die Ablage legt jedes
+  // Ergebnis als `.png` mit `Content-Type: image/png` ab — ein JPEG unter
+  // PNG-Namen. Browser raten das richtig, ein Bildprogramm oder eine Druckerei
+  // lehnt es ab, und der Fehler fällt erst außerhalb der App auf. Außerdem
+  // säße dann eine Kompression im höchstauflösenden Ergebnis der ganzen Kette,
+  // das ausgerechnet für Details gemacht ist.
+  return sharp(ergebnis).linear(faktor, versatz).png({ compressionLevel: 9 }).toBuffer()
 }
 
 export type GeminiErgebnis = {
@@ -128,46 +142,90 @@ export async function bildNachbauen(
   }
   const verhaeltnis = bestesVerhaeltnis(info.width, info.height)
 
-  const antwort = await fetch(
-    `${config.proxyUrl}/v1beta/models/${MODELL}:generateContent`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.proxyToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [
-            { inline_data: { mime_type: 'image/png', data: quelle.toString('base64') } },
-            { text: UPSCALE_PROMPT },
-          ],
-        }],
-        generationConfig: { imageConfig: { aspectRatio: verhaeltnis, imageSize: klasse } },
-      }),
-      signal: optionen.signal ?? AbortSignal.timeout(config.requestTimeoutMs),
-    },
-  )
+  // Das Format der Quelle wird nicht angenommen, sondern gelesen — sonst ginge
+  // ein JPEG mit `mime_type: image/png` hinaus, sobald Gemini je auf ein
+  // Vergrößerungsergebnis angewendet wird.
+  const art = bildart(quelle)
+  if (!art) throw new Error('Das Ausgangsbild ist kein erkennbares Bild.')
 
-  const roh = await antwort.text()
+  // Abbruch UND Zeitgrenze. Vorher stand hier `signal ?? timeout(...)` — damit
+  // fiel die Grenze im Dauerbetrieb immer weg, weil dort stets ein Signal
+  // mitkommt. Derselbe Fehler war in fal.ts schon einmal gefunden und
+  // dokumentiert; deshalb steht die Regel jetzt in netz.ts statt in einem
+  // Kommentar.
+  const frist = config.falTimeoutMs
+  let antwort: Response
+  try {
+    antwort = await fetch(
+      `${config.proxyUrl}/v1beta/models/${MODELL}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.proxyToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              { inline_data: { mime_type: art.typ, data: quelle.toString('base64') } },
+              { text: UPSCALE_PROMPT },
+            ],
+          }],
+          generationConfig: { imageConfig: { aspectRatio: verhaeltnis, imageSize: klasse } },
+        }),
+        signal: mitFrist(optionen.signal, frist),
+      },
+    )
+  } catch (e) {
+    throw uebersetzeFehler(e as Error, optionen.signal, frist, 'Gemini', ohneGeheimnis)
+  }
+
+  let roh: string
+  try {
+    roh = await antwort.text()
+  } catch (e) {
+    // Trifft der Abbruch beim Lesen des Rumpfs, wirft undici einen TypeError
+    // statt eines AbortError — index.ts würde daraus einen verbrannten Versuch
+    // machen statt einer Rückstellung.
+    throw uebersetzeFehler(e as Error, optionen.signal, frist, 'Gemini', ohneGeheimnis)
+  }
   if (!antwort.ok) {
     throw new Error(ohneGeheimnis(`Gemini → HTTP ${antwort.status}: ${roh.slice(0, 400)}`))
   }
 
   const j = JSON.parse(roh) as {
-    candidates?: { content?: { parts?: Record<string, { data?: string }>[] } }[]
+    candidates?: {
+      finishReason?: string
+      content?: { parts?: (Record<string, { data?: string }> & { text?: string })[] }
+    }[]
   }
-  const teile = j.candidates?.[0]?.content?.parts ?? []
+  const kandidat = j.candidates?.[0]
+  const teile = kandidat?.content?.parts ?? []
   // Der Proxy reicht mal `inlineData`, mal `inline_data` durch — je nachdem,
   // welchen Weg die Antwort genommen hat.
   const treffer = teile.find(p => p.inlineData?.data || p.inline_data?.data)
   const daten = treffer?.inlineData?.data ?? treffer?.inline_data?.data
-  if (!daten) throw new Error('Gemini hat kein Bild zurückgegeben.')
+  if (!daten) {
+    // Lehnt Gemini ab (Sicherheitsfilter, Personen im Bild), steht der Grund
+    // als Text in der Antwort. Ohne ihn stünde in der Warteschlange nur
+    // „kein Bild zurückgegeben" — bei einem Porträt der wahrscheinlichste Fall.
+    const grund = teile.map(p => p.text).filter(Boolean).join(' ').slice(0, 300)
+    const wieso = kandidat?.finishReason ? ` (${kandidat.finishReason})` : ''
+    throw new Error(
+      `Gemini hat kein Bild zurückgegeben${wieso}.` + (grund ? ` Begründung: ${grund}` : ''),
+    )
+  }
 
   // Ausdruecklich ArrayBufferLike: sharps toBuffer() liefert diesen Typ, und
   // ohne die Angabe leitet TypeScript vom Buffer.from() den engeren ab.
   let bild: Buffer<ArrayBufferLike> = Buffer.from(daten, 'base64')
+  // Buffer.from(..., 'base64') wirft NIE — ungültige Zeichen werden still
+  // verworfen. Ohne diese Prüfung käme der erste erkennbare Fehler von sharp,
+  // mit einer Meldung, die nichts über die Ursache sagt.
+  if (!bildart(bild) || bild.length < 100) {
+    throw new Error(`Gemini lieferte kein brauchbares Bild (${bild.length} Bytes).`)
+  }
   if (optionen.farbeAngleichen !== false) {
     bild = await farbeAngleichen(bild, quelle)
   }

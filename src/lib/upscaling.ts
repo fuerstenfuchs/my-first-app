@@ -23,7 +23,7 @@
  * Welches besser ist, hängt vom Bild ab. Deshalb beide, statt eines
  * auszuwählen.
  */
-export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal'
+export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal' | 'gemini'
 
 /**
  * Was im Menü angeboten wird — und in welcher Reihenfolge.
@@ -38,7 +38,7 @@ export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal'
  * Beschriftung verlieren und sich nicht mehr erneut einreihen lassen.
  * Weggenommen wird nur das Angebot, nicht die Vergangenheit.
  */
-export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'crystal']
+export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'gemini', 'crystal']
 
 /** Die bezahlten Verfahren — an einer Stelle, damit niemand eins vergisst. */
 export const KOSTET_GELD: readonly Upscaler[] = ['seedvr2', 'crystal']
@@ -51,6 +51,7 @@ export const VERFAHREN_NAME: Record<Upscaler, string> = {
   lanczos: 'Rechnen',
   seedvr2: 'KI · SeedVR2',
   crystal: 'KI · Crystal',
+  gemini:  'KI · Gemini',
 }
 
 /** Was im Menü unter der Überschrift steht. */
@@ -58,6 +59,60 @@ export const VERFAHREN_HINWEIS: Record<Upscaler, string> = {
   lanczos: 'nur rechnerisch',
   seedvr2: 'treu und günstig — der Regelfall',
   crystal: 'schärfer, erfindet mehr, teuer',
+  // „Gratis" und „höchste Auflösung" sind die beiden Wörter, die den Klick
+  // auslösen. Der Vorbehalt muss deshalb daneben stehen und nicht erst in der
+  // Bestätigung danach: Gemini baut das Bild NEU — am Porträt gemessen saßen
+  // Brauenform und Lidfalte hinterher anders.
+  gemini:  'gratis, bis 4K — rechnet das Bild NEU, bei Gesichtern prüfen',
+}
+
+/**
+ * Was ein Verfahren als Ziel entgegennimmt.
+ *
+ * Gemini kennt KEINE Faktoren. Es rechnet in Seitenverhältnis plus
+ * Größenklasse — aus 1122×1402 werden 3712×4608, also 3,31×. Diese Zahl in
+ * eine Faktor-Auswahl zu pressen wäre eine Lüge auf dem Knopf. Deshalb hat
+ * jedes Verfahren seine eigenen Stufen, und die Datenbank hat für beide Arten
+ * eine eigene Spalte.
+ */
+export type Stufe =
+  | { art: 'faktor'; wert: 2 | 3 | 4 }
+  | { art: 'klasse'; wert: '1K' | '2K' | '4K' }
+
+const FAKTOREN: Stufe[] = [
+  { art: 'faktor', wert: 2 }, { art: 'faktor', wert: 3 }, { art: 'faktor', wert: 4 },
+]
+
+export const STUFEN: Record<Upscaler, Stufe[]> = {
+  lanczos: FAKTOREN,
+  seedvr2: FAKTOREN,
+  crystal: FAKTOREN,
+  // 1K wäre bei Marks Bildern eine Verkleinerung — deshalb nur 2K und 4K.
+  gemini: [{ art: 'klasse', wert: '2K' }, { art: 'klasse', wert: '4K' }],
+}
+
+/**
+ * Wie groß eine Gemini-Größenklasse tatsächlich wird — gemessen, nicht geraten.
+ *
+ * Am 02.09.2026 an echten Läufen: 2K aus einem 4:5-Bild ergab 1856×2304
+ * (4,3 MP), 4K ergab 3712×4608 (17,1 MP); ein 16:9-Bild kam bei 4K auf
+ * 5504×3072 (16,9 MP). Die Megapixel bleiben also gleich, die Kantenlängen
+ * folgen dem Seitenverhältnis — deshalb steht hier die Fläche und nicht ein
+ * Kantenmaß, das nur für ein Format stimmen würde.
+ *
+ * WARUM DAS IM MENÜ STEHT: Bei den Faktor-Stufen zeigt die Warteschlange die
+ * konkreten Zielmaße an. Ohne eine Zahl daneben liest sich „4K" wie WENIGER
+ * als „4×" — und liefert in Wahrheit mehr.
+ */
+export const KLASSE_FLAECHE: Record<'1K' | '2K' | '4K', string> = {
+  '1K': 'ca. 1 MP',
+  '2K': 'ca. 4 MP',
+  '4K': 'ca. 17 MP',
+}
+
+/** Die Beschriftung einer Stufe im Menü. */
+export function stufeLabel(stufe: Stufe): string {
+  return stufe.art === 'faktor' ? `${stufe.wert}×` : stufe.wert
 }
 
 /**
@@ -85,23 +140,31 @@ export const VERFAHREN_HINWEIS: Record<Upscaler, string> = {
  * unmittelbar nach dem Lauf noch 0,00 — der Abzug kam erst rund eine Minute
  * später. Wer sofort nachmisst, misst falsch.
  */
-export const KI_PREIS: Record<Exclude<Upscaler, 'lanczos'>, Record<2 | 3 | 4, string>> = {
+/*
+ * Nur die beiden bezahlten Verfahren. Gemini steht hier bewusst NICHT drin:
+ * Es laeuft ueber Marks eigenen Zugang und kostet nichts extra — ein Eintrag
+ * mit '0 ct' waere eine Preisangabe, wo es keinen Preis gibt.
+ */
+export const KI_PREIS: Record<'seedvr2' | 'crystal', Record<2 | 3 | 4, string>> = {
   seedvr2: { 2: 'ca. 0,7 ct', 3: 'ca. 1,6 ct', 4: 'ca. 2,8 ct' },
   crystal: { 2: 'ca. 10 ct',  3: 'ca. 22 ct',  4: 'ca. 38 ct'  },
 }
 
-/** Der Preis für ein Verfahren, oder ein leerer Text beim kostenlosen. */
-export function preis(verfahren: Upscaler, faktor: 2 | 3 | 4): string {
-  return kostetGeld(verfahren)
-    ? KI_PREIS[verfahren as Exclude<Upscaler, 'lanczos'>][faktor]
-    : ''
+/** Der Preis für eine Stufe, oder ein leerer Text bei den kostenlosen. */
+export function preis(verfahren: Upscaler, stufe: Stufe): string {
+  if (!kostetGeld(verfahren) || stufe.art !== 'faktor') return ''
+  return KI_PREIS[verfahren as 'seedvr2' | 'crystal'][stufe.wert]
 }
 
 /** Ein Satz für Bestätigungen — dieselbe Zahl wie im Menü. */
-export function kostenSatz(verfahren: Upscaler, faktor: 2 | 3 | 4): string {
+export function kostenSatz(verfahren: Upscaler, stufe: Stufe): string {
+  if (verfahren === 'gemini') {
+    return 'Gemini baut das Bild neu auf — über Deinen eigenen Zugang, kostet nichts extra. '
+      + 'Bei Gesichtern das Ergebnis ansehen: Es ist ein Nachbau, kein Vergrößern.'
+  }
   if (!kostetGeld(verfahren)) {
     return 'Der Arbeiter rechnet sie auf dem PC — das kostet nichts.'
   }
-  return `${VERFAHREN_NAME[verfahren]} über fal.ai — rekonstruiert Details, ` +
-    `kostet ${preis(verfahren, faktor)}.`
+  return `${VERFAHREN_NAME[verfahren]} über fal.ai — rekonstruiert Details, `
+    + `kostet ${preis(verfahren, stufe)}.`
 }

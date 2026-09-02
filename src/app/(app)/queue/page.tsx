@@ -21,7 +21,8 @@ import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
 import {
-  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld, IM_MENUE,
+  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld, IM_MENUE, STUFEN, stufeLabel,
+  KLASSE_FLAECHE,
 } from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
@@ -326,18 +327,21 @@ export default function QueuePage() {
                                       <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
                                         {VERFAHREN_NAME[v]} · {VERFAHREN_HINWEIS[v]}
                                       </DropdownMenuLabel>
-                                      {([2, 3, 4] as const).map(f => (
+                                      {STUFEN[v].map(stufe => (
                                         <DropdownMenuItem
-                                          key={`${v}-${f}`}
+                                          key={`${v}-${stufe.wert}`}
                                           className="flex items-center justify-between gap-3 text-xs"
-                                          onClick={() => void vergroessern(job, job.result_paths[i], f, v)}
+                                          onClick={() => void vergroessern(job, job.result_paths[i], stufe, v)}
                                         >
-                                          <span>{f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}</span>
-                                          {kostetGeld(v) && (
-                                            <span className="text-[10px] tabular-nums text-muted-foreground">
-                                              {preis(v, f)}
-                                            </span>
-                                          )}
+                                          <span>
+                                            {stufeLabel(stufe)}
+                                            {stufe.art === 'faktor'
+                                              ? (masse(job, stufe.wert) ? ` · ${masse(job, stufe.wert)}` : '')
+                                              : ` · ${KLASSE_FLAECHE[stufe.wert]}`}
+                                          </span>
+                                          <span className="text-[10px] tabular-nums text-muted-foreground">
+                                            {kostetGeld(v) ? preis(v, stufe) : 'gratis'}
+                                          </span>
                                         </DropdownMenuItem>
                                       ))}
                                     </div>
@@ -437,7 +441,7 @@ export default function QueuePage() {
             <AlertDialogDescription>
               Das kostet erneut{' '}
               {neuKandidat?.scale && neuKandidat.upscaler
-                ? preis(neuKandidat.upscaler, neuKandidat.scale as 2 | 3 | 4)
+                ? preis(neuKandidat.upscaler, { art: 'faktor', wert: neuKandidat.scale as 2 | 3 | 4 })
                 : 'Geld'}.
               {' '}Der Arbeiter versucht zuerst, ein bereits bezahltes Ergebnis
               abzuholen — ist bei fal.ai keins mehr da, läuft es neu.

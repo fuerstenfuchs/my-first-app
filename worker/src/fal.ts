@@ -20,6 +20,7 @@
  */
 
 import { config, ohneGeheimnis } from './config.ts'
+import { mitFrist, uebersetzeFehler as netzFehler, bildart } from './netz.ts'
 
 const ANMELDEN = 'https://queue.fal.run'
 
@@ -142,24 +143,6 @@ function schluessel(): string {
   return config.falKey
 }
 
-/**
- * Abbruch UND Zeitgrenze, nicht das eine oder das andere.
- *
- * Vorher stand hier `signal ?? AbortSignal.timeout(...)`. Damit fiel die
- * Zeitgrenze genau dann weg, wenn der Dauerbetrieb sein Abbruchsignal mitgab —
- * also im Regelfall. Eine Verbindung, die nie antwortet, hätte den Arbeiter
- * unbegrenzt blockiert: kein Fehler, keine Meldung, nur Stille. Und Stille
- * sieht in diesem Projekt genauso aus wie „nichts zu tun".
- *
- * Die beiden Gründe bleiben unterscheidbar: Abbruch von außen wirft AbortError
- * (index.ts stellt den Auftrag zurück), die Zeitgrenze wirft TimeoutError
- * (zählt als Fehlversuch). Genauso macht es `proxy.ts`.
- */
-function mitFrist(signal: AbortSignal | undefined, ms: number): AbortSignal {
-  const frist = AbortSignal.timeout(ms)
-  return signal ? AbortSignal.any([signal, frist]) : frist
-}
-
 type Antwort = { status: number; text: string }
 
 async function falRuf(
@@ -173,26 +156,8 @@ async function falRuf(
     })
     return { status: antwort.status, text: await antwort.text() }
   } catch (e) {
-    throw uebersetzeFehler(e as Error, signal, 60_000)
+    throw netzFehler(e as Error, signal, 60_000, 'fal.ai', ohneGeheimnis)
   }
-}
-
-/**
- * Netzfehler in etwas übersetzen, das der Aufrufer unterscheiden kann.
- *
- * Wichtig ist der letzte Fall: Trifft der Abbruch, während der Antwortrumpf
- * gelesen wird, wirft undici einen TypeError („terminated") statt eines
- * AbortError. `index.ts` erkennt den nicht — der Auftrag würde als
- * fehlgeschlagen gelten statt zurückgestellt zu werden, und das kostet bei
- * einem bezahlten Auftrag einen zusätzlichen bezahlten Neuversuch.
- */
-function uebersetzeFehler(fehler: Error, signal: AbortSignal | undefined, ms: number): Error {
-  if (fehler.name === 'TimeoutError') {
-    return new Error(`fal.ai hat nach ${Math.round(ms / 1000)}s nicht geantwortet.`)
-  }
-  if (fehler.name === 'AbortError') return fehler
-  if (signal?.aborted) return new DOMException('Abgebrochen', 'AbortError')
-  return new Error(ohneGeheimnis(`fal.ai nicht erreichbar: ${fehler.message}`))
 }
 
 function alsJson(antwort: Antwort, was: string): Record<string, unknown> {
@@ -311,20 +276,6 @@ export async function bildVergroessernKi(
 }
 
 /**
- * Erkennungszeichen am Dateianfang.
- *
- * Auch JPEG, obwohl bei beiden Modellen `output_format: 'png'` angefordert
- * wird: Google hat heute auf eine Anfrage, die PNG erwarten liess, ein JPEG
- * geliefert. Ein Anbieter, der das Format wechselt, soll hier keinen Auftrag
- * zum Scheitern bringen — geprueft wird, dass es ein BILD ist, nicht welches.
- */
-const KENNUNGEN: Record<string, number[]> = {
-  PNG:  [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-  JPEG: [0xff, 0xd8, 0xff],
-  WEBP: [0x52, 0x49, 0x46, 0x46],
-}
-
-/**
  * Das fertige Bild holen — und nachsehen, ob es wirklich eins ist.
  *
  * Ohne diese Prüfung landet eine HTML-Fehlerseite des CDN, mit HTTP 200
@@ -349,7 +300,7 @@ async function bildHolen(url: string, signal?: AbortSignal): Promise<ArrayBuffer
         signal: mitFrist(signal, 120_000),
       })
     } catch (e) {
-      throw uebersetzeFehler(e as Error, signal, 120_000)
+      throw netzFehler(e as Error, signal, 120_000, 'fal.ai', ohneGeheimnis)
     }
 
     if (antwort.status >= 300 && antwort.status < 400) {
@@ -370,10 +321,7 @@ async function bildHolen(url: string, signal?: AbortSignal): Promise<ArrayBuffer
     if (daten.byteLength < 100) {
       throw new Error(`Das Ergebnisbild war nur ${daten.byteLength} Bytes groß.`)
     }
-    const kopf = new Uint8Array(daten, 0, 8)
-    const erkannt = Object.entries(KENNUNGEN)
-      .some(([, muster]) => muster.every((b, i) => kopf[i] === b))
-    if (!erkannt) {
+    if (!bildart(daten)) {
       throw new Error('Das Ergebnis trug keine Bild-Kennung — nicht abgelegt.')
     }
     return daten
