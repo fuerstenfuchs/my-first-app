@@ -250,18 +250,28 @@ export function WerkbankDialog({
               <p className="max-w-md text-center text-sm text-destructive">
                 Bild konnte nicht geladen werden: {fehler}
               </p>
-            ) : reiter === 'zuschnitt' ? (
+            ) : (
+              /*
+                Das Canvas steht IMMER an derselben Stelle im Baum — auch im
+                Regler-Reiter, wo nicht zugeschnitten wird.
+
+                Vorher lag es in zwei Zweigen: einmal in ReactCrop, einmal
+                daneben. Beim Reiterwechsel erzeugte React damit ein NEUES
+                Canvas, während `BildWerk` noch am alten hing — die Bühne blieb
+                schwarz. Am 02.09.2026 im laufenden Browser gesehen.
+
+                Beim Zuschneiden wird der Rahmen nur abgeschaltet, nicht
+                entfernt.
+              */
               <ReactCrop
                 crop={crop}
                 onChange={(_, prozent) => cropUebernehmen(prozent)}
                 aspect={seitenverhaeltnis}
+                disabled={reiter !== 'zuschnitt'}
                 className="max-h-full"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <canvas ref={canvasRef} className="block max-h-[70vh] max-w-full object-contain" />
+                <canvas ref={canvasRef} className="block max-h-[68vh] max-w-full object-contain" />
               </ReactCrop>
-            ) : (
-              <canvas ref={canvasRef} className="block max-h-full max-w-full object-contain" />
             )}
           </div>
 
