@@ -37,12 +37,33 @@ export function useBildLoeschen() {
     setLoescht(pfad)
     try {
       const { error: dateiErr } = await supabase.storage.from(BUCKET).remove([pfad])
-      if (dateiErr) {
+      if (dateiErr && !/not.?found|does not exist|404/i.test(dateiErr.message)) {
         toast.error(`Datei ließ sich nicht löschen: ${dateiErr.message}`)
         return false
       }
+      // Eine schon fehlende Datei ist KEIN Grund aufzuhoeren. Sonst waere jede
+      // Kachel, deren Datei aus irgendeinem Grund fehlt, fuer immer
+      // unloeschbar — sie stuende da und zeigte ein kaputtes Bild.
 
-      const rest = (job.result_paths ?? []).filter(p => p !== pfad)
+      // Den Stand FRISCH holen statt aus dem Zustand: `job.result_paths` ist
+      // eine Momentaufnahme vom letzten Zeichnen. Loescht man zwei Bilder
+      // schnell hintereinander, rechnet das zweite Loeschen sonst auf dem alten
+      // Stand und schreibt den ersten Pfad wieder hinein — eine Kachel ohne
+      // Datei.
+      const { data: frisch } = await supabase
+        .from('image_jobs')
+        .select('result_paths')
+        .eq('id', job.id)
+        .maybeSingle()
+      const stand: string[] = frisch?.result_paths ?? job.result_paths ?? []
+      const rest = stand.filter(p => p !== pfad)
+
+      // Die Notiz „schon abgelegt" haengt am PFAD, und Ergebnispfade sind
+      // wiederverwendbar (`<nutzer>/<auftrag>/<index>.png`). Bliebe sie stehen,
+      // truege ein spaeteres, anderes Bild an derselben Stelle faelschlich die
+      // Marke „abgelegt" — und der Filter „Noch nicht abgelegt" verbaerge es.
+      // Ein still verschwundenes Bild ist der teurere Fehler.
+      await supabase.from('bild_uebernahmen').delete().eq('quell_pfad', pfad)
 
       if (rest.length === 0) {
         const { error } = await supabase.from('image_jobs').delete().eq('id', job.id)

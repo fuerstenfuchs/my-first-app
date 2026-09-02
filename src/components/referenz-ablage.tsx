@@ -1,5 +1,6 @@
 'use client'
 
+import type { Dispatch, SetStateAction } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -102,7 +103,17 @@ function blobAusBase64(base64: string, typ: string): Blob {
 
 interface Props {
   bilder: Referenzbild[]
-  onChange: (bilder: Referenzbild[]) => void
+  /**
+   * Setzer im Stil von React — NICHT als Wert, sondern als Fortschreibung.
+   *
+   * WARUM: `onChange([...bilder, ...neue])` liest `bilder` aus dem Abschluss,
+   * also den Stand vom letzten Zeichnen. Faellt eine grosse Datei herein und
+   * man fuegt waehrend des Hochladens ein zweites Bild ein, sehen BEIDE Aufrufe
+   * eine leere Liste — der zweite ueberschreibt den ersten. Das erste Bild
+   * verschwindet aus der Liste und bleibt als verwaiste Datei im Speicher
+   * liegen, ohne jede Meldung.
+   */
+  onChange: Dispatch<SetStateAction<Referenzbild[]>>
   className?: string
 }
 
@@ -175,11 +186,11 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
         neue.push({ id: pfad, url: publicUrl, name: datei.name || 'Referenz' })
       }
 
-      if (neue.length > 0) onChange([...bilder, ...neue])
+      if (neue.length > 0) onChange(vorher => [...vorher, ...neue].slice(0, MAX_REFERENZEN))
     } finally {
       setLaedt(false)
     }
-  }, [bilder, onChange, supabase])
+  }, [bilder.length, onChange, supabase])
 
   /**
    * Ein Bild, von dem nur die Adresse bekannt ist.
@@ -208,19 +219,24 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
         body: JSON.stringify({ url: adresse }),
       })
       const daten = await antwort.json().catch(() => null) as
-        { datenBase64?: string; typ?: string; name?: string; fehler?: string } | null
+        { pfad?: string; url?: string; typ?: string; fehler?: string } | null
 
       // Der Fehlertext der Route ist schon für Mark geschrieben — er wird
       // unverändert gezeigt und nicht in ein eigenes „Fehlgeschlagen" übersetzt.
-      if (!antwort.ok || !daten?.datenBase64) {
+      if (!antwort.ok || !daten?.url) {
         toast.error(daten?.fehler ?? 'Das Bild konnte nicht geholt werden.')
         return
       }
 
-      const blob = blobAusBase64(daten.datenBase64, daten.typ ?? 'image/png')
-      await hochladen([
-        new File([blob], daten.name || 'referenz.png', { type: blob.type }),
-      ])
+      // Die Route hat das Bild bereits abgelegt — hier kommt nur noch die
+      // Adresse an. Vorher kam es als base64 zurueck und wurde von hier aus
+      // hochgeladen; das riss an der Antwortgrenze der Plattform, lange bevor
+      // die versprochenen 15 MB erreicht waren.
+      onChange(vorher => vorher.length >= MAX_REFERENZEN ? vorher : [...vorher, {
+        id: daten.pfad as string,
+        url: daten.url as string,
+        name: (daten.pfad as string).split('/').pop() ?? 'referenz',
+      }])
     } catch {
       toast.error('Das Bild konnte nicht geholt werden — keine Verbindung zum Server.')
     } finally {
@@ -253,7 +269,7 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
     // Nur aus der Liste, die Datei bleibt liegen. Löschen wäre hier nicht
     // sicher rückgängig zu machen, und dieselbe Adresse kann bereits in einem
     // eingereihten Auftrag stehen — die würde damit still kaputtgehen.
-    onChange(bilder.filter(b => b.id !== id))
+    onChange(vorher => vorher.filter(b => b.id !== id))
   }
 
   function abwerfen(e: React.DragEvent) {

@@ -141,7 +141,26 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
   // Bild-Endpunkten antwortet der Proxy für Gemini mit HTTP 400.
   const ueberGemini = job.model.startsWith('gemini')
 
-  for (let i = pfade.length; i < anzahl; i++) {
+  /**
+   * Wo weitergezaehlt wird — aus dem HOECHSTEN vorhandenen Index, nicht aus der
+   * Anzahl.
+   *
+   * WARUM DER UNTERSCHIED SEIT DEM 02.09.2026 ZAEHLT: Ergebnispfade sind
+   * `<nutzer>/<auftrag>/<index>.<endung>` und werden mit `upsert` geschrieben.
+   * Bis es das Loeschen einzelner Bilder im Lichttisch gab, konnte
+   * `result_paths` keine Luecken haben — `pfade.length` und „naechster freier
+   * Index" waren dasselbe. Jetzt nicht mehr: Faellt bei einem Auftrag ueber
+   * vier Bilder nach dreien (0,1,2) der Versuch aus und Mark loescht Bild 0,
+   * bleiben zwei Pfade, und die Schleife begaenne bei 2 — also auf `2.png`,
+   * das es schon gibt. Das vorhandene Bild waere ueberschrieben, `2.png`
+   * stuende zweimal in der Liste, und statt vier Bildern laegen drei da.
+   */
+  const naechsterIndex = pfade.reduce((hoechste, p) => {
+    const n = Number(p.split('/').pop()?.split('.')[0])
+    return Number.isInteger(n) ? Math.max(hoechste, n + 1) : hoechste
+  }, pfade.length)
+
+  for (let i = naechsterIndex; i < naechsterIndex + (anzahl - pfade.length); i++) {
     const begonnen = Date.now()
     let daten: ArrayBuffer
     if (ueberGemini) {

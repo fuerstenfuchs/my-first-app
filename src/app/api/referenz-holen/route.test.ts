@@ -33,8 +33,31 @@ describe('istInternesZiel — was nicht geholt werden darf', () => {
     ['fd00::1',          'eindeutig lokal (IPv6-Gegenstück zum privaten Netz)'],
     ['fe80::1',          'Link-Local in IPv6'],
     ['ff02::1',          'Multicast in IPv6'],
-    ['::ffff:127.0.0.1', 'IPv4 in IPv6 verpackt — die klassische Lücke'],
+    ['::ffff:127.0.0.1', 'IPv4 in IPv6 verpackt, punktiert'],
     ['::ffff:192.168.0.1', 'privates Netz, in IPv6 verpackt'],
+
+    // ── DIE FORM, DIE WIRKLICH ANKOMMT ────────────────────────────────────
+    // Am 02.09.2026 nachgemessen: `new URL('http://[::ffff:127.0.0.1]/')`
+    // gibt als Hostnamen die NORMALISIERTE Hexform zurück, `::ffff:7f00:1`.
+    // Die erste Fassung dieser Wache suchte nur die punktierte Form. Sie war
+    // grün getestet und trotzdem offen — der Test prüfte die Schreibweise, die
+    // im Betrieb nie eintrifft. Deshalb steht jede dieser Zeilen hier einzeln.
+    ['::ffff:7f00:1',    'HEXFORM von 127.0.0.1 — hierüber war die Wache offen'],
+    ['::ffff:a9fe:a9fe', 'Hexform von 169.254.169.254, den Cloud-Metadaten'],
+    ['::ffff:c0a8:1',    'Hexform von 192.168.0.1'],
+    ['::ffff:a00:1',     'Hexform von 10.0.0.1'],
+    ['0:0:0:0:0:ffff:7f00:1', 'dieselbe Adresse ungekürzt'],
+    ['::7f00:1',         'veraltete IPv4-kompatible Form'],
+    ['64:ff9b::7f00:1',  'NAT64 mit 127.0.0.1 darin'],
+    ['2002:7f00:1::',    '6to4 — trägt eine IPv4 in sich'],
+    ['2001:0:53aa::1',   'Teredo — trägt eine IPv4 in sich'],
+    ['fdff::1',          'obere Kante von fc00::/7'],
+    ['febf::1',          'obere Kante des Link-Local-Bereichs'],
+    ['ffff::1',          'obere Kante von Multicast'],
+    ['::ffff:7f00:1%eth0', 'mit Zonenkennung angehängt'],
+    [':::1',             'kaputte Schreibweise — im Zweifel nein'],
+    ['1:2:3:4:5:6:7',    'zu wenige Gruppen'],
+    ['gggg::1',          'keine Hexziffern'],
     ['kein.ip',          'nicht deutbar — im Zweifel nein'],
     ['',                 'leer'],
   ]
@@ -58,6 +81,10 @@ describe('istInternesZiel — was durchgelassen wird', () => {
     ['100.128.0.1',       'knapp über Carrier-NAT'],
     ['169.253.0.1',       'knapp neben Link-Local'],
     ['2606:4700:4700::1111', 'öffentliches IPv6'],
+    ['2a00:1450:4001:82f::200e', 'öffentliches IPv6, ausgeschrieben'],
+    ['::ffff:8.8.8.8',    'öffentliche IPv4 in IPv6 verpackt, punktiert'],
+    ['::ffff:808:808',    'dieselbe in Hexform — muss durchgehen'],
+    ['2001:4860:4860::8888', 'öffentlich, beginnt mit 2001 aber ist kein Teredo'],
   ]
 
   for (const [ip, grund] of erlaubt) {

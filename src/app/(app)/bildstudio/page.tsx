@@ -243,7 +243,11 @@ export default function BildstudioPage() {
                   onAnsehen={() => setLightbox({ urls, start: i })}
                   onUebernehmen={url => setUebernahme({ url, pfad: b.pfad })}
                   onBearbeiten={(url, pfad) => setWerkbank({ job: b.job, url, pfad })}
-                  onLoeschen={async pfad => { if (await loeschen(b.job, pfad)) laden() }}
+                  onLoeschen={async pfad => {
+                    // AUF das Neuladen warten: Sonst rechnet ein sofort
+                    // folgendes zweites Loeschen noch auf dem alten Stand.
+                    if (await loeschen(b.job, pfad)) { await laden(); abgelegteHolen() }
+                  }}
                   onVergroessern={(pfad, stufe, verfahren) =>
                     void vergroessern(b.job, pfad, stufe, verfahren)}
                 />
