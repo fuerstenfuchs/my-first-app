@@ -37,6 +37,16 @@ export async function bildHerunterladen(url: string, dateiname: string): Promise
  */
 export function dateinameFuerBild(
   erstelltAm: string, index: number, gesamt: number, hinweis?: string | null,
+  /**
+   * Der Speicherpfad des Bildes — nur wegen der Endung.
+   *
+   * Vorher stand hier fest `.png`. Seit Gemini dabei ist, liegen auch JPEGs in
+   * der Ablage; `ergebnisAblegen` im Arbeiter bestimmt Endung und Typ eigens
+   * aus dem Inhalt. Ohne diesen Parameter hätte der Download das wieder
+   * ausgehebelt und JPEG-Bytes als `.png` gespeichert — genau der Fehler, gegen
+   * den die Ablage repariert wurde.
+   */
+  pfad?: string | null,
 ): string {
   const d = new Date(erstelltAm)
   const zwei = (n: number) => String(n).padStart(2, '0')
@@ -56,5 +66,8 @@ export function dateinameFuerBild(
   }
   if (gesamt > 1) teile.push(String(index + 1))
 
-  return `${teile.join('-')}.png`
+  // Endung aus dem Pfad, Rückfall png. Ein JPEG unter .png zeigt der Browser
+  // richtig an (er rät), aber ein Bildprogramm oder eine Druckerei lehnt es ab.
+  const endung = (pfad && /\.([a-z0-9]{2,5})$/i.exec(pfad)?.[1]?.toLowerCase()) || 'png'
+  return `${teile.join('-')}.${endung}`
 }

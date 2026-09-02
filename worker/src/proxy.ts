@@ -7,6 +7,7 @@
  */
 
 import { config, ohneGeheimnis } from './config.ts'
+import { PROXY_UNERREICHBAR } from './netz.ts'
 import { bildHolen } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
 
@@ -85,7 +86,7 @@ export async function bildErzeugen(job: ImageJob, signal?: AbortSignal): Promise
     }
     if (fehler.name === 'AbortError') throw fehler
     throw new Error(ohneGeheimnis(
-      `Der Proxy war nicht erreichbar: ${fehler.message}. Läuft EasyCLIProxyAPI auf ${config.proxyUrl}?`,
+      `${PROXY_UNERREICHBAR}: ${fehler.message}. Läuft EasyCLIProxyAPI auf ${config.proxyUrl}?`,
     ))
   }
 

@@ -73,7 +73,7 @@ export function ErgebnisKachel({
       // vorher in der Warteschlange, und ein Prompt im Dateinamen ergäbe
       // hundert Zeichen Buchstabensalat.
       const hinweis = (job.scene_meta as { name?: string } | null)?.name ?? null
-      await bildHerunterladen(url, dateinameFuerBild(job.created_at, index, gesamt, hinweis))
+      await bildHerunterladen(url, dateinameFuerBild(job.created_at, index, gesamt, hinweis, pfad))
     } catch (e) {
       toast.error(`Download fehlgeschlagen: ${(e as Error).message}`)
     } finally {

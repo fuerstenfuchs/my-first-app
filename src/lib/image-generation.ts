@@ -15,10 +15,74 @@ import type { AspectRatioKey } from './scene-builder-options'
  */
 
 export const MODELLE = [
-  { id: 'gpt-image-2', label: 'GPT Image 2', note: 'Standard, folgt Referenzbildern treu' },
+  {
+    id: 'gpt-image-2', label: 'GPT Image 2',
+    note: 'Standard, folgt Referenzbildern treu',
+    kannReferenzen: true,
+  },
+  {
+    id: 'gemini-3.1-flash-image',
+    label: 'Gemini 3.1 Flash Image',
+    note: 'Alle fünf Formate, bis 4K — ohne Referenzbilder',
+    // Der nativen Gemini-Anbindung werden nur Prompt und Format übergeben.
+    // Referenzbilder gingen dort lautlos verloren, während der Prompt weiter
+    // „Image 1 = CHARACTER …" diktiert — das Ergebnis wäre eine erfundene
+    // Person, und in der Warteschlange stünde trotzdem „2 Ref.". Deshalb
+    // steht das hier als DATUM und nicht als Hinweistext: Eine Notiz, die im
+    // Scene Builder gar nicht gerendert wird, schützt niemanden.
+    kannReferenzen: false,
+  },
 ] as const
 
 export type ModellId = typeof MODELLE[number]['id']
+
+/** Die Modelle, die Referenzbilder verarbeiten können. */
+export const MODELLE_MIT_REFERENZ = MODELLE.filter(m => m.kannReferenzen)
+
+export function kannReferenzen(modell: ModellId): boolean {
+  return MODELLE.find(m => m.id === modell)?.kannReferenzen ?? false
+}
+
+/**
+ * Rechnet dieses Modell in Größenklassen statt in Pixeln?
+ *
+ * Gemini kennt kein `size`. Es nimmt Seitenverhältnis plus Größenklasse
+ * (1K/2K/4K) — am 02.09.2026 gemessen. Und es ist auf `/v1/images/generations`
+ * gar nicht erreichbar, sondern nur über den nativen Weg; der Arbeiter
+ * verzweigt entsprechend.
+ */
+export function rechnetInKlassen(modell: ModellId): boolean {
+  return modell.startsWith('gemini')
+}
+
+/** Die Größenklassen, die für ein erzeugtes Bild sinnvoll sind. */
+export const KLASSEN = [
+  { id: '1K', label: '1K', note: 'ca. 1 MP' },
+  { id: '2K', label: '2K', note: 'ca. 4 MP' },
+  { id: '4K', label: '4K', note: 'ca. 17 MP' },
+] as const
+export type KlassenId = typeof KLASSEN[number]['id']
+
+/**
+ * Was für ein Format tatsächlich herauskommt — je nach Modell verschieden.
+ *
+ * Der Unterschied ist groß, aber nicht so groß wie „exakt gegen ungenau":
+ *
+ * - gpt-image-2 kennt nur DREI Größen. 16:9 wird zu 3:2 (1,50 statt 1,78),
+ *   9:16 zu 2:3 — das sind 16 Prozent daneben.
+ * - Gemini kennt alle fünf Verhältnisse, trifft sie aber auch nicht auf die
+ *   Stelle: Am 02.09.2026 gemessen ergab 16:9 ein Bild von 2752×1536, also
+ *   1,7917 statt 1,7778 — 0,78 Prozent zu breit.
+ *
+ * Hier stand zuerst „exakt". Der erste echte Lauf hat das widerlegt, und eine
+ * Formatangabe, die 0,8 Prozent verschweigt, ist genau die Sorte Zusage, an
+ * der man sich später stößt.
+ */
+export function formatHinweis(modell: ModellId, format: AspectRatioKey | null): string {
+  if (rechnetInKlassen(modell)) return 'auf ~1 % genau'
+  const z = groesseFuerFormat(format)
+  return z.hinweis ?? z.size
+}
 
 /** Die drei Größen, die gpt-image-2 tatsächlich annimmt. */
 export const NATIVE_GROESSEN = ['1024x1024', '1536x1024', '1024x1536'] as const

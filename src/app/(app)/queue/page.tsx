@@ -183,7 +183,11 @@ export default function QueuePage() {
                           {job.job_type === 'upscale' && job.upscaler
                             ? VERFAHREN_NAME[job.upscaler]
                             : job.model}
-                          {job.reference_urls.length === 0 && ` · ${job.size}`}
+                          {/* Bei Gemini ist `size` bedeutungslos — die Spalte wird nur
+                              gefüllt, weil sie Pflicht ist. Angezeigt gehört die
+                              Größenklasse; der Arbeiter protokolliert sie auch so. */}
+                          {job.reference_urls.length === 0 &&
+                            ` · ${job.model.startsWith('gemini') ? (job.ziel_klasse ?? '—') : job.size}`}
                           {job.aspect_ratio ? ` · ${job.aspect_ratio.replace(/_/g, ':').replace(/^[a-z]+:/, '')}` : ''}
                           {job.variants > 1 ? ` · ${job.variants}×` : ''}
                           {job.reference_urls.length > 0 ? ` · ${job.reference_urls.length} Ref.` : ''}

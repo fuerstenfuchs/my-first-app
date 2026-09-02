@@ -13,7 +13,7 @@
 import { bildErzeugen } from './proxy.ts'
 import { bildVergroessern } from './upscale.ts'
 import { bildVergroessernKi, type KiVerfahren } from './fal.ts'
-import { bildNachbauen } from './gemini.ts'
+import { bildNachbauen, bildErzeugenGemini, GROESSENKLASSEN } from './gemini.ts'
 import {
   auftragFertig, ergebnisAblegen, ergebnisHolen, externeAnfrageMerken, fortschrittMerken,
 } from './supabase.ts'
@@ -34,8 +34,10 @@ export function beschreibung(job: ImageJob): string {
   }
   const anzahl = durchlaeufe(job)
   const referenzen = job.reference_urls.length
+  // Bei Gemini ist `size` bedeutungslos — dort zaehlt die Groessenklasse.
+  const groesse = job.model.startsWith('gemini') ? (job.ziel_klasse ?? '2K') : job.size
   return (
-    `${job.model} · ${job.size} · ${anzahl} Durchlauf${anzahl > 1 ? 'e' : ''}` +
+    `${job.model} · ${groesse} · ${anzahl} Durchlauf${anzahl > 1 ? 'e' : ''}` +
     (referenzen ? ` · ${referenzen} Referenz${referenzen > 1 ? 'en' : ''}` : ' · ohne Referenz')
   )
 }
@@ -133,9 +135,44 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
     sage(`  ${pfade.length} Bild(er) aus einem früheren Versuch übernommen.`)
   }
 
+  // Gemini spricht einen anderen Weg als die OpenAI-artigen Modelle: nicht
+  // /v1/images/generations mit Pixelmaßen, sondern den nativen Endpunkt mit
+  // Seitenverhältnis und Größenklasse. Am 02.09.2026 gemessen — auf den
+  // Bild-Endpunkten antwortet der Proxy für Gemini mit HTTP 400.
+  const ueberGemini = job.model.startsWith('gemini')
+
   for (let i = pfade.length; i < anzahl; i++) {
     const begonnen = Date.now()
-    const daten = await bildErzeugen(job, signal)
+    let daten: ArrayBuffer
+    if (ueberGemini) {
+      // KEIN Rückfall auf eine Vorgabe. Drei Zweige weiter oben gilt eine
+      // fehlende Größenklasse bei der Gemini-Vergrößerung als Fehler; hier
+      // hätte `?? '2K'` dieselbe Lücke verschluckt. Zwei Zweige, dieselbe
+      // Frage, entgegengesetzte Antwort — das war die eigentliche Schwäche.
+      if (!job.ziel_klasse) {
+        throw new Error(
+          'Gemini-Auftrag ohne Größenklasse. Gemini rechnet nicht in Pixeln — ' +
+          'die Spalte ziel_klasse muss 1K, 2K oder 4K enthalten.',
+        )
+      }
+      // Gemini bekommt hier NUR den Prompt. Referenzbilder würden lautlos
+      // verschwinden, während der Prompt weiter „Image 1 = CHARACTER …"
+      // diktiert — das Ergebnis wäre eine erfundene Person, und in der
+      // Warteschlange stünde trotzdem „2 Ref.". Lieber ein klarer Fehler.
+      if (job.reference_urls.length > 0) {
+        throw new Error(
+          `Gemini kann keine Referenzbilder verarbeiten (${job.reference_urls.length} übergeben). ` +
+          'Für Aufträge mit Referenz gpt-image-2 wählen.',
+        )
+      }
+      const klasse = job.ziel_klasse as typeof GROESSENKLASSEN[number]
+      const e = await bildErzeugenGemini(job.prompt, job.aspect_ratio, klasse, signal, job.model)
+      daten = e.daten.buffer.slice(
+        e.daten.byteOffset, e.daten.byteOffset + e.daten.byteLength,
+      ) as ArrayBuffer
+    } else {
+      daten = await bildErzeugen(job, signal)
+    }
     const pfad = await ergebnisAblegen(job.user_id, job.id, i, daten)
     pfade.push(pfad)
     // Sofort festhalten — sonst wäre alles verloren, wenn das nächste Bild scheitert.

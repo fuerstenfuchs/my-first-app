@@ -44,8 +44,16 @@ export const config = {
   requestTimeoutMs: zahl('REQUEST_TIMEOUT_MS', 300_000),
   // Ab wann ein Auftrag auf 'running' als verwaist gilt.
   //
-  // MUSS über der längstmöglichen Laufzeit liegen: 4 Durchläufe (Höchstwert
-  // laut Datenbankschranke) mal 5 Minuten Zeitgrenze je Bild sind 20 Minuten.
+  // MUSS über der Zeit liegen, die ein EINZELNES Bild höchstens braucht — nicht
+  // über der des ganzen Auftrags. Das ist kein Zufall: `fortschrittMerken`
+  // frischt `started_at` nach jedem fertigen Bild auf, die Frist läuft also je
+  // Bild neu. Bei requestTimeoutMs = 5 min ist 30 reichlich.
+  //
+  // Hier stand zuerst „4 Durchläufe mal 5 Minuten sind 20 Minuten". Das trug
+  // nur, solange ein Auftrag höchstens 20 Minuten lief — mit Gemini wären es
+  // 4 × 10 = 40. Ein Ausfall entsteht daraus nicht (siehe oben), aber wer die
+  // alte Rechnung liest und STALE_MINUTES danach einstellt, rechnet falsch.
+  //
   // Ein zu kleiner Wert reiht einen noch laufenden Auftrag neu ein — bei zwei
   // Arbeitern wird er dann ein zweites Mal erzeugt, und jedes Bild kostet Geld.
   staleMinutes: zahl('STALE_MINUTES', 30),

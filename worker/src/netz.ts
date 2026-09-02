@@ -28,6 +28,21 @@
  * (index.ts stellt den Auftrag zurück, ohne einen Versuch zu verbrauchen), die
  * Zeitgrenze wirft TimeoutError (zählt als Fehlversuch).
  */
+/**
+ * Der Satz, an dem `index.ts` den Autostart-Wettlauf erkennt.
+ *
+ * Arbeiter und Bild-Proxy liegen beide im Autostart, und der Arbeiter ist
+ * schneller da. Ein Auftrag, der in diese Lücke fällt, wird zurückgestellt
+ * statt als Fehlversuch gezählt — sonst verbrennen drei Anläufe in wenigen
+ * Sekunden.
+ *
+ * WARUM ALS KONSTANTE: Die Erkennung ist eine Textprobe
+ * (`fehler.message.includes(...)`). Solange der Satz in jeder Anbindung neu
+ * getippt wird, greift der Schutz für die eine und nicht für die andere —
+ * genau das war beim Gemini-Weg der Fall.
+ */
+export const PROXY_UNERREICHBAR = 'Der Proxy war nicht erreichbar'
+
 export function mitFrist(signal: AbortSignal | undefined, ms: number): AbortSignal {
   const frist = AbortSignal.timeout(ms)
   return signal ? AbortSignal.any([signal, frist]) : frist

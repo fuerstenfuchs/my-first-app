@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Loader2, Send, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -9,9 +9,10 @@ import {
 } from '@/components/ui/select'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, DURCHLAEUFE, groesseFuerFormat, formatAnsage, promptFuerAuftrag,
-  referenzZuordnung, ROLLEN_LABEL,
-  type ModellId, type Durchlaeufe, type Referenz,
+  MODELLE, MODELLE_MIT_REFERENZ, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
+  groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
+  ROLLEN_LABEL,
+  type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
 } from '@/lib/image-generation'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
 
@@ -37,7 +38,29 @@ export function QueueButton({
   const { anlegen } = useImageJobs(false)
   const [modell, setModell] = useState<ModellId>('gpt-image-2')
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
+  const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [laeuft, setLaeuft] = useState(false)
+
+  /**
+   * Sobald Referenzbilder dabei sind, stehen nur Modelle zur Wahl, die sie auch
+   * verarbeiten. Gemini stünde sonst hier — und würde sie lautlos verwerfen,
+   * weil dieses Menü nur `m.label` zeigt und die Notiz dazu gar nicht.
+   */
+  const auswahl = useMemo(
+    () => (referenzen.length > 0 ? MODELLE_MIT_REFERENZ : MODELLE),
+    [referenzen.length],
+  )
+
+  // Wer erst Gemini wählt und dann ein Referenzbild dazunimmt, hätte sonst ein
+  // Modell eingestellt, das gar nicht mehr im Menü steht.
+  useEffect(() => {
+    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2')
+  }, [auswahl, modell])
+
+  // Gemini rechnet in Größenklassen statt in Pixeln. Ohne diese Angabe lehnt
+  // die Datenbank den Auftrag ab — und eine stille Vorgabe wäre schlechter als
+  // eine sichtbare Wahl.
+  const inKlassen = rechnetInKlassen(modell)
 
   const zuordnung = groesseFuerFormat(aspectRatio)
   const rollen = referenzen.map(r => r.rolle)
@@ -55,6 +78,7 @@ export function QueueButton({
       size:            zuordnung.size,
       aspect_ratio:    aspectRatio,
       variants:        durchlaeufe,
+      ziel_klasse:     inKlassen ? klasse : null,
       reference_urls:  referenzen.map(r => r.url),
       reference_roles: rollen,
       // name fuer den Dateinamen beim Download — ohne ihn hiessen alle Bilder
@@ -82,11 +106,26 @@ export function QueueButton({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {MODELLE.map(m => (
+            {auswahl.map(m => (
               <SelectItem key={m.id} value={m.id} className="text-xs">{m.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        {inKlassen && (
+          <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>
+            <SelectTrigger className="h-7 w-[5.5rem] text-[11px]" aria-label="Größenklasse">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KLASSEN.map(k => (
+                <SelectItem key={k.id} value={k.id} className="text-xs">
+                  {k.label} · {k.note}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select
           value={String(durchlaeufe)}

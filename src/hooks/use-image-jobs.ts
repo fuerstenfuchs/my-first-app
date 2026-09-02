@@ -47,6 +47,11 @@ export interface ImageJobInput {
   reference_roles?: ReferenzRolle[]
   scene_meta?:     Record<string, unknown> | null
   preset_id?:      string | null
+  /**
+   * Nur für Modelle, die in Größenklassen rechnen (Gemini). Bei allen anderen
+   * bleibt es null — die Datenbank lässt es dort auch nicht zu.
+   */
+  ziel_klasse?:    '1K' | '2K' | '4K' | null
 }
 
 const TABLE  = 'image_jobs'
@@ -125,6 +130,7 @@ export function useImageJobs(aktiv = true) {
         reference_roles: input.reference_roles ?? [],
         scene_meta:     input.scene_meta ?? null,
         preset_id:      input.preset_id ?? null,
+        ziel_klasse:    input.ziel_klasse ?? null,
       })
       .select()
       .single()

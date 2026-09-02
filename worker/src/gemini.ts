@@ -19,9 +19,17 @@
 
 import sharp from 'sharp'
 import { config, ohneGeheimnis } from './config.ts'
-import { mitFrist, uebersetzeFehler, bildart } from './netz.ts'
+import { mitFrist, uebersetzeFehler, bildart, PROXY_UNERREICHBAR } from './netz.ts'
 
-const MODELL = 'gemini-3.1-flash-image'
+/**
+ * Das Modell, wenn der Aufrufer keines nennt.
+ *
+ * Es wird durchgereicht statt fest verdrahtet: Käme je ein zweites
+ * Gemini-Modell dazu, würde es angeboten, in der Datenbank vermerkt — und
+ * trotzdem auf 3.1 gerechnet. Die Herkunftsangabe eines Bildes ist kein
+ * Kosmetikum.
+ */
+const MODELL_VORGABE = 'gemini-3.1-flash-image'
 
 /** Was Google annimmt — von Google selbst gemeldet, nicht geraten. */
 export const SEITENVERHAELTNISSE = [
@@ -30,6 +38,26 @@ export const SEITENVERHAELTNISSE = [
 ] as const
 
 export const GROESSENKLASSEN = ['512', '512P', '512PX', '1K', '2K', '4K'] as const
+
+/**
+ * Die Trésor-Formate auf Geminis Seitenverhältnisse.
+ *
+ * Gemini kennt alle fünf, gpt-image-2 nur drei Größen (aus 16:9 wird dort 3:2,
+ * also 16 Prozent daneben).
+ *
+ * ABER NICHT „EXAKT": Hier stand zuerst „Wer ein Format exakt braucht, ist hier
+ * richtig." Der erste echte Lauf am 02.09.2026 hat das widerlegt — 16:9 ergab
+ * 2752×1536, also 1,7917 statt 1,7778, 0,78 Prozent zu breit. Die Korrektur
+ * stand danach nur in `src/lib/image-generation.ts`; dieser Zwilling blieb
+ * stehen und verwies auch noch auf die Datei, die ihm widerspricht.
+ */
+export const FORMAT_ZU_VERHAELTNIS: Record<string, string | undefined> = {
+  square_1_1:     '1:1',
+  landscape_16_9: '16:9',
+  story_9_16:     '9:16',
+  portrait_4_5:   '4:5',
+  cinematic_21_9: '21:9',
+}
 
 /**
  * Der Auftrag an Gemini — an einer Stelle, weil jede Zeile darin erarbeitet ist.
@@ -123,6 +151,131 @@ export async function farbeAngleichen(
   return sharp(ergebnis).linear(faktor, versatz).png({ compressionLevel: 9 }).toBuffer()
 }
 
+/**
+ * Ein Aufruf an Gemini — die Stelle, an der Zeitgrenze, Abbruch und
+ * Fehlerbehandlung EINMAL stehen. Sowohl das Nachbauen als auch das freie
+ * Erzeugen gehen hier durch.
+ */
+async function geminiRuf(
+  teile: Record<string, unknown>[],
+  verhaeltnis: string,
+  klasse: string,
+  signal?: AbortSignal,
+  modell: string = MODELL_VORGABE,
+): Promise<Buffer> {
+  // requestTimeoutMs, NICHT falTimeoutMs: Gemini läuft über den LOKALEN Proxy,
+  // und genau dafür ist requestTimeoutMs gedacht. Wer FAL_TIMEOUT_MS wegen
+  // fal.ai verstellt, soll nicht still die Geduld gegenüber dem eigenen PC
+  // ändern.
+  const frist = config.requestTimeoutMs
+  let antwort: Response
+  try {
+    antwort = await fetch(
+      `${config.proxyUrl}/v1beta/models/${modell}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.proxyToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: teile }],
+          generationConfig: { imageConfig: { aspectRatio: verhaeltnis, imageSize: klasse } },
+        }),
+        signal: mitFrist(signal, frist),
+      },
+    )
+  } catch (e) {
+    const f = uebersetzeFehler(e as Error, signal, frist, 'Gemini', ohneGeheimnis)
+    // Damit der Autostart-Schutz in index.ts auch für diesen Weg greift: Beim
+    // Hochfahren ist der Proxy oft noch nicht da, und ein Auftrag soll dann
+    // liegenbleiben statt drei Versuche in Sekunden zu verbrennen.
+    if (f.name === 'Error' && f.message.includes('nicht erreichbar')) {
+      throw new Error(`${PROXY_UNERREICHBAR}: ${f.message}`)
+    }
+    throw f
+  }
+
+  let roh: string
+  try {
+    roh = await antwort.text()
+  } catch (e) {
+    // Trifft der Abbruch beim Lesen des Rumpfs, wirft undici einen TypeError
+    // statt eines AbortError — index.ts würde daraus einen verbrannten Versuch
+    // machen statt einer Rückstellung.
+    throw uebersetzeFehler(e as Error, signal, frist, 'Gemini', ohneGeheimnis)
+  }
+  if (!antwort.ok) {
+    throw new Error(ohneGeheimnis(`Gemini → HTTP ${antwort.status}: ${roh.slice(0, 400)}`))
+  }
+
+  // Antwortet der Proxy mit HTTP 200 und HTML (Anmeldeseite, Fehlerseite,
+  // Zwischenspeicher), flöge sonst ein roher SyntaxError durch — ungefiltert
+  // und ohne Hinweis auf die Ursache. fal.ts und proxy.ts fangen das ab.
+  let j: {
+    candidates?: {
+      finishReason?: string
+      content?: { parts?: (Record<string, { data?: string }> & { text?: string })[] }
+    }[]
+  }
+  try {
+    j = JSON.parse(roh)
+  } catch {
+    throw new Error(
+      `Gemini hat keine lesbare Antwort geliefert (${roh.slice(0, 120)}…).`,
+    )
+  }
+  const kandidat = j.candidates?.[0]
+  const stuecke = kandidat?.content?.parts ?? []
+  // Der Proxy reicht mal `inlineData`, mal `inline_data` durch.
+  const treffer = stuecke.find(p => p.inlineData?.data || p.inline_data?.data)
+  const daten = treffer?.inlineData?.data ?? treffer?.inline_data?.data
+  if (!daten) {
+    // Lehnt Gemini ab (Sicherheitsfilter, Personen im Bild), steht der Grund
+    // als Text in der Antwort. Ohne ihn stünde nur „kein Bild zurückgegeben".
+    const grund = stuecke.map(p => p.text).filter(Boolean).join(' ').slice(0, 300)
+    const wieso = kandidat?.finishReason ? ` (${kandidat.finishReason})` : ''
+    throw new Error(
+      `Gemini hat kein Bild zurückgegeben${wieso}.` + (grund ? ` Begründung: ${grund}` : ''),
+    )
+  }
+
+  const bild = Buffer.from(daten, 'base64')
+  // Buffer.from(..., 'base64') wirft NIE — ungültige Zeichen werden still
+  // verworfen. Ohne diese Prüfung käme der erste erkennbare Fehler von sharp.
+  if (!bildart(bild) || bild.length < 100) {
+    throw new Error(`Gemini lieferte kein brauchbares Bild (${bild.length} Bytes).`)
+  }
+  return bild
+}
+
+/**
+ * Ein Bild aus einem Prompt erzeugen — ohne Vorlage.
+ *
+ * Der Gegenpart zu `bildNachbauen`. Keine Farbrückführung: Es gibt kein
+ * Original, an dem sich etwas angleichen ließe.
+ */
+export async function bildErzeugenGemini(
+  prompt: string,
+  format: string | null,
+  klasse: typeof GROESSENKLASSEN[number],
+  signal?: AbortSignal,
+  modell?: string,
+): Promise<{ daten: Buffer; breite: number; hoehe: number; verhaeltnis: string }> {
+  // Kein stiller Rückfall auf 1:1. Käme ein sechstes Format dazu, gäbe es
+  // sonst ein quadratisches Bild bei angefordertem 2,39:1 — ohne Fehlermeldung.
+  const verhaeltnis = format ? FORMAT_ZU_VERHAELTNIS[format] : '1:1'
+  if (!verhaeltnis) {
+    throw new Error(
+      `Gemini kennt das Format "${format}" nicht. Bekannt: ` +
+      `${Object.keys(FORMAT_ZU_VERHAELTNIS).join(', ')}.`,
+    )
+  }
+  const bild = await geminiRuf([{ text: prompt }], verhaeltnis, klasse, signal, modell)
+  const m = await sharp(bild).metadata()
+  return { daten: bild, breite: m.width ?? 0, hoehe: m.height ?? 0, verhaeltnis }
+}
+
 export type GeminiErgebnis = {
   daten: Buffer
   breite: number
@@ -148,84 +301,17 @@ export async function bildNachbauen(
   const art = bildart(quelle)
   if (!art) throw new Error('Das Ausgangsbild ist kein erkennbares Bild.')
 
-  // Abbruch UND Zeitgrenze. Vorher stand hier `signal ?? timeout(...)` — damit
-  // fiel die Grenze im Dauerbetrieb immer weg, weil dort stets ein Signal
-  // mitkommt. Derselbe Fehler war in fal.ts schon einmal gefunden und
-  // dokumentiert; deshalb steht die Regel jetzt in netz.ts statt in einem
-  // Kommentar.
-  const frist = config.falTimeoutMs
-  let antwort: Response
-  try {
-    antwort = await fetch(
-      `${config.proxyUrl}/v1beta/models/${MODELL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.proxyToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [
-              { inline_data: { mime_type: art.typ, data: quelle.toString('base64') } },
-              { text: UPSCALE_PROMPT },
-            ],
-          }],
-          generationConfig: { imageConfig: { aspectRatio: verhaeltnis, imageSize: klasse } },
-        }),
-        signal: mitFrist(optionen.signal, frist),
-      },
-    )
-  } catch (e) {
-    throw uebersetzeFehler(e as Error, optionen.signal, frist, 'Gemini', ohneGeheimnis)
-  }
+  // Der Aufruf selbst steht in `geminiRuf` — Zeitgrenze, Abbruchbehandlung
+  // und Bildprüfung gibt es dort einmal, nicht in jedem Aufrufer neu.
+  const roh = await geminiRuf(
+    [
+      { inline_data: { mime_type: art.typ, data: quelle.toString('base64') } },
+      { text: UPSCALE_PROMPT },
+    ],
+    verhaeltnis, klasse, optionen.signal,
+  )
 
-  let roh: string
-  try {
-    roh = await antwort.text()
-  } catch (e) {
-    // Trifft der Abbruch beim Lesen des Rumpfs, wirft undici einen TypeError
-    // statt eines AbortError — index.ts würde daraus einen verbrannten Versuch
-    // machen statt einer Rückstellung.
-    throw uebersetzeFehler(e as Error, optionen.signal, frist, 'Gemini', ohneGeheimnis)
-  }
-  if (!antwort.ok) {
-    throw new Error(ohneGeheimnis(`Gemini → HTTP ${antwort.status}: ${roh.slice(0, 400)}`))
-  }
-
-  const j = JSON.parse(roh) as {
-    candidates?: {
-      finishReason?: string
-      content?: { parts?: (Record<string, { data?: string }> & { text?: string })[] }
-    }[]
-  }
-  const kandidat = j.candidates?.[0]
-  const teile = kandidat?.content?.parts ?? []
-  // Der Proxy reicht mal `inlineData`, mal `inline_data` durch — je nachdem,
-  // welchen Weg die Antwort genommen hat.
-  const treffer = teile.find(p => p.inlineData?.data || p.inline_data?.data)
-  const daten = treffer?.inlineData?.data ?? treffer?.inline_data?.data
-  if (!daten) {
-    // Lehnt Gemini ab (Sicherheitsfilter, Personen im Bild), steht der Grund
-    // als Text in der Antwort. Ohne ihn stünde in der Warteschlange nur
-    // „kein Bild zurückgegeben" — bei einem Porträt der wahrscheinlichste Fall.
-    const grund = teile.map(p => p.text).filter(Boolean).join(' ').slice(0, 300)
-    const wieso = kandidat?.finishReason ? ` (${kandidat.finishReason})` : ''
-    throw new Error(
-      `Gemini hat kein Bild zurückgegeben${wieso}.` + (grund ? ` Begründung: ${grund}` : ''),
-    )
-  }
-
-  // Ausdruecklich ArrayBufferLike: sharps toBuffer() liefert diesen Typ, und
-  // ohne die Angabe leitet TypeScript vom Buffer.from() den engeren ab.
-  let bild: Buffer<ArrayBufferLike> = Buffer.from(daten, 'base64')
-  // Buffer.from(..., 'base64') wirft NIE — ungültige Zeichen werden still
-  // verworfen. Ohne diese Prüfung käme der erste erkennbare Fehler von sharp,
-  // mit einer Meldung, die nichts über die Ursache sagt.
-  if (!bildart(bild) || bild.length < 100) {
-    throw new Error(`Gemini lieferte kein brauchbares Bild (${bild.length} Bytes).`)
-  }
+  let bild: Buffer<ArrayBufferLike> = roh
   if (optionen.farbeAngleichen !== false) {
     bild = await farbeAngleichen(bild, quelle)
   }

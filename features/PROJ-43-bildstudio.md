@@ -23,7 +23,7 @@ Dazu geht heute gar nicht: ein Bild einfach so erzeugen, ohne den Scene Builder.
 |---|---|---|
 | **A** | „Übernehmen nach …" auf jeder Ergebniskachel | **fertig** |
 | **B** | Rubrik Bildstudio mit Lichttisch | **fertig** |
-| C | Freie Erzeugung mit Speichern in den Trésor | offen |
+| **C** | Freie Erzeugung mit Speichern in den Trésor | **fertig** |
 | D | Werkbank: Zuschneiden und sieben Regler | offen |
 
 Marks Änderung an der Reihenfolge: Gemini als viertes Vergrößerungsverfahren
@@ -134,6 +134,69 @@ Beim Zusammenführen fiel ein Unterschied auf, der sonst still geblieben wäre:
 Der erste Entwurf der Kachel nahm beim Dateinamen `scene_meta.name ?? prompt`,
 die Warteschlange bisher `?? null`. Das hätte jedem Download hundert Zeichen
 Prompt in den Namen geschrieben. Jetzt wieder wie vorher.
+
+## Phase C — freie Erzeugung
+
+Links im Bildstudio: Prompt eintippen, Modell, Format, Anzahl. Kein Umweg über
+den Scene Builder. Der Einfügeweg dahinter ist derselbe (`anlegen()`) — er weiß
+nichts von Szenen und wurde nicht angefasst.
+
+**Gemini ist erstmals als Bildmodell wählbar.** Es funktioniert grundlegend
+anders: nativer Google-Endpunkt statt `/v1/images/generations`, Seitenverhältnis
+plus Größenklasse statt Pixelmaßen, JPEG statt PNG. Gemessen an einem echten
+Lauf: 16:9 in 2K ergab 2752×1536 in 25 Sekunden.
+
+| | gpt-image-2 | Gemini |
+|---|---|---|
+| 16:9 wird | 3:2 (16 % daneben) | 1,7917 (0,78 % daneben) |
+| Auflösung | ~1,5 MP | bis 17 MP |
+| Referenzbilder | ja | **nein** |
+
+**Prompt speichern:** Unter dem Feld erscheint „War gut?" mit vorbelegtem
+Titelfeld. Kein Dialog — ein Dialog für ein Feld ist einer zu viel. Der Prompt
+landet mit dem Etikett `bildstudio` im Trésor und geht in die semantische Suche.
+
+### Was Critic gefunden hat
+
+**Der Blocker war einer, den ich allein nicht gefunden hätte:** `MODELLE` speist
+nicht nur das neue Bedienfeld, sondern auch den Scene Builder. Dort wird nur
+`m.label` gerendert — die Notiz „ohne Referenzbilder" erscheint gar nicht. Mark
+hätte eine Szene mit Charakter- und Outfit-Referenz gebaut, auf Gemini gestellt
+(weil dort 16:9 wirklich 16:9 wird) und ein Bild mit einer **erfundenen Person**
+bekommen. Der Prompt hätte weiter „Image 1 = CHARACTER — take the face" diktiert,
+ohne dass ein Bild 1 mitginge. In der Warteschlange stünde trotzdem „2 Ref.".
+
+Behoben doppelt: `kannReferenzen` ist jetzt ein **Datum** am Modell (eine Notiz,
+die an der entscheidenden Stelle nicht gerendert wird, schützt niemanden), der
+Scene Builder bietet bei Referenzbildern nur passende Modelle an und stellt
+zurück, wenn nachträglich eine Referenz dazukommt — und der Arbeiter bricht mit
+klarer Ansage ab, statt sie zu verschlucken.
+
+**Die Datenbankschranke war nicht dicht.** `ziel_klasse is null or ... or model
+like 'gemini%'` ließ einen Gemini-Auftrag OHNE Größenklasse durch, und der
+Arbeiter fiel still auf 2K zurück — während drei Zweige weiter oben dieselbe
+Lücke bei der Vergrößerung als Fehler galt. Zwei Zweige, dieselbe Frage,
+entgegengesetzte Antwort. Jetzt eine Äquivalenz (`proj-43c`), und der Rückfall
+ist ein Fehler. Alle vier Fälle an der laufenden Datenbank durchprobiert.
+
+**Drei Anzeigen widersprachen sich** über dasselbe Bild: Die Warteschlange zeigte
+`1536x1024` (ein Pflichtfeld ohne Bedeutung), der Arbeiter protokollierte die
+Klasse, und der Download nannte jede Datei `.png` — auch die JPEGs, für die
+`ergebnisAblegen` eigens Endung und Typ aus dem Inhalt bestimmt. Alle drei ziehen
+jetzt am selben Strang.
+
+**Der Autostart-Schutz griff für Gemini nicht.** `index.ts` erkennt den
+Wettlauf zwischen Arbeiter und Proxy an einer Textprobe — und der Satz stand nur
+in `proxy.ts`. Ein Gemini-Auftrag beim Hochfahren hätte alle drei Versuche in
+Sekunden verbrannt. Der Satz ist jetzt eine Konstante in `netz.ts`, genau wie
+`mitFrist` nach dem letzten Durchgang.
+
+Dazu: `JSON.parse` ungesichert · Modell fest verdrahtet statt durchgereicht ·
+Zeitgrenze aus dem falschen Topf (`falTimeoutMs` statt `requestTimeoutMs`,
+obwohl Gemini über den *lokalen* Proxy läuft) · stiller Rückfall auf 1:1 bei
+unbekanntem Format · die widerlegte „exakt"-Zusage stand noch im Arbeiter ·
+fehlende Beschriftungen · der Speichern-Knopf ließ sich in eine Sackgasse
+fahren, wenn man nach dem Speichern den Titel korrigierte.
 
 ## Offen
 

@@ -12,6 +12,7 @@
  */
 
 import { config } from './config.ts'
+import { PROXY_UNERREICHBAR } from './netz.ts'
 import { auftragAbarbeiten, beschreibung } from './abarbeiten.ts'
 import {
   naechsterAuftrag,
@@ -66,7 +67,7 @@ async function durchgang(aufraeumen: boolean): Promise<boolean> {
     // beim Hochfahren regelmaessig, weil Arbeiter und Proxy beide im Autostart
     // liegen und der Arbeiter schneller da ist. Ohne diese Unterscheidung
     // haetten drei Anlaeufe in den ersten Sekunden einen Auftrag verbrannt.
-    if (fehler.message.includes('Der Proxy war nicht erreichbar')) {
+    if (fehler.message.includes(PROXY_UNERREICHBAR)) {
       sage('  Der Bild-Proxy antwortet noch nicht — Auftrag bleibt liegen.')
       await auftragZurueckstellen(job.id, job.attempts, 'Bild-Proxy war nicht erreichbar')
       return true

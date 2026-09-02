@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { ErgebnisKachel } from '@/components/ergebnis-kachel'
 import { BildUebernehmenDialog } from '@/components/bild-uebernehmen-dialog'
+import { FreieErzeugung } from '@/components/freie-erzeugung'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
@@ -165,7 +166,10 @@ export default function BildstudioPage() {
         )}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <FreieErzeugung onEingereiht={laden} />
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {loading ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {Array.from({ length: 18 }).map((_, i) => (
@@ -215,7 +219,8 @@ export default function BildstudioPage() {
               </div>
             ))}
           </div>
-        )}
+          )}
+        </div>
       </div>
 
       <BildUebernehmenDialog
