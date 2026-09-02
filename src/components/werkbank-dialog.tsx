@@ -451,7 +451,15 @@ export function WerkbankDialog({
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
           {/* Bühne */}
-          <div className="flex min-h-0 flex-1 flex-col gap-1">
+          {/*
+            `min-w-0`: Ein Flex-Element schrumpft von sich aus nicht unter die
+            Breite seines Inhalts. Seit das Canvas eine ausgerechnete Breite hat
+            statt `max-w-full`, ist dieser Inhalt breit — die Buehne mass sich
+            daraufhin breiter als der Dialog und schob die Werkzeugspalte ueber
+            den rechten Rand hinaus. Am 02.09.2026 im Browser gesehen: „Anpassu…",
+            „Zuschnitt zuruecksetze…" abgeschnitten.
+          */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1">
           <div
             ref={buehneRef}
             onPointerDown={vergleichAn}
@@ -461,7 +469,7 @@ export function WerkbankDialog({
             // nicht zurueckrollen. Dieselbe Geste wie beim Ziehtrenner.
             onDoubleClick={() => setZoom(1)}
             className={cn(
-              'flex min-h-0 flex-1 items-center justify-center rounded-md bg-black/40 p-2',
+              'flex min-h-0 min-w-0 flex-1 items-center justify-center rounded-md bg-black/40 p-2',
               // Erst beim Hineinzoomen Rollbalken. Bei 1 waeren sie nur Rand,
               // der die Buehne kleiner misst als sie ist.
               zoom > 1 ? 'overflow-auto' : 'overflow-hidden',
