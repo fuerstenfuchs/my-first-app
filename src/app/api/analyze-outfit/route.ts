@@ -3,6 +3,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+
+// Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
+// Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
+// eigenen Proxy, und der ist NUR vom Browser aus erreichbar (ein Server bei
+// Vercel kommt nicht an 127.0.0.1). Zwei Wege, ein Prompt — laegen sie
+// doppelt vor, wuerde einer geaendert und der andere nicht.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,27 +21,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const OUTFIT_SYSTEM_PROMPT = `You are a fashion stylist and outfit analyst.
-
-Analyze the image and describe the complete outfit or look shown.
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — short outfit name in German (e.g. 'Lässiger Streetwear-Look', 'Elegantes Business-Outfit')",
-  "tags": ["array of 4-8 German tags describing style, season, occasion, colors, mood"],
-  "description": "string — 2-3 sentences in German describing the complete look: color palette, style, occasion suitability"
-}
-
-Rules:
-- name: concise, in German, captures the overall vibe (e.g. 'Sommerlicher Boho-Look')
-- tags: lowercase, no spaces, mix of style/color/occasion tags (e.g. ["sommer", "boho", "beige", "casual", "strand", "leinen"])
-- description: describe the complete outfit as a whole — color palette, combined style, when/where to wear it
-- Focus on the COMPLETE outfit, not individual pieces
-- If only one item is visible, still describe its outfit context
-- No marketing language, factual and precise
-
-Output ONLY the JSON object, nothing else.`
+const OUTFIT_SYSTEM_PROMPT = ANALYSE_PROMPT.outfit
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 

@@ -3,6 +3,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+
+// Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
+// Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
+// eigenen Proxy, und der ist NUR vom Browser aus erreichbar (ein Server bei
+// Vercel kommt nicht an 127.0.0.1). Zwei Wege, ein Prompt — laegen sie
+// doppelt vor, wuerde einer geaendert und der andere nicht.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,28 +21,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const FASHION_SYSTEM_PROMPT = `You are a fashion expert and clothing analyst.
-
-Analyze the image and identify the clothing item, outfit, shoe, or accessory shown.
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — short descriptive name in German (e.g. 'Schwarze Lederjacke', 'Weiße Sneaker')",
-  "category": "one of: oberteile | unterteile | kleider | jacken | schuhe | accessoires | kopfbedeckungen | sonstiges",
-  "tags": ["array of 3-6 German tags describing color, style, material, fit"],
-  "description": "string — 1-2 sentences in German describing the item"
-}
-
-Rules:
-- name: concise, in German, color + type (e.g. 'Marineblaues Strickkleid')
-- category: pick the single best matching category
-- tags: lowercase, no spaces, e.g. ["dunkelblau", "strick", "midi", "casual"]
-- description: factual, no marketing language
-- If the image shows multiple items, focus on the most prominent one
-- If the image does not show clothing/fashion at all, use category "sonstiges"
-
-Output ONLY the JSON object, nothing else.`
+const FASHION_SYSTEM_PROMPT = ANALYSE_PROMPT.fashion
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 

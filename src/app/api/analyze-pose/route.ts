@@ -3,6 +3,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+
+// Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
+// Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
+// eigenen Proxy, und der ist NUR vom Browser aus erreichbar (ein Server bei
+// Vercel kommt nicht an 127.0.0.1). Zwei Wege, ein Prompt — laegen sie
+// doppelt vor, wuerde einer geaendert und der andere nicht.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,30 +21,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const POSE_SYSTEM_PROMPT = `You are a specialist in precise body-pose description for AI image and video generation.
-
-Your ONLY task: describe the exact physical pose — body position, limb placement, joint angles, weight distribution, gaze direction, and facial expression.
-
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — descriptive name in German (e.g. 'Arme verschränkt, Blick zur Seite', 'Gehend auf Kamera zu')",
-  "category": "one of: stehend | gehen | rennen | tanzen | sitzen | liegen | gestik | interaktion | emotion | sonstiges",
-  "tags": ["array of 3-6 German tags describing the pose and body language"],
-  "description": "string — English pose description ONLY. 2-4 sentences. Describe exclusively: spine alignment, head angle, shoulder position, arm/hand placement, hip/leg stance, weight shift, gaze direction, and facial expression. Nothing else."
-}
-
-STRICT RULES for description:
-- ONLY describe the body: joints, limbs, posture, gaze, expression
-- DO NOT mention: clothing, hair, skin color, accessories, background, setting, lighting, mood, style, or any visual element that is not the body itself
-- Wrong: "wearing a black jacket, leaning against a brick wall, confident urban style"
-- Correct: "standing sideways, left shoulder tilted back, right knee slightly bent, left hand resting on hip, chin angled down toward the right, eyes looking forward through lowered brows"
-- The description must work for any character regardless of appearance — pure body mechanics only
-- If multiple people are shown, focus on the primary figure
-- If no clear pose is visible, use category "sonstiges"
-
-Output ONLY the JSON object, nothing else.`
+const POSE_SYSTEM_PROMPT = ANALYSE_PROMPT.pose
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 

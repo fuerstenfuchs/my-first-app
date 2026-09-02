@@ -3,6 +3,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+
+// Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
+// Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
+// eigenen Proxy, und der ist NUR vom Browser aus erreichbar (ein Server bei
+// Vercel kommt nicht an 127.0.0.1). Zwei Wege, ein Prompt — laegen sie
+// doppelt vor, wuerde einer geaendert und der andere nicht.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,52 +21,9 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const CAMERA_PROMPT = `You are a specialist in cinematography and camera technique for AI image and video generation.
+const CAMERA_PROMPT = ANALYSE_PROMPT.kamera
 
-Analyze the image and identify the camera shot type and framing.
-
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — name of the camera shot in German (e.g. 'Extreme Close-Up', 'Dutch Angle', 'Over-Shoulder-Shot')",
-  "category": "one of: nah | mittel | weit | perspektive | sonstiges",
-  "tags": ["array of 3-5 English tags describing the shot"],
-  "description": "string — 1-2 sentences in English describing the camera framing, angle, and visual effect"
-}
-
-Category guide:
-- nah: Extreme Close-Up, Close-Up (face/detail fills frame)
-- mittel: Portrait, Medium Shot, Full Body (person visible from head to waist or full)
-- weit: Wide Shot, Establishing Shot (environment dominant)
-- perspektive: Dutch Angle, Bird's Eye, Worm's Eye, POV, Over-Shoulder, Selfie, Drone
-- sonstiges: anything else
-
-Output ONLY the JSON object, nothing else.`
-
-const LIGHTING_PROMPT = `You are a specialist in cinematographic lighting for AI image and video generation.
-
-Analyze the image and identify the lighting style, mood, and technique.
-
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — name of the lighting style in German (e.g. 'Golden Hour', 'Neon Rim Light', 'Candle Light')",
-  "category": "one of: natuerlich | studio | dramatisch | urban | warm | sonstiges",
-  "tags": ["array of 3-5 English tags describing the lighting"],
-  "description": "string — 1-2 sentences in English describing the light quality, color temperature, and mood"
-}
-
-Category guide:
-- natuerlich: Golden Hour, Blue Hour, Sunlight, Overcast, Moonlight (outdoor/natural)
-- studio: Soft Box, Ring Light, Hard Key Light, Three-Point Lighting (controlled studio)
-- dramatisch: Stage Lighting, Backlight, Rim Light, Chiaroscuro, Hard shadows
-- urban: Neon, Street lights, LED signs, City glow
-- warm: Candle, Fireplace, Lantern, Tungsten bulb
-- sonstiges: anything else
-
-Output ONLY the JSON object, nothing else.`
+const LIGHTING_PROMPT = ANALYSE_PROMPT.licht
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 

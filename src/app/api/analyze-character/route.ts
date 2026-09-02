@@ -3,6 +3,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+
+// Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
+// Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
+// eigenen Proxy, und der ist NUR vom Browser aus erreichbar (ein Server bei
+// Vercel kommt nicht an 127.0.0.1). Zwei Wege, ein Prompt — laegen sie
+// doppelt vor, wuerde einer geaendert und der andere nicht.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,45 +21,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const CHARACTER_SYSTEM_PROMPT = `You are a specialist in character identity description for AI image generation.
-
-Analyze the image and describe the person shown as a reusable character reference.
-If multiple people are visible, focus on the most prominent/centered person.
-
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — short descriptive name in German based on appearance (e.g. 'Junge Frau mit langen blonden Haaren')",
-  "description": "string — 1-2 sentences in German describing the person's overall appearance and impression",
-  "prompt": "string — 5-8 short comma-separated English phrases describing the person for an AI image generator (no full sentences, no trailing period except the last)",
-  "tags": ["array of 3-6 lowercase English tags"],
-  "attributes": {
-    "geschlecht": "string or omit if not clearly visible",
-    "alter": "string — approximate age or age range (e.g. '30er Jahre') or omit",
-    "koerperbau": "string or omit",
-    "groesse": "string — estimated, e.g. 'groß', 'durchschnittlich' or omit",
-    "haarfarbe": "string or omit",
-    "haarstil": "string or omit",
-    "augenfarbe": "string or omit if not visible",
-    "bart": "string or omit if not applicable/visible",
-    "gesichtsform": "string or omit",
-    "hauttyp": "string or omit",
-    "besonderheiten": "string — visible distinctive marks/features or omit",
-    "ausstrahlung": "string or omit",
-    "stimmung": "string or omit",
-    "kleidungsstil": "string — descriptive only, e.g. 'casual', 'elegant' or omit",
-    "accessoires": "string — visible accessories or omit"
-  }
-}
-
-Rules:
-- Only describe what is actually visible in the image — do not invent details for occluded or unclear features.
-- Omit any attribute key entirely if it cannot be determined from the image.
-- German fields (name, description, attribute values) in German; the "prompt" field in English.
-- Be factual and descriptive, not judgmental.
-
-Output ONLY the JSON object, nothing else.`
+const CHARACTER_SYSTEM_PROMPT = ANALYSE_PROMPT.character
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 

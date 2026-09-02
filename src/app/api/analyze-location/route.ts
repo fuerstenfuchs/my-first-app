@@ -3,6 +3,13 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+
+// Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
+// Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
+// eigenen Proxy, und der ist NUR vom Browser aus erreichbar (ein Server bei
+// Vercel kommt nicht an 127.0.0.1). Zwei Wege, ein Prompt — laegen sie
+// doppelt vor, wuerde einer geaendert und der andere nicht.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,41 +21,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const LOCATION_SYSTEM_PROMPT = `You are a location scout and visual reference expert.
-
-Analyze the image and identify the location, setting, or environment shown.
-Return ONLY a valid JSON object — no markdown, no code fences, no explanation.
-
-JSON schema:
-{
-  "name": "string — descriptive name in German (e.g. 'Nachtklub mit Neonlichtern', 'Belebte Stadtstraße Tokyo')",
-  "category": "one of: stadt | natur | strand | innenraum | gebaeude | eventlocation | nachtlocation | filmset | sonstiges",
-  "tags": ["array of 3-6 German tags describing atmosphere, time of day, style, mood"],
-  "description": "string — 1-2 sentences in German describing the location and its visual character"
-}
-
-CATEGORY DEFINITIONS — pick exactly one, the single best match. Do not default to "gebaeude" unless a building is clearly the dominant subject:
-- stadt: streets, city districts, urban skylines, plazas — outdoor, man-made, but not one single building
-- natur: landscapes, mountains, forests, lakes, islands, fields, rivers, parks — anywhere nature dominates, even if small structures are visible in the distance
-- strand: beaches, coastlines, seaside, boardwalks by the water
-- innenraum: any interior space (room, hall, lobby, restaurant interior) — regardless of what kind of building it is in
-- gebaeude: ONE specific building or architectural structure, photographed mainly from the OUTSIDE, where the building itself (not its surroundings) is the clear main subject (e.g. a castle, a stadium, a skyscraper, a landmark building)
-- eventlocation: stages, concert venues, festival grounds, sports arenas during an event
-- nachtlocation: bars, clubs, nightlife venues, neon-lit night scenes
-- filmset: built sets, studio backlots, green-screen stages
-- sonstiges: anything that doesn't clearly fit the above, or if no location is shown at all
-
-When a photo shows a landscape, island, or natural area that merely contains a building or settlement (e.g. an island with a castle, a village in a valley), classify it as "natur" — the building is a detail, not the subject. Only use "gebaeude" when the building itself fills the frame and is unmistakably the photographic subject.
-
-Rules:
-- name: descriptive and specific, in German (e.g. 'Regennasse Stadtstraße bei Nacht', 'Verlassenes Lagerhaus Industriestil')
-- category: pick the single best matching category using the definitions above
-- tags: lowercase, e.g. ["nacht", "neon", "regen", "urban", "cinematic"]
-- description: factual, focus on visual qualities useful for film/photo reference
-- If the image shows multiple environments, focus on the dominant one
-- If the image does not show a location at all, use category "sonstiges"
-
-Output ONLY the JSON object, nothing else.`
+const LOCATION_SYSTEM_PROMPT = ANALYSE_PROMPT.location
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 
