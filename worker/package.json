@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node --watch --env-file=.env src/index.ts",
     "einmal": "node --env-file=.env src/einmal.ts",
-    "pruefen": "node --env-file=.env src/pruefen.ts"
+    "pruefen": "node --env-file=.env src/pruefen.ts",
+    "test": "node --test src/*.test.ts"
   },
   "engines": {
     "node": ">=22.18"

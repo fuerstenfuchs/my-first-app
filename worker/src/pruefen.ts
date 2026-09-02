@@ -11,6 +11,8 @@ let fehler = 0
 
 function gut(text: string): void { console.log(`  [ok]     ${text}`) }
 function schlecht(text: string): void { console.log(`  [FEHLER] ${text}`); fehler++ }
+/** Fehlt etwas Freiwilliges, ist das kein Fehler — aber es soll dastehen. */
+function hinweis(text: string): void { console.log(`  [offen]  ${text}`) }
 
 console.log('\nPrüfe die Einrichtung des Arbeiters\n')
 
@@ -86,6 +88,37 @@ try {
   else schlecht(`Ablage generated-images fehlt (HTTP ${antwort.status})`)
 } catch (e) {
   schlecht(`Ablage: ${(e as Error).message}`)
+}
+
+// ── 4. fal.ai (nur fuer die KI-Vergroesserung) ───────────────────────
+//
+// Geprueft wird mit einer Nachfrage nach einem Auftrag, den es nicht gibt.
+// Das kostet nichts und trennt trotzdem sauber: Ein abgelehnter Schluessel
+// antwortet 401, ein angenommener 404. Einen Auftrag einzureichen waere die
+// andere Moeglichkeit — die kostet Geld, und eine Pruefung darf das nicht.
+console.log('\nfal.ai (KI-Vergroesserung)')
+if (!config.falKey) {
+  hinweis('FAL_KEY nicht gesetzt — rechnerisches Vergroessern laeuft, KI-Vergroesserung nicht.')
+} else {
+  try {
+    const antwort = await fetch(
+      'https://queue.fal.run/fal-ai/seedvr/requests/00000000-0000-0000-0000-000000000000/status',
+      { headers: { Authorization: `Key ${config.falKey}` }, signal: AbortSignal.timeout(15_000) },
+    )
+    // Nur 404 ist ein Beweis: Der Schluessel wurde angenommen, der erfundene
+    // Auftrag nicht gefunden. Frueher galt hier alles ausser 401/403 als gut —
+    // damit haette ein 400 oder 500 ein gruenes [ok] gedruckt. Ein Messkanal,
+    // der bei kaputtem Schluessel gruen meldet, ist schlimmer als keiner.
+    if (antwort.status === 404 || antwort.status === 200) {
+      gut(`Schluessel wird angenommen (HTTP ${antwort.status} auf einen erfundenen Auftrag)`)
+    } else if (antwort.status === 401 || antwort.status === 403) {
+      schlecht(`fal.ai lehnt den Schluessel ab (HTTP ${antwort.status}). FAL_KEY pruefen.`)
+    } else {
+      hinweis(`fal.ai antwortet HTTP ${antwort.status} — unklar, ob der Schluessel gilt.`)
+    }
+  } catch (e) {
+    schlecht(ohneGeheimnis(`fal.ai nicht erreichbar: ${(e as Error).message}`))
+  }
 }
 
 // ── Ergebnis ────────────────────────────────────────────────────────────────

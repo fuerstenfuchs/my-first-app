@@ -21,8 +21,12 @@ ersten Mal hat das einen Vergrößerungsauftrag dreimal ans Bildmodell geschickt
 und verbrannt.
 
 **Ob er gerade läuft**, steht in der App: Die Seite *Warteschlange* zeigt oben
-„Arbeiter läuft" oder „Arbeiter zuletzt vor …". Er meldet sich alle fünf
-Sekunden; bleibt die Meldung länger als dreißig Sekunden aus, gilt er als weg.
+„Arbeiter läuft" oder „Arbeiter zuletzt vor …". Er meldet sich alle zwanzig
+Sekunden; bleibt die Meldung länger als sechzig Sekunden aus, gilt er als weg.
+
+Das Lebenszeichen hängt bewusst **nicht** am Auftragstakt: Der wird bei längerer
+Ruhe träger (bis 60 s), und sonst hätte die Anzeige einen sparsamen Arbeiter für
+einen abgestürzten gehalten.
 
 ## Von Hand starten
 
@@ -56,6 +60,7 @@ passen.
 | `npm start` | Dauerbetrieb, startet bei Code-Änderungen neu |
 | `npm run pruefen` | Prüft Proxy, Datenbank, Ablage — **kostet nichts** |
 | `npm run einmal` | Genau ein Auftrag, dann Schluss. Für die Abnahme. |
+| `npm test` | Prüft die Adressschranke der fal.ai-Anbindung — **kostet nichts** |
 
 ## Voraussetzungen
 
@@ -78,6 +83,8 @@ passen.
 | `REQUEST_TIMEOUT_MS` | Zeitgrenze je Bild (300000) |
 | `STALE_MINUTES` | Ab wann ein Auftrag als verwaist gilt (30) |
 | `MAX_ATTEMPTS` | Versuche je Auftrag (3) |
+| `FAL_KEY` | **Optional.** Zugang zu fal.ai für die KI-Vergrößerung |
+| `FAL_TIMEOUT_MS` | Wie lange auf fal gewartet wird (600000) |
 
 `STALE_MINUTES` muss über der längsten Laufzeit liegen: vier Durchläufe mal fünf
 Minuten sind zwanzig. Ein zu kleiner Wert reiht einen noch laufenden Auftrag neu
@@ -85,3 +92,33 @@ ein — und jedes Bild kostet Geld.
 
 Die Datei ist doppelt von Git ausgeschlossen. Sie enthält den Service-Key, der
 alle Zugriffsregeln umgeht.
+
+## Die zwei Wege beim Vergrößern
+
+| | Rechnen (`lanczos`) | KI (`seedvr2`) |
+|---|---|---|
+| Wo | auf diesem PC | fal.ai |
+| Kosten | nichts | ca. 0,5 ct (2×) bis 2 ct (4×) |
+| Was passiert | vorhandene Bildpunkte klüger verteilt | Struktur wird rekonstruiert: Haut, Haar, Stoff |
+| Ohne Internet | läuft | läuft nicht |
+| Bild verlässt den PC | nein | **ja** |
+
+Das Verfahren steht **im Auftrag**, nicht in dieser `.env`. Der Arbeiter rät es
+nie: Fehlt es, scheitert der Auftrag mit einer Ansage. Eine stille Voreinstellung
+wäre genau die Stelle, an der ein Klick unbemerkt Geld ausgibt.
+
+**Ein Neuversuch zahlt nicht zweimal.** Ab dem Absenden ist der Lauf bei fal
+bezahlt. Die Auftragsnummer wird deshalb sofort in der Zeile festgehalten
+(`external_ref`) — jeder spätere Versuch holt zuerst dieses Ergebnis ab und
+schickt nur dann einen neuen Auftrag, wenn bei fal nichts mehr liegt. Das gilt
+auch nach `Strg+C`, nach einem Neustart durch `--watch` und nach „Erneut
+einreihen".
+
+**Warum nicht lokal?** SeedVR2 ist unter Apache 2.0 frei verfügbar und ließe sich
+selbst betreiben — aber nur mit einer NVIDIA-Karte mit reichlich eigenem
+Speicher. Dieser PC hat eine integrierte AMD 780M ohne eigenen Videospeicher und
+kein CUDA. Gemessen am 02.09.2026.
+
+`FAL_KEY` liegt hier und **nicht** bei Vercel: Der Arbeiter läuft auf dem PC,
+die App in der Cloud. In der Vercel-Umgebung stünde der Schlüssel jeder
+Server-Route offen; hier kennt ihn nur dieser eine Prozess.

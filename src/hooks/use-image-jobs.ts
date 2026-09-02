@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import type { JobStatus, ReferenzRolle } from '@/lib/image-generation'
+import { kostenSatz, type Upscaler } from '@/lib/upscaling'
+
+export type { Upscaler }
 
 export interface ImageJob {
   id:             string
@@ -27,6 +30,9 @@ export interface ImageJob {
   job_type:       'generate' | 'upscale'
   source_path:    string | null
   scale:          number | null
+  upscaler:       Upscaler | null
+  /** Auftragsnummer bei fal.ai — damit ein Neuversuch nicht zweimal zahlt. */
+  external_ref:   Record<string, unknown> | null
 }
 
 export interface ImageJobInput {
@@ -174,11 +180,14 @@ export function useImageJobs(aktiv = true) {
    * Ein vorhandenes Ergebnis vergrößern lassen.
    *
    * Läuft über dieselbe Warteschlange wie die Erzeugung — der Arbeiter erkennt
-   * am job_type, was zu tun ist. Kostet nichts: Das Vergrößern rechnet der PC
-   * selbst, es geht keine Anfrage an ein Bildmodell.
+   * am job_type, was zu tun ist, und am upscaler, womit.
+   *
+   * Das Verfahren wird ausdrücklich übergeben und hat keine Voreinstellung:
+   * Der eine Weg kostet nichts, der andere Geld. Eine stille Vorgabe wäre
+   * genau die Stelle, an der ein Klick unbemerkt etwas auslöst.
    */
   const vergroessern = useCallback(async (
-    quelle: ImageJob, pfad: string, faktor: 2 | 3 | 4,
+    quelle: ImageJob, pfad: string, faktor: 2 | 3 | 4, verfahren: Upscaler,
   ): Promise<ImageJob | null> => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -193,11 +202,12 @@ export function useImageJobs(aktiv = true) {
         job_type:    'upscale',
         source_path: pfad,
         scale:       faktor,
+        upscaler:    verfahren,
         // Der Prompt ist bei einer Vergrößerung nur noch Beschriftung — die
         // Spalte ist aber Pflicht, und ein leeres Feld läse sich auf /queue wie
         // ein Fehler.
         prompt:      `${faktor}× vergrößert · ${quelle.prompt.slice(0, 120)}`,
-        model:       'lanczos',
+        model:       verfahren,
         size:        quelle.size,
         variants:    1,
         scene_meta:  { ...(quelle.scene_meta ?? {}), herkunft: 'upscale', quelle: quelle.id },
@@ -213,7 +223,7 @@ export function useImageJobs(aktiv = true) {
     const job = data as ImageJob
     setJobs(prev => [job, ...prev])
     toast.success(`${faktor}× Vergrößerung eingereiht`, {
-      description: 'Der Arbeiter rechnet sie auf dem PC — das kostet nichts.',
+      description: kostenSatz(verfahren, faktor),
     })
     return job
   }, [supabase])

@@ -12,8 +12,9 @@
 
 import { bildErzeugen } from './proxy.ts'
 import { bildVergroessern } from './upscale.ts'
+import { bildVergroessernKi } from './fal.ts'
 import {
-  auftragFertig, ergebnisAblegen, ergebnisHolen, fortschrittMerken,
+  auftragFertig, ergebnisAblegen, ergebnisHolen, externeAnfrageMerken, fortschrittMerken,
 } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
 
@@ -22,7 +23,7 @@ export type Melder = (text: string) => void
 
 export function beschreibung(job: ImageJob): string {
   if (job.job_type === 'upscale') {
-    return `vergrößern ${job.scale}×`
+    return `vergrößern ${job.scale}× · ${job.upscaler ?? 'ohne Verfahren'}`
   }
   const anzahl = durchlaeufe(job)
   const referenzen = job.reference_urls.length
@@ -37,21 +38,54 @@ export function durchlaeufe(job: ImageJob): number {
 }
 
 /**
- * Vergrößern. Rechnet der PC selbst, kostet nichts und braucht keine
- * Gegenstelle — deshalb auch kein Fortschreiben: Es ist immer genau ein Bild,
- * und ein Neuversuch ist umsonst.
+ * Vergrößern — rechnerisch auf dem PC oder mit KI über fal.ai.
+ *
+ * Beide Wege liefern genau ein Bild, deshalb kein Fortschreiben wie beim
+ * Erzeugen. Der Unterschied liegt woanders: Lanczos ist umsonst und ein
+ * Neuversuch kostet nichts, SeedVR2 kostet pro Lauf. Das Verfahren steht
+ * deshalb im Auftrag und wird hier nicht erraten — ein fehlender Wert ist ein
+ * Fehler und keine stille Voreinstellung auf das kostenpflichtige Verfahren.
  */
-async function vergroessern(job: ImageJob, sage: Melder): Promise<void> {
+async function vergroessern(
+  job: ImageJob, sage: Melder, signal?: AbortSignal,
+): Promise<void> {
   if (!job.source_path || !job.scale) {
     throw new Error('Vergrößerungsauftrag ohne Ausgangsbild oder Faktor.')
   }
+  if (job.upscaler !== 'lanczos' && job.upscaler !== 'seedvr2') {
+    throw new Error(`Unbekanntes Vergrößerungsverfahren: ${job.upscaler ?? 'keins angegeben'}`)
+  }
+
   const begonnen = Date.now()
   const quelle = await ergebnisHolen(job.source_path, job.user_id)
-  const { daten, vorher, nachher } = await bildVergroessern(quelle, job.scale)
+
+  let daten: ArrayBuffer
+  let nachher: { breite: number; hoehe: number }
+
+  if (job.upscaler === 'seedvr2') {
+    sage('  KI-Vergrößerung bei fal.ai…')
+    const ergebnis = await bildVergroessernKi(quelle, job.scale, {
+      signal,
+      // Ein früherer Versuch hat vielleicht schon bezahlt. Dann wird sein
+      // Ergebnis abgeholt statt ein zweites Mal gerechnet.
+      vorhandeneAnfrage: job.external_ref,
+      merken: anfrage => externeAnfrageMerken(job.id, anfrage),
+    })
+    if (ergebnis.wiederaufgenommen) {
+      sage('  Ergebnis eines früheren Versuchs abgeholt — kostet nichts.')
+    }
+    daten = ergebnis.daten
+    nachher = ergebnis.nachher
+  } else {
+    const ergebnis = await bildVergroessern(quelle, job.scale)
+    daten = ergebnis.daten
+    nachher = ergebnis.nachher
+  }
+
   const pfad = await ergebnisAblegen(job.user_id, job.id, 0, daten)
 
   sage(
-    `  ${vorher.breite}×${vorher.hoehe} → ${nachher.breite}×${nachher.hoehe} ` +
+    `  ${job.upscaler} · ${job.scale}× → ${nachher.breite}×${nachher.hoehe} ` +
     `in ${Math.round((Date.now() - begonnen) / 1000)}s · ` +
     `${Math.round(daten.byteLength / 1024)} kB`,
   )
@@ -88,6 +122,6 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
 export async function auftragAbarbeiten(
   job: ImageJob, sage: Melder, signal?: AbortSignal,
 ): Promise<void> {
-  if (job.job_type === 'upscale') return vergroessern(job, sage)
+  if (job.job_type === 'upscale') return vergroessern(job, sage, signal)
   return erzeugen(job, sage, signal)
 }

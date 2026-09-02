@@ -56,12 +56,29 @@ export const config = {
    * nicht zu arbeiten.
    */
   userId: (process.env.WORKER_USER_ID ?? '').trim(),
+  /**
+   * Zugang zu fal.ai fuer die KI-Vergroesserung. Bewusst KEINE Pflicht:
+   * Erzeugen und rechnerisches Vergroessern kosten nichts und sollen nicht
+   * daran haengen, dass irgendwo ein Guthabenkonto eingerichtet ist. Fehlt der
+   * Schluessel, scheitert genau der eine Auftragstyp, der ihn braucht — mit
+   * einem Satz, der sagt wo er hingehoert.
+   */
+  falKey: (process.env.FAL_KEY ?? '').trim(),
+  /**
+   * Wie lange auf fal.ai gewartet wird.
+   *
+   * Bewusst NICHT requestTimeoutMs mitbenutzt: Das ist die Zeitgrenze je Bild
+   * beim lokalen Proxy. Wer sie wegen des Proxys herabsetzt, haette sonst
+   * stillschweigend auch die Geduld gegenueber fal verkuerzt — und ein zu
+   * frueh aufgegebener Lauf ist dort schon bezahlt.
+   */
+  falTimeoutMs: zahl('FAL_TIMEOUT_MS', 600_000),
 }
 
 /** Schlüssel aus Fehlertexten entfernen, bevor irgendetwas ausgegeben wird. */
 export function ohneGeheimnis(text: string): string {
   let sauber = text
-  for (const geheim of [config.proxyToken, config.supabaseKey]) {
+  for (const geheim of [config.proxyToken, config.supabaseKey, config.falKey]) {
     if (geheim && geheim.length > 6) {
       sauber = sauber.split(geheim).join('***')
     }

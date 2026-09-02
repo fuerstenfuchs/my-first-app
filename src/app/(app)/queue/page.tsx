@@ -13,12 +13,14 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
+import { KI_PREIS, VERFAHREN_NAME } from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
 
@@ -89,6 +91,8 @@ export default function QueuePage() {
   }
   const [offen, setOffen] = useState<Set<string>>(new Set())
   const [loeschKandidat, setLoeschKandidat] = useState<ImageJob | null>(null)
+  /** Gescheiterter KI-Auftrag, der noch einmal laufen soll — kostet erneut. */
+  const [neuKandidat, setNeuKandidat] = useState<ImageJob | null>(null)
   const [lightbox, setLightbox] = useState<{ urls: string[]; start: number } | null>(null)
 
   function umschalten(id: string) {
@@ -205,7 +209,13 @@ export default function QueuePage() {
                         <StatusChip status={job.status} />
                         <span className="text-[11px] text-muted-foreground">{zeit(job.created_at)}</span>
                         <span className="text-[11px] text-muted-foreground/60">
-                          {job.model}
+                          {/* Bei Vergrößerungen ist `upscaler` die maßgebliche
+                              Spalte — der Arbeiter richtet sich nach ihr. `model`
+                              trägt dieselbe Tatsache nur als Beschriftung mit und
+                              könnte auseinanderdriften. */}
+                          {job.job_type === 'upscale' && job.upscaler
+                            ? VERFAHREN_NAME[job.upscaler]
+                            : job.model}
                           {job.reference_urls.length === 0 && ` · ${job.size}`}
                           {job.aspect_ratio ? ` · ${job.aspect_ratio.replace(/_/g, ':').replace(/^[a-z]+:/, '')}` : ''}
                           {job.variants > 1 ? ` · ${job.variants}×` : ''}
@@ -231,7 +241,14 @@ export default function QueuePage() {
                       {job.status === 'failed' && (
                         <Button
                           size="icon" variant="ghost" className="h-7 w-7"
-                          onClick={() => void erneutEinreihen(job.id)}
+                          /* Der einzige Knopf, der ungefragt Geld ausgeben
+                             konnte: Er setzt attempts auf 0, ein gescheiterter
+                             KI-Auftrag lief danach bis zu dreimal erneut. Im
+                             Menü steht der Preis vor dem Klick — hier stand
+                             gar nichts. */
+                          onClick={() => job.upscaler === 'seedvr2'
+                            ? setNeuKandidat(job)
+                            : void erneutEinreihen(job.id)}
                           title="Erneut einreihen"
                         >
                           <RotateCw className="h-3.5 w-3.5" />
@@ -289,17 +306,38 @@ export default function QueuePage() {
                                     <Maximize2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="min-w-44">
+                                <DropdownMenuContent align="end" className="min-w-52">
+                                  {/* Zwei Verfahren, deutlich getrennt: Das eine
+                                      kostet nichts, das andere Geld. Der Preis
+                                      steht deshalb im Menü und nicht erst in
+                                      einer Bestätigung danach — sichtbar sein
+                                      muss er vor dem Klick, nicht danach. */}
                                   <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-                                    Rechnerisch vergrößern — kostet nichts
+                                    Rechnen · kostet nichts
                                   </DropdownMenuLabel>
                                   {([2, 3, 4] as const).map(f => (
                                     <DropdownMenuItem
-                                      key={f}
+                                      key={`lanczos-${f}`}
                                       className="text-xs"
-                                      onClick={() => void vergroessern(job, job.result_paths[i], f)}
+                                      onClick={() => void vergroessern(job, job.result_paths[i], f, 'lanczos')}
                                     >
                                       {f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
+                                    KI · rekonstruiert Details
+                                  </DropdownMenuLabel>
+                                  {([2, 3, 4] as const).map(f => (
+                                    <DropdownMenuItem
+                                      key={`seedvr2-${f}`}
+                                      className="flex items-center justify-between gap-3 text-xs"
+                                      onClick={() => void vergroessern(job, job.result_paths[i], f, 'seedvr2')}
+                                    >
+                                      <span>{f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}</span>
+                                      <span className="text-[10px] tabular-nums text-muted-foreground">
+                                        {KI_PREIS[f]}
+                                      </span>
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>
@@ -387,6 +425,31 @@ export default function QueuePage() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!neuKandidat} onOpenChange={o => !o && setNeuKandidat(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Noch einmal von der KI vergrößern?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Das kostet erneut{' '}
+              {neuKandidat?.scale ? KI_PREIS[neuKandidat.scale as 2 | 3 | 4] : 'Geld'}.
+              {' '}Der Arbeiter versucht zuerst, ein bereits bezahltes Ergebnis
+              abzuholen — ist bei fal.ai keins mehr da, läuft es neu.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (neuKandidat) void erneutEinreihen(neuKandidat.id)
+                setNeuKandidat(null)
+              }}
+            >
+              Erneut einreihen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!loeschKandidat} onOpenChange={o => !o && setLoeschKandidat(null)}>
         <AlertDialogContent>

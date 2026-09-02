@@ -4,6 +4,7 @@
  */
 
 import { config, ohneGeheimnis } from './config.ts'
+import type { FalAnfrage } from './fal.ts'
 
 export type ImageJob = {
   id: string
@@ -21,6 +22,8 @@ export type ImageJob = {
   job_type: 'generate' | 'upscale'
   source_path: string | null
   scale: number | null
+  upscaler: 'lanczos' | 'seedvr2' | null
+  external_ref: FalAnfrage | null
   anchor_job_id: string | null
   scene_meta: unknown
   result_paths: string[]
@@ -122,6 +125,22 @@ export async function fortschrittMerken(id: string, resultPaths: string[]): Prom
     result_paths: resultPaths,
     started_at: new Date().toISOString(),
   })
+}
+
+/**
+ * Den abgesendeten fal-Auftrag festhalten — das Gegenstueck zu
+ * `fortschrittMerken`, nur ist das Bezahlte hier kein Bild, sondern eine
+ * Auftragsnummer.
+ *
+ * WARUM DAS NOETIG IST: Ab dem Absenden ist der Lauf bezahlt. Jeder Fehler
+ * danach — Zeitablauf, misslungenes Hochladen, eine einzelne 5xx-Antwort beim
+ * Nachfragen, ein Neustart durch `node --watch`, zweimal Strg+C — stellt den
+ * Auftrag zurueck auf 'queued'. Ohne diese Zeile schickt der naechste
+ * Durchgang einen zweiten kostenpflichtigen Auftrag, obwohl drueben laengst
+ * gerechnet wurde. Mit ihr wird dasselbe Ergebnis abgeholt.
+ */
+export async function externeAnfrageMerken(id: string, anfrage: unknown): Promise<void> {
+  await auftragAendern(id, { external_ref: anfrage })
 }
 
 /**

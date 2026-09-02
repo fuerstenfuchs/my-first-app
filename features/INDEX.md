@@ -65,6 +65,8 @@
 
 | PROJ-41 | Arbeiter startet selbst, Lebenszeichen in der Warteschlange | In Review | [PROJ-41](PROJ-41-arbeiter-autostart.md) | 2026-09-01 |
 
+| PROJ-42 | KI-Vergroesserung mit Detailrekonstruktion (SeedVR2 ueber fal.ai) | In Review | [PROJ-42](PROJ-42-ki-upscaler.md) | 2026-09-02 |
+
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-42
+## Next Available ID: PROJ-43
