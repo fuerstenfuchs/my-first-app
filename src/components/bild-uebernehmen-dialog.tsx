@@ -29,13 +29,16 @@ import { cn } from '@/lib/utils'
 interface Props {
   offen: boolean
   onClose: () => void
-  /** Die öffentliche Adresse des zu übernehmenden Bildes. */
-  bildUrl: string | null
+  /**
+   * Adresse UND Speicherpfad des Bildes. Der Pfad wird als Notiz gespeichert,
+   * weil die Adresse einen wechselnden Cache-Brecher trägt.
+   */
+  bild: { url: string; pfad: string } | null
   /** Wird nach erfolgreicher Übernahme gerufen. */
   onFertig?: () => void
 }
 
-export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Props) {
+export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props) {
   const { laeuft, eintraegeLaden, variantenLaden, uebernehmen } = useBildUebernehmen()
 
   const [art, setArt] = useState<BausteinSchluessel>('charaktere')
@@ -83,17 +86,17 @@ export function BildUebernehmenDialog({ offen, onClose, bildUrl, onFertig }: Pro
   }, [eintraege, suche])
 
   const bestaetigen = useCallback(async () => {
-    if (!bildUrl || !gewaehlt) return
+    if (!bild || !gewaehlt) return
     // Ein Baustein MIT Varianten braucht eine gewählte; einer ohne nicht.
     if (b.varianten && !variantId) return
-    const ok = await uebernehmen(bildUrl, {
+    const ok = await uebernehmen(bild.url, bild.pfad, {
       baustein: art,
       parentId: gewaehlt.id,
       parentName: gewaehlt.name,
       variantId,
     })
     if (ok) { onFertig?.(); onClose() }
-  }, [bildUrl, gewaehlt, variantId, art, b, uebernehmen, onFertig, onClose])
+  }, [bild, gewaehlt, variantId, art, b, uebernehmen, onFertig, onClose])
 
   const bereit = !!gewaehlt && (!b.varianten || !!variantId) && !laeuft
 

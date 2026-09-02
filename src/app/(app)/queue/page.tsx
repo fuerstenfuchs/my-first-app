@@ -2,10 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 import {
-  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download,
-  ExternalLink, Maximize2, FolderInput,
+  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, ExternalLink,
 } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -13,19 +11,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { BildUebernehmenDialog } from '@/components/bild-uebernehmen-dialog'
+import { ErgebnisKachel } from '@/components/ergebnis-kachel'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
-import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
-import {
-  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld, IM_MENUE, STUFEN, stufeLabel,
-  KLASSE_FLAECHE,
-} from '@/lib/upscaling'
+import { preis, VERFAHREN_NAME, kostetGeld } from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
 
@@ -47,21 +38,6 @@ function dauer(job: ImageJob): string | null {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min`
 }
 
-/**
- * Zeigt vorab, wie groß das Bild würde — 3× klingt abstrakt, 4608×3072 nicht.
- *
- * Nur wenn die Größe auch stimmt: Mit Referenzbild ignoriert gpt-image-2 den
- * Größenparameter und richtet sich nach der Vorlage (am 01.09.2026 gemessen,
- * 1024x1024 angefordert, 1122x1402 bekommen). Dann wäre jede Rechnung aus
- * `size` erfunden, und die Kachel verspräche Maße, die nicht eintreten.
- */
-function masse(job: ImageJob, faktor: number): string {
-  if (job.reference_urls.length > 0) return ''
-  const [b, h] = job.size.split('x').map(Number)
-  if (!b || !h) return ''
-  return `${b * faktor}×${h * faktor}`
-}
-
 function StatusChip({ status }: { status: JobStatus }) {
   return (
     <span className={cn(
@@ -77,29 +53,13 @@ function StatusChip({ status }: { status: JobStatus }) {
 
 export default function QueuePage() {
   const { jobs, loading, ladefehler, laden, vergroessern, erneutEinreihen, loeschen } = useImageJobs()
-  const [laedtHerunter, setLaedtHerunter] = useState<string | null>(null)
   const arbeiter = useWorkerStatus()
-
-  async function herunterladen(job: ImageJob, url: string, index: number) {
-    setLaedtHerunter(url)
-    try {
-      const hinweis = (job.scene_meta as { name?: string } | null)?.name ?? null
-      await bildHerunterladen(
-        url,
-        dateinameFuerBild(job.created_at, index, job.result_paths.length, hinweis),
-      )
-    } catch (e) {
-      toast.error(`Download fehlgeschlagen: ${(e as Error).message}`)
-    } finally {
-      setLaedtHerunter(null)
-    }
-  }
   const [offen, setOffen] = useState<Set<string>>(new Set())
   const [loeschKandidat, setLoeschKandidat] = useState<ImageJob | null>(null)
   /** Gescheiterter KI-Auftrag, der noch einmal laufen soll — kostet erneut. */
   const [neuKandidat, setNeuKandidat] = useState<ImageJob | null>(null)
   /** Das Bild, das gerade in einen Baustein übernommen werden soll. */
-  const [uebernahme, setUebernahme] = useState<string | null>(null)
+  const [uebernahme, setUebernahme] = useState<{ url: string; pfad: string } | null>(null)
   const [lightbox, setLightbox] = useState<{ urls: string[]; start: number } | null>(null)
 
   function umschalten(id: string) {
@@ -275,107 +235,18 @@ export default function QueuePage() {
                   {bilder.length > 0 && (
                     <div className="grid grid-cols-2 gap-1.5 px-3 pb-3 sm:grid-cols-3 md:grid-cols-4">
                       {bilder.map((url, i) => (
-                        <div
+                        <ErgebnisKachel
                           key={url}
-                          className="group relative aspect-square overflow-hidden rounded border border-border/40 bg-muted/20"
-                        >
-                          <button
-                            onClick={() => setLightbox({ urls: bilder, start: i })}
-                            className="h-full w-full"
-                            aria-label={`Ergebnis ${i + 1} vergrößern`}
-                          >
-                            <img
-                              src={url} alt={`Ergebnis ${i + 1}`} loading="lazy"
-                              className="h-full w-full object-cover transition group-hover:scale-[1.03]"
-                            />
-                          </button>
-                          <div /*
-                            Ohne Zeigegeraet gibt es kein Ueberfahren: Auf dem
-                            Handy waren die Knoepfe nie sichtbar — aber weiterhin
-                            anklickbar, weil opacity-0 keine Klicks abschaltet.
-                            Ein Tipp aufs Bild loeste dort einen unsichtbaren
-                            Download aus. Jetzt dauerhaft sichtbar, sobald das
-                            Geraet kein Ueberfahren kennt.
-                          */
-                          className="absolute bottom-1.5 right-1.5 flex gap-1 transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
-                            {/* Vergrößern nur beim Erzeugnis anbieten — ein bereits
-                                vergrößertes Bild noch einmal zu vergrößern bringt
-                                nichts als Dateigröße. */}
-                            {job.job_type !== 'upscale' && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
-                                    title="Vergrößern"
-                                    aria-label={`Ergebnis ${i + 1} vergrößern`}
-                                  >
-                                    <Maximize2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="min-w-56">
-                                  {/* Drei Verfahren, deutlich getrennt: eines
-                                      kostet nichts, zwei kosten Geld. Der Preis
-                                      steht deshalb im Menü und nicht erst in
-                                      einer Bestätigung danach — sichtbar sein
-                                      muss er vor dem Klick, nicht danach.
-
-                                      Aus der Liste erzeugt statt dreimal
-                                      abgeschrieben: Beim zweiten KI-Verfahren
-                                      wäre sonst genau die Kopie entstanden, an
-                                      der Preis und Beschriftung auseinander-
-                                      driften. */}
-                                  {IM_MENUE.map((v, nr) => (
-                                    <div key={v}>
-                                      {nr > 0 && <DropdownMenuSeparator />}
-                                      <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-                                        {VERFAHREN_NAME[v]} · {VERFAHREN_HINWEIS[v]}
-                                      </DropdownMenuLabel>
-                                      {STUFEN[v].map(stufe => (
-                                        <DropdownMenuItem
-                                          key={`${v}-${stufe.wert}`}
-                                          className="flex items-center justify-between gap-3 text-xs"
-                                          onClick={() => void vergroessern(job, job.result_paths[i], stufe, v)}
-                                        >
-                                          <span>
-                                            {stufeLabel(stufe)}
-                                            {stufe.art === 'faktor'
-                                              ? (masse(job, stufe.wert) ? ` · ${masse(job, stufe.wert)}` : '')
-                                              : ` · ${KLASSE_FLAECHE[stufe.wert]}`}
-                                          </span>
-                                          <span className="text-[10px] tabular-nums text-muted-foreground">
-                                            {kostetGeld(v) ? preis(v, stufe) : 'gratis'}
-                                          </span>
-                                        </DropdownMenuItem>
-                                      ))}
-                                    </div>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                            <Button
-                              size="icon"
-                              className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
-                              title="In einen Baustein übernehmen"
-                              aria-label={`Ergebnis ${i + 1} in einen Baustein übernehmen`}
-                              onClick={() => setUebernahme(url)}
-                            >
-                              <FolderInput className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
-                              title="Bild herunterladen"
-                              aria-label={`Ergebnis ${i + 1} herunterladen`}
-                              disabled={laedtHerunter === url}
-                              onClick={() => void herunterladen(job, url, i)}
-                            >
-                              {laedtHerunter === url
-                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                : <Download className="h-3.5 w-3.5" />}
-                            </Button>
-                          </div>
-                        </div>
+                          job={job}
+                          url={url}
+                          pfad={job.result_paths[i]}
+                          index={i}
+                          gesamt={bilder.length}
+                          onAnsehen={() => setLightbox({ urls: bilder, start: i })}
+                          onUebernehmen={u => setUebernahme({ url: u, pfad: job.result_paths[i] })}
+                          onVergroessern={(pfad, stufe, verfahren) =>
+                            void vergroessern(job, pfad, stufe, verfahren)}
+                        />
                       ))}
                     </div>
                   )}
@@ -447,7 +318,7 @@ export default function QueuePage() {
 
       <BildUebernehmenDialog
         offen={!!uebernahme}
-        bildUrl={uebernahme}
+        bild={uebernahme}
         onClose={() => setUebernahme(null)}
       />
 

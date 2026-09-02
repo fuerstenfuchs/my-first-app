@@ -22,7 +22,7 @@ Dazu geht heute gar nicht: ein Bild einfach so erzeugen, ohne den Scene Builder.
 | | | Stand |
 |---|---|---|
 | **A** | „Übernehmen nach …" auf jeder Ergebniskachel | **fertig** |
-| B | Rubrik Bildstudio mit Lichttisch | offen |
+| **B** | Rubrik Bildstudio mit Lichttisch | **fertig** |
 | C | Freie Erzeugung mit Speichern in den Trésor | offen |
 | D | Werkbank: Zuschneiden und sieben Regler | offen |
 
@@ -95,6 +95,45 @@ einheitlichen Namen.
 Und „keine Varianten" heißt hier ausdrücklich NICHT „geht nicht": Der Warnsatz
 „hat noch keine Variante" erscheint nur bei Bausteinen, die überhaupt welche
 haben.
+
+## Phase B — der Lichttisch
+
+Eigene Rubrik `/bildstudio`, in der Seitenleiste VOR der Warteschlange. Alle
+Bilder aus allen Aufträgen als ein Raster, neueste zuerst. Ein Auftrag mit vier
+Durchläufen ist hier vier Kacheln, kein Eintrag mit vier Bildern darin — genau
+das ist der Unterschied zur Warteschlange.
+
+Vier Filter: **Alle · Heute · Vergrößert · Noch nicht abgelegt.**
+
+### „Noch nicht abgelegt" brauchte eine eigene Tabelle
+
+Der Filter ließ sich nicht ableiten. Beim Übernehmen wird das Bild **kopiert**;
+die Kopie im Baustein hat einen eigenen Pfad in einem eigenen Eimer und
+keinerlei Verweis zurück. Die Frage „was habe ich schon abgelegt?" wäre nur
+durch Bildvergleich zu beantworten.
+
+Deshalb `bild_uebernahmen` (`docs/proj-43-bild-uebernahmen.sql`) — eine reine
+Notiz: Wird eine Zeile gelöscht, geht kein Bild verloren, das Bild steht dann
+nur wieder als „noch nicht abgelegt" da. Gemerkt wird der **Speicherpfad**, nicht
+die Adresse: Die trägt einen Cache-Brecher (`?v=`), der sich mit jedem Versuch
+ändert.
+
+Abgelegte Bilder tragen eine grüne Marke links oben.
+
+### Die Kachel steht nur einmal da
+
+`src/components/ergebnis-kachel.tsx` — Bild, Vergrößern-Menü, Übernehmen,
+Herunterladen. Die Warteschlange benutzt jetzt dieselbe Komponente.
+
+Als Kopie wären die beiden genau dort auseinandergedriftet, wo es weh tut: bei
+den Preisangaben und beim Vergrößerungsmenü. Denselben Fehler hat Critic in
+diesem Projekt schon einmal gefunden — Menü und Bestätigung nannten
+verschiedene Preise.
+
+Beim Zusammenführen fiel ein Unterschied auf, der sonst still geblieben wäre:
+Der erste Entwurf der Kachel nahm beim Dateinamen `scene_meta.name ?? prompt`,
+die Warteschlange bisher `?? null`. Das hätte jedem Download hundert Zeichen
+Prompt in den Namen geschrieben. Jetzt wieder wie vorher.
 
 ## Offen
 

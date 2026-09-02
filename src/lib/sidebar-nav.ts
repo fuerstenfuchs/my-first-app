@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Palette,
-  Clapperboard, Images, type LucideIcon,
+  Clapperboard, Images, Aperture, type LucideIcon,
 } from 'lucide-react'
 
 /**
@@ -101,6 +101,14 @@ export const BAUSTEINE: NavEintrag[] = [
 
 /** Die Werkbank — steht jetzt oben statt auf Platz zwölf. */
 export const PRODUKTION: NavEintrag[] = [
+  {
+    // Der Lichttisch: alle Bilder als Raster. Steht VOR der Warteschlange,
+    // weil er die Oberfläche für den Normalfall ist — die Warteschlange ist
+    // der Maschinenraum für den Ausnahmefall.
+    href: '/bildstudio', label: 'Bildstudio', icon: Aperture,
+    farben: f(['#160a1a', '#130918'], ['#c084fc', '#7c3aed'], ['#a855f7', '#6d28d9'],
+      '0 0 18px rgba(168,85,247,0.22), 0 0 18px rgba(109,40,217,0.15)', 'text-purple-400'),
+  },
   {
     href: '/scene-builder', label: 'Scene Builder', icon: Clapperboard,
     farben: f(['#1a1206', '#181006'], ['#fbbf24', '#d97706'], ['#f59e0b', '#b45309'],

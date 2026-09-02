@@ -90,7 +90,7 @@ export function useBildUebernehmen() {
    * der Baustein sein eigenes Exemplar.
    */
   const uebernehmen = useCallback(async (
-    quellUrl: string, ziel: Ziel,
+    quellUrl: string, quellPfad: string, ziel: Ziel,
   ): Promise<boolean> => {
     const b = BAUSTEINE.find(x => x.schluessel === ziel.baustein)
     if (!b) { toast.error('Unbekanntes Ziel'); return false }
@@ -155,6 +155,18 @@ export function useBildUebernehmen() {
         return false
       }
 
+      // Notiz, dass dieses Ergebnisbild abgelegt ist — damit der Lichttisch es
+      // markieren kann. Reine Anzeige-Hilfe: Scheitert sie, ist trotzdem alles
+      // gut gegangen, deshalb nur eine Zeile im Protokoll und keine Fehlermeldung.
+      const { error: notizErr } = await supabase.from('bild_uebernahmen').upsert({
+        user_id: user.id,
+        quell_pfad: quellPfad,
+        ziel_art: ziel.baustein,
+        ziel_id: ziel.parentId,
+        ziel_name: ziel.parentName,
+      }, { onConflict: 'user_id,quell_pfad,ziel_art,ziel_id' })
+      if (notizErr) console.warn('Übernahme-Notiz nicht gespeichert:', notizErr.message)
+
       // Das Titelbild wird ABSICHTLICH nicht angefasst — auch dann nicht, wenn
       // der Baustein noch keines hat. Mark am 02.09.2026: „Da habe ich mühsam
       // schon eigene Titelbilder erstellt, sodass die möglichst alle gleich
@@ -171,5 +183,20 @@ export function useBildUebernehmen() {
     }
   }, [supabase])
 
-  return { laeuft, eintraegeLaden, variantenLaden, uebernehmen }
+  /**
+   * Welche Ergebnisbilder schon abgelegt sind — als Menge von Speicherpfaden.
+   *
+   * Der Pfad und nicht die Adresse: Die Adresse trägt in der Warteschlange
+   * einen Cache-Brecher (`?v=`), der sich mit jedem Versuch ändert.
+   */
+  const abgelegteLaden = useCallback(async (): Promise<Set<string>> => {
+    const { data, error } = await supabase
+      .from('bild_uebernahmen')
+      .select('quell_pfad')
+      .limit(2000)
+    if (error) return new Set()
+    return new Set((data ?? []).map(r => r.quell_pfad as string))
+  }, [supabase])
+
+  return { laeuft, eintraegeLaden, variantenLaden, uebernehmen, abgelegteLaden }
 }
