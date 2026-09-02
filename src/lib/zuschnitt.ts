@@ -260,3 +260,36 @@ export function bestesFenster(quelle: ImageBitmap, verhaeltnis: number): Ausschn
 
   return { x: bx / b, y: by / h, breite: fb / b, hoehe: fh / h }
 }
+
+/**
+ * Das groesste zentrierte Fenster im gewuenschten Verhaeltnis.
+ *
+ * WARUM ES DAS BRAUCHT: Wer ein Format anklickt, erwartet, dass der Rahmen
+ * SOFORT so aussieht. Am 02.09.2026 im Browser nachgemessen: Nach dem Klick auf
+ * „16:9" lag der Rahmen weiter auf dem ganzen Bild (1122x1402) — sichtbar
+ * passierte nichts, und Speichern haette das unveraenderte Hochformat abgelegt.
+ * Ein Formatknopf, der nichts tut, ist schlimmer als keiner.
+ *
+ * Unterschied zu `bestesFenster`: Das hier fragt nicht, WO im Bild etwas los
+ * ist — es legt den Rahmen einfach mittig. Das ist der Ausgangspunkt, den man
+ * danach mit der Maus verschiebt.
+ */
+export function zentriertesFenster(
+  breite: number,
+  hoehe: number,
+  verhaeltnis: number,
+): Ausschnitt {
+  if (!(breite > 0) || !(hoehe > 0) || !(verhaeltnis > 0)) return GANZES_BILD
+
+  // Erst so breit wie moeglich; passt die Hoehe nicht ins Bild, andersherum.
+  let fb = breite
+  let fh = fb / verhaeltnis
+  if (fh > hoehe) { fh = hoehe; fb = fh * verhaeltnis }
+
+  return {
+    x: (breite - fb) / 2 / breite,
+    y: (hoehe - fh) / 2 / hoehe,
+    breite: fb / breite,
+    hoehe: fh / hoehe,
+  }
+}

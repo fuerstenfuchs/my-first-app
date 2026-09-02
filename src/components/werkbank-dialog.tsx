@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { BildWerk, REGLER_VORGABE, istNeutral, type Regler } from '@/lib/bild-werk'
 import {
   VERHAELTNISSE, GANZES_BILD, istGanzesBild, inPixel, raenderWeg, bestesFenster,
+  zentriertesFenster,
   type Ausschnitt, type VerhaeltnisSchluessel,
 } from '@/lib/zuschnitt'
 import { useBildBearbeiten } from '@/hooks/use-bild-bearbeiten'
@@ -344,13 +345,19 @@ export function WerkbankDialog({
                       <button
                         key={v.key}
                         onClick={() => {
-                          // AUCH den Ausschnitt zurücksetzen, nicht nur den
-                          // Rahmen. Vorher blieb der alte freie Zuschnitt
-                          // stehen, während der Rahmen verschwand: Für den
-                          // Betrachter aufgehoben, beim Speichern angewandt.
                           setVerhaeltnis(v.key)
                           setCrop(undefined)
-                          setAusschnitt(GANZES_BILD)
+                          // Der Rahmen springt SOFORT in das gewählte Format —
+                          // mittig, so groß wie er hineinpasst. Ein Knopf, nach
+                          // dem sichtbar nichts geschieht, ist ein kaputter
+                          // Knopf; und den alten freien Zuschnitt einfach
+                          // stehen zu lassen wäre noch schlechter: Für den
+                          // Betrachter aufgehoben, beim Speichern angewandt.
+                          setAusschnitt(
+                            v.wert && masse
+                              ? zentriertesFenster(masse.b, masse.h, v.wert)
+                              : GANZES_BILD,
+                          )
                         }}
                         aria-pressed={verhaeltnis === v.key}
                         className={cn(
