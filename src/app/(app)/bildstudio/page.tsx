@@ -60,10 +60,13 @@ function beschriftung(job: ImageJob): string {
     return `${ziel} · ${job.upscaler ? VERFAHREN_NAME[job.upscaler] : ''}`
   }
   const name = (job.scene_meta?.name as string | undefined) ?? job.prompt
+  if (job.job_type !== 'bearbeitet') return name
   // Eine bearbeitete Fassung erbt `scene_meta` von ihrer Quelle — ohne dieses
   // Zeichen trügen Original und Fassung dieselbe Unterschrift, und man löscht
-  // nach zwei Tagen die falsche.
-  return job.job_type === 'bearbeitet' ? `✎ ${name}` : name
+  // nach zwei Tagen die falsche. Die Nummer ab der zweiten Fassung, damit sich
+  // auch zwei Bearbeitungen desselben Bildes unterscheiden.
+  const n = Number(job.scene_meta?.fassung) || 1
+  return n > 1 ? `✎${n} ${name}` : `✎ ${name}`
 }
 
 export default function BildstudioPage() {

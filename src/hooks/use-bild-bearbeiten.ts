@@ -85,6 +85,10 @@ export function useBildBearbeiten() {
             ...(quelle.scene_meta ?? {}),
             herkunft: 'bearbeitung',
             quelle: quelle.id,
+            // Die wievielte Fassung — sonst stehen die erste und die zweite
+            // Bearbeitung desselben Bildes unter demselben Namen im
+            // Lichttisch, und man loescht die falsche.
+            fassung: (Number(quelle.scene_meta?.fassung) || 0) + 1,
           },
         })
         .select()

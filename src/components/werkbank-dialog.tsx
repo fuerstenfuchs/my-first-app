@@ -169,11 +169,38 @@ export function WerkbankDialog({
     return v.wert ?? undefined
   }, [verhaeltnis, masse])
 
-  function cropUebernehmen(c: Crop) {
-    setCrop(c)
-    if (c.unit === '%' && c.width > 0 && c.height > 0) {
-      setAusschnitt({ x: c.x / 100, y: c.y / 100, breite: c.width / 100, hoehe: c.height / 100 })
+  /**
+   * Was am Ende WIRKLICH herauskommt — eine einzige Rechnung.
+   *
+   * WARUM ALS EIN WERT UND NICHT DREIMAL GERECHNET: Vorher rechnete die
+   * Kopfzeile ohne `seitenverhaeltnis`, der Zuschnitt und die gemeldeten Masse
+   * mit. `inPixel` leitet die Hoehe bei gesetztem Verhaeltnis aus der Breite ab,
+   * ohne rundet es beide Seiten einzeln — an 1122x1402 mit „Original" plus
+   * automatischem Zuschnitt sind das 1192 gegen 1197 Bildpunkte. Die Kopfzeile
+   * versprach eine Zahl, die Datei bekam eine andere.
+   *
+   * `ganz` unterscheidet zusaetzlich den Fall, in dem gar nicht zugeschnitten
+   * wird: Ein von Hand auf 99,9 % gezogener Rahmen faellt unter die Toleranz
+   * von `istGanzesBild`, das Bild wird also unbeschnitten gespeichert — dann
+   * duerfen auch die gemeldeten Masse die vollen sein und nicht die um zwei
+   * Punkte kleineren des Rahmens.
+   */
+  const ergebnis = useMemo(() => {
+    if (!masse) return null
+    if (istGanzesBild(ausschnitt)) {
+      return { x: 0, y: 0, breite: masse.b, hoehe: masse.h, ganz: true }
     }
+    return { ...inPixel(ausschnitt, masse.b, masse.h, seitenverhaeltnis), ganz: false }
+  }, [ausschnitt, masse, seitenverhaeltnis])
+
+  function cropUebernehmen(c: Crop) {
+    // Beide Zustaende oder keinen. Meldet die Bibliothek einen leeren Rahmen
+    // (Klick ohne Zug), wurde vorher nur `crop` genullt und `ausschnitt` behielt
+    // den alten Wert — sichtbar kein Rahmen, beim Speichern trotzdem
+    // zugeschnitten. Genau die Diskrepanz, die `ausschnittSetzen` beseitigt.
+    if (c.unit !== '%' || !(c.width > 0) || !(c.height > 0)) return
+    setCrop(c)
+    setAusschnitt({ x: c.x / 100, y: c.y / 100, breite: c.width / 100, hoehe: c.height / 100 })
   }
 
   /**
@@ -216,7 +243,7 @@ export function WerkbankDialog({
   // ── Speichern ────────────────────────────────────────────────────────────
   async function alsFassungSpeichern() {
     const werk = werkRef.current
-    if (!werk || !masse || !job || !quellPfad || rechnet) return
+    if (!werk || !masse || !ergebnis || !job || !quellPfad || rechnet) return
 
     if (istGanzesBild(ausschnitt) && istNeutral(regler)) {
       toast.info('Nichts geändert — es gibt nichts zu speichern.')
@@ -231,11 +258,11 @@ export function WerkbankDialog({
       const voll = await werk.export(regler)
 
       let fertig = voll
-      if (!istGanzesBild(ausschnitt)) {
-        // Maße aus dem Zustand, NICHT aus dem ImageBitmap: Wird der Dialog
-        // während der Rechnung geschlossen, gibt der Aufräumer das Bitmap frei,
-        // und ein freigegebenes meldet 0 × 0.
-        const p = inPixel(ausschnitt, masse.b, masse.h, seitenverhaeltnis)
+      // `ergebnis` statt einer eigenen Rechnung: Maße aus dem Zustand, NICHT
+      // aus dem ImageBitmap — wird der Dialog während der Rechnung geschlossen,
+      // gibt der Aufräumer das Bitmap frei, und ein freigegebenes meldet 0 × 0.
+      if (ergebnis && !ergebnis.ganz) {
+        const p = ergebnis
         const gerechnet = await createImageBitmap(voll)
         const c = document.createElement('canvas')
         c.width = p.breite; c.height = p.hoehe
@@ -247,11 +274,10 @@ export function WerkbankDialog({
           c.toBlob(b => b ? ja(b) : nein(new Error('Zuschnitt ließ sich nicht speichern.')), 'image/png'))
       }
 
-      const p = inPixel(ausschnitt, masse.b, masse.h, seitenverhaeltnis)
       const neu = await speichern(job, quellPfad, fertig, {
         ausschnitt,
         regler: { ...regler },
-      }, { breite: p.breite, hoehe: p.hoehe })
+      }, { breite: ergebnis.breite, hoehe: ergebnis.hoehe })
       if (neu) { onGespeichert?.(); onClose() }
     } catch (e) {
       toast.error(`Speichern fehlgeschlagen: ${(e as Error).message}`)
@@ -269,10 +295,7 @@ export function WerkbankDialog({
           <DialogTitle className="text-base">Werkbank</DialogTitle>
           <DialogDescription className="text-xs">
             {masse ? `${masse.b} × ${masse.h}` : '…'}
-            {!istGanzesBild(ausschnitt) && masse && (() => {
-              const p = inPixel(ausschnitt, masse.b, masse.h)
-              return ` → Ausschnitt ${p.breite} × ${p.hoehe}`
-            })()}
+            {ergebnis && !ergebnis.ganz && ` → Ausschnitt ${ergebnis.breite} × ${ergebnis.hoehe}`}
             {' · Das Original bleibt unverändert — gespeichert wird eine neue Fassung.'}
           </DialogDescription>
         </DialogHeader>
@@ -360,6 +383,11 @@ export function WerkbankDialog({
                       <button
                         key={v.key}
                         onClick={() => {
+                          // Derselbe Knopf zweimal: Wer den Rahmen erst auf
+                          // das Gesicht geschoben und dann versehentlich noch
+                          // einmal auf „16:9" geklickt hat, saehe ihn sonst
+                          // ohne Rueckfrage in die Mitte zurueckspringen.
+                          if (v.key === verhaeltnis) return
                           setVerhaeltnis(v.key)
                           // Der Rahmen springt SOFORT in das gewählte Format —
                           // mittig, so groß wie er hineinpasst. Ein Knopf, nach
