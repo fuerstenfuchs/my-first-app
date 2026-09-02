@@ -12,7 +12,7 @@
 
 import { bildErzeugen } from './proxy.ts'
 import { bildVergroessern } from './upscale.ts'
-import { bildVergroessernKi } from './fal.ts'
+import { bildVergroessernKi, type KiVerfahren } from './fal.ts'
 import {
   auftragFertig, ergebnisAblegen, ergebnisHolen, externeAnfrageMerken, fortschrittMerken,
 } from './supabase.ts'
@@ -52,7 +52,8 @@ async function vergroessern(
   if (!job.source_path || !job.scale) {
     throw new Error('Vergrößerungsauftrag ohne Ausgangsbild oder Faktor.')
   }
-  if (job.upscaler !== 'lanczos' && job.upscaler !== 'seedvr2') {
+  const bekannt = ['lanczos', 'seedvr2', 'crystal']
+  if (!job.upscaler || !bekannt.includes(job.upscaler)) {
     throw new Error(`Unbekanntes Vergrößerungsverfahren: ${job.upscaler ?? 'keins angegeben'}`)
   }
 
@@ -62,9 +63,9 @@ async function vergroessern(
   let daten: ArrayBuffer
   let nachher: { breite: number; hoehe: number }
 
-  if (job.upscaler === 'seedvr2') {
-    sage('  KI-Vergrößerung bei fal.ai…')
-    const ergebnis = await bildVergroessernKi(quelle, job.scale, {
+  if (job.upscaler !== 'lanczos') {
+    sage(`  KI-Vergrößerung bei fal.ai (${job.upscaler})…`)
+    const ergebnis = await bildVergroessernKi(quelle, job.scale, job.upscaler as KiVerfahren, {
       signal,
       // Ein früherer Versuch hat vielleicht schon bezahlt. Dann wird sein
       // Ergebnis abgeholt statt ein zweites Mal gerechnet.

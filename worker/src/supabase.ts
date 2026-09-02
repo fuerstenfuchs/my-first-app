@@ -22,7 +22,7 @@ export type ImageJob = {
   job_type: 'generate' | 'upscale'
   source_path: string | null
   scale: number | null
-  upscaler: 'lanczos' | 'seedvr2' | null
+  upscaler: 'lanczos' | 'seedvr2' | 'crystal' | null
   external_ref: FalAnfrage | null
   anchor_job_id: string | null
   scene_meta: unknown

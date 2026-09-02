@@ -62,3 +62,16 @@ alter table public.image_jobs add constraint image_jobs_external_ref_nur_upscale
 
 comment on column public.image_jobs.external_ref is
   'Auftragsnummer und Abholadressen bei fal.ai. Damit ein Neuversuch das bereits bezahlte Ergebnis abholt, statt einen zweiten kostenpflichtigen Lauf zu starten.';
+
+-- ── Nachtrag: zweites KI-Verfahren (Crystal Upscaler von Clarity AI) ───────
+--
+-- Mark kennt beide aus der Praxis und will die Wahl. Sie arbeiten
+-- unterschiedlich: SeedVR2 rekonstruiert zurueckhaltend und bleibt nah am
+-- Original, Crystal geht freier zu Werke. Welches besser ist, haengt vom Bild
+-- ab — deshalb beide, statt eines auszuwaehlen.
+alter table public.image_jobs drop constraint if exists image_jobs_upscaler_check;
+alter table public.image_jobs add constraint image_jobs_upscaler_check
+  check (upscaler is null or upscaler in ('lanczos', 'seedvr2', 'crystal'));
+
+comment on column public.image_jobs.upscaler is
+  'lanczos = rechnerisch auf dem PC, kostenlos; seedvr2 und crystal = KI-Detailrekonstruktion über fal.ai, kostenpflichtig';

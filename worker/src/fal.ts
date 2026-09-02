@@ -1,13 +1,14 @@
 /**
- * KI-Vergrößerung über fal.ai — SeedVR2 von ByteDance.
+ * KI-Vergrößerung über fal.ai — SeedVR2 (ByteDance) und Crystal (Clarity AI).
  *
  * Der Unterschied zu `upscale.ts` ist nicht graduell: Lanczos verteilt die
- * vorhandenen Bildpunkte klüger, SeedVR2 rekonstruiert Struktur, die im
- * Original nicht steht — Hautporen, Haarsträhnen, Stoffgewebe. Das Modell ist
- * dasselbe, das ByteDance unter Apache 2.0 veröffentlicht hat; lokal betreiben
- * ließe es sich nur mit einer NVIDIA-Karte mit reichlich eigenem Speicher.
- * Dieser PC hat eine integrierte AMD 780M ohne eigenen Videospeicher und kein
- * CUDA (gemessen 02.09.2026) — deshalb der Umweg über eine Gegenstelle.
+ * vorhandenen Bildpunkte klüger, diese beiden rekonstruieren Struktur, die im
+ * Original nicht steht — Hautporen, Haarsträhnen, Stoffgewebe.
+ *
+ * Lokal betreiben ließe sich SeedVR2 durchaus (Apache 2.0), aber nur mit einer
+ * NVIDIA-Karte mit reichlich eigenem Speicher. Dieser PC hat eine integrierte
+ * AMD 780M ohne eigenen Videospeicher und kein CUDA (gemessen 02.09.2026) —
+ * deshalb der Umweg über eine Gegenstelle.
  *
  * WARUM DER SCHLÜSSEL HIER LIEGT UND NICHT BEI VERCEL: Der Arbeiter läuft auf
  * Marks PC, die App in der Cloud. Läge FAL_KEY in der Vercel-Umgebung, wäre er
@@ -20,8 +21,57 @@
 
 import { config, ohneGeheimnis } from './config.ts'
 
-const MODELL = 'fal-ai/seedvr/upscale/image'
 const ANMELDEN = 'https://queue.fal.run'
+
+/**
+ * Die KI-Verfahren, die es gibt.
+ *
+ * Sie sprechen nicht dieselbe Sprache: SeedVR2 will `upscale_factor` und gibt
+ * `image` zurueck, Crystal will `scale_factor` und gibt `images` als Liste
+ * zurueck. Diese Unterschiede gehoeren hierher, an eine Stelle — und nicht als
+ * `if` verstreut durch den Ablauf, der fuer beide gleich ist.
+ *
+ * Warum beide: SeedVR2 rekonstruiert zurueckhaltend und bleibt nah am
+ * Original, Crystal geht freier zu Werke. Welches passt, haengt vom Bild ab.
+ */
+export type KiVerfahren = 'seedvr2' | 'crystal'
+
+type Bildangabe = { url?: string; width?: number; height?: number }
+
+type FalModell = {
+  id: string
+  rumpf: (bildUrl: string, faktor: number) => Record<string, unknown>
+  bildAus: (antwort: Record<string, unknown>) => Bildangabe
+}
+
+const MODELLE: Record<KiVerfahren, FalModell> = {
+  seedvr2: {
+    id: 'fal-ai/seedvr/upscale/image',
+    rumpf: (image_url, faktor) => ({
+      image_url,
+      upscale_mode: 'factor',
+      upscale_factor: faktor,
+      // PNG, weil die ganze Kette verlustfrei ist. Die Voreinstellung waere bei
+      // beiden Modellen JPEG — das wuerde am Ende der Bearbeitung
+      // Kompressionsspuren hineintragen, die vorher nicht da waren.
+      output_format: 'png',
+    }),
+    bildAus: a => (a.image ?? {}) as Bildangabe,
+  },
+  crystal: {
+    id: 'fal-ai/crystal-upscaler',
+    rumpf: (image_url, faktor) => ({
+      image_url,
+      scale_factor: faktor,
+      output_format: 'png',
+      // 0 = nah am Original. Der Regler geht bis 10; hoehere Werte erfinden
+      // mehr dazu. Bewusst nicht geraten — wenn Mark mehr will, wird daraus
+      // eine Einstellung in der Oberflaeche.
+      creativity: 0,
+    }),
+    bildAus: a => ((a.images as Bildangabe[] | undefined)?.[0] ?? {}) as Bildangabe,
+  },
+}
 
 /** Abstand zwischen zwei Nachfragen beim laufenden Auftrag. */
 const NACHFRAGE_MS = 2000
@@ -163,22 +213,14 @@ function alsJson(antwort: Antwort, was: string): Record<string, unknown> {
 
 /** Auftrag absenden. Ab hier kostet es Geld. */
 async function absenden(
-  quelle: ArrayBuffer, faktor: number, signal?: AbortSignal,
+  quelle: ArrayBuffer, faktor: number, modell: FalModell, signal?: AbortSignal,
 ): Promise<FalAnfrage> {
   const bild = `data:image/png;base64,${Buffer.from(quelle).toString('base64')}`
 
-  const roh = await falRuf(`${ANMELDEN}/${MODELL}`, {
+  const roh = await falRuf(`${ANMELDEN}/${modell.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      image_url: bild,
-      upscale_mode: 'factor',
-      upscale_factor: faktor,
-      // PNG, weil die ganze Kette verlustfrei ist. Die Voreinstellung wäre
-      // JPEG — das würde am Ende der Bearbeitung Kompressionsspuren
-      // hineintragen, die vorher nicht da waren.
-      output_format: 'png',
-    }),
+    body: JSON.stringify(modell.rumpf(bild, faktor)),
     signal,
   }, signal)
 
@@ -193,11 +235,13 @@ async function absenden(
 }
 
 export async function bildVergroessernKi(
-  quelle: ArrayBuffer, faktor: number, optionen: KiOptionen = {},
+  quelle: ArrayBuffer, faktor: number, verfahren: KiVerfahren, optionen: KiOptionen = {},
 ): Promise<KiErgebnis> {
   if (!Number.isInteger(faktor) || faktor < 2 || faktor > 4) {
     throw new Error(`Vergrößerungsfaktor ${faktor} ist nicht vorgesehen (erlaubt: 2 bis 4).`)
   }
+  const modell = MODELLE[verfahren]
+  if (!modell) throw new Error(`Unbekanntes KI-Verfahren: ${verfahren}`)
   const { signal, vorhandeneAnfrage, merken } = optionen
 
   // Zuerst nachsehen, ob ein früherer Versuch schon bezahlt hat.
@@ -218,7 +262,7 @@ export async function bildVergroessernKi(
   }
 
   if (!anfrage) {
-    anfrage = await absenden(quelle, faktor, signal)
+    anfrage = await absenden(quelle, faktor, modell, signal)
     // VOR dem ersten Warten festhalten. Zwischen Absenden und Merken darf
     // nichts liegen, was scheitern kann.
     await merken?.(anfrage)
@@ -251,22 +295,34 @@ export async function bildVergroessernKi(
 
   const fertig = alsJson(
     await falRuf(anfrage.response_url!, { method: 'GET' }, signal), 'Ergebnis abholen',
-  ) as { image?: { url?: string; width?: number; height?: number } }
+  )
+  // Wo das Bild in der Antwort steht, weiss die Modelltabelle — SeedVR2 legt es
+  // unter `image` ab, Crystal als erstes Element von `images`.
+  const bild = modell.bildAus(fertig)
+  if (!bild.url) throw new Error('fal.ai hat kein Bild zurückgegeben.')
 
-  const bildUrl = fertig.image?.url
-  if (!bildUrl) throw new Error('fal.ai hat kein Bild zurückgegeben.')
-
-  const daten = await bildHolen(bildUrl, signal)
+  const daten = await bildHolen(bild.url, signal)
 
   return {
     daten,
-    nachher: { breite: fertig.image?.width ?? 0, hoehe: fertig.image?.height ?? 0 },
+    nachher: { breite: bild.width ?? 0, hoehe: bild.height ?? 0 },
     wiederaufgenommen,
   }
 }
 
-/** Die ersten acht Bytes jeder PNG-Datei. */
-const PNG_KENNUNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+/**
+ * Erkennungszeichen am Dateianfang.
+ *
+ * Auch JPEG, obwohl bei beiden Modellen `output_format: 'png'` angefordert
+ * wird: Google hat heute auf eine Anfrage, die PNG erwarten liess, ein JPEG
+ * geliefert. Ein Anbieter, der das Format wechselt, soll hier keinen Auftrag
+ * zum Scheitern bringen — geprueft wird, dass es ein BILD ist, nicht welches.
+ */
+const KENNUNGEN: Record<string, number[]> = {
+  PNG:  [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+  JPEG: [0xff, 0xd8, 0xff],
+  WEBP: [0x52, 0x49, 0x46, 0x46],
+}
 
 /**
  * Das fertige Bild holen — und nachsehen, ob es wirklich eins ist.
@@ -315,8 +371,10 @@ async function bildHolen(url: string, signal?: AbortSignal): Promise<ArrayBuffer
       throw new Error(`Das Ergebnisbild war nur ${daten.byteLength} Bytes groß.`)
     }
     const kopf = new Uint8Array(daten, 0, 8)
-    if (PNG_KENNUNG.some((b, i) => kopf[i] !== b)) {
-      throw new Error('Das Ergebnis trug keine PNG-Kennung — nicht abgelegt.')
+    const erkannt = Object.entries(KENNUNGEN)
+      .some(([, muster]) => muster.every((b, i) => kopf[i] === b))
+    if (!erkannt) {
+      throw new Error('Das Ergebnis trug keine Bild-Kennung — nicht abgelegt.')
     }
     return daten
   }

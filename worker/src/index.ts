@@ -56,7 +56,7 @@ async function durchgang(aufraeumen: boolean): Promise<boolean> {
       // Ein bereits abgesendeter KI-Lauf laeuft bei fal weiter und wird dort
       // berechnet, egal was hier geschieht. Das gehoert dazugesagt: „wird
       // wieder eingereiht" klingt sonst nach folgenlos.
-      if (job.upscaler === 'seedvr2') {
+      if (job.upscaler === 'seedvr2' || job.upscaler === 'crystal') {
         sage('  Der KI-Lauf laeuft bei fal.ai weiter und wird beim naechsten Mal abgeholt.')
       }
       await auftragZurueckstellen(job.id, job.attempts, 'Arbeiter wurde beendet')

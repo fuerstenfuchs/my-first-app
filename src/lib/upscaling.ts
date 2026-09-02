@@ -14,36 +14,79 @@
  * Womit vergrößert wird.
  *
  * `lanczos` rechnet der PC selbst und kostet nichts — es verteilt vorhandene
- * Bildpunkte, erfindet aber keine Details. `seedvr2` ist ByteDances Modell
- * über fal.ai: Es rekonstruiert Haut, Haar und Stoff, und es kostet Geld.
+ * Bildpunkte, erfindet aber keine Details. Die beiden anderen laufen über
+ * fal.ai, rekonstruieren Haut, Haar und Stoff, und kosten Geld:
+ *
+ * - `seedvr2` (ByteDance) bleibt nah am Original, rekonstruiert zurückhaltend
+ * - `crystal` (Clarity AI) geht freier zu Werke
+ *
+ * Welches besser ist, hängt vom Bild ab. Deshalb beide, statt eines
+ * auszuwählen.
  */
-export type Upscaler = 'lanczos' | 'seedvr2'
+export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal'
+
+/** Die bezahlten Verfahren — an einer Stelle, damit niemand eins vergisst. */
+export const KOSTET_GELD: readonly Upscaler[] = ['seedvr2', 'crystal']
+
+export function kostetGeld(v: Upscaler | null | undefined): boolean {
+  return !!v && KOSTET_GELD.includes(v)
+}
 
 export const VERFAHREN_NAME: Record<Upscaler, string> = {
   lanczos: 'Rechnen',
-  seedvr2: 'KI (SeedVR2)',
+  seedvr2: 'KI · SeedVR2',
+  crystal: 'KI · Crystal',
+}
+
+/** Was im Menü unter der Überschrift steht. */
+export const VERFAHREN_HINWEIS: Record<Upscaler, string> = {
+  lanczos: 'kostet nichts',
+  seedvr2: 'nah am Original, günstig',
+  crystal: 'erfindet mehr Details, teuer',
 }
 
 /**
- * Was ein KI-Lauf ungefähr kostet, je Faktor.
+ * Was ein KI-Lauf kostet, je Verfahren und Faktor.
  *
- * fal.ai rechnet nach Megapixeln ab ($0.001/MP). Aus 1536×864 werden bei 2×
- * 5,3 MP und bei 4× 21,2 MP — daher der Sprung. Gerundet und mit „ca.", weil
- * es von der Ausgangsgröße abhängt und der Kurs schwankt; zwei Nachkomma-
- * stellen würden eine Genauigkeit vorgeben, die es nicht gibt.
+ * GEMESSEN am 02.09.2026, nicht geschätzt: Beide Verfahren liefen auf demselben
+ * Bild (1122×1402, 2×), und der Preis ergibt sich aus dem Guthaben bei fal.ai
+ * vorher und nachher.
  *
- * Bei einem großen quadratischen Quellbild kann 4× auch das Doppelte kosten.
- * Deshalb steht bei der Bestätigung „bis" und nicht „genau".
+ * | Verfahren | 2× auf 1,6 MP | je Megapixel |
+ * |---|---|---|
+ * | SeedVR2 | 0,7 ct  | ~$0,0011 |
+ * | Crystal | 9,6 ct  | ~$0,0152 |
+ *
+ * **Crystal kostet das Vierzehnfache.** Vorher stand hier für beide „ca. 0,5 ct"
+ * — eine aus einer Recherche übernommene Zahl, die für Crystal um das
+ * Neunzehnfache danebenlag. Bei einer Preisangabe, die vor dem Klick steht,
+ * ist das kein Rundungsfehler, sondern eine falsche Auskunft.
+ *
+ * Die Werte für 3× und 4× sind HOCHGERECHNET (Fläche wächst quadratisch), nicht
+ * gemessen. Ob Crystal überhaupt nach Megapixeln abrechnet oder pauschal je
+ * Bild, ist mit einem einzigen Messpunkt nicht zu entscheiden.
+ *
+ * Ein weiterer Fallstrick: fal bucht **verzögert** ab. SeedVR2 zeigte
+ * unmittelbar nach dem Lauf noch 0,00 — der Abzug kam erst rund eine Minute
+ * später. Wer sofort nachmisst, misst falsch.
  */
-export const KI_PREIS: Record<2 | 3 | 4, string> = {
-  2: 'ca. 0,5 ct',
-  3: 'ca. 1 ct',
-  4: 'ca. 2 ct',
+export const KI_PREIS: Record<Exclude<Upscaler, 'lanczos'>, Record<2 | 3 | 4, string>> = {
+  seedvr2: { 2: 'ca. 0,7 ct', 3: 'ca. 1,6 ct', 4: 'ca. 2,8 ct' },
+  crystal: { 2: 'ca. 10 ct',  3: 'ca. 22 ct',  4: 'ca. 38 ct'  },
+}
+
+/** Der Preis für ein Verfahren, oder ein leerer Text beim kostenlosen. */
+export function preis(verfahren: Upscaler, faktor: 2 | 3 | 4): string {
+  return kostetGeld(verfahren)
+    ? KI_PREIS[verfahren as Exclude<Upscaler, 'lanczos'>][faktor]
+    : ''
 }
 
 /** Ein Satz für Bestätigungen — dieselbe Zahl wie im Menü. */
 export function kostenSatz(verfahren: Upscaler, faktor: 2 | 3 | 4): string {
-  return verfahren === 'seedvr2'
-    ? `SeedVR2 über fal.ai — rekonstruiert Details, kostet ${KI_PREIS[faktor]}.`
-    : 'Der Arbeiter rechnet sie auf dem PC — das kostet nichts.'
+  if (!kostetGeld(verfahren)) {
+    return 'Der Arbeiter rechnet sie auf dem PC — das kostet nichts.'
+  }
+  return `${VERFAHREN_NAME[verfahren]} über fal.ai — rekonstruiert Details, ` +
+    `kostet ${preis(verfahren, faktor)}.`
 }

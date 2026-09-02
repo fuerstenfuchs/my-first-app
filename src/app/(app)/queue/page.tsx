@@ -20,7 +20,9 @@ import { ImageLightbox } from '@/components/image-lightbox'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
-import { KI_PREIS, VERFAHREN_NAME } from '@/lib/upscaling'
+import {
+  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld,
+} from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
 
@@ -246,7 +248,7 @@ export default function QueuePage() {
                              KI-Auftrag lief danach bis zu dreimal erneut. Im
                              Menü steht der Preis vor dem Klick — hier stand
                              gar nichts. */
-                          onClick={() => job.upscaler === 'seedvr2'
+                          onClick={() => kostetGeld(job.upscaler)
                             ? setNeuKandidat(job)
                             : void erneutEinreihen(job.id)}
                           title="Erneut einreihen"
@@ -306,39 +308,39 @@ export default function QueuePage() {
                                     <Maximize2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="min-w-52">
-                                  {/* Zwei Verfahren, deutlich getrennt: Das eine
-                                      kostet nichts, das andere Geld. Der Preis
+                                <DropdownMenuContent align="end" className="min-w-56">
+                                  {/* Drei Verfahren, deutlich getrennt: eines
+                                      kostet nichts, zwei kosten Geld. Der Preis
                                       steht deshalb im Menü und nicht erst in
                                       einer Bestätigung danach — sichtbar sein
-                                      muss er vor dem Klick, nicht danach. */}
-                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-                                    Rechnen · kostet nichts
-                                  </DropdownMenuLabel>
-                                  {([2, 3, 4] as const).map(f => (
-                                    <DropdownMenuItem
-                                      key={`lanczos-${f}`}
-                                      className="text-xs"
-                                      onClick={() => void vergroessern(job, job.result_paths[i], f, 'lanczos')}
-                                    >
-                                      {f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}
-                                    </DropdownMenuItem>
-                                  ))}
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-                                    KI · rekonstruiert Details
-                                  </DropdownMenuLabel>
-                                  {([2, 3, 4] as const).map(f => (
-                                    <DropdownMenuItem
-                                      key={`seedvr2-${f}`}
-                                      className="flex items-center justify-between gap-3 text-xs"
-                                      onClick={() => void vergroessern(job, job.result_paths[i], f, 'seedvr2')}
-                                    >
-                                      <span>{f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}</span>
-                                      <span className="text-[10px] tabular-nums text-muted-foreground">
-                                        {KI_PREIS[f]}
-                                      </span>
-                                    </DropdownMenuItem>
+                                      muss er vor dem Klick, nicht danach.
+
+                                      Aus der Liste erzeugt statt dreimal
+                                      abgeschrieben: Beim zweiten KI-Verfahren
+                                      wäre sonst genau die Kopie entstanden, an
+                                      der Preis und Beschriftung auseinander-
+                                      driften. */}
+                                  {(['lanczos', 'seedvr2', 'crystal'] as const).map((v, nr) => (
+                                    <div key={v}>
+                                      {nr > 0 && <DropdownMenuSeparator />}
+                                      <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
+                                        {VERFAHREN_NAME[v]} · {VERFAHREN_HINWEIS[v]}
+                                      </DropdownMenuLabel>
+                                      {([2, 3, 4] as const).map(f => (
+                                        <DropdownMenuItem
+                                          key={`${v}-${f}`}
+                                          className="flex items-center justify-between gap-3 text-xs"
+                                          onClick={() => void vergroessern(job, job.result_paths[i], f, v)}
+                                        >
+                                          <span>{f}×{masse(job, f) ? ` · ${masse(job, f)}` : ''}</span>
+                                          {kostetGeld(v) && (
+                                            <span className="text-[10px] tabular-nums text-muted-foreground">
+                                              {preis(v, f)}
+                                            </span>
+                                          )}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </div>
                                   ))}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -429,10 +431,14 @@ export default function QueuePage() {
       <AlertDialog open={!!neuKandidat} onOpenChange={o => !o && setNeuKandidat(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Noch einmal von der KI vergrößern?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Noch einmal mit {neuKandidat?.upscaler ? VERFAHREN_NAME[neuKandidat.upscaler] : 'der KI'} vergrößern?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Das kostet erneut{' '}
-              {neuKandidat?.scale ? KI_PREIS[neuKandidat.scale as 2 | 3 | 4] : 'Geld'}.
+              {neuKandidat?.scale && neuKandidat.upscaler
+                ? preis(neuKandidat.upscaler, neuKandidat.scale as 2 | 3 | 4)
+                : 'Geld'}.
               {' '}Der Arbeiter versucht zuerst, ein bereits bezahltes Ergebnis
               abzuholen — ist bei fal.ai keins mehr da, läuft es neu.
             </AlertDialogDescription>
