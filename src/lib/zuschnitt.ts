@@ -48,8 +48,18 @@ export type Ausschnitt = { x: number; y: number; breite: number; hoehe: number }
 
 export const GANZES_BILD: Ausschnitt = { x: 0, y: 0, breite: 1, hoehe: 1 }
 
-export function istGanzesBild(a: Ausschnitt): boolean {
-  return a.x === 0 && a.y === 0 && a.breite === 1 && a.hoehe === 1
+/**
+ * Ist das praktisch das ganze Bild?
+ *
+ * Mit Toleranz, nicht auf die Stelle genau: Zieht man den Rahmen von Hand
+ * wieder auf das ganze Bild auf, liefert der Zuschneider Prozentwerte wie
+ * 99.9987. Ohne Toleranz gälte das als Änderung, und es entstünde eine
+ * Fassung, die sich vom Original um nichts unterscheidet außer einer
+ * Pixelreihe.
+ */
+export function istGanzesBild(a: Ausschnitt, toleranz = 0.002): boolean {
+  return Math.abs(a.x) <= toleranz && Math.abs(a.y) <= toleranz
+    && Math.abs(a.breite - 1) <= toleranz && Math.abs(a.hoehe - 1) <= toleranz
 }
 
 /**
@@ -58,14 +68,41 @@ export function istGanzesBild(a: Ausschnitt): boolean {
  * Vorschau lägen im Original um den Skalierungsfaktor daneben — bei einem
  * 16:9-Zuschnitt fällt genau das auf.
  */
-export function inPixel(a: Ausschnitt, breite: number, hoehe: number) {
-  const x = Math.round(a.x * breite)
-  const y = Math.round(a.y * hoehe)
-  return {
-    x, y,
-    breite: Math.max(1, Math.round(a.breite * breite)),
-    hoehe:  Math.max(1, Math.round(a.hoehe * hoehe)),
+export function inPixel(
+  a: Ausschnitt, breite: number, hoehe: number,
+  /**
+   * Das gewählte Seitenverhältnis, falls eines gewählt ist.
+   *
+   * Ohne es entsteht aus zwei unabhängig gerundeten Anteilen ein Verhältnis,
+   * das nur ungefähr stimmt — aus 16:9 kann 16,03:9 werden. Bei fünfzehn
+   * Seitenverhältnissen als Aushängeschild ist das keine Kleinigkeit: Wer das
+   * Bild in ein Video legt, bekommt eine Pixelreihe Verzug.
+   */
+  verhaeltnis?: number,
+) {
+  let b = Math.max(1, Math.round(a.breite * breite))
+  let h = Math.max(1, Math.round(a.hoehe * hoehe))
+
+  // Die Höhe aus der Breite ableiten, statt beide zu runden.
+  if (verhaeltnis && verhaeltnis > 0) {
+    h = Math.max(1, Math.round(b / verhaeltnis))
+    if (h > hoehe) { h = hoehe; b = Math.max(1, Math.round(h * verhaeltnis)) }
+    if (b > breite) { b = breite; h = Math.max(1, Math.round(b / verhaeltnis)) }
   }
+
+  b = Math.min(b, breite)
+  h = Math.min(h, hoehe)
+
+  // KLEMMEN, sonst ragt der Ausschnitt über die Bildkante.
+  // Nachgerechnet: bei 4496 px Breite und x=0.3333 / breite=0.6667 ergeben die
+  // unabhängigen Rundungen 1499 + 2998 = 4497 — ein Pixel zu viel. `drawImage`
+  // füllt den Überstand laut Norm mit durchsichtigem Schwarz, also stünde in
+  // jeder zweiten randbündigen Fassung eine 1 px breite durchsichtige Spalte.
+  // Man sieht sie erst, wenn das Bild irgendwo auf anderem Grund liegt.
+  const x = Math.min(Math.max(0, Math.round(a.x * breite)), breite - b)
+  const y = Math.min(Math.max(0, Math.round(a.y * hoehe)), hoehe - h)
+
+  return { x, y, breite: b, hoehe: h }
 }
 
 // ── Automatisches Zuschneiden ───────────────────────────────────────────────
@@ -129,9 +166,18 @@ export function raenderWeg(quelle: ImageBitmap, schwelle = 12): Ausschnitt {
   while (links < rechts && spalteRuhig(links)) links++
   while (rechts > links && spalteRuhig(rechts)) rechts--
 
-  // Nichts gefunden? Dann bleibt das ganze Bild — kein Zuschnitt ist besser
-  // als ein zufälliger.
-  if (oben === 0 && links === 0 && unten === h - 1 && rechts === b - 1) return GANZES_BILD
+  // BLEIBT ZU WENIG ÜBRIG, gilt „nichts gefunden".
+  //
+  // Bei einem einfarbigen oder sehr flauen Bild ist JEDE Zeile und Spalte
+  // „ruhig". Die Schleifen laufen dann bis zur gegenüberliegenden Kante, und
+  // die alte Prüfung auf die vier Startwerte griff nicht mehr — heraus kam ein
+  // Fenster von etwa drei mal drei Bildpunkten in der rechten unteren Ecke,
+  // hochgerechnet auf das ganze Bild. Das trifft nicht nur den Extremfall:
+  // Nebel, Schnee, ein Studiohintergrund reichen schon.
+  const bleibtBreite = rechts - links + 1
+  const bleibtHoehe  = unten - oben + 1
+  if (bleibtBreite < b * 0.1 || bleibtHoehe < h * 0.1) return GANZES_BILD
+  if (bleibtBreite > b * 0.98 && bleibtHoehe > h * 0.98) return GANZES_BILD
 
   const rand = 1
   const x = Math.max(0, links - rand) / b
@@ -180,6 +226,17 @@ export function bestesFenster(quelle: ImageBitmap, verhaeltnis: number): Ausschn
   // Größtes Fenster im Zielverhältnis, das ins Bild passt.
   let fb = b, fh = Math.round(b / verhaeltnis)
   if (fh > h) { fh = h; fb = Math.round(h * verhaeltnis) }
+
+  // Passt das Fenster genau auf das ganze Bild — also bei „Original" —, gäbe es
+  // nichts zu suchen und der Knopf sagte jedes Mal Nein. Dann wird ein etwas
+  // kleineres Fenster gesucht: Genau das ist die naheliegende Absicht, wenn
+  // jemand „Original" wählt und trotzdem automatisch zuschneiden will —
+  // Format behalten, Ausschnitt besser legen.
+  if (fb >= b * 0.99 && fh >= h * 0.99) {
+    fb = Math.round(b * 0.85)
+    fh = Math.round(fb / verhaeltnis)
+    if (fh > h) { fh = Math.round(h * 0.85); fb = Math.round(fh * verhaeltnis) }
+  }
   if (fb >= b && fh >= h) return GANZES_BILD
 
   const schritt = Math.max(1, Math.round(Math.min(b, h) / 24))

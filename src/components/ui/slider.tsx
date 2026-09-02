@@ -5,10 +5,21 @@ import * as SliderPrimitive from "@radix-ui/react-slider"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * `griffLabel` beschriftet den GRIFF, nicht den Rahmen.
+ *
+ * Radix legt `role="slider"` auf den Thumb; ein `aria-label` an der Wurzel
+ * landet dort nie. Am 02.09.2026 in der Werkbank nachgemessen: sieben Griffe,
+ * alle ohne Beschriftung. Wer mit einer Vorlesehilfe darauf steht, hoert nur
+ * eine Zahl.
+ */
+type SliderProps =
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & { griffLabel?: string }
+
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
->(({ className, ...props }, ref) => (
+  SliderProps
+>(({ className, griffLabel, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
     className={cn(
@@ -20,7 +31,7 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
       <SliderPrimitive.Range className="absolute h-full bg-primary" />
     </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
+    <SliderPrimitive.Thumb aria-label={griffLabel} className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName

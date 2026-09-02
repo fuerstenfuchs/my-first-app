@@ -1,3 +1,23 @@
+-- ACHTUNG: HISTORIE, kein wiederholbares Skript. NICHT erneut einspielen.
+--
+-- Was hier steht, war am 01.09.2026 richtig und ist seither zweimal ersetzt
+-- worden. Wer diese Datei heute von oben bis unten laufen laesst, bricht die
+-- Anwendung — die Schranken darin kennen nur den Stand von damals:
+--
+--   * `image_jobs_type_check` laesst hier nur 'generate' und 'upscale' zu.
+--     Seit proj-43d gibt es 'bearbeitet'. Diese Fassung wuerde jede
+--     bearbeitete Fassung ausschliessen — und die vorhandenen Zeilen lassen
+--     sie ohnehin nicht mehr setzen.
+--   * `image_jobs_scale_check` verlangt hier 2 bis 4. Seit proj-42 hat der
+--     Gemini-Weg gar keinen Faktor, sondern eine Zielklasse (`ziel_klasse`),
+--     und `scale` darf dort leer sein.
+--   * Der Text unten spricht von „rechnerisch vergroessern". Ab proj-42 ist
+--     das nur noch einer von mehreren Wegen; Lanczos ist seit dem 02.09.2026
+--     aus dem Menue heraus (Mark: „werde ich nie nutzen").
+--
+-- Der gueltige Stand ergibt sich aus dieser Datei UND proj-42, proj-42b,
+-- proj-42c, proj-43, proj-43b, proj-43c, proj-43d — in dieser Reihenfolge.
+--
 -- PROJ-39: Vorhandene Ergebnisbilder rechnerisch vergrößern.
 --
 -- Nutzt dieselbe Warteschlange wie die Erzeugung: ein zweiter Auftragstyp statt

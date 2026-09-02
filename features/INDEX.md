@@ -69,4 +69,6 @@
 
 <!-- Add features above this line -->
 
-## Next Available ID: PROJ-43
+| PROJ-43 | Bildstudio (Uebernehmen, Lichttisch, freie Erzeugung, Werkbank) | In Review | [PROJ-43](PROJ-43-bildstudio.md) | 2026-09-02 |
+
+## Next Available ID: PROJ-44

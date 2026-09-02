@@ -43,6 +43,16 @@ export function useBildBearbeiten() {
     quellPfad: string,
     blob: Blob,
     bearbeitung: Bearbeitung,
+    /**
+     * Die TATSÄCHLICHEN Maße der Fassung.
+     *
+     * Nicht die der Quelle: Nach einem Zuschnitt sind sie andere, und
+     * `ergebnis-kachel.tsx` rechnet die Vergrößerungsvorschau aus `size`. Ohne
+     * diese Angabe böte das Menü zu einem 1200×675-Bild „3× · 3072×3072" an —
+     * derselbe Fehlertyp, der hier schon einmal gefunden wurde: ein Menü, das
+     * Maße verspricht, die nicht eintreten.
+     */
+    masse: { breite: number; hoehe: number },
   ): Promise<ImageJob | null> => {
     setSpeichert(true)
     try {
@@ -61,10 +71,15 @@ export function useBildBearbeiten() {
           status:      'done',
           source_path: quellPfad,
           bearbeitung,
-          prompt:      `Bearbeitet · ${quelle.prompt.slice(0, 120)}`,
+          // Kein „Bearbeitet · Bearbeitet · …" beim Bearbeiten einer Fassung.
+          prompt: quelle.prompt.startsWith('Bearbeitet · ')
+            ? quelle.prompt.slice(0, 140)
+            : `Bearbeitet · ${quelle.prompt.slice(0, 120)}`,
           model:       'browser',
-          size:        quelle.size,
-          aspect_ratio: quelle.aspect_ratio,
+          size:        `${masse.breite}x${masse.hoehe}`,
+          // Das Seitenverhältnis der Quelle stimmt nach einem Zuschnitt nicht
+          // mehr — und ein falsches ist schlechter als keins.
+          aspect_ratio: null,
           variants:    1,
           scene_meta:  {
             ...(quelle.scene_meta ?? {}),

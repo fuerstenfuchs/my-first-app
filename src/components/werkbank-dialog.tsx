@@ -42,7 +42,7 @@ const REGLER_LISTE: { key: keyof Regler; label: string; min: number; max: number
   { key: 'helligkeit', label: 'Helligkeit',  min: -100, max: 100 },
   { key: 'kontrast',   label: 'Kontrast',    min: -100, max: 100 },
   { key: 'saettigung', label: 'Sättigung',   min: -100, max: 100 },
-  { key: 'highlights', label: 'Highlights',  min: -100, max: 100 },
+  { key: 'highlights', label: 'Lichter',     min: -100, max: 100 },
   { key: 'schatten',   label: 'Schatten',    min: -100, max: 100 },
   { key: 'temperatur', label: 'Temperatur',  min: -100, max: 100 },
   { key: 'schaerfe',   label: 'Schärfe',     min: 0,    max: 100 },
@@ -66,6 +66,20 @@ export function WerkbankDialog({
   const werkRef = useRef<BildWerk | null>(null)
   const bitmapRef = useRef<ImageBitmap | null>(null)
 
+  /**
+   * Läuft gerade eine Rechnung?
+   *
+   * NICHT dasselbe wie `speichert` aus dem Hook: Das wird erst gesetzt, wenn
+   * die Datei fertig ist. Bei 25 Megapixeln liegen davor mehrere Sekunden
+   * Exportzeit, in denen weder der Knopf gesperrt noch der Dialog verriegelt
+   * war. Zwei Folgen, beide gemeldet:
+   *
+   *  - zweimal klicken erzeugte zwei Fassungen
+   *  - Escape drücken schloss den Dialog, der Aufräumer gab das Bild frei, und
+   *    ein freigegebenes ImageBitmap meldet 0 × 0 — gespeichert wurde ein
+   *    1×1-Bild, mit Erfolgsmeldung darüber.
+   */
+  const [rechnet, setRechnet] = useState(false)
   const [laedt, setLaedt] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [masse, setMasse] = useState<{ b: number; h: number } | null>(null)
@@ -186,14 +200,14 @@ export function WerkbankDialog({
   // ── Speichern ────────────────────────────────────────────────────────────
   async function alsFassungSpeichern() {
     const werk = werkRef.current
-    const bitmap = bitmapRef.current
-    if (!werk || !bitmap || !job || !quellPfad) return
+    if (!werk || !masse || !job || !quellPfad || rechnet) return
 
     if (istGanzesBild(ausschnitt) && istNeutral(regler)) {
       toast.info('Nichts geändert — es gibt nichts zu speichern.')
       return
     }
 
+    setRechnet(true)
     try {
       // Erst die Regler auf dem vollen Bild, dann zuschneiden. Die Reihenfolge
       // ist festgenagelt: Andersherum wanderte die Schärfe an die neuen
@@ -202,7 +216,10 @@ export function WerkbankDialog({
 
       let fertig = voll
       if (!istGanzesBild(ausschnitt)) {
-        const p = inPixel(ausschnitt, bitmap.width, bitmap.height)
+        // Maße aus dem Zustand, NICHT aus dem ImageBitmap: Wird der Dialog
+        // während der Rechnung geschlossen, gibt der Aufräumer das Bitmap frei,
+        // und ein freigegebenes meldet 0 × 0.
+        const p = inPixel(ausschnitt, masse.b, masse.h, seitenverhaeltnis)
         const gerechnet = await createImageBitmap(voll)
         const c = document.createElement('canvas')
         c.width = p.breite; c.height = p.hoehe
@@ -214,20 +231,23 @@ export function WerkbankDialog({
           c.toBlob(b => b ? ja(b) : nein(new Error('Zuschnitt ließ sich nicht speichern.')), 'image/png'))
       }
 
+      const p = inPixel(ausschnitt, masse.b, masse.h, seitenverhaeltnis)
       const neu = await speichern(job, quellPfad, fertig, {
         ausschnitt,
         regler: { ...regler },
-      })
+      }, { breite: p.breite, hoehe: p.hoehe })
       if (neu) { onGespeichert?.(); onClose() }
     } catch (e) {
       toast.error(`Speichern fehlgeschlagen: ${(e as Error).message}`)
+    } finally {
+      setRechnet(false)
     }
   }
 
   const etwasGeaendert = !istGanzesBild(ausschnitt) || !istNeutral(regler)
 
   return (
-    <Dialog open={offen} onOpenChange={o => !o && onClose()}>
+    <Dialog open={offen} onOpenChange={o => { if (!o && !rechnet) onClose() }}>
       <DialogContent className="flex h-[92vh] max-w-[min(96vw,80rem)] flex-col gap-3 overflow-hidden p-4">
         <DialogHeader className="space-y-0.5">
           <DialogTitle className="text-base">Werkbank</DialogTitle>
@@ -264,7 +284,11 @@ export function WerkbankDialog({
                 entfernt.
               */
               <ReactCrop
-                crop={crop}
+                // Im Regler-Reiter KEIN Rahmen: react-image-crop legt außerhalb der
+                // Auswahl einen halbdurchsichtigen schwarzen Schleier. Farbe und
+                // Helligkeit auf einem am Rand abgedunkelten Bild zu beurteilen
+                // führt zuverlässig dazu, dass man zu hell einstellt.
+                crop={reiter === 'zuschnitt' ? crop : undefined}
                 onChange={(_, prozent) => cropUebernehmen(prozent)}
                 aspect={seitenverhaeltnis}
                 disabled={reiter !== 'zuschnitt'}
@@ -319,7 +343,15 @@ export function WerkbankDialog({
                     {VERHAELTNISSE.map(v => (
                       <button
                         key={v.key}
-                        onClick={() => { setVerhaeltnis(v.key); setCrop(undefined) }}
+                        onClick={() => {
+                          // AUCH den Ausschnitt zurücksetzen, nicht nur den
+                          // Rahmen. Vorher blieb der alte freie Zuschnitt
+                          // stehen, während der Rahmen verschwand: Für den
+                          // Betrachter aufgehoben, beim Speichern angewandt.
+                          setVerhaeltnis(v.key)
+                          setCrop(undefined)
+                          setAusschnitt(GANZES_BILD)
+                        }}
                         aria-pressed={verhaeltnis === v.key}
                         className={cn(
                           'flex flex-col items-center gap-1 rounded border px-1 py-1.5 text-[10px] transition',
@@ -347,19 +379,19 @@ export function WerkbankDialog({
                   {REGLER_LISTE.map(r => (
                     <div key={r.key} className="space-y-1">
                       <div className="flex items-baseline justify-between">
-                        <label htmlFor={`regler-${r.key}`} className="text-[11px] text-muted-foreground">
-                          {r.label}
-                        </label>
+                        {/* Ein `label` darf nur auf ein Formularelement zeigen;
+                            Radix legt die id auf ein span. Der Griff trägt die
+                            Beschriftung selbst (griffLabel). */}
+                        <span className="text-[11px] text-muted-foreground">{r.label}</span>
                         <span className="font-mono text-[10px] tabular-nums text-foreground">
                           {regler[r.key] > 0 ? `+${regler[r.key]}` : regler[r.key]}
                         </span>
                       </div>
                       <Slider
-                        id={`regler-${r.key}`}
                         min={r.min} max={r.max} step={1}
                         value={[regler[r.key]]}
                         onValueChange={([v]) => setRegler(alt => ({ ...alt, [r.key]: v }))}
-                        aria-label={r.label}
+                        griffLabel={r.label}
                       />
                     </div>
                   ))}
@@ -375,18 +407,18 @@ export function WerkbankDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={speichert}>
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={speichert || rechnet}>
             Abbrechen
           </Button>
           <Button
             size="sm"
             onClick={() => void alsFassungSpeichern()}
-            disabled={speichert || laedt || !!fehler || !etwasGeaendert}
+            disabled={speichert || rechnet || laedt || !!fehler || !etwasGeaendert}
           >
-            {speichert
+            {speichert || rechnet
               ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               : <Save className="mr-1.5 h-3.5 w-3.5" />}
-            Als neue Fassung speichern
+            {rechnet ? 'Wird gerechnet …' : 'Als neue Fassung speichern'}
           </Button>
         </DialogFooter>
       </DialogContent>

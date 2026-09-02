@@ -39,12 +39,13 @@ type Bild = {
   gesamt: number
 }
 
-type Filter = 'alle' | 'heute' | 'vergroessert' | 'offen'
+type Filter = 'alle' | 'heute' | 'vergroessert' | 'bearbeitet' | 'offen'
 
 const FILTER_LABEL: Record<Filter, string> = {
   alle: 'Alle',
   heute: 'Heute',
   vergroessert: 'Vergrößert',
+  bearbeitet: 'Bearbeitet',
   offen: 'Noch nicht abgelegt',
 }
 
@@ -58,7 +59,11 @@ function beschriftung(job: ImageJob): string {
     const ziel = job.upscaler === 'gemini' ? job.ziel_klasse : `${job.scale}×`
     return `${ziel} · ${job.upscaler ? VERFAHREN_NAME[job.upscaler] : ''}`
   }
-  return (job.scene_meta?.name as string | undefined) ?? job.prompt
+  const name = (job.scene_meta?.name as string | undefined) ?? job.prompt
+  // Eine bearbeitete Fassung erbt `scene_meta` von ihrer Quelle — ohne dieses
+  // Zeichen trügen Original und Fassung dieselbe Unterschrift, und man löscht
+  // nach zwei Tagen die falsche.
+  return job.job_type === 'bearbeitet' ? `✎ ${name}` : name
 }
 
 export default function BildstudioPage() {
@@ -117,6 +122,7 @@ export default function BildstudioPage() {
     switch (filter) {
       case 'heute':        return alleBilder.filter(b => istHeute(b.job.created_at))
       case 'vergroessert': return alleBilder.filter(b => b.job.job_type === 'upscale')
+      case 'bearbeitet':   return alleBilder.filter(b => b.job.job_type === 'bearbeitet')
       case 'offen':        return alleBilder.filter(b => !abgelegt.has(b.pfad))
       default:             return alleBilder
     }

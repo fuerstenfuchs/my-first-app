@@ -82,7 +82,22 @@ void main() {
   vec3 rgb = toLinear(texture(uBild, vUv).rgb);
 
   rgb *= uHell;
-  rgb = (rgb - 0.5) * uKontrast + 0.5;
+  // KONTRAST IST DER EINE SCHRITT, DER NICHT IN LINEAREM LICHT GEHOERT.
+  //
+  // Alles andere hier rechnet linear, und das ist richtig — Helligkeit,
+  // Saettigung, Lichter/Schatten sind physikalische Groessen. Kontrast ist es
+  // nicht: Er spreizt um die wahrgenommene Mitte, und die liegt in linearem
+  // Licht bei 0.214, nicht bei 0.5.
+  //
+  // Zwei Fassungen und zwei Rechnungen bis hierher (02.09.2026):
+  //   Drehpunkt 0.5 linear  → +100 machte aus Mittelgrau SCHWARZ
+  //   Drehpunkt 0.214 linear → Mittelgrau blieb, aber sRGB 0.25 fiel bei
+  //                            +50 schon auf 0.00 — die Vierteltöne soffen ab
+  //   in sRGB gerechnet      → 0.25/0.50/0.75 wird zu 0.13/0.50/0.88
+  //
+  // Deshalb: hin nach sRGB, spreizen, zurueck. Ein Umweg von zwei Zeilen, aber
+  // der Regler tut damit, was drauf steht.
+  rgb = toLinear(clamp((toSRGB(rgb) - 0.5) * uKontrast + 0.5, 0.0, 1.0));
   rgb = max(rgb, 0.0);
 
   float Lsat = dot(rgb, LUMA);
@@ -167,7 +182,14 @@ void main() {
   float d = clamp(L - Lb, -0.10, 0.10);
   if (abs(d) < 0.012) d = 0.0;
   float Lneu = L + uMenge * d;
-  rgb *= Lneu / max(L, 1e-5);
+  // (4) Der Verstaerkungsfaktor wird geklemmt.
+  //
+  // L ist LINEARE Luminanz und in den Schatten winzig; die Grenze +-0.10 ist
+  // dagegen absolut. Bei L = 0.001 und d = 0.05 ergaebe sich ein Faktor von 61
+  // — an dunklen Kanten entstuenden weisse Sprenkel. Kein Fehler im Sinne von
+  // Muell, aber ein kaputtes Bild, und zwar nur bei Nachtaufnahmen, wo es
+  // niemand sucht.
+  rgb *= clamp(Lneu / max(L, 1e-5), 0.5, 2.0);
 
   fragColor = vec4(toSRGB(clamp(rgb, 0.0, 1.0)), 1.0);
 }`
@@ -400,7 +422,14 @@ export class BildWerk {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   }
 
-  /** In voller Aufloesung rechnen und als Blob liefern (PNG). */
+  /**
+   * In voller Aufloesung rechnen und als Blob liefern (PNG).
+   *
+   * Danach werden die vollauflösenden Zwischenziele wieder freigegeben. Bei
+   * 25 Megapixeln sind das mehrere hundert Megabyte auf der Grafikeinheit, und
+   * nach dem Export zeichnet normalerweise nichts mehr — bleibt der Dialog nach
+   * einem misslungenen Upload offen, haengen sie sonst bis zum Schliessen.
+   */
   async export(r: Regler): Promise<Blob> {
     this.pruefeLebend()
     const gl = this.gl
@@ -498,7 +527,13 @@ export class BildWerk {
     // Symmetrisch: +100 verdoppelt die Steigung, -100 halbiert sie.
     gl.uniform1f(t.ort('uKontrast'), c >= 0 ? 1 + c : 1 / (1 - c))
     gl.uniform1f(t.ort('uSaett'), 1 + r.saettigung / 100)
-    // Vorzeichen: positiv nimmt die Lichter zurueck, positiv hebt die Schatten an.
+    // Vorzeichen: positiv HELLT BEIDE AUF — Lichter wie Schatten. Rechts heisst
+    // hier dasselbe wie bei jedem Regler daneben: mehr davon.
+    //
+    // Hier stand die alte Fassung („positiv nimmt die Lichter zurueck"), waehrend
+    // der Shader laengst das Gegenteil tat. Ein Kommentar, der dem Code
+    // widerspricht, ist schlimmer als keiner: Wer hier vorbeikommt, haelt das
+    // Plus im Shader fuer den Fehler und dreht es zurueck.
     gl.uniform1f(t.ort('uHigh'), (r.highlights / 100) * 0.5)
     gl.uniform1f(t.ort('uSchatten'), (r.schatten / 100) * 0.5)
     gl.uniform1f(t.ort('uTemp'), r.temperatur / 100)
