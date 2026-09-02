@@ -222,12 +222,24 @@ Beschreibung, das ist ihr Zweck. Was fehlte, war die Übersicht darüber.
 daraus die nächstliegende seiner drei Größen (4:3 → 3:2, spürbar breiter — das
 steht als Hinweis am Feld).
 
-**Nano Banana Pro gibt es nicht.** Am 02.09.2026 gemessen: Sechs Namen
-durchprobiert (`gemini-3-pro-image`, `nano-banana-pro`, `imagen-4.0-…` und
-weitere), alle kommen mit „unknown provider for model" zurück. Der Proxy führt
-nur, was in seinem Katalog steht — und dort ist `gemini-3.1-flash-image` das
-einzige Bildmodell von Google. Das IST die Nano-Banana-Reihe, aber die
-Flash-Fassung, nicht Pro.
+**Nano Banana Pro: der erste Befund war zu grob.** „Unknown provider for model"
+liest sich wie „gibt es nicht" — es heißt aber „kein angemeldeter ANBIETER
+führt es".
+
+Genauer gemessen, in der Anwendung selbst: `gemini-3-pro-image` steht 4×,
+`gemini-2.5-flash-image` 5× im Katalog des Proxys, mitsamt vollständiger
+Modellbeschreibung (`owned_by: google`, `type: gemini`). Der Proxy meldet
+36 Modelle aus drei Anbietern — anthropic 15, **antigravity 11**, openai 10.
+Keiner vom Typ `gemini`, weil `gemini-api-key` in `config.yaml` auskommentiert
+ist. Marks antigravity-Anmeldung führt nur `gemini-3.1-flash-image`.
+
+**Es fehlt also ein Schlüssel, kein Modell.** Beide sind jetzt in der Auswahl,
+mit dem Hinweis dazu; ohne Schlüssel scheitert der Auftrag mit einer Meldung,
+die sagt, was zu tun ist (an der echten Gegenstelle geprüft).
+
+`gemini-3.1-pro-image` steht dagegen **gar nicht** in der Anwendung — diese
+Fassung (v0.2.63) kennt nur `gemini-3-pro-image` und
+`gemini-3-pro-image-preview`. Es käme mit einer neueren EasyCLIProxyAPI.
 
 ## Offen
 

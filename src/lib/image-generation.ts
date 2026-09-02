@@ -21,9 +21,33 @@ export const MODELLE = [
     kannReferenzen: true,
   },
   {
+    // = „Nano Banana Pro". Laut Marks Angabe das beste der Reihe:
+    // Studioqualität, präzise Schrift, 4K. Der Proxy KENNT das Modell (es steht
+    // in seinem Katalog), gibt es aber nur über einen Gemini-API-Schlüssel
+    // frei — Marks antigravity-Anmeldung führt es nicht. Ohne Schlüssel
+    // scheitert der Auftrag mit „unknown provider for model".
+    // Gemessen am 02.09.2026: 36 Modelle aus drei Anbietern (anthropic 15,
+    // antigravity 11, openai 10) — kein Anbieter vom Typ `gemini`.
+    id: 'gemini-3-pro-image',
+    label: 'Nano Banana Pro (Gemini 3 Pro Image)',
+    note: 'Beste Qualität — braucht einen Gemini-Schlüssel im Proxy',
+    kannReferenzen: false,
+  },
+  {
+    // Das kleinste und schnellste der Reihe (~8 s). Ebenfalls nur mit
+    // Gemini-Schlüssel. UNGEPRÜFT: ob es `imageSize` (1K/2K/4K) überhaupt
+    // annimmt — die Pro-Reihe tut es, bei 2.5 Flash konnte ich es ohne
+    // Schlüssel nicht messen. Sollte es ablehnen, steht der Grund als
+    // Fehlertext in der Warteschlange.
+    id: 'gemini-2.5-flash-image',
+    label: 'Nano Banana (Gemini 2.5 Flash Image)',
+    note: 'Schnell und einfach — braucht einen Gemini-Schlüssel im Proxy',
+    kannReferenzen: false,
+  },
+  {
     id: 'gemini-3.1-flash-image',
     label: 'Gemini 3.1 Flash Image',
-    note: 'Alle sieben Formate, bis 4K — ohne Referenzbilder',
+    note: 'Alle sieben Formate, bis 4K — läuft ohne Zusatzschlüssel',
     // Der nativen Gemini-Anbindung werden nur Prompt und Format übergeben.
     // Referenzbilder gingen dort lautlos verloren, während der Prompt weiter
     // „Image 1 = CHARACTER …" diktiert — das Ergebnis wäre eine erfundene

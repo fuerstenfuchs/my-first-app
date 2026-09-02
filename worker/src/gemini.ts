@@ -208,6 +208,18 @@ async function geminiRuf(
     throw uebersetzeFehler(e as Error, signal, frist, 'Gemini', ohneGeheimnis)
   }
   if (!antwort.ok) {
+    // Der häufigste Fall bei den Pro-Modellen: Der Proxy kennt das Modell,
+    // aber kein angemeldeter Anbieter führt es. Die rohe Meldung sagt nur
+    // „unknown provider for model" — das hilft niemandem beim Beheben.
+    if (roh.includes('unknown provider for model')) {
+      throw new Error(
+        `Das Modell "${modell}" ist über den Proxy nicht erreichbar. ` +
+        'Es steht in seinem Katalog, wird aber nur über einen Gemini-API-Schlüssel ' +
+        'freigegeben: in cpa-core/config.yaml unter `gemini-api-key` eintragen ' +
+        '(Schlüssel von aistudio.google.com), dann den Proxy neu starten. ' +
+        'Ohne Schlüssel funktioniert gemini-3.1-flash-image.',
+      )
+    }
     throw new Error(ohneGeheimnis(`Gemini → HTTP ${antwort.status}: ${roh.slice(0, 400)}`))
   }
 
