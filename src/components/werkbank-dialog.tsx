@@ -155,21 +155,45 @@ export function WerkbankDialog({
   useEffect(() => {
     const el = buehneRef.current
     if (!el || !offen) return
-    const messen = () => setBuehne({ b: el.clientWidth, h: el.clientHeight })
+    const messen = () => {
+      const b = el.clientWidth, h = el.clientHeight
+      // NUR bei echter Aenderung neu setzen. Ein frisches Objekt mit denselben
+      // Zahlen ist fuer React eine Aenderung: Es zeichnet neu, das Neuzeichnen
+      // laesst den Beobachter erneut feuern, und der Browser steht.
+      // Am 02.09.2026 genau so passiert — der Renderer war eingefroren.
+      setBuehne(v => (v && v.b === b && v.h === h) ? v : { b, h })
+    }
     messen()
     const ro = new ResizeObserver(messen)
     ro.observe(el)
     return () => ro.disconnect()
   }, [offen, laedt, fehler])
 
+  /**
+   * Die eingepasste Groesse — gemessen NUR ohne Zoom.
+   *
+   * WARUM NICHT LAUFEND: Sobald hineingezoomt ist, steht das Canvas ueber die
+   * Buehne hinaus und es erscheinen Rollbalken. Die nehmen Platz weg,
+   * `clientWidth` schrumpft, das eingepasste Mass wuerde kleiner, das Canvas
+   * auch — und der Rollbalken verschwaende wieder. Ein Flackern, das nie zur
+   * Ruhe kommt. Die Grundgroesse wird deshalb bei 1 festgehalten und danach
+   * nur noch multipliziert.
+   */
+  const basisRef = useRef<{ b: number; h: number } | null>(null)
   const anzeige = useMemo(() => {
-    if (!masse || !buehne || buehne.b < 2 || buehne.h < 2) return null
-    // Einpassen, aber ein kleines Bild nicht kuenstlich aufblasen.
-    const passt = Math.min(1, Math.min(buehne.b / masse.b, buehne.h / masse.h))
-    return {
-      b: Math.max(1, Math.round(masse.b * passt * zoom)),
-      h: Math.max(1, Math.round(masse.h * passt * zoom)),
+    if (!masse) return null
+    if (zoom === 1) {
+      if (!buehne || buehne.b < 2 || buehne.h < 2) return null
+      // Einpassen, aber ein kleines Bild nicht kuenstlich aufblasen.
+      const passt = Math.min(1, Math.min(buehne.b / masse.b, buehne.h / masse.h))
+      basisRef.current = {
+        b: Math.max(1, Math.round(masse.b * passt)),
+        h: Math.max(1, Math.round(masse.h * passt)),
+      }
     }
+    const basis = basisRef.current
+    if (!basis) return null
+    return { b: Math.round(basis.b * zoom), h: Math.round(basis.h * zoom) }
   }, [masse, buehne, zoom])
 
   // ── Vorschau zeichnen ────────────────────────────────────────────────────
