@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download, ExternalLink, Maximize2,
+  Loader2, RotateCw, Trash2, Clock, ImageOff, ChevronDown, ChevronRight, Download,
+  ExternalLink, Maximize2, FolderInput,
 } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ImageLightbox } from '@/components/image-lightbox'
+import { BildUebernehmenDialog } from '@/components/bild-uebernehmen-dialog'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
@@ -96,6 +98,8 @@ export default function QueuePage() {
   const [loeschKandidat, setLoeschKandidat] = useState<ImageJob | null>(null)
   /** Gescheiterter KI-Auftrag, der noch einmal laufen soll — kostet erneut. */
   const [neuKandidat, setNeuKandidat] = useState<ImageJob | null>(null)
+  /** Das Bild, das gerade in einen Baustein übernommen werden soll. */
+  const [uebernahme, setUebernahme] = useState<string | null>(null)
   const [lightbox, setLightbox] = useState<{ urls: string[]; start: number } | null>(null)
 
   function umschalten(id: string) {
@@ -352,6 +356,15 @@ export default function QueuePage() {
                             <Button
                               size="icon"
                               className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
+                              title="In einen Baustein übernehmen"
+                              aria-label={`Ergebnis ${i + 1} in einen Baustein übernehmen`}
+                              onClick={() => setUebernahme(url)}
+                            >
+                              <FolderInput className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              className="h-7 w-7 bg-background/80 text-foreground backdrop-blur hover:bg-background"
                               title="Bild herunterladen"
                               aria-label={`Ergebnis ${i + 1} herunterladen`}
                               disabled={laedtHerunter === url}
@@ -431,6 +444,12 @@ export default function QueuePage() {
           </div>
         )}
       </div>
+
+      <BildUebernehmenDialog
+        offen={!!uebernahme}
+        bildUrl={uebernahme}
+        onClose={() => setUebernahme(null)}
+      />
 
       <AlertDialog open={!!neuKandidat} onOpenChange={o => !o && setNeuKandidat(null)}>
         <AlertDialogContent>
