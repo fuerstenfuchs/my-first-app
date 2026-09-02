@@ -143,7 +143,14 @@ export function FreieErzeugung(
       // hängt. Deshalb kommt die Breite per Stil und nicht als Klasse — eine
       // Tailwind-Klasse mit einer Zahl aus dem Zustand gäbe es nicht.
       style={breite ? ({ ['--panel-breite' as string]: `${breite}px` }) : undefined}
-      className="flex w-full shrink-0 flex-col gap-2.5 border-b border-border/50 bg-muted/10 p-3 lg:w-[var(--panel-breite,260px)] lg:border-b-0"
+      /*
+        `overflow-y-auto min-h-0`: Seit das Prompt-Feld eine feste Hoehe hat
+        statt `flex-1`, faengt nichts mehr eine Stauchung ab — bei niedrigem
+        Fenster oder quer gehaltenem Handy rutschte „Erzeugen lassen" unter
+        den Rand und war nicht mehr erreichbar. Jetzt rollt die Spalte.
+        Genau das wollte Mark: „Dann scrolle ich lieber da ein bisschen."
+      */
+      className="flex min-h-0 w-full shrink-0 flex-col gap-2.5 overflow-y-auto border-b border-border/50 bg-muted/10 p-3 lg:w-[var(--panel-breite,260px)] lg:border-b-0"
     >
       <div className="flex items-center gap-1.5">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -166,7 +173,7 @@ export function FreieErzeugung(
           Jetzt eine feste Hoehe, in der gerollt wird; `resize-y` bleibt, wer
           mehr sehen will, zieht es groesser.
         */
-        className="h-[min(34vh,20rem)] shrink-0 resize-y overflow-y-auto text-xs leading-relaxed"
+        className="h-[min(34dvh,20rem)] shrink-0 resize-y overflow-y-auto text-xs leading-relaxed"
       />
 
       <Select value={modell} onValueChange={v => setModell(v as ModellId)}>

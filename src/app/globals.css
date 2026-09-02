@@ -97,3 +97,23 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/*
+  Die Werkbank-Buehne: das vergroesserte Bild rollen lassen statt abschneiden.
+
+  `react-image-crop` bringt zwei Regeln mit, die zusammen jeden Zoom aushebeln:
+    .ReactCrop               { max-width: 100% }
+    .ReactCrop__child-wrapper{ overflow: hidden }
+
+  Der Rahmen kann damit nie breiter werden als die Buehne, und alles, was
+  darueber hinausgeht, wird WEGGESCHNITTEN — es entsteht kein Ueberlauf, also
+  auch kein Rollbalken. Am 02.09.2026 im Browser nachgemessen: Canvas 974
+  Punkte breit, der Wrapper darum 958. Waagerecht war der Zoom damit wirkungslos
+  und die rechte Bildhaelfte unerreichbar.
+
+  Diese beiden Regeln gelten nur fuer unsere eigene Instanz. Der Zuschnitt
+  laeuft ohnehin ohne Zoom, dort schneidet also nichts mehr ab, was vorher
+  geschnitten haette.
+*/
+.werkbank-buehne { max-width: none; max-height: none; }
+.werkbank-buehne .ReactCrop__child-wrapper { overflow: visible; max-height: none; }

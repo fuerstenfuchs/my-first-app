@@ -452,12 +452,28 @@ export class BildWerk {
     if (!ctx) throw new Error('BildWerk: 2D-Kontext fuer den Export nicht verfuegbar.')
     ctx.putImageData(new ImageData(new Uint8ClampedArray(roh.buffer), b, h), 0, 0)
 
-    return await new Promise<Blob>((loesen, ablehnen) => {
+    const blob = await new Promise<Blob>((loesen, ablehnen) => {
       flaeche.toBlob((blob) => {
         if (blob) loesen(blob)
         else ablehnen(new Error('BildWerk: Der Export liess sich nicht als PNG kodieren.'))
       }, 'image/png')
     })
+
+    // Und jetzt WIRKLICH freigeben. Der Kommentar oben behauptete das schon,
+    // der Rumpf tat es nicht. Bei einem 21-Megapixel-Bild blieben so rund
+    // 340 MB Grafikspeicher stehen, wenn der Upload scheitert und der Dialog
+    // offen bleibt — ohne Reglerbewegung zeichnet nichts neu, also raeumt auch
+    // nichts auf. Derselbe Fehlertyp wie beim Lichter-Regler: ein Kommentar,
+    // der dem Code widerspricht.
+    for (const z of [this.zielFarbe, this.zielBlurA, this.zielBlurB, this.zielAusgabe]) {
+      if (!z) continue
+      gl.deleteFramebuffer(z.fb)
+      gl.deleteTexture(z.tex)
+    }
+    this.zielFarbe = null; this.zielBlurA = null; this.zielBlurB = null
+    this.zielAusgabe = null
+    this.zielBreite = 0; this.zielHoehe = 0
+    return blob
   }
 
   /** Texturen und Kontext freigeben. */
