@@ -13,6 +13,7 @@ import { WerkbankDialog } from '@/components/werkbank-dialog'
 import { ZiehTrenner, gemerkteBreite } from '@/components/zieh-trenner'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
+import { useBildLoeschen } from '@/hooks/use-bild-loeschen'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { VERFAHREN_NAME } from '@/lib/upscaling'
 import { cn } from '@/lib/utils'
@@ -72,6 +73,7 @@ function beschriftung(job: ImageJob): string {
 export default function BildstudioPage() {
   const { jobs, loading, ladefehler, laden, vergroessern } = useImageJobs()
   const { abgelegteLaden } = useBildUebernehmen()
+  const { loeschen } = useBildLoeschen()
   const arbeiter = useWorkerStatus()
 
   const [filter, setFilter] = useState<Filter>('alle')
@@ -241,6 +243,7 @@ export default function BildstudioPage() {
                   onAnsehen={() => setLightbox({ urls, start: i })}
                   onUebernehmen={url => setUebernahme({ url, pfad: b.pfad })}
                   onBearbeiten={(url, pfad) => setWerkbank({ job: b.job, url, pfad })}
+                  onLoeschen={async pfad => { if (await loeschen(b.job, pfad)) laden() }}
                   onVergroessern={(pfad, stufe, verfahren) =>
                     void vergroessern(b.job, pfad, stufe, verfahren)}
                 />

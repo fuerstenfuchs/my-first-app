@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Loader2, Maximize2, FolderInput, Check, Wand2 } from 'lucide-react'
+import { Download, Loader2, Maximize2, FolderInput, Check, Wand2, Trash2 } from 'lucide-react'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
@@ -33,6 +37,15 @@ export type KachelAktionen = {
   onUebernehmen: (url: string) => void
   /** Zuschneiden und Regler — fehlt sie, wird der Knopf nicht gezeigt. */
   onBearbeiten?: (url: string, pfad: string) => void
+  /**
+   * Bild loeschen — fehlt sie, wird der Knopf nicht gezeigt.
+   *
+   * Die Warteschlange bekommt ihn bewusst NICHT: Dort geht es um den Fortgang
+   * eines Auftrags, nicht ums Aufraeumen, und ein Loeschknopf neben einem
+   * laufenden Auftrag laedt zum Verwechseln ein. Mark hat ihn fuer den
+   * Lichttisch verlangt, dort steht er.
+   */
+  onLoeschen?: (pfad: string) => Promise<void> | void
   /** Groß ansehen. */
   onAnsehen: () => void
 }
@@ -64,9 +77,11 @@ function zielMasse(job: ImageJob, faktor: number): string {
 
 export function ErgebnisKachel({
   job, url, pfad, index, gesamt, abgelegt,
-  onVergroessern, onUebernehmen, onAnsehen, onBearbeiten,
+  onVergroessern, onUebernehmen, onAnsehen, onBearbeiten, onLoeschen,
 }: Props) {
   const [laedt, setLaedt] = useState(false)
+  const [fragt, setFragt] = useState(false)
+  const [loescht, setLoescht] = useState(false)
 
   async function herunterladen() {
     setLaedt(true)
@@ -189,7 +204,56 @@ export function ErgebnisKachel({
         >
           {laedt ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
         </Button>
+
+        {onLoeschen && (
+          <Button
+            size="icon"
+            className="h-7 w-7 bg-background/80 text-destructive backdrop-blur hover:bg-destructive hover:text-destructive-foreground"
+            title="Bild löschen"
+            aria-label={`Ergebnis ${index + 1} löschen`}
+            disabled={loescht}
+            onClick={() => setFragt(true)}
+          >
+            {loescht ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+          </Button>
+        )}
       </div>
+
+      {/*
+        Rueckfrage, weil sich Loeschen nicht zuruecknehmen laesst. Der Text sagt
+        ausdruecklich, was NICHT mitgeht — sonst traut sich niemand, der ein
+        Bild schon in einen Baustein uebernommen hat.
+      */}
+      <AlertDialog open={fragt} onOpenChange={setFragt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dieses Bild löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Datei wird endgültig entfernt — das lässt sich nicht rückgängig machen.
+              {abgelegt
+                ? ' Die Kopie im Baustein bleibt davon unberührt, sie wurde beim Übernehmen kopiert.'
+                : ' Bereits in Bausteine übernommene Kopien bleiben unberührt.'}
+              {gesamt > 1 && ` Die anderen ${gesamt - 1} Bilder des Auftrags bleiben stehen.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loescht}>Behalten</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={loescht}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async e => {
+                // Der Dialog schliesst sich sonst sofort und die Kachel
+                // verschwaende, bevor klar ist, ob es geklappt hat.
+                e.preventDefault()
+                setLoescht(true)
+                try { await onLoeschen?.(pfad) } finally { setLoescht(false); setFragt(false) }
+              }}
+            >
+              {loescht ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Löschen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

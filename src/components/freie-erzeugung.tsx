@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Loader2, Send, Save, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,11 @@ import {
 import { createClient } from '@/lib/supabase'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, DURCHLAEUFE, KLASSEN, groesseFuerFormat, formatHinweis, rechnetInKlassen,
+  MODELLE, MODELLE_MIT_REFERENZ, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
+  formatHinweis, formatAnsage, rechnetInKlassen,
   type ModellId, type Durchlaeufe, type KlassenId,
 } from '@/lib/image-generation'
+import { ReferenzAblage, type Referenzbild } from '@/components/referenz-ablage'
 import { ASPECT_RATIOS, type AspectRatioKey } from '@/lib/scene-builder-options'
 
 /**
@@ -47,6 +49,30 @@ export function FreieErzeugung(
   const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [anzahl, setAnzahl] = useState<Durchlaeufe>(1)
   const [laeuft, setLaeuft] = useState(false)
+  const [referenzen, setReferenzen] = useState<Referenzbild[]>([])
+
+  const mitReferenz = referenzen.length > 0
+
+  /**
+   * Sobald Referenzbilder liegen, stehen nur noch Modelle zur Wahl, die sie
+   * auch verarbeiten.
+   *
+   * Das ist keine Bequemlichkeit, sondern der Schutz vor einem stillen
+   * Fehlschlag: Der nativen Gemini-Anbindung werden nur Prompt und Format
+   * übergeben, Referenzbilder gingen dort verloren. Der Arbeiter bricht solche
+   * Aufträge deshalb ausdrücklich ab — die Sperre hier verhindert, dass Mark
+   * erst nach dem Warten in der Warteschlange davon erfährt.
+   */
+  const auswahl = useMemo(
+    () => (mitReferenz ? MODELLE_MIT_REFERENZ : MODELLE),
+    [mitReferenz],
+  )
+
+  // Wer erst Gemini wählt und dann ein Referenzbild dazulegt, hätte sonst ein
+  // Modell eingestellt, das gar nicht mehr im Menü steht.
+  useEffect(() => {
+    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2')
+  }, [auswahl, modell])
 
   const [titel, setTitel] = useState('')
   const [speichert, setSpeichert] = useState(false)
@@ -71,7 +97,13 @@ export function FreieErzeugung(
     setLaeuft(true)
     try {
       const job = await anlegen({
-        prompt: text,
+        // Mit Referenzbild ignoriert gpt-image-2 den Größenparameter — das
+        // Ergebnis richtet sich dann nach der Vorlage. Die einzige Handhabe ist
+        // eine Ansage im Prompt; ohne Referenz wäre sie überflüssig, weil dann
+        // `size` wirkt.
+        prompt: mitReferenz
+          ? [text, formatAnsage(format)].filter(Boolean).join('\n\n')
+          : text,
         model: modell,
         // Bei Gemini ist `size` bedeutungslos — die Spalte ist aber Pflicht.
         // Der native Weg nimmt Seitenverhältnis und Klasse, siehe `ziel_klasse`.
@@ -79,9 +111,14 @@ export function FreieErzeugung(
         aspect_ratio: format,
         variants: anzahl,
         ziel_klasse: inKlassen ? klasse : null,
+        reference_urls: referenzen.map(r => r.url),
         scene_meta: { name: titelVorschlag(text) || 'Freier Prompt', herkunft: 'bildstudio' },
       })
       if (job) {
+        // Die Ablage leeren: Der nächste Einfall ist selten derselbe mit
+        // denselben Vorlagen — und eine liegengebliebene Referenz, die keiner
+        // mehr bemerkt, wäre der teurere Fehler.
+        setReferenzen([])
         toast.success(
           anzahl > 1 ? `${anzahl} Bilder eingereiht` : 'Bild eingereiht',
           { description: 'Der Arbeiter holt es ab — Du musst nicht warten.' },
@@ -176,17 +213,27 @@ export function FreieErzeugung(
         className="h-[min(34dvh,20rem)] shrink-0 resize-y overflow-y-auto text-xs leading-relaxed"
       />
 
+      <ReferenzAblage bilder={referenzen} onChange={setReferenzen} className="shrink-0" />
+
       <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
         <SelectTrigger className="h-8 text-xs" aria-label="Modell"><SelectValue /></SelectTrigger>
         <SelectContent>
-          {MODELLE.map(m => (
-            <SelectItem key={m.id} value={m.id} className="text-xs">
-              <span className="flex flex-col items-start">
-                <span>{m.label}</span>
-                <span className="text-[10px] text-muted-foreground">{m.note}</span>
-              </span>
-            </SelectItem>
-          ))}
+          {MODELLE.map(m => {
+            // Gesperrt, aber sichtbar: Ein Modell, das aus der Liste
+            // verschwindet, wirkt wie ein Fehler. Eines, das dasteht und den
+            // Grund nennt, erklärt sich selbst.
+            const gesperrt = mitReferenz && !m.kannReferenzen
+            return (
+              <SelectItem key={m.id} value={m.id} disabled={gesperrt} className="text-xs">
+                <span className="flex flex-col items-start">
+                  <span>{m.label}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {gesperrt ? 'Kann keine Referenzbilder verarbeiten' : m.note}
+                  </span>
+                </span>
+              </SelectItem>
+            )
+          })}
         </SelectContent>
       </Select>
 
@@ -242,13 +289,26 @@ export function FreieErzeugung(
           drei Größen und macht aus 16:9 ein 3:2 — das gehört vor den Klick. */}
       {/* Erst das Format, dann die Genauigkeit. „Format: auf ~1 % genau" allein
           beantwortet die Frage „was kommt heraus?" nicht. */}
+      {/* Mit Referenz stimmt die Größenangabe nicht mehr: Der Parameter wirkt
+          dann nicht, das Modell richtet sich nach der Vorlage. Am 01.09.2026
+          gemessen — 1024x1024 angefragt, 1122x1402 zurückbekommen. Eine Zahl,
+          die nicht eintrifft, ist schlechter als keine. */}
       <p className="text-[10px] leading-snug text-muted-foreground">
-        Ergebnis: <span className="text-foreground">
-          {inKlassen ? `${formatLabel} · ${hinweis}` : hinweis}
-        </span>
-        {inKlassen
-          ? ' — Gemini kennt alle sieben Verhältnisse.'
-          : ' — gpt-image-2 kennt nur drei Größen.'}
+        {mitReferenz ? (
+          <>
+            Ergebnis: <span className="text-foreground">richtet sich nach dem Referenzbild</span>
+            {' '}— das gewünschte Format geht als Ansage im Prompt mit.
+          </>
+        ) : (
+          <>
+            Ergebnis: <span className="text-foreground">
+              {inKlassen ? `${formatLabel} · ${hinweis}` : hinweis}
+            </span>
+            {inKlassen
+              ? ' — Gemini kennt alle sieben Verhältnisse.'
+              : ' — gpt-image-2 kennt nur drei Größen.'}
+          </>
+        )}
       </p>
 
       <Button size="sm" onClick={() => void erzeugen()} disabled={!prompt.trim() || laeuft}>
