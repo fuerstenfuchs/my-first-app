@@ -1,15 +1,24 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { Download, Loader2, Settings, Smartphone, Sparkles, Upload } from 'lucide-react'
+import { CheckCircle2, Download, Loader2, PlugZap, Settings, Smartphone, Sparkles, Upload, XCircle } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { usePrompts } from '@/hooks/use-prompts'
 import { usePwaInstall } from '@/components/pwa-install-banner'
 import { createClient } from '@/lib/supabase'
+import {
+  PROXY_MODELLE, PROXY_VORGABE_MODELL, PROXY_VORGABE_URL,
+  proxyEinstellungenLesen, proxyEinstellungenSchreiben, proxyPruefen,
+} from '@/lib/proxy-analyse'
 
 interface ExportPrompt {
   title: string
@@ -47,6 +56,45 @@ export default function EinstellungenPage() {
   }, [])
 
   useEffect(() => { loadIndexedCount() }, [loadIndexedCount])
+
+  // ——— Eigener Proxy ———
+  // Die Werte kommen aus localStorage, also erst NACH dem ersten Rendern:
+  // Auf dem Server gibt es kein localStorage, und wer hier direkt mit dem
+  // gespeicherten Wert startete, bekaeme eine Hydrations-Warnung geschenkt.
+  const [proxyUrl, setProxyUrl] = useState(PROXY_VORGABE_URL)
+  const [proxyToken, setProxyToken] = useState('')
+  const [proxyModell, setProxyModell] = useState<string>(PROXY_VORGABE_MODELL)
+  const [proxyPruefend, setProxyPruefend] = useState(false)
+  const [proxyBefund, setProxyBefund] = useState<{ ok: boolean; text: string } | null>(null)
+
+  useEffect(() => {
+    const e = proxyEinstellungenLesen()
+    setProxyUrl(e.url)
+    setProxyToken(e.token)
+    setProxyModell(e.modell)
+  }, [])
+
+  /** Sofort speichern statt „Sichern"-Knopf — und melden, wenn der Speicher zumacht. */
+  function proxyMerken(teil: { url?: string; token?: string; modell?: string }) {
+    if (!proxyEinstellungenSchreiben(teil)) {
+      toast.error('Einstellung konnte nicht gespeichert werden — im privaten Fenster ist der lokale Speicher gesperrt.')
+    }
+    setProxyBefund(null)
+  }
+
+  async function handleProxyPruefen() {
+    setProxyPruefend(true)
+    setProxyBefund(null)
+    const ergebnis = await proxyPruefen({ url: proxyUrl, token: proxyToken, modell: proxyModell })
+    setProxyPruefend(false)
+    if (ergebnis.ok) {
+      setProxyBefund({ ok: true, text: `${ergebnis.anzahl} Modelle erreichbar` })
+      toast.success(`Proxy erreichbar — ${ergebnis.anzahl} Modelle`)
+    } else {
+      setProxyBefund({ ok: false, text: ergebnis.fehler })
+      toast.error(ergebnis.fehler)
+    }
+  }
 
   async function handleIndexAll() {
     const supabase = createClient()
@@ -304,6 +352,95 @@ export default function EinstellungenPage() {
 
               <p className="text-xs text-muted-foreground">
                 Neue und bearbeitete Prompts werden automatisch indiziert. Nutze diesen Button einmalig für bestehende Prompts.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <PlugZap className="h-4 w-4 text-amber-500" />
+                Eigener Proxy
+              </CardTitle>
+              <CardDescription>
+                Bildanalysen laufen dann über deine eigene CLIProxyAPI statt über die kostenpflichtigen
+                Dienste — mit den Modellen aus deinen vorhandenen Abos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="space-y-1.5">
+                <Label htmlFor="proxy-url">Adresse</Label>
+                <Input
+                  id="proxy-url"
+                  value={proxyUrl}
+                  placeholder={PROXY_VORGABE_URL}
+                  onChange={e => { setProxyUrl(e.target.value); proxyMerken({ url: e.target.value }) }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="proxy-token">Zugangsschlüssel</Label>
+                <Input
+                  id="proxy-token"
+                  type="password"
+                  value={proxyToken}
+                  autoComplete="off"
+                  placeholder="wird nur auf diesem Gerät gespeichert"
+                  onChange={e => { setProxyToken(e.target.value); proxyMerken({ token: e.target.value }) }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="proxy-modell">Modell</Label>
+                <Select
+                  value={proxyModell}
+                  onValueChange={v => { setProxyModell(v); proxyMerken({ modell: v }) }}
+                >
+                  <SelectTrigger id="proxy-modell">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROXY_MODELLE.map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <span className="font-medium">{m.id}</span>
+                        <span className="text-muted-foreground"> — {m.beschreibung}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled={proxyPruefend}
+                  onClick={handleProxyPruefen}
+                >
+                  {proxyPruefend
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Prüfe…</>
+                    : <><PlugZap className="h-4 w-4" />Verbindung prüfen</>}
+                </Button>
+                {proxyBefund && (
+                  <span className={`flex items-center gap-1.5 text-sm ${proxyBefund.ok ? 'text-green-600 dark:text-green-500' : 'text-destructive'}`}>
+                    {proxyBefund.ok
+                      ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      : <XCircle className="h-4 w-4 shrink-0" />}
+                    {proxyBefund.text}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Diese Einstellung gilt <strong>nur an diesem Rechner</strong> und wandert nicht mit deinem
+                Konto mit. Der Grund: Der Proxy läuft auf <code>127.0.0.1</code>, also auf dem Gerät, vor
+                dem du gerade sitzt. Der Aufruf geht deshalb direkt aus dem Browser dorthin — der Server
+                der App steht bei Vercel und käme an deinen PC gar nicht heran. Auf dem Handy gibt es
+                keinen Proxy; dort laufen die Analysen weiter über den bezahlten Dienst. Ist der Proxy
+                einmal aus, fällt die App automatisch darauf zurück und sagt es dir.
               </p>
             </CardContent>
           </Card>

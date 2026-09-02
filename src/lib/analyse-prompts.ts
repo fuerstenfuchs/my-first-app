@@ -332,8 +332,12 @@ export const ANALYSE_ANGABEN: Record<AnalyseArt, {
   pose:           { nutzerText: 'Analyze this pose/action and return the JSON.', maxWorte: 512,  ausgabe: 'json' },
   kamera:         { nutzerText: 'Analyze this image and return the JSON.',       maxWorte: 512,  ausgabe: 'json' },
   licht:          { nutzerText: 'Analyze this image and return the JSON.',       maxWorte: 512,  ausgabe: 'json' },
-  bild:           { nutzerText: 'Analyze this image.',                           maxWorte: 1500, ausgabe: 'text' },
-  bildPlatzhalter:{ nutzerText: 'Analyze this image.',                           maxWorte: 1500, ausgabe: 'text' },
+  // WORTGETREU aus der Route uebernommen, nicht sinngemaess: Sie schickt
+  // „Generate a prompt for this image." Ich hatte hier zuerst „Analyze this
+  // image." stehen — sinngleich, aber eben nicht dasselbe. Genau die Drift,
+  // gegen die dieses Modul angelegt wurde, und sie waere von mir gekommen.
+  bild:           { nutzerText: 'Generate a prompt for this image.',            maxWorte: 1500, ausgabe: 'text' },
+  bildPlatzhalter:{ nutzerText: 'Generate a prompt for this image.',            maxWorte: 1500, ausgabe: 'text' },
 }
 
 /**

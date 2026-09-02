@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { QuickImageDrop } from './quick-image-drop'
 import { usePromptMedia, IMAGE_TYPES, IMAGE_MAX } from '@/hooks/use-prompt-media'
+import { analysiere } from '@/hooks/use-analyse'
 import type { Prompt } from '@/hooks/use-prompts'
 
 export interface SharePayload {
@@ -193,13 +194,15 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
         return
       }
 
-      const res = await fetch('/api/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...body, model: selectedModel, personPlaceholder }),
-      })
-      if (!res.ok) throw new Error('failed')
-      const { prompt } = await res.json() as { prompt: string }
+      // Erst der eigene Proxy, sonst die Route — die Entscheidung steckt in
+      // `analysiere`, nicht hier. `model` bleibt im Rumpf, weil es die
+      // Modellwahl der ROUTE ist; der Proxy hat seine eigene in den
+      // Einstellungen.
+      const { ergebnis: prompt } = await analysiere<string>(
+        personPlaceholder ? 'bildPlatzhalter' : 'bild',
+        body,
+        { route: '/api/analyze-image', zusatz: { model: selectedModel, personPlaceholder } },
+      )
       setContent(prompt)
       if (!title.trim()) setTitle(prompt.trim().slice(0, 55).trimEnd())
       setIsDirty(true)

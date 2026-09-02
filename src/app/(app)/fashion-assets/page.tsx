@@ -28,6 +28,7 @@ import {
   type FashionAssetInput, type FashionAssetVariantInput, type FashionCategory,
 } from '@/hooks/use-fashion-assets'
 import { cn } from '@/lib/utils'
+import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 
 // ── Gallery card ─────────────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ export default function FashionAssetsPage() {
     setAiAnalyzing(true)
     setAiSuggestion(null)
     try {
-      let body: Record<string, string>
+      let body: AnalyseBild
       try {
         const imgRes = await fetch(asset.cover_image_url)
         if (!imgRes.ok) throw new Error('fetch failed')
@@ -208,16 +209,14 @@ export default function FashionAssetsPage() {
         body = { imageUrl: asset.cover_image_url }
       }
 
-      const res = await fetch('/api/analyze-fashion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(data.error ?? `HTTP ${res.status}`)
-      }
-      const result = await res.json() as { name?: string; category?: string; tags?: string[]; description?: string }
+      // Erst Marks eigener Proxy, sonst die bezahlte Route. Welcher Weg es
+      // wurde, sagt `analysiere` selbst per Hinweis — hier gibt es dadurch
+      // nichts mehr zu entscheiden.
+      const { ergebnis: result } = await analysiere<{ name?: string; category?: string; tags?: string[]; description?: string }>(
+        'fashion',
+        body,
+        { route: '/api/analyze-fashion' },
+      )
       const validCategories = FASHION_CATEGORIES.map(c => c.key)
       setAiSuggestion({
         name:        result.name        ?? asset.name,

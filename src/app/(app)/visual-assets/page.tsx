@@ -19,6 +19,7 @@ import {
   type VisualAsset, type VisualAssetInput, type AssetType, type VisualCategory,
 } from '@/hooks/use-visual-assets'
 import { cn } from '@/lib/utils'
+import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ export default function VisualAssetsPage() {
     setAiSuggestion(null)
     setAiError(null)
     try {
-      let body: Record<string, string>
+      let body: AnalyseBild
       try {
         const imgRes = await fetch(selectedAsset.cover_image_url)
         if (!imgRes.ok) throw new Error('fetch failed')
@@ -160,20 +161,18 @@ export default function VisualAssetsPage() {
           reader.onerror = reject
           reader.readAsDataURL(blob)
         })
-        body = { assetType: selectedAsset.asset_type, imageBase64, mediaType }
+        body = { imageBase64, mediaType }
       } catch {
-        body = { assetType: selectedAsset.asset_type, imageUrl: selectedAsset.cover_image_url }
+        body = { imageUrl: selectedAsset.cover_image_url }
       }
-      const res = await fetch('/api/analyze-visual-asset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string }
-        throw new Error(data.error ?? `HTTP ${res.status}`)
-      }
-      const result = await res.json() as { name?: string; category?: string; tags?: string[]; description?: string }
+      // Erst Marks eigener Proxy, sonst die bezahlte Route. `assetType`
+      // entscheidet dabei ueber den Prompt — dieselbe Weiche, die die Route
+      // intern schon immer hatte, hier nur sichtbar gemacht.
+      const { ergebnis: result } = await analysiere<{ name?: string; category?: string; tags?: string[]; description?: string }>(
+        selectedAsset.asset_type === 'lighting' ? 'licht' : 'kamera',
+        body,
+        { route: '/api/analyze-visual-asset', zusatz: { assetType: selectedAsset.asset_type } },
+      )
       const validCats = currentCategories.map(c => c.key) as string[]
       setAiSuggestion({
         name:        result.name        ?? selectedAsset.name,

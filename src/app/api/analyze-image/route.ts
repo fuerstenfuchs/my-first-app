@@ -4,7 +4,7 @@ import OpenAI from 'openai'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+import { ANALYSE_PROMPT, ANALYSE_ANGABEN } from '@/lib/analyse-prompts'
 
 // Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
 // Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
                   data: imageData,
                 },
               },
-              { type: 'text', text: 'Generate a prompt for this image.' },
+              { type: 'text', text: ANALYSE_ANGABEN.bild.nutzerText },
             ],
           },
         ],
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
                 type: 'image_url',
                 image_url: { url: `data:${imageMime};base64,${imageData}` },
               },
-              { type: 'text', text: 'Generate a prompt for this image.' },
+              { type: 'text', text: ANALYSE_ANGABEN.bild.nutzerText },
             ],
           },
         ],
