@@ -74,6 +74,6 @@
 | PROJ-44 | Einstellungsreihe (Kontinuitaet ueber mehrere Einstellungen) | Planned | [PROJ-44](PROJ-44-einstellungsreihe.md) | 2026-09-03 |
 | PROJ-45 | Lichttisch als Auswahlwerkzeug (Bilder gegeneinander halten) | Planned | [PROJ-45](PROJ-45-lichttisch-vergleich.md) | 2026-09-03 |
 | PROJ-46 | Bausteine finden statt scrollen | Planned | [PROJ-46](PROJ-46-bausteine-finden.md) | 2026-09-03 |
-| PROJ-47 | Prompt-Assistent im Bildstudio (Text-KI ueber den Proxy) | In Progress | [PROJ-47](PROJ-47-prompt-assistent.md) | 2026-09-03 |
+| PROJ-47 | Prompt-Assistent im Bildstudio (Text-KI ueber den Proxy) | In Review | [PROJ-47](PROJ-47-prompt-assistent.md) | 2026-09-03 |
 
 ## Next Available ID: PROJ-48

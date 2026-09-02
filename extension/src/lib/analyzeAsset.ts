@@ -1,3 +1,5 @@
+import { proxyLesen, proxyBereit, analyseUeberProxy } from './proxy'
+
 export type AssetAnalysisType = 'fashion' | 'location' | 'pose' | 'outfit' | 'character'
 
 export interface AssetAnalysisResult {
@@ -47,6 +49,36 @@ export async function analyzeAsset(
       requestBody = { imageBase64, mediaType }
     } catch {
       requestBody = { imageUrl }
+    }
+  }
+
+  /*
+    ERST DER EIGENE PROXY. Die Analysetypen heissen hier genauso wie in
+    `ANALYSE_ART` der App, deshalb geht der Name direkt durch.
+
+    Nur mit Base64: Liegt bloss eine Bildadresse vor (der `catch`-Zweig oben),
+    muesste der Proxy sie selbst holen — bei einem Bild hinter einer Anmeldung
+    kaeme er nicht heran. Dann geht es ohne Umweg ueber die Route, so wie
+    bisher.
+
+    Scheitert der Proxy, wird NICHT abgebrochen, sondern die Route genommen.
+    Aber nicht stillschweigend: In der Konsole steht, warum — sonst wuerde Mark
+    nie erfahren, dass gerade Geld geflossen ist.
+  */
+  if ('imageBase64' in requestBody) {
+    const e = await proxyLesen()
+    if (proxyBereit(e)) {
+      try {
+        return await analyseUeberProxy<AssetAnalysisResult>(
+          type, requestBody.imageBase64 as string,
+          (requestBody.mediaType as string) || 'image/jpeg', e,
+        )
+      } catch (err) {
+        console.warn(
+          `[PromptDB] Eigener Proxy nicht nutzbar (${(err as Error).message}) — ` +
+          'die Analyse laeuft jetzt ueber den bezahlten Dienst.',
+        )
+      }
     }
   }
 

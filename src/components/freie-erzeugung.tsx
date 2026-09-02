@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Loader2, Send, Save, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,8 @@ import {
 } from '@/lib/image-generation'
 import { ReferenzAblage, type Referenzbild } from '@/components/referenz-ablage'
 import { ASPECT_RATIOS, type AspectRatioKey } from '@/lib/scene-builder-options'
+import { PromptAssistent } from '@/components/prompt-assistent'
+import type { Zusammenhang } from '@/lib/proxy-text'
 
 /**
  * Ein Bild einfach so erzeugen — ohne Umweg über den Scene Builder.
@@ -50,6 +52,9 @@ export function FreieErzeugung(
   const [anzahl, setAnzahl] = useState<Durchlaeufe>(1)
   const [laeuft, setLaeuft] = useState(false)
   const [referenzen, setReferenzen] = useState<Referenzbild[]>([])
+
+  /** Das Prompt-Feld selbst — der Assistent unten schreibt hinein und rollt hierher. */
+  const promptRef = useRef<HTMLTextAreaElement | null>(null)
 
   const mitReferenz = referenzen.length > 0
 
@@ -88,6 +93,39 @@ export function FreieErzeugung(
   const inKlassen = rechnetInKlassen(modell)
   const hinweis = useMemo(() => formatHinweis(modell, format), [modell, format])
   const formatLabel = ASPECT_RATIOS.find(f => f.key === format)?.label ?? format
+
+  /**
+   * Was der Prompt-Assistent über den Auftrag wissen muss.
+   *
+   * WARUM DAS MITGEHT: Ein Prompt für gpt-image-2 sieht anders aus als einer für
+   * Gemini, und mit Referenzbild richtet sich gpt-image-2 nach der Vorlage statt
+   * nach dem Format. Ohne diese drei Angaben schriebe der Assistent Prompts für
+   * ein Werkzeug, das gar nicht benutzt wird.
+   *
+   * `useMemo`, weil das Objekt sonst bei jedem Tastendruck im Prompt-Feld neu
+   * entstünde und den Assistenten unnötig neu rechnen ließe.
+   */
+  const zusammenhang = useMemo<Zusammenhang>(() => ({
+    bildModell: MODELLE.find(m => m.id === modell)?.label ?? modell,
+    format: formatLabel,
+    referenzen: referenzen.length,
+  }), [modell, formatLabel, referenzen.length])
+
+  /**
+   * Den erzeugten Prompt in das Feld oben setzen.
+   *
+   * Das Rollen ist kein Schmuck: Der Assistent sitzt UNTER dem Erzeugen-Block,
+   * das Feld liegt bei gerolltem Panel also außerhalb des Blicks. Ohne den
+   * Sprung sähe es aus, als sei nichts passiert.
+   */
+  const uebernehmen = useCallback((text: string) => {
+    setPrompt(text)
+    const feld = promptRef.current
+    if (!feld) return
+    feld.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    feld.focus({ preventScroll: true })
+    toast.success('Im Prompt-Feld eingesetzt')
+  }, [])
   const schonGespeichert =
     zuletztGespeichert === JSON.stringify([titel.trim(), prompt.trim()])
 
@@ -195,6 +233,7 @@ export function FreieErzeugung(
       </div>
 
       <Textarea
+        ref={promptRef}
         value={prompt}
         onChange={e => setPrompt(e.target.value)}
         placeholder="Was soll entstehen? Zum Beispiel: Eine ältere Frau mit kurzem weißem Haar, Dreiviertelporträt vor heller Wand, weiches Fensterlicht von links …"
@@ -322,6 +361,13 @@ export function FreieErzeugung(
         Landet in derselben Warteschlange. Der Arbeiter holt es ab — Du musst
         nicht warten.
       </p>
+
+      {/* UNTER dem Erzeugen-Block, so wie Mark es beschrieben hat: „im
+          Bildstudio unter dem erzeugen prompt, also auch unter den weiteren
+          Eingaben dort." Zugeklappt kostet er nur eine Zeile Höhe — die Spalte
+          ist schmal, und zu viel verbrauchte Höhe war hier schon einmal ein
+          berechtigter Einwand. */}
+      <PromptAssistent zusammenhang={zusammenhang} onUebernehmen={uebernehmen} />
 
       {prompt.trim() && (
         <div className="mt-auto space-y-1.5 border-t border-border/50 pt-2.5">

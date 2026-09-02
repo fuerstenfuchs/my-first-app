@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { PendingCapture } from '../types'
+import { proxyLesen, proxyBereit, analyseUeberProxy } from '../lib/proxy'
 
 interface Props {
   capture: PendingCapture
@@ -115,6 +116,49 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
         setError('App-URL nicht konfiguriert. Bitte VITE_APP_URL in der Extension-.env setzen.')
         return
       }
+      /*
+        ERST DER EIGENE PROXY. Er braucht das Bild als Base64 — die Route
+        koennte auch mit einer Adresse umgehen, der Proxy nicht: Bei einem Bild
+        hinter einer Anmeldung kaeme er nicht heran. Also wird es hier geholt;
+        die Erweiterung darf das dank `<all_urls>`.
+
+        `personPlaceholder` waehlt dieselbe Weiche wie in der Route: die
+        Prompt-Fassung, die `[Person]` einsetzt und Gesicht, Haare und Alter
+        ausdruecklich WEGLAESST, damit die Charakter-Referenz sie liefern kann.
+
+        Scheitert irgendetwas davon, wird nicht abgebrochen, sondern die Route
+        genommen — aber mit einer Zeile in der Konsole, warum. Sonst wuesste
+        niemand, dass gerade Geld geflossen ist.
+      */
+      const pe = await proxyLesen()
+      if (proxyBereit(pe)) {
+        try {
+          const bild = await fetch(coverImageUrl)
+          if (!bild.ok) throw new Error(`Bild nicht ladbar (${bild.status})`)
+          const blob = await bild.blob()
+          const b64 = await new Promise<string>((ja, nein) => {
+            const l = new FileReader()
+            l.onloadend = () => ja((l.result as string).split(',')[1] ?? '')
+            l.onerror = nein
+            l.readAsDataURL(blob)
+          })
+          const { prompt } = await analyseUeberProxy<{ prompt: string }>(
+            personPlaceholder ? 'bildPlatzhalter' : 'bild',
+            b64, blob.type || 'image/jpeg', pe,
+          )
+          setContent(prompt)
+          if (!title.trim() || title === capture.title) {
+            setTitle(prompt.trim().slice(0, 55).trimEnd())
+          }
+          return
+        } catch (err) {
+          console.warn(
+            `[PromptDB] Eigener Proxy nicht nutzbar (${(err as Error).message}) — ` +
+            'die Analyse laeuft jetzt ueber den bezahlten Dienst.',
+          )
+        }
+      }
+
       const res = await fetch(`${appUrl}/api/analyze-image`, {
         method: 'POST',
         headers: {

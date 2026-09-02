@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { filterPrompts } from '../lib/filter'
 import type { Prompt, PendingCapture } from '../types'
 import { Header } from './Header'
+import { ProxyEinstellungenPanel } from './ProxyEinstellungenPanel'
 import { SearchBar } from './SearchBar'
 import { TabBar, type Tab } from './TabBar'
 import { EmptyState } from './EmptyState'
@@ -17,6 +18,10 @@ interface Props {
 }
 
 export function MainScreen({ onLogout, pendingCapture, onOpenCapture }: Props) {
+  // Die Proxy-Einstellungen liegen ueber allem anderen: Sie sind selten
+  // gebraucht, muessen aber ohne Suchen erreichbar sein.
+  const [zeigtProxy, setZeigtProxy] = useState(false)
+
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -74,9 +79,11 @@ export function MainScreen({ onLogout, pendingCapture, onOpenCapture }: Props) {
 
   const isSearching = query.trim().length > 0
 
+  if (zeigtProxy) return <ProxyEinstellungenPanel onClose={() => setZeigtProxy(false)} />
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <Header onLogout={onLogout} />
+      <Header onLogout={onLogout} onEinstellungen={() => setZeigtProxy(true)} />
       {pendingCapture && <PendingCaptureBanner onClick={onOpenCapture} />}
       <SearchBar value={query} onChange={setQuery} />
 
