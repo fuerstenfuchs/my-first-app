@@ -27,6 +27,7 @@ import { QuickImageDrop } from './quick-image-drop'
 import { usePromptMedia, IMAGE_TYPES, IMAGE_MAX } from '@/hooks/use-prompt-media'
 import { analysiere } from '@/hooks/use-analyse'
 import type { Prompt } from '@/hooks/use-prompts'
+import { proxyBereit } from '@/lib/proxy-analyse'
 
 export interface SharePayload {
   content: string
@@ -47,14 +48,33 @@ function isValidUrl(url: string): boolean {
   try { new URL(url); return true } catch { return false }
 }
 
-const ANALYZE_MODELS = [
+/**
+ * Die Modelle des BEZAHLTEN Wegs — samt Preis, denn der ist hier das
+ * Entscheidungsmerkmal. Nur sichtbar, wenn kein eigener Proxy eingerichtet ist.
+ */
+const ROUTE_MODELLE = [
   { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5', note: '~0,003 €/Bild' },
   { id: 'gpt-4.1-mini',              label: 'GPT-4.1 mini', note: '~0,004 €/Bild' },
   { id: 'claude-sonnet-4-6',         label: 'Sonnet 4.6', note: '~0,012 €/Bild' },
   { id: 'gpt-4o',                    label: 'GPT-4o', note: '~0,012 €/Bild' },
 ] as const
 
-type AnalyzeModelId = typeof ANALYZE_MODELS[number]['id']
+/**
+ * Die Modelle des eigenen Proxy. Kein Preis — sie stecken in Marks Abos.
+ *
+ * WARUM DIE LEISTE UEBERHAUPT WECHSELT: Mark am 03.09.2026 zur Erweiterung:
+ * „Hier stehen aber immer noch die alten Modelle." Er hatte recht, und in der
+ * App stand dasselbe Problem: Die Knoepfe zeigten Modelle und Preise des
+ * bezahlten Wegs, waehrend die Analyse laengst ueber den Proxy lief. Eine
+ * Auswahl, die niemand ausfuehrt, und Preise, die niemand zahlt.
+ */
+const PROXY_KNOEPFE = [
+  { id: 'claude-opus-4-6',       label: 'Opus 4.6', note: 'genaueste' },
+  { id: 'gemini-3.6-flash-high', label: 'Gemini 3.6', note: 'am schnellsten' },
+  { id: 'gpt-5.4',               label: 'GPT 5.4', note: 'ausführlichste' },
+] as const
+
+type AnalyzeModelId = string
 
 export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptureModalProps) {
   const [content, setContent] = useState('')
@@ -69,6 +89,17 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
     if (typeof window === 'undefined') return 'claude-haiku-4-5-20251001'
     return (localStorage.getItem('pdb:analyze-model') as AnalyzeModelId | null) ?? 'claude-haiku-4-5-20251001'
   })
+  /** Ist der eigene Proxy eingerichtet? Danach richtet sich die Leiste. */
+  const [proxyDa, setProxyDa] = useState(false)
+  useEffect(() => { setProxyDa(proxyBereit()) }, [isOpen])
+  const modelle = proxyDa ? PROXY_KNOEPFE : ROUTE_MODELLE
+
+  // Wechselt der Weg, muss die Wahl in die neue Liste fallen — sonst staende
+  // ein Modell markiert, das es dort gar nicht gibt.
+  useEffect(() => {
+    if (!modelle.some(m => m.id === selectedModel)) setSelectedModel(modelle[0].id)
+  }, [modelle, selectedModel])
+
   const [contentError, setContentError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [showDiscardDialog, setShowDiscardDialog] = useState(false)
@@ -201,7 +232,13 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       const { ergebnis: prompt } = await analysiere<string>(
         personPlaceholder ? 'bildPlatzhalter' : 'bild',
         body,
-        { route: '/api/analyze-image', zusatz: { model: selectedModel, personPlaceholder } },
+        {
+          route: '/api/analyze-image',
+          zusatz: { model: selectedModel, personPlaceholder },
+          // Damit die Wahl aus der Leiste auch ueber den Proxy gilt und nicht
+          // nur ueber die Route.
+          modell: proxyDa ? selectedModel : undefined,
+        },
       )
       setContent(prompt)
       if (!title.trim()) setTitle(prompt.trim().slice(0, 55).trimEnd())
@@ -432,7 +469,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
             {hasImages && (
               <div className="space-y-2">
                 <div className="flex gap-1 flex-wrap">
-                  {ANALYZE_MODELS.map(m => (
+                  {modelle.map(m => (
                     <button
                       key={m.id}
                       type="button"

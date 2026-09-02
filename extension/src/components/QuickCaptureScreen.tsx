@@ -13,14 +13,28 @@ interface Props {
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
-const ANALYZE_MODELS = [
+/**
+ * Die Modelle des BEZAHLTEN Wegs. Nur noch sichtbar, wenn kein eigener Proxy
+ * eingerichtet ist — sonst zeigten sie eine Wahl, die niemand ausfuehrt.
+ */
+const ROUTE_MODELLE = [
   { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' },
   { id: 'gpt-4.1-mini',              label: 'GPT-4.1 mini' },
   { id: 'claude-sonnet-4-6',         label: 'Sonnet 4.6' },
   { id: 'gpt-4o',                    label: 'GPT-4o' },
 ] as const
 
-type AnalyzeModelId = typeof ANALYZE_MODELS[number]['id']
+/**
+ * Die Modelle des eigenen Proxy — kuerzere Namen, damit die vier Knoepfe in
+ * die schmale Leiste passen.
+ */
+const PROXY_KNOEPFE = [
+  { id: 'claude-opus-4-6',       label: 'Opus 4.6' },
+  { id: 'gemini-3.6-flash-high', label: 'Gemini 3.6' },
+  { id: 'gpt-5.4',               label: 'GPT 5.4' },
+] as const
+
+type AnalyzeModelId = string
 
 export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, onDiscard }: Props) {
   const [title, setTitle] = useState(capture.title)
@@ -40,6 +54,30 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   const [selectedModel, setSelectedModel] = useState<AnalyzeModelId>(
     () => (localStorage.getItem('pdb:analyze-model') as AnalyzeModelId | null) ?? 'claude-haiku-4-5-20251001'
   )
+  /**
+   * Laeuft der eigene Proxy? Danach richtet sich, WELCHE Modelle in der Leiste
+   * stehen — und die Wahl muss dann auch wirklich benutzt werden.
+   *
+   * Mark am 03.09.2026 zum ersten Wurf: „Hier stehen aber immer noch die alten
+   * Modelle." Er hatte recht: Die Knoepfe zeigten die Modelle des bezahlten
+   * Wegs, waehrend die Analyse laengst ueber den Proxy lief. Eine Auswahl, die
+   * nichts bewirkt.
+   */
+  const [proxyDa, setProxyDa] = useState(false)
+  const modelle = proxyDa ? PROXY_KNOEPFE : ROUTE_MODELLE
+
+  useEffect(() => {
+    void proxyLesen().then(e => setProxyDa(proxyBereit(e)))
+  }, [])
+
+  // Wechselt der Weg, muss die Wahl in die neue Liste fallen — sonst staende
+  // ein Modell markiert, das es dort gar nicht gibt.
+  useEffect(() => {
+    if (!modelle.some(m => m.id === selectedModel)) {
+      setSelectedModel(modelle[0].id)
+    }
+  }, [modelle, selectedModel])
+
   const [isDragOver, setIsDragOver] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -145,6 +183,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           const { prompt } = await analyseUeberProxy<{ prompt: string }>(
             personPlaceholder ? 'bildPlatzhalter' : 'bild',
             b64, blob.type || 'image/jpeg', pe,
+            selectedModel,   // die Wahl aus der Leiste gilt auch hier
           )
           setContent(prompt)
           if (!title.trim() || title === capture.title) {
@@ -307,7 +346,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           </div>
           {/* Zeile 1: Modell-Buttons + [Person] */}
           <div className="px-2 pt-1.5 flex items-center gap-1.5 flex-wrap">
-            {ANALYZE_MODELS.map(m => (
+            {modelle.map(m => (
               <button
                 key={m.id}
                 type="button"

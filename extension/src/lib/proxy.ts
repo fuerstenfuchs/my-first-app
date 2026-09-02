@@ -117,6 +117,14 @@ export async function analyseUeberProxy<T>(
   bildBase64: string,
   mediaType: string,
   e: ProxyEinstellungen,
+  /**
+   * Ein Modell nur fuer diesen einen Aufruf.
+   *
+   * WARUM: In Quick Capture stehen Modellknoepfe. Ohne diesen Weg waeren sie
+   * wirkungslos, sobald der Proxy laeuft — ein Knopf, der nichts tut, ist
+   * schlimmer als kein Knopf.
+   */
+  modellDiesmal?: string,
 ): Promise<T> {
   const angaben = ANALYSE_ANGABEN[art]
   const a = await fetch(`${basis(e.url)}/v1/chat/completions`, {
@@ -124,7 +132,7 @@ export async function analyseUeberProxy<T>(
     headers: { Authorization: `Bearer ${e.token}`, 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(90_000),
     body: JSON.stringify({
-      model: e.modell,
+      model: modellDiesmal || e.modell,
       max_tokens: angaben.maxWorte,
       messages: [
         { role: 'system', content: ANALYSE_PROMPT[art] },
