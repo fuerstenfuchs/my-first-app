@@ -19,7 +19,8 @@
 import { ANALYSE_PROMPT, ANALYSE_ANGABEN, jsonAusAntwort, type AnalyseArt } from '@/lib/analyse-prompts'
 
 export const PROXY_SPEICHER_SCHLUESSEL = 'tresor.proxy'
-export const PROXY_VORGABE_URL = 'http://127.0.0.1:8317'
+// `localhost`, NICHT `127.0.0.1` — siehe die Messung bei `basis()` weiter unten.
+export const PROXY_VORGABE_URL = 'http://localhost:8317'
 
 /** Frist fuer eine Analyse. Gemessen wurden ~5-17 s; 60 s laesst reichlich Luft. */
 const FRIST_MS = 60_000
@@ -91,10 +92,38 @@ export function proxyBereit(): boolean {
   return e.url.trim().length > 0 && e.token.trim().length > 0
 }
 
-/** Schraegstrich am Ende abschneiden, sonst wird aus „…:8317/" ein „…:8317//v1/models". */
+/**
+ * Die Adresse in die Form bringen, in der der Browser sie schnell erreicht.
+ *
+ * ZWEI DINGE PASSIEREN HIER, das zweite ist das wichtige.
+ *
+ * 1. Schraegstrich am Ende weg, sonst wird aus „…:8317/" ein „…:8317//v1/models".
+ *
+ * 2. `127.0.0.1` wird zu `localhost`. Am 03.09.2026 im Browser nachgemessen,
+ *    derselbe Proxy, dieselbe Anfrage, nur die Schreibweise der Adresse:
+ *
+ *      http://127.0.0.1:8317   ->  401 nach 20 019 ms
+ *      http://localhost:8317   ->  401 nach      4 ms
+ *
+ *    Viertausendfach. Und es ist verlaesslich, nicht einmalig — viermal
+ *    hintereinander 3 bis 4 ms. Ausserhalb des Browsers (curl) ist die
+ *    Zahlenadresse dagegen sofort da, es liegt also an Chrome und nicht am
+ *    Proxy: Auf die blanke IP wendet er offenbar Pruefungen an, von denen der
+ *    Name `localhost` ausgenommen ist.
+ *
+ *    Die Umschreibung passiert absichtlich HIER und nicht beim Speichern:
+ *    Mark hat die Zahlenadresse bereits eingetragen, und die steht auch in der
+ *    `worker/.env`, aus der er sie abschreibt. Es waere die falsche Antwort,
+ *    ihn eine Adresse aendern zu lassen, die richtig ist — sie ist nur fuer
+ *    den Browser die langsamere.
+ */
 function basis(url: string): string {
-  return url.trim().replace(/\/+$/, '')
+  return url.trim()
+    .replace(/\/+$/, '')
+    .replace(/^(https?:\/\/)127\.0\.0\.1(?=[:/]|$)/i, '$1localhost')
 }
+
+export const _basis = basis  // nur zum Pruefen
 
 /**
  * Aus einem geworfenen Fehler einen Satz machen, den man lesen kann.
