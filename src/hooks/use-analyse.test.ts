@@ -85,7 +85,13 @@ describe('analysiere', () => {
 
     expect(weg).toBe('proxy')
     expect(ergebnis.name).toBe('Aus dem Proxy')
-    expect(String(mockFetch.mock.calls[0][0])).toContain('127.0.0.1:8317')
+    // Gerufen wird `localhost`, OBWOHL in den Einstellungen die Zahlenadresse
+    // steht: Chrome braucht auf `127.0.0.1` zwanzig Sekunden und auf
+    // `localhost` vier Millisekunden — am 03.09.2026 im Browser nachgemessen.
+    // Die Umschreibung passiert in `basis()`. Wer sie herausnimmt, weil sie
+    // ueberfluessig aussieht, macht die Analyse wieder zwanzig Sekunden lang.
+    expect(String(mockFetch.mock.calls[0][0])).toContain('localhost:8317')
+    expect(String(mockFetch.mock.calls[0][0])).not.toContain('127.0.0.1')
   })
 
   // ── Die eigentliche Gegenprobe: Proxy absichtlich kaputt ──────────────────
