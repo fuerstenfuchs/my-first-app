@@ -14,8 +14,10 @@ import {
 import {
   KOERPERFOTO_VARIANTE, SCHRITT_LABEL, VARIANTEN_NAME,
   istEigenerSpeicher, kettenPrompt, quellenFuer, naechsterSchritt, offeneSchritte,
-  type KettenSchritt, type KoerperAuswahl,
+  koerperbildKandidaten,
+  type KettenSchritt, type KoerperAuswahl, type Bildgruppe,
 } from '@/lib/referenzkette'
+import { loadRefImages } from '@/lib/reference-images'
 
 /** Derselbe Baustein-Eintrag, den auch `Übernehmen` für Charaktere benutzt —
  * dieselbe Eimer- und Größengrenze gilt für ein von Hand hochgeladenes
@@ -134,6 +136,20 @@ export function useReferenzkette(
    * Änderung darin sähe aus wie eine echte, obwohl sie nichts mehr bewirkt.
    */
   const [jobUnterwegsSchritt, setJobUnterwegsSchritt] = useState<KettenSchritt | null>(null)
+  /**
+   * Ein VORHANDENES Bild, das Mark als Körperquelle gewählt hat.
+   *
+   * Mark am 03.09.2026: „Oft lade ich direkt noch ein Körperbild nach durch die
+   * Erweiterung. Das landet dann automatisch in Sonstige. Er kann also auch
+   * direkt bleiben, nur soll man dieses Bild dann auch auswählen können."
+   *
+   * Deshalb NICHTS in der Datenbank: Das Bild bleibt in seiner Variante liegen,
+   * hier steht nur, dass DIESER Lauf es benutzt. Es hat Vorrang vor einem
+   * hochgeladenen „Körper Original" — die Auswahl ist die jüngere Aussage.
+   */
+  const [gewaehltesKoerperbild, setGewaehltesKoerperbild] = useState<string | null>(null)
+  const [kandidaten, setKandidaten] = useState<Bildgruppe[] | null>(null)
+  const [kandidatenLaden, setKandidatenLaden] = useState(false)
   const abbruch = useRef(false)
 
   const titelbild = character.cover_image_url
@@ -205,6 +221,8 @@ export function useReferenzkette(
     setPhase({ art: 'bereit' })
     setKoerperAuswahl({})
     setJobUnterwegsSchritt(null)
+    setGewaehltesKoerperbild(null)
+    setKandidaten(null)
   }, [offen])
 
   useEffect(() => () => { abbruch.current = true }, [])
@@ -425,7 +443,11 @@ export function useReferenzkette(
       if (zeileErr) { toast.error(`Körperfoto konnte nicht eingetragen werden: ${zeileErr.message}`); return false }
 
       setStand(s => ({ ...s, koerperfotoUrl: publicUrl }))
-      toast.success('Körperfoto gespeichert')
+      // Ein frisch hochgeladenes Bild ist die jüngste Aussage — eine vorher
+      // getroffene Auswahl aus vorhandenen Bildern gilt damit nicht mehr.
+      // Sonst lüde Mark ein Bild hoch, und die Kette benutzte ein anderes.
+      setGewaehltesKoerperbild(null)
+      toast.success('Körper Original gespeichert')
       return true
     } catch (e) {
       toast.error(`Körperfoto fehlgeschlagen: ${(e as Error).message}`)
@@ -434,6 +456,27 @@ export function useReferenzkette(
       setKoerperfotoLaedt(false)
     }
   }, [supabase, varianteHolen, character.id])
+
+  /**
+   * Die vorhandenen Bilder dieses Charakters zur Auswahl holen.
+   *
+   * Erst auf Zuruf, nicht beim Öffnen des Dialogs: Wer nur die Kette starten
+   * will, braucht diese Abfrage nie. `loadRefImages` ist dieselbe Abfrage, die
+   * auch der Scene Builder und der Weg „Prompt → Bild" benutzen — eine zweite
+   * Fassung davon wäre die Doppelung, die später auseinanderläuft.
+   */
+  const kandidatenHolen = useCallback(async () => {
+    setKandidatenLaden(true)
+    try {
+      const bilder = await loadRefImages('character_variants', 'character_id', character.id)
+      setKandidaten(koerperbildKandidaten(bilder))
+    } catch (e) {
+      toast.error(`Vorhandene Bilder konnten nicht geladen werden: ${(e as Error).message}`)
+      setKandidaten([])
+    } finally {
+      setKandidatenLaden(false)
+    }
+  }, [character.id])
 
   // ── Der Ablauf ─────────────────────────────────────────────────────────────
 
@@ -502,7 +545,7 @@ export function useReferenzkette(
     // dann mit dem, was gerade an Körperfoto/Auswahl vorliegt.
     if (offene[0] === 'kopf') {
       try {
-        const ergebnis = await erzeuge('kopf', aktuell.urls, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
+        const ergebnis = await erzeuge('kopf', aktuell.urls, { koerperfotoUrl: gewaehltesKoerperbild ?? aktuell.koerperfotoUrl, koerperAuswahl })
         setPhase({ art: 'pruefen', bildUrl: ergebnis.url, bildPfad: ergebnis.pfad })
       } catch (e) {
         fehlerMelden('kopf', e)
@@ -511,7 +554,7 @@ export function useReferenzkette(
     }
 
     try {
-      await laufe(offene, aktuell.urls, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
+      await laufe(offene, aktuell.urls, { koerperfotoUrl: gewaehltesKoerperbild ?? aktuell.koerperfotoUrl, koerperAuswahl })
       setPhase({ art: 'fertig' })
       toast.success('Referenzkette fertig')
     } catch (e) {
@@ -519,7 +562,7 @@ export function useReferenzkette(
     } finally {
       void nachfuehren()
     }
-  }, [titelbildLiegtEigen, standErmitteln, erzeuge, laufe, koerperAuswahl, fehlerMelden, nachfuehren])
+  }, [titelbildLiegtEigen, standErmitteln, erzeuge, laufe, koerperAuswahl, gewaehltesKoerperbild, fehlerMelden, nachfuehren])
 
   /** „Nehmen und weiter" — Kopf ablegen, dann Körper und Referenzsheet. */
   const kopfNehmen = useCallback(async () => {
@@ -534,7 +577,7 @@ export function useReferenzkette(
       // Genau HIER ist Marks Halt — er hat den Kopf gerade genommen. Das
       // Körperfoto und die Merkmalsauswahl, die er bis zu diesem Klick
       // gesetzt hat, gelten jetzt für den Rest der Kette.
-      await laufe(rest, { ...aktuell.urls, kopf: kopfUrl }, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
+      await laufe(rest, { ...aktuell.urls, kopf: kopfUrl }, { koerperfotoUrl: gewaehltesKoerperbild ?? aktuell.koerperfotoUrl, koerperAuswahl })
       setPhase({ art: 'fertig' })
       toast.success('Referenzkette fertig')
     } catch (e) {
@@ -542,7 +585,7 @@ export function useReferenzkette(
     } finally {
       void nachfuehren()
     }
-  }, [phase, ablegen, standErmitteln, laufe, koerperAuswahl, fehlerMelden, nachfuehren])
+  }, [phase, ablegen, standErmitteln, laufe, koerperAuswahl, gewaehltesKoerperbild, fehlerMelden, nachfuehren])
 
   /**
    * „Neu erzeugen" — noch ein Kopf-Auftrag.
@@ -554,12 +597,12 @@ export function useReferenzkette(
   const kopfVerwerfen = useCallback(async () => {
     try {
       const aktuell = await standErmitteln()
-      const ergebnis = await erzeuge('kopf', aktuell.urls, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
+      const ergebnis = await erzeuge('kopf', aktuell.urls, { koerperfotoUrl: gewaehltesKoerperbild ?? aktuell.koerperfotoUrl, koerperAuswahl })
       setPhase({ art: 'pruefen', bildUrl: ergebnis.url, bildPfad: ergebnis.pfad })
     } catch (e) {
       fehlerMelden('kopf', e)
     }
-  }, [standErmitteln, erzeuge, koerperAuswahl, fehlerMelden])
+  }, [standErmitteln, erzeuge, koerperAuswahl, gewaehltesKoerperbild, fehlerMelden])
 
   /**
    * Warten aufgeben. Der Auftrag selbst bleibt in der Warteschlange — siehe
@@ -589,7 +632,15 @@ export function useReferenzkette(
     abbrechen,
     // Marks Eingriffsmöglichkeiten für den Körper-Schritt — sichtbar für den
     // Dialog, damit er sie am Halt nach dem Kopf anbieten kann.
-    koerperfotoUrl: stand.koerperfotoUrl,
+    // Die Auswahl aus vorhandenen Bildern hat Vorrang vor dem hochgeladenen
+    // „Körper Original" — sie ist die juengere Aussage.
+    koerperfotoUrl: gewaehltesKoerperbild ?? stand.koerperfotoUrl,
+    /** Ob die Quelle eine Auswahl ist (statt eines Uploads) — fuer die Anzeige. */
+    koerperbildIstAuswahl: gewaehltesKoerperbild !== null,
+    kandidaten,
+    kandidatenLaden,
+    kandidatenHolen,
+    koerperbildWaehlen: setGewaehltesKoerperbild,
     koerperfotoLaedt,
     koerperfotoHochladen,
     koerperAuswahl,

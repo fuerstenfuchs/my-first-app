@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Loader2, Check, AlertTriangle, Link2, RefreshCw, ArrowRight, ShieldAlert,
-  Upload, PersonStanding,
+  Upload, PersonStanding, Images,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -147,9 +147,24 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
     starte, kopfNehmen, kopfVerwerfen, abbrechen,
     koerperfotoUrl, koerperfotoLaedt, koerperfotoHochladen,
     koerperAuswahl, setKoerperAuswahl, jobUnterwegsSchritt,
+    koerperbildIstAuswahl, kandidaten, kandidatenLaden, kandidatenHolen,
+    koerperbildWaehlen,
   } = useReferenzkette(character, offen, onAenderung)
 
   const dateiFeld = useRef<HTMLInputElement>(null)
+  const [auswahlOffen, setAuswahlOffen] = useState(false)
+
+  /**
+   * Die vorhandenen Bilder erst beim Öffnen holen, und nur einmal.
+   *
+   * Wer die Kette nur startet, braucht diese Abfrage nie — sie beim Öffnen des
+   * Dialogs mitzuladen wäre eine Abfrage für alle, damit einer sie manchmal
+   * benutzt.
+   */
+  function oeffneAuswahl() {
+    setAuswahlOffen(true)
+    if (kandidaten === null) void kandidatenHolen()
+  }
 
   // Eine Uhr, damit die Wartezeit sichtbar läuft. Stillstand und „dauert eben"
   // sehen sonst gleich aus — genau die Verwechslung, wegen der man einen
@@ -298,32 +313,93 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                     />
                   </div>
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    <p className="text-xs text-emerald-400/80">„Körper Original" liegt vor.</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={koerperfotoLaedt}
-                      onClick={() => dateiFeld.current?.click()}
-                    >
-                      {koerperfotoLaedt
-                        ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                        : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-                      Anderes Foto wählen
-                    </Button>
+                    <p className="text-xs text-emerald-400/80">
+                      {koerperbildIstAuswahl
+                        ? 'Gewähltes Bild wird als Körperquelle benutzt.'
+                        : '„Körper Original" liegt vor.'}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button size="sm" variant="outline" disabled={koerperfotoLaedt}
+                        onClick={() => dateiFeld.current?.click()}>
+                        {koerperfotoLaedt
+                          ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                          : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                        Anderes hochladen
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => oeffneAuswahl()}>
+                        <Images className="mr-1.5 h-3.5 w-3.5" />
+                        Vorhandenes wählen
+                      </Button>
+                      {koerperbildIstAuswahl && (
+                        <Button size="sm" variant="ghost" onClick={() => koerperbildWaehlen(null)}>
+                          Auswahl aufheben
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={koerperfotoLaedt}
-                  onClick={() => dateiFeld.current?.click()}
-                >
-                  {koerperfotoLaedt
-                    ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-                  „Körper Original" auswählen
-                </Button>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button size="sm" variant="outline" disabled={koerperfotoLaedt}
+                    onClick={() => dateiFeld.current?.click()}>
+                    {koerperfotoLaedt
+                      ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                    Bild hochladen
+                  </Button>
+                  {/* Marks häufigerer Fall: Das Körperbild ist längst da — über
+                      die Erweiterung nachgeladen und in „Sonstige" gelandet.
+                      Es soll dort bleiben und nur auswählbar sein. */}
+                  <Button size="sm" variant="outline" onClick={() => oeffneAuswahl()}>
+                    <Images className="mr-1.5 h-3.5 w-3.5" />
+                    Vorhandenes Bild wählen
+                  </Button>
+                </div>
+              )}
+
+              {/* ── Die Auswahl vorhandener Bilder ─────────────────────── */}
+              {auswahlOffen && (
+                <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-2.5">
+                  {kandidatenLaden ? (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Bilder werden geladen …
+                    </p>
+                  ) : !kandidaten || kandidaten.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Dieser Charakter hat noch keine Bilder, die als Körperquelle
+                      taugen. (Bilder außerhalb des eigenen Speichers stehen nicht
+                      zur Wahl — der Arbeiter würde sie ablehnen.)
+                    </p>
+                  ) : (
+                    kandidaten.map(gruppe => (
+                      <div key={gruppe.label} className="space-y-1">
+                        <p className="text-[11px] font-medium text-muted-foreground">{gruppe.label}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {gruppe.bilder.map(url => (
+                            <button
+                              key={url}
+                              type="button"
+                              onClick={() => { koerperbildWaehlen(url); setAuswahlOffen(false) }}
+                              className={cn(
+                                'h-16 w-16 overflow-hidden rounded-md border-2 bg-black/30 transition-colors',
+                                url === koerperfotoUrl
+                                  ? 'border-violet-400'
+                                  : 'border-transparent hover:border-violet-500/50',
+                              )}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={`Bild aus ${gruppe.label}`} className="h-full w-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => setAuswahlOffen(false)}>
+                    Schließen
+                  </Button>
+                </div>
               )}
 
               <input

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   KETTEN_SCHRITTE, VARIANTEN_NAME, KOERPERFOTO_VARIANTE, KOPF_ORIGINAL_VARIANTE,
   quellenFuer, referenzAnsage, kettenPrompt, koerperMerkmaleText, istEigenerSpeicher,
+  koerperbildKandidaten,
   naechsterSchritt, offeneSchritte,
   type KettenSchritt,
 } from './referenzkette'
@@ -86,6 +87,46 @@ describe('Referenzquellen des Körper-Schritts — Mark am 03.09.2026', () => {
   it('braucht für den Kopf nur das Originalfoto, unabhängig vom Körperfoto', () => {
     expect(quellenFuer('kopf', { hatKoerperfoto: true }))
       .toEqual([{ bild: 'titelbild', rolle: 'identitaet' }])
+  })
+})
+
+describe('Vorhandene Bilder als Körperquelle — Mark am 03.09.2026', () => {
+  const bild = (n: string) => `${EIGEN}/storage/v1/object/public/character-images/a/b/${n}.png`
+
+  it('fasst je Variante zusammen und behält die Reihenfolge des Eingangs', () => {
+    expect(koerperbildKandidaten([
+      { url: bild('1'), label: 'Kopf' },
+      { url: bild('2'), label: 'Sonstige' },
+      { url: bild('3'), label: 'Sonstige' },
+    ], EIGEN)).toEqual([
+      { label: 'Kopf',     bilder: [bild('1')] },
+      { label: 'Sonstige', bilder: [bild('2'), bild('3')] },
+    ])
+  })
+
+  // Der Kern: Das über die Erweiterung nachgeladene Bild liegt in „Sonstige"
+  // und soll dort BLEIBEN — es muss nur auswählbar sein.
+  it('bietet auch Bilder aus „Sonstige" an, ohne sie zu verschieben', () => {
+    const gruppen = koerperbildKandidaten([{ url: bild('x'), label: 'Sonstige' }], EIGEN)
+    expect(gruppen).toEqual([{ label: 'Sonstige', bilder: [bild('x')] }])
+  })
+
+  it('lässt fremde Adressen weg — der Arbeiter würde sie ablehnen', () => {
+    expect(koerperbildKandidaten([
+      { url: 'https://scontent-dus1-1.xx.fbcdn.net/v/t39/510969862.jpg', label: 'Sonstige' },
+      { url: bild('gut'), label: 'Sonstige' },
+    ], EIGEN)).toEqual([{ label: 'Sonstige', bilder: [bild('gut')] }])
+  })
+
+  it('zeigt dasselbe Bild nicht zweimal', () => {
+    expect(koerperbildKandidaten([
+      { url: bild('gleich'), label: 'Sonstige' },
+      { url: bild('gleich'), label: 'Sonstige' },
+    ], EIGEN)).toEqual([{ label: 'Sonstige', bilder: [bild('gleich')] }])
+  })
+
+  it('liefert nichts, wenn es nichts Brauchbares gibt', () => {
+    expect(koerperbildKandidaten([], EIGEN)).toEqual([])
   })
 })
 

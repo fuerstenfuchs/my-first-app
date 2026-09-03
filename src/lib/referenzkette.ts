@@ -150,6 +150,46 @@ export function quellenFuer(
   }
 }
 
+/** Ein Bild, wie es aus `loadRefImages` kommt: Adresse plus Variantenname. */
+export type Bildkandidat = { url: string; label: string }
+/** Bilder einer Variante, zusammengefasst für die Auswahl. */
+export type Bildgruppe = { label: string; bilder: string[] }
+
+/**
+ * Welche vorhandenen Bilder als Körperquelle in Frage kommen.
+ *
+ * Mark am 03.09.2026: „Oft ist es auch so, dass ich direkt noch ein Körperbild
+ * nachlade durch die Erweiterung. Das landet dann automatisch in Sonstige. Er
+ * kann also auch direkt bleiben, nur soll man dieses Bild dann auch auswählen
+ * können." Deshalb wird hier NICHTS verschoben oder kopiert — die Bilder
+ * bleiben, wo sie sind, und werden nur zur Auswahl angeboten.
+ *
+ * ES WIRD NICHT NACH VARIANTEN GEFILTERT. Naheliegend wäre, nur „Sonstige"
+ * und „Körper Original" anzubieten — aber wer sein Körperbild in einem eigenen
+ * Fach abgelegt hat, fände es dann nicht mehr, ohne zu erfahren warum. Der
+ * Variantenname steht an jedem Bild, das reicht zur Unterscheidung.
+ *
+ * Aussortiert wird nur, was der Arbeiter ohnehin ablehnen würde: Adressen
+ * außerhalb des eigenen Speichers. Sie hier anzubieten hieße, einen Auftrag
+ * einreihen zu lassen, der sicher scheitert.
+ */
+export function koerperbildKandidaten(
+  bilder: readonly Bildkandidat[],
+  basis?: string,
+): Bildgruppe[] {
+  const gruppen = new Map<string, string[]>()
+  for (const b of bilder) {
+    if (!istEigenerSpeicher(b.url, basis)) continue
+    const label = String(b.label ?? '').trim() || 'Ohne Namen'
+    const liste = gruppen.get(label) ?? []
+    // Dasselbe Bild kann in derselben Variante zweimal eingetragen sein;
+    // zweimal dieselbe Kachel wäre nur verwirrend.
+    if (!liste.includes(b.url)) liste.push(b.url)
+    gruppen.set(label, liste)
+  }
+  return [...gruppen.entries()].map(([label, bilder]) => ({ label, bilder }))
+}
+
 /**
  * Der Zuordnungsblock für einen Schritt — oder null, wenn er keinen braucht.
  *
