@@ -47,6 +47,47 @@ export function durchlaeufe(job: ImageJob): number {
 }
 
 /**
+ * Welche Bildnummern ein Auftrag noch erzeugen muss.
+ *
+ * WARUM DAS EINE EIGENE FUNKTION IST UND KEINE SCHLEIFENBEDINGUNG: Genau da
+ * steckte am 03.09.2026 ein Fehler, den Mark gemeldet hat — „wenn ich im
+ * Scenebuilder zwei Bilder möchte, dann generiert er mir nur eins". Die
+ * Bedingung lautete
+ *
+ *     for (let i = start; i < start + (anzahl - pfade.length); i++)
+ *
+ * und der Schleifenrumpf schiebt jedes fertige Bild in `pfade`. Die Grenze
+ * schrumpfte also, während die Liste wuchs:
+ *
+ *     i=0:  0 < 0 + (2-0) = 2  ✓   Bild erzeugt, pfade.length wird 1
+ *     i=1:  1 < 0 + (2-1) = 1  ✗   Schleife endet
+ *
+ * Ein Bild statt zwei — und der Auftrag meldete sich trotzdem als fertig. Bei
+ * `variants: 1` fiel es nicht auf, deshalb ging es durch.
+ *
+ * Die Nummern werden deshalb VORHER ausgerechnet und danach nur noch
+ * abgearbeitet. Was einmal feststeht, kann sich nicht mehr unter der Hand
+ * ändern.
+ *
+ * WARUM AUS DER HÖCHSTEN NUMMER WEITERGEZÄHLT WIRD statt aus der Anzahl:
+ * Ergebnispfade sind `<nutzer>/<auftrag>/<nummer>.<endung>` und werden mit
+ * `upsert` geschrieben. Seit man im Lichttisch einzelne Bilder löschen kann,
+ * hat `result_paths` Lücken — bei [1.png, 2.png] begänne „Anzahl vorhandener"
+ * bei 2 und überschriebe das vorhandene `2.png`.
+ */
+export function nochZuErzeugen(vorhandene: string[], anzahl: number): number[] {
+  const fehlt = anzahl - vorhandene.length
+  if (fehlt <= 0) return []
+
+  const start = vorhandene.reduce((hoechste, p) => {
+    const n = Number(p.split('/').pop()?.split('.')[0])
+    return Number.isInteger(n) ? Math.max(hoechste, n + 1) : hoechste
+  }, vorhandene.length)
+
+  return Array.from({ length: fehlt }, (_, k) => start + k)
+}
+
+/**
  * Vergrößern — rechnerisch auf dem PC oder mit KI über fal.ai.
  *
  * Beide Wege liefern genau ein Bild, deshalb kein Fortschreiben wie beim
@@ -155,12 +196,12 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
    * das es schon gibt. Das vorhandene Bild waere ueberschrieben, `2.png`
    * stuende zweimal in der Liste, und statt vier Bildern laegen drei da.
    */
-  const naechsterIndex = pfade.reduce((hoechste, p) => {
-    const n = Number(p.split('/').pop()?.split('.')[0])
-    return Number.isInteger(n) ? Math.max(hoechste, n + 1) : hoechste
-  }, pfade.length)
+  // EINMAL ausrechnen, welche Nummern noch fehlen — nicht in der
+  // Schleifenbedingung. Siehe `nochZuErzeugen`: Der Rumpf laesst `pfade`
+  // wachsen, eine Bedingung mit `pfade.length` darin schrumpft also mit.
+  const offeneIndizes = nochZuErzeugen(pfade, anzahl)
 
-  for (let i = naechsterIndex; i < naechsterIndex + (anzahl - pfade.length); i++) {
+  for (const i of offeneIndizes) {
     const begonnen = Date.now()
     let daten: ArrayBuffer
     if (ueberGemini) {
