@@ -476,7 +476,17 @@ export default function OutfitsPage() {
                     key={o.id}
                     outfit={o}
                     isSelected={selectedId === o.id}
-                    onClick={() => { setSelectedId(prev => prev === o.id ? null : o.id); setSelectedVariantId(null); setAiSuggestion(null) }}
+                    onClick={() => {
+                      setSelectedId(prev => prev === o.id ? null : o.id)
+                      setSelectedVariantId(null)
+                      setAiSuggestion(null)
+                      // Auch den erzeugten Sheet-Prompt zuruecksetzen: Er blieb
+                      // sonst mitsamt Kopieren-Knopf unter dem NAECHSTEN Eintrag
+                      // stehen — man kopierte den Prompt eines anderen
+                      // Kleidungsstuecks und merkte es erst am erzeugten Bild.
+                      setGeneratedSheetPrompt(null)
+                      setSheetError(null)
+                    }}
                     onEdit={() => { setEditingOutfit(o); setOutfitFormOpen(true) }}
                     onDelete={() => setDeleteOutfitId(o.id)}
                   />

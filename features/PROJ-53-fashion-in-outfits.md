@@ -111,3 +111,33 @@ Mark das Anlagedatum zurückwill, ist es eine Zeile.
   Titelbildspalte.
 - `SPEICHERLIMIT_MB['fashion-assets']` bleibt: Die Bilder der 19 Einträge
   liegen weiter in diesem Eimer.
+
+## WARNUNG: Der Eimer `fashion-assets` ist NICHT stillgelegt
+
+Der Umzug hat **Datenbankzeilen kopiert, keine Dateien**. Am 03.09.2026
+nachgemessen: **17 der 19 Titelbilder und alle 9 Variantenbilder** der
+umgezogenen Einträge liegen weiterhin im Speicher-Eimer `fashion-assets`.
+
+Wer die Fashion-*Tabellen* später aufräumt und dabei denkt „dann kann der
+Eimer ja auch weg", löscht damit 17 Titelbilder aus der aktiven Bibliothek.
+Der Eimer bleibt produktiv, solange diese Einträge existieren — deshalb steht
+er auch weiter in `SPEICHERLIMIT_MB`.
+
+Nebenbefund derselben Messung: Bei 7 der 9 umgezogenen Bilder ist ein
+`storage_path` gesetzt, der sich auf den *fashion*-Eimer bezieht; das Löschen
+in `use-outfits.ts` räumt aber im Eimer `outfit-images` auf. Die Datenbankzeile
+verschwände, die Datei bliebe als Waise liegen. Kein Datenverlust, aber ein
+stiller Speicherrest — festgehalten, nicht behoben.
+
+## Nach der unabhängigen Prüfung behoben (03.09.2026)
+
+- **Scene Builder zeigte 36 Einträge ohne Unterscheidung.** Genau dort, wo
+  19 neue Einzelteile auftauchten, fehlte die Kategorie — man hätte eine
+  Lederjacke an der Stelle des ganzen Looks gewählt und es erst am erzeugten
+  Bild gemerkt. Die Kachel trägt jetzt die Kategorie unter dem Namen, und
+  Komplett-Looks stehen zuerst.
+- **Der erzeugte Sheet-Prompt blieb beim Wechsel des Eintrags stehen** —
+  mitsamt Kopieren-Knopf, unter einem anderen Kleidungsstück.
+- **Beide Migrationen liegen jetzt als SQL in `docs/`** (`proj-52-…`,
+  `proj-53-…`), wie es die Hauskonvention verlangt. Vorher waren
+  Wiederholbarkeit und Umkehrbarkeit nur behauptet, nicht überprüfbar.

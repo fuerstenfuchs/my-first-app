@@ -28,6 +28,7 @@ import { QueueButton } from '@/components/scene-builder/queue-button'
 import type { Referenz, ReferenzRolle } from '@/lib/image-generation'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
+import { kategorieEintrag } from '@/lib/outfit-kategorien'
 import { buildPrompt, type Scene, type SceneRefs } from '@/lib/szene-prompt'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -75,10 +76,19 @@ const REF_SLOTS: RefSlotKey[] = ['character', 'outfit', 'location']
 // ── Small asset thumbnail card (left panel) ───────────────────────────────────
 
 function AssetThumb({
-  name, imageUrl, emoji, isSelected, onClick,
+  name, imageUrl, emoji, isSelected, onClick, hinweis = null,
 }: {
   name: string; imageUrl: string | null; emoji: string
   isSelected: boolean; onClick: () => void
+  /**
+   * Eine Zeile unter dem Namen, die sagt, WAS die Kachel ist.
+   *
+   * Gebraucht seit PROJ-53: Im Outfit-Fach liegen jetzt komplette Looks UND
+   * einzelne Kleidungsstuecke nebeneinander — aus 17 kuratierten Eintraegen
+   * wurden 36. Ohne diese Zeile waehlt man eine Lederjacke an der Stelle, an
+   * der ein ganzer Look hingehoert, und sieht es erst am erzeugten Bild.
+   */
+  hinweis?: string | null
 }) {
   return (
     <button
@@ -108,6 +118,9 @@ function AssetThumb({
       </div>
       <div className="px-1.5 py-1">
         <p className="text-[10px] font-medium leading-tight truncate">{name}</p>
+        {hinweis && (
+          <p className="text-[9px] leading-tight truncate text-muted-foreground/70">{hinweis}</p>
+        )}
       </div>
     </button>
   )
@@ -621,7 +634,17 @@ export default function SceneBuilderPage() {
       }
       case 'outfits': return {
         loading: loadingOutfits,
-        items: outfits.map(o => ({ id: o.id, name: o.name, imageUrl: o.cover_image_url, isSelected: scene.outfit?.id === o.id, onSelect: () => setSlot('outfit', o) }))
+        // Komplett-Looks zuerst, dann die Einzelteile: Das Fach heisst
+        // „Outfit", und der ganze Look ist der Normalfall. Innerhalb der
+        // beiden Gruppen bleibt die Reihenfolge des Hooks (nach Namen).
+        items: [...outfits]
+          .sort((a, b) => Number(b.category === 'komplett') - Number(a.category === 'komplett'))
+          .map(o => ({
+            id: o.id, name: o.name, imageUrl: o.cover_image_url,
+            hinweis: kategorieEintrag(o.category)?.label ?? null,
+            isSelected: scene.outfit?.id === o.id,
+            onSelect: () => setSlot('outfit', o),
+          }))
       }
       case 'locations': return {
         loading: loadingLocs,
@@ -706,6 +729,7 @@ export default function SceneBuilderPage() {
                     emoji={currentTab.emoji}
                     isSelected={item.isSelected}
                     onClick={item.onSelect}
+                    hinweis={'hinweis' in item ? (item as { hinweis?: string | null }).hinweis : null}
                   />
                 ))}
               </div>
