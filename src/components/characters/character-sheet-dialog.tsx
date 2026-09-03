@@ -187,7 +187,10 @@ The sheet contains exactly three panels side by side, left to right:
 
 PANEL 1 (leftmost, LARGE — roughly half the total width):
 - Head and shoulders only, in a three-quarter front view turned slightly to one side so that one cheek and the side of the face are partly visible
-- Large and sharp: this is the only place in the entire sheet where the face appears
+- THE HEAD MUST FILL THIS PANEL. Top of the hair almost touching the upper edge, chin roughly two thirds of the way down, shoulders cut off by the lower edge. This is a tight portrait crop — NOT a small figure standing inside a large empty frame.
+- Only a narrow margin of background around the head, at most about a tenth of the panel width on each side. No empty space above the hair, none below the shoulders.
+- The face here is the LARGEST element on the entire sheet — unmistakably bigger than the head of either full-body figure beside it
+- Sharp and detailed: this is the only place in the entire sheet where the face appears
 - Neutral expression, eyes to camera
 
 PANEL 2 (middle):
