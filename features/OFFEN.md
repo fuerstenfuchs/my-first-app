@@ -104,3 +104,68 @@ Damit morgen niemand doppelt sucht:
 - **`localhost` statt `127.0.0.1`**: 20 019 ms gegen 4 ms. Diese eine Zeile
   entscheidet, ob der Proxy-Weg brauchbar ist — nicht anfassen, es gibt Tests
   und einen Kommentar mit der Messung.
+
+## Offen aus der PROJ-54-Prüfung (Nacht zum 04.09.2026)
+
+Die Outfit-Referenzkette ist gebaut, geprüft und live — aber ein unabhängiger
+Prüfdurchgang fand elf gewichtige Punkte. **Die vier Prompt-Befunde wurden
+noch in derselben Nacht behoben** (reine Textarbeit, kein Verhaltensrisiko);
+die Code-Befunde stehen bewusst offen, weil sie echte Änderungen und einen
+Prüflauf brauchen.
+
+**Wichtig: Drei davon stehen wörtlich auch in `use-referenzkette.ts`
+(PROJ-48).** Die beiden Ketten-Hooks sind Kopien voneinander — wer einen
+repariert, muss den anderen mitnehmen, sonst bleibt die ältere Kette stehen.
+
+### Kostet Geld, deshalb zuerst
+
+1. **Bezahlte Erzeugung nach dem Abbruch.** `erzeuge()` prüft die Laufnummer
+   nicht, bevor es einen Auftrag einreiht — nur danach. Wer „Warten aufgeben"
+   drückt, während gerade abgelegt wird (mehrere Sekunden: Download, Upload,
+   zwei Inserts), bezahlt noch ein Bild. Auch in PROJ-48.
+2. **Doppelklick = zwei Aufträge.** Der Startknopf bleibt vom Klick bis zur
+   Antwort von `anlegen` klickbar — zwei Netzwerkrunden ohne Rückmeldung.
+   Gilt auch für „Nehmen und weiter" und „Neu erzeugen". Auch in PROJ-48.
+3. **Ein bezahltes Blatt geht beim Schließen am Halt verloren.** Der Dialog
+   lässt sich in der Prüfen-Phase schließen; das fertige Vorne-Blatt ist dann
+   weg, und der nächste Klick bezahlt es erneut. Beim Weg „Neu erzeugen" sagt
+   der Dialog ausdrücklich, das Bild bleibe in der Warteschlange — beim
+   Schließen sagt er nichts.
+4. **„Weiter mit ‚Rückseite'" löst bis zu drei Erzeugungen aus.** Der Knopf
+   nennt einen Schritt, startet aber die ganze Restliste. Vorschlag:
+   „Weiter — Rückseite, Detailaufnahmen und Referenzsheet (3 Bilder)".
+
+### Irreführende Anzeigen
+
+5. **Der Fehler wird beim falschen Schritt gemeldet.** Gemeldet wird immer der
+   erste offene Schritt, nicht der gescheiterte — daneben steht dann ein
+   grüner Haken für genau diesen Schritt. Auch in PROJ-48.
+6. **Am Ende kein einziges Ergebnisbild.** Nach dem Halt laufen drei Blätter
+   durch, der Dialog zeigt danach nur Häkchen. Vier Vorschaubilder im
+   Fertig-Zustand wären ein kleiner Eingriff mit großer Wirkung — und die
+   einzige Stelle, an der ein misslungenes Blatt 3 auffiele.
+
+### Datenbank
+
+7. **Kein Eindeutigkeits-Index auf Variantennamen.** Nachgemessen in der Nacht
+   zum 04.09.2026: Weder `outfit_variants` noch `character_variants` haben
+   einen Unique-Index auf `(parent_id, name)`. Zwei parallele Läufe legen
+   deshalb zwei Fächer gleichen Namens an, und `standErmitteln` greift dann
+   willkürlich eines. Ein Index würde beide Ketten auf einmal absichern —
+   **vor dem Anlegen prüfen, ob es schon Dubletten gibt**, sonst scheitert er.
+
+### Struktur
+
+8. **`istEigenerSpeicher` liegt in der falschen Datei.** Es ist eine Regel des
+   Arbeiters, keine der Charakterkette — steht aber in `referenzkette.ts` und
+   wird von der Outfit-Kette re-exportiert. Inzwischen zieht auch das
+   Outfit-Formular `referenzkette.ts` mit herein. Gehört in ein neutrales
+   Modul (`lib/speicher.ts`), das beide importieren. Fünf Minuten.
+
+### Kleinere Punkte
+
+- Klick auf das X während „wartet" tut sichtbar nichts — ein Toast würde
+  reichen.
+- Eine gefüllte Lücke zieht das Referenzsheet nicht nach: Fehlte die Rückseite
+  und wird nachgeholt, bleibt ein ohne sie gebautes Referenzsheet stehen.
+- Nirgends im Dialog steht, dass ein Klick vier bezahlte Erzeugungen auslöst.

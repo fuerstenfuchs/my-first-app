@@ -111,7 +111,7 @@ Tests und der Build sagen, dass sie baut; sie sagen nicht, dass gpt-image-2
 aus dem Titelbild tatsächlich ein personenfreies Blatt macht. Genau dafür
 sitzt der Halt nach dem ersten Blatt.
 
-## Bewusst offen
+## Bewusst offen (Stand vor der Prüfung)
 
 - **Der Knopf hängt nicht an der Kategorie** — ein Komplett-Look bekommt die
   vier Blätter genauso wie ein einzelnes Kleidungsstück. Falls das für Schuhe
@@ -120,3 +120,39 @@ sitzt der Halt nach dem ersten Blatt.
   Dialog. `jobUnterwegsSchritt` aus PROJ-48 wurde bewusst NICHT übernommen:
   Die Outfit-Kette hat keine Merkmalsauswahl, es gäbe nichts zu schützen — und
   ein Zustandsfeld ohne Wirkung hält der nächste Leser für wichtig.
+
+## Nach der unabhängigen Prüfung (Nacht zum 04.09.2026)
+
+Elf gewichtige Befunde. **Die vier Prompt-Befunde wurden sofort behoben**,
+weil sie die allerersten vier bezahlten Erzeugungen unbrauchbar gemacht
+hätten — reine Textarbeit ohne Verhaltensrisiko:
+
+1. **„One single garment" hätte jeden Komplett-Look zerstört.** 17 der 36
+   Einträge sind komplette Looks aus mehreren Teilen; der Satz hätte das
+   Modell aufgefordert, Teile wegzulassen oder zu verschmelzen. Jetzt steht
+   ausdrücklich da, dass bei einem Komplett-Look ALLE Teile in ihrer
+   getragenen Anordnung zu zeigen sind.
+2. **Der Kleiderbügel fehlte in der Verbotsliste.** Bei freigestellter
+   Kleidung ist er der häufigste ungebetene Gast — häufiger als ein Mensch.
+   Jetzt verboten, samt Schneiderpuppe, Torso-Ständer und Garderobenstange.
+3. **„NO PERSON" ist die schwächere Hälfte.** Verneinungen tragen bei
+   Bildmodellen schlecht. Daneben steht jetzt die positive Beschreibung
+   desselben Zustands: hohl, offene Ausschnitte, Hintergrund scheint hindurch,
+   Innenfutter am Kragen sichtbar.
+4. **Grundregeln und Detailblatt widersprachen sich.** „Ghost mannequin",
+   „freier Hintergrund" und „nothing else in the frame" gelten für einen
+   Stoff-Makro nicht — das Modell hätte zwischen zwei Anweisungen wählen
+   müssen, und die wahrscheinlichere Auflösung wäre gewesen, im Detailfeld
+   wieder das ganze Kleidungsstück zu zeigen. Die Regeln sind jetzt in einen
+   Kern (gilt immer) und einen Einzelbild-Teil getrennt; das Detailblatt hebt
+   den Einzelbild-Teil ausdrücklich auf.
+
+Dazu aufgenommen: Rückseiten-Blatt sichert jetzt ab, dass Knopfleiste, Front-
+Reißverschluss und Brusttaschen NICHT auf der Rückseite auftauchen (das
+häufigste Fehlbild ist eine gespiegelte Vorderansicht), und beide Einzelbilder
+fordern dieselbe Kameraachse und -höhe, damit sie nebeneinander bestehen.
+
+**Die sieben Code-Befunde stehen in `features/OFFEN.md`** — sie brauchen
+echte Änderungen und einen Prüflauf. Drei davon stehen wörtlich auch in
+`use-referenzkette.ts` (PROJ-48): Die beiden Ketten-Hooks sind Kopien
+voneinander und müssen zusammen repariert werden.
