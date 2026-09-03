@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, User, Pencil, Trash2, X, ChevronRight, Users, Sparkles, ExternalLink } from 'lucide-react'
+import { Plus, Search, User, Pencil, Trash2, X, ChevronRight, Users, Sparkles, ExternalLink, Link2 } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -36,6 +36,7 @@ import { VariantCard } from '@/components/characters/variant-card'
 import { AlleVariantenBilder } from '@/components/characters/alle-varianten-bilder'
 import { CharacterMediaManager } from '@/components/characters/character-media-manager'
 import { CharacterSheetDialog } from '@/components/characters/character-sheet-dialog'
+import { ReferenzketteDialog } from '@/components/characters/referenzkette-dialog'
 import {
   useCharacters,
   useCharacterDetail,
@@ -68,6 +69,7 @@ export default function CharactersPage() {
     reorderImages,
     reorderVariants,
     updateCharacterCover,
+    refetch: refetchDetail,
   } = useCharacterDetail(selectedId)
 
   const [variantFormOpen, setVariantFormOpen] = useState(false)
@@ -75,6 +77,7 @@ export default function CharactersPage() {
   const [deleteVariantId, setDeleteVariantId] = useState<string | null>(null)
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
   const [sheetDialogOpen, setSheetDialogOpen] = useState(false)
+  const [kettenDialogOffen, setKettenDialogOffen] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -288,6 +291,14 @@ export default function CharactersPage() {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                  {/* Der häufigste Handgriff zuerst (PROJ-48): Kopf, Körper und
+                      Referenzsheet in einem Durchlauf, statt dreimal einzeln
+                      erzeugen, herunterladen und wieder hochladen. */}
+                  <Button size="sm" className="h-8 gap-1.5 bg-violet-600 hover:bg-violet-500"
+                    onClick={() => setKettenDialogOffen(true)}>
+                    <Link2 className="h-3.5 w-3.5" />
+                    Referenzkette
+                  </Button>
                   <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-500/40 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
                     onClick={() => setSheetDialogOpen(true)}>
                     <Sparkles className="h-3.5 w-3.5" />
@@ -453,6 +464,17 @@ export default function CharactersPage() {
           open={sheetDialogOpen}
           onClose={() => setSheetDialogOpen(false)}
           character={character}
+        />
+      )}
+
+      {/* Erst mounten, wenn gebraucht: Der Dialog fragt beim Öffnen den Stand
+          der drei Varianten ab — das soll nur geschehen, wenn er auch aufgeht. */}
+      {character && kettenDialogOffen && (
+        <ReferenzketteDialog
+          offen
+          onClose={() => setKettenDialogOffen(false)}
+          character={character}
+          onAenderung={() => { void refetchDetail() }}
         />
       )}
 

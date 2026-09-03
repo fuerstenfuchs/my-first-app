@@ -1,6 +1,6 @@
 # PROJ-48: Referenzkette für Charaktere
 
-## Status: Planned
+## Status: In Review
 **Created:** 2026-09-03
 
 ## Warum
@@ -64,30 +64,57 @@ misslungener Kopf pflanzt sich sonst in beide folgenden Bilder fort.
 **neutrale Kleidung** verlangt werden — aber so, dass man **die Proportionen
 des Körpers gut sieht**. Und **möglichst kein Schattenwurf**.
 
-## Was noch offen ist
+**5. Drei eigene Varianten.** Mark am 03.09.2026: „Es werden drei eigene
+Varianten. Es werden einmal Kopf, einmal Körper und einmal Referenzsheet."
+Nicht alle drei in eine Variante, und das Titelbild wird nie überschrieben —
+stehende Regel seit dem 02.09.2026.
 
-- In welche Variante die drei Bilder gehören. Marks Benennung legt eigene
-  Varianten nahe („Kopf", „Körper", „Referenzsheet"). Das Titelbild wird nie
-  überschrieben — stehende Regel.
-
-## Was vorher geklärt werden muss
-
-Diese Fragen ändern den Bau, deshalb stehen sie hier und nicht im Code:
-
-1. **Läuft die Kette in einem Rutsch durch oder Schritt für Schritt?**
-   Durchlaufend ist bequemer; Schritt für Schritt erlaubt, ein misslungenes
-   Sheet zu wiederholen, bevor der Fehler sich in die nächsten fortpflanzt —
-   und genau das ist bei einer Kette die Gefahr.
-2. **Bekommt Schritt 2 nur den erzeugten Kopf oder Kopf UND Original?**
-   Mark hat „Referenzbild der vorher generierte Kopf" gesagt. Nur den Kopf zu
-   geben ist konsequent; das Original mitzugeben könnte die Körperstatur besser
-   treffen, birgt aber die Vermischung, die Schritt 3 gerade vermeiden will.
-3. **Wohin gehen die drei Bilder?** In dieselbe Variante wie das Original oder
-   in eigene Varianten („Kopf", „Körper", „Referenz")? Marks stehende Regel
-   gilt: **das Titelbild wird nie überschrieben.**
-
-## Voraussetzung — erst PROJ-49
+## Voraussetzung — PROJ-49, erledigt
 
 Die Kette setzt voraus, dass das Ausgangsbild im eigenen Speicher liegt. Genau
-daran ist Marks Versuch am 03.09.2026 gescheitert (siehe PROJ-49). Ohne das
-kann Schritt 1 gar nicht starten.
+daran ist Marks Versuch am 03.09.2026 zunächst gescheitert. PROJ-49 hat das
+behoben: 401 Bilder nachgeholt, und die Erweiterung kopiert ab jetzt beim
+Erfassen. **Mark hat am 03.09.2026 bestätigt: „Das Bild geht jetzt auch
+durch."** Der Weg ist frei.
+
+## Umsetzung (03.09.2026)
+
+**Neue Dateien**
+
+- `src/lib/referenzkette.ts` — die Regeln ohne Oberfläche: Reihenfolge,
+  Variantennamen, Referenzzuordnung je Schritt, die Speicher-Schranke und
+  „wo geht es weiter". Frei von React und Supabase, damit ohne Anmeldung
+  prüfbar.
+- `src/lib/referenzkette.test.ts` — 16 Prüfungen. Jede wurde einmal absichtlich
+  zum Scheitern gebracht (Reihenfolge vertauscht, Titelbild zusätzlich an
+  Schritt 2, Speicher-Schranke ausgehängt): 7 Prüfungen wurden rot, danach
+  wieder grün.
+- `src/hooks/use-referenzkette.ts` — die Ausführung: einreihen, warten,
+  ablegen, wiederaufnehmen.
+- `src/components/characters/referenzkette-dialog.tsx` — die Oberfläche.
+
+**Geänderte Dateien**
+
+- `character-sheet-dialog.tsx` — `Referenzsheet` als vierter, einzeln wählbarer
+  Sheet-Typ; die drei Ketten-Prompts werden exportiert (eine Quelle, keine
+  Kopie).
+- `characters/page.tsx` — Knopf „Referenzkette" in der Kopfzeile.
+
+**Entscheidungen**
+
+- **Eigene Referenzansage je Schritt** statt `referenzZuordnung()` aus
+  `image-generation.ts`: Die kennt nur Charakter/Outfit/Location und hätte beim
+  Referenzsheet zweimal „CHARACTER" geschrieben. Beim dritten Schritt sind es
+  aber zwei Aufgaben — Gesicht aus Bild 1, Körperbau aus Bild 2. Die
+  Sheet-Prompts selbst bleiben unverändert; angehängt wird nur die Zuordnung.
+- **Die Vorlage des nächsten Schrittes ist das ABGELEGTE Bild**, nicht das
+  Ergebnis des Auftrags: Wird ein Auftrag aus der Warteschlange gelöscht,
+  verschwindet seine Datei mit.
+- **Titelbild wird vorher geprüft**, nicht erst vom Arbeiter abgelehnt. Sonst
+  reiht die Kette Aufträge ein, von denen der erste sicher scheitert.
+- **Kein harter Zeitablauf beim Warten**, nur ein Hinweis nach vier Minuten.
+  Ein Auftrag darf lange dauern, wenn andere vor ihm liegen.
+- **Format bleibt wie bisher** (kein `aspect_ratio`, keine Formatansage im
+  Prompt) — genau wie beim bisherigen Weg über den Sheet-Dialog. Mit
+  Referenzbild richtet sich gpt-image-2 ohnehin nach der Vorlage. OFFEN: ob die
+  Sheets ausdrücklich quer angefordert werden sollen.

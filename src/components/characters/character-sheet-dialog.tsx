@@ -12,7 +12,7 @@ import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
-type SheetType = 'kopf' | 'ausdruecke' | 'koerper' | 'gesichtsdetails'
+export type SheetType = 'kopf' | 'ausdruecke' | 'koerper' | 'gesichtsdetails' | 'referenzsheet'
 type Gender = 'woman' | 'man'
 
 const SHEET_TYPES: { id: SheetType; label: string; icon: string; description: string; views: string[] }[] = [
@@ -44,11 +44,22 @@ const SHEET_TYPES: { id: SheetType; label: string; icon: string; description: st
     description: 'Nahaufnahmen einzelner Gesichtsmerkmale',
     views: ['Augen', 'Augenbrauen', 'Nase', 'Lippen', 'Kieferlinie'],
   },
+  {
+    // Marks meistgebrauchtes Blatt (PROJ-48). Es steht hier auch EINZELN in der
+    // Liste und nicht nur am Ende der Referenzkette: Wer Kopf und Körper schon
+    // hat, will das dritte Blatt nachziehen können, ohne die ganze Kette
+    // durchzulaufen.
+    id: 'referenzsheet',
+    label: 'Referenzsheet',
+    icon: '🪪',
+    description: 'Großer 3/4-Kopf, Körper vorne ohne Kopf, Körper hinten',
+    views: ['3/4 Kopf groß', 'Körper vorne (kopflos)', 'Körper hinten'],
+  },
 ]
 
 // ── Fixed prompts ────────────────────────────────────────────────────────────
 
-const KOPF_PROMPT = `Using @image1-3 as the reference character, create a professional facial features reference sheet.
+export const KOPF_PROMPT = `Using @image1-3 as the reference character, create a professional facial features reference sheet.
 
 Preserve exact facial structure and appearance. Do not modify or reinterpret any facial feature.
 
@@ -107,7 +118,7 @@ Style requirements:
 The goal is to create a detailed expression reference sheet that helps maintain consistency when generating future lifestyle, fitness, and influencer images.`
 }
 
-const KOERPER_PROMPT = `Using @image1-3 as the reference character, create a professional full-body character reference sheet.
+export const KOERPER_PROMPT = `Using @image1-3 as the reference character, create a professional full-body character reference sheet.
 
 Preserve exact facial features, body proportions, skin tone, hairstyle, hair color, and overall appearance. Do not redesign, alter, or reinterpret the character in any way.
 
@@ -136,7 +147,75 @@ Style requirements:
 - No background elements
 - Character centered in each frame
 
-The goal is to create a clear full-body reference sheet that can be used to maintain consistency across future image generations. The person wears white short shorts, a white T-shirt, and white sneakers.`
+The goal is to create a clear full-body reference sheet that can be used to maintain consistency across future image generations.
+
+CLOTHING — neutral, but the body must stay readable:
+- Plain, unpatterned, close-fitting garments in a single neutral tone (light grey or off-white)
+- Fitted short sleeves and fitted shorts, plain shoes
+- The clothing must NOT hide the body proportions: shoulder width, waist, hip width, limb length and build must remain clearly recognisable
+- No logos, prints, patterns, jewellery or accessories
+
+LIGHTING — flat and shadow-free:
+- Even, diffuse light from the front, no directional key light
+- NO cast shadows on the background, NO shadow pooling under the feet
+- No dramatic modelling, no rim light, no vignetting`
+
+/**
+ * Das dritte Referenzbild — Marks meistgebrauchtes, und es gab es noch nicht.
+ *
+ * Seine Beschreibung vom 03.09.2026: „Ein großes Kopfbild von leicht schräg
+ * vorne, also so drei Viertel vorne, sodass man eine Seite auch ein wenig
+ * sieht. Und daneben den Körper von vorne komplett ohne Kopf. Daneben noch ein
+ * Körperbild von hinten. Sodass mit einem Referenzbild alles abgedeckt ist.
+ * Man den Kopf aber nur einmal in groß sieht, sodass die KI nicht
+ * durcheinanderkommt."
+ *
+ * DER KOPFLOSE KÖRPER IST DER KERN und keine Marotte. Ein Blatt, auf dem
+ * dasselbe Gesicht dreimal klein auftaucht, gibt dem Bildmodell drei
+ * widersprüchliche Vorlagen desselben Gesichts — es mischt sie. Genau einmal
+ * groß, sonst gar nicht: Dann weiß es, welches Gesicht gemeint ist.
+ */
+export const REFERENZSHEET_PROMPT = `Using @image1 and @image2 as the reference character, create ONE single combined reference sheet.
+
+The sheet contains exactly three panels side by side, left to right:
+
+PANEL 1 (leftmost, LARGE — roughly half the total width):
+- Head and shoulders only, in a three-quarter front view turned slightly to one side so that one cheek and the side of the face are partly visible
+- Large and sharp: this is the only place in the entire sheet where the face appears
+- Neutral expression, eyes to camera
+
+PANEL 2 (middle):
+- Full body from the front, standing straight, arms relaxed at the sides
+- CROPPED AT THE NECK — the head must NOT be visible in this panel at all
+- Body proportions clearly readable: shoulder width, waist, hips, limb length and build
+
+PANEL 3 (rightmost):
+- Full body from behind, standing straight, arms relaxed at the sides
+- The back of the head may be visible, but no face
+
+CRITICAL RULE: the face appears exactly ONCE, in panel 1. Panels 2 and 3 must not show it. Do not add any extra small head shots, insets or thumbnails anywhere on the sheet.
+
+Preserve exact facial features, body proportions, skin tone, hairstyle, hair colour and overall appearance from the references. Do not redesign or reinterpret the character.
+
+CLOTHING — neutral, but the body must stay readable:
+- Plain, unpatterned, close-fitting garments in a single neutral tone (light grey or off-white)
+- Fitted short sleeves and fitted shorts, plain shoes
+- The clothing must NOT hide the body proportions
+- No logos, prints, patterns, jewellery or accessories
+
+LIGHTING — flat and shadow-free:
+- Even, diffuse light from the front, no directional key light
+- NO cast shadows on the background, NO shadow pooling under the feet
+- No dramatic modelling, no rim light, no vignetting
+
+Style requirements:
+- Photorealistic
+- Clean white background
+- Consistent scale and identical lighting across all three panels
+- Sharp focus, high detail
+- No artistic effects, no props, no background elements, no text or labels
+
+The goal is one single sheet that covers face, front and back in a form that can be handed to an image model as the only character reference.`
 
 const GESICHTSDETAILS_PROMPT = `Using @image1-3 as the reference character, create a professional details reference sheet.
 
@@ -170,6 +249,7 @@ function getPrompt(type: SheetType, gender: Gender): string {
   if (type === 'kopf') return KOPF_PROMPT
   if (type === 'ausdruecke') return ausdrueckePrompt(gender)
   if (type === 'gesichtsdetails') return GESICHTSDETAILS_PROMPT
+  if (type === 'referenzsheet') return REFERENZSHEET_PROMPT
   return KOERPER_PROMPT
 }
 
