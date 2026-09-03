@@ -47,6 +47,29 @@ Originalbild des Charakters
 
 Am Ende hat der Charakter vier Bilder: das Original plus drei erzeugte.
 
+## Marks Antworten (03.09.2026) — damit ist geklärt
+
+**1. Halb von Hand, halb automatisch.** Der Kopf wird zuerst erzeugt und Mark
+sieht ihn an: „Ja, wär wahrscheinlich besser, wenn ich das generierte Kopfbild
+zuerst sehe." Erst wenn er ihn nimmt, laufen Körper und Referenzsheet **ohne
+weiteres Zutun** durch. Das ist die richtige Stelle für den Halt: Ein
+misslungener Kopf pflanzt sich sonst in beide folgenden Bilder fort.
+
+**2. Schritt 2 bekommt NUR den erzeugten Kopf.** Nicht zusätzlich das Original.
+
+**3. Die Benennung steht fest:** das erste heißt **Kopf**, das zweite
+**Körper**, das dritte **Referenzsheet**.
+
+**4. Neue Anforderung an das Körperbild** (Marks Worte): Im Prompt muss
+**neutrale Kleidung** verlangt werden — aber so, dass man **die Proportionen
+des Körpers gut sieht**. Und **möglichst kein Schattenwurf**.
+
+## Was noch offen ist
+
+- In welche Variante die drei Bilder gehören. Marks Benennung legt eigene
+  Varianten nahe („Kopf", „Körper", „Referenzsheet"). Das Titelbild wird nie
+  überschrieben — stehende Regel.
+
 ## Was vorher geklärt werden muss
 
 Diese Fragen ändern den Bau, deshalb stehen sie hier und nicht im Code:

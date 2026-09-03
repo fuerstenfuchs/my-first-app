@@ -77,6 +77,6 @@
 | PROJ-47 | Prompt-Assistent im Bildstudio (Text-KI ueber den Proxy) | In Review | [PROJ-47](PROJ-47-prompt-assistent.md) | 2026-09-03 |
 
 | PROJ-48 | Referenzkette fuer Charaktere (Kopf, Koerper, Kombi-Referenz) | Planned | [PROJ-48](PROJ-48-referenzkette-charakter.md) | 2026-09-03 |
-| PROJ-49 | Erfasste Bilder in den eigenen Speicher kopieren | Planned | [PROJ-49](PROJ-49-bilder-in-den-eigenen-speicher.md) | 2026-09-03 |
+| PROJ-49 | Erfasste Bilder in den eigenen Speicher kopieren | In Progress | [PROJ-49](PROJ-49-bilder-in-den-eigenen-speicher.md) | 2026-09-03 |
 
 ## Next Available ID: PROJ-50

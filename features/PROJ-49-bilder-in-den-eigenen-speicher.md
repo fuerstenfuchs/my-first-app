@@ -1,6 +1,6 @@
 # PROJ-49: Erfasste Bilder in den eigenen Speicher kopieren
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-09-03
 
 ## Warum — der Auslöser
@@ -65,3 +65,34 @@ eigenen Nutzerkennung ab.
 
 PROJ-49 ist die Voraussetzung für PROJ-48 (Referenzkette). Ohne Bild im eigenen
 Speicher kann keine Kette starten.
+
+## Reparaturlauf durchgeführt (03.09.2026)
+
+`worker/src/bilder-nachholen.mts`, zwei Gänge. Der erste ändert nichts und
+sagt nur, was noch erreichbar ist — genau die Zahl, die man vorher wissen will.
+
+```
+gefunden:     431 fremde Bildadressen
+erreichbar:   403
+nicht mehr:    28   ← schon verloren, bevor wir angefangen haben
+nachgeholt:   401
+Fehler dabei:   2
+```
+
+Von 431 zeigen jetzt noch **30** nach außen; das sind die toten und die zwei
+Fehlschläge. Marks blockierter Charakter liegt im eigenen Speicher, das Sheet
+kann laufen.
+
+**Zwei Dinge, die beim Bau auffielen:**
+
+- Ein HTTP/2-Fehler eines fremden Servers kommt als unbehandeltes Ereignis an
+  der Sitzung an, NICHT als abgelehnte Zusage — er entkommt jedem `try/catch`
+  um den Abruf. Der erste Lauf ist daran beim 331. von 431 Bildern gestorben.
+  Bei einem Skript über Hunderte fremder Server ist das die Regel, nicht die
+  Ausnahme.
+- Der Bericht wird nach JEDEM Bild geschrieben, nicht am Ende. Die alten
+  Adressen stehen darin, bevor sie überschrieben werden — nichts geht
+  unwiederbringlich verloren.
+
+**Noch zu bauen:** Punkt 1 der Spezifikation — beim Erfassen kopieren, damit
+sich der Bestand nicht wieder aufbaut.
