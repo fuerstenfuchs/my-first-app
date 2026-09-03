@@ -105,11 +105,7 @@ wird. Das unbeschnittene Bild — mit allem, was Mark extra hatte entfernen
 wollen — war also immer die tatsächliche Referenz, auch für die
 Kopf-Sheet-Generierung. Das erklärt die Moderationsablehnung direkt.
 
-Behoben: `cover_image_url` nimmt jetzt `cropUrl ?? coverUrl`. Zusätzlich legt
-die Erweiterung das gewählte Titelbild jetzt auch in die (dank dieses
-Features garantiert vorhandene) Variante „Kopf" — genau das, was Mark an der
-In-App-Erzeugung als Vorbild nannte: „Wenn man einen Charakter normal anlegt,
-direkt über die Seite, dann wird eine Variante generiert."
+Behoben: `cover_image_url` nimmt jetzt `cropUrl ?? coverUrl`.
 
 **Derselbe Befund bestand identisch** in `FashionCaptureScreen.tsx`,
 `LocationCaptureScreen.tsx`, `PoseCaptureScreen.tsx` — dort nur die
@@ -117,8 +113,28 @@ URL-Priorität korrigiert (keine Variante dort, das System kennt für diese drei
 keine Standard-Fächer).
 
 **Nicht rückwirkend korrigiert**: bereits angelegte Charaktere/Assets mit
-falschem Titelbild bleiben, wie sie sind. Mark kann sie über die jetzt
-sichtbare Variante (bei Charakteren) bzw. von Hand neu setzen.
+falschem Titelbild bleiben, wie sie sind.
+
+### Zweiter Durchgang — das Titelbild darf nicht in die Variante „Kopf"
+
+Die erste Fassung dieses Nachtrags legte das gewählte Titelbild zusätzlich in
+die Variante „Kopf", damit es sichtbar/bearbeitbar wird — genau das, was Mark
+an der In-App-Erzeugung als Vorbild nannte. Er bemerkte selbst den Fehler
+darin, Minuten später: Die Referenzkette (PROJ-48) liest ein vorhandenes Bild
+in „Kopf" als Beweis, dass das Kopf-SHEET (fünf Blickwinkel) schon erzeugt
+wurde, und überspringt den Schritt. Ein einzelnes Ausgangsfoto dort hätte die
+eigentliche Kopf-Sheet-Generierung also für jeden so angelegten Charakter
+dauerhaft verhindert — derselbe Fehlertyp, den ein Review-Durchgang kurz zuvor
+schon für `AddCharacterImageScreen.tsx` gefunden hatte, hier aber selbst neu
+eingebaut.
+
+Korrigiert: neue Variante `KOPF_ORIGINAL_VARIANTE` (`'Kopf Original'`) in
+`src/lib/referenzkette.ts`, neben `KOERPERFOTO_VARIANTE` — sichtbar und
+bearbeitbar, aber von der Kette ignoriert. Betrifft sowohl die Erweiterung als
+auch den „Kopf"-Slot im App-Formular (`use-characters.ts`), der denselben
+Fehler schon vor PROJ-50 enthielt, nur bislang folgenlos, weil es die
+Referenzkette noch nicht gab. Test in `referenzkette.test.ts` ergänzt: der
+neue Name darf nie mit `VARIANTEN_NAME.kopf` zusammenfallen.
 
 ## Folgefeature
 
