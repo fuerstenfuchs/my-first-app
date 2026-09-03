@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
 import { STANDARD_VARIANTEN, fehlendeStandardVarianten } from '@/lib/charakter-varianten'
+import { VARIANTEN_NAME, KOPF_ORIGINAL_VARIANTE } from '@/lib/referenzkette'
 
 export type { UploadingFile } from './use-prompt-media'
 export { IMAGE_TYPES, IMAGE_MAX }
@@ -153,7 +154,18 @@ export function useCharacters() {
       // GENAU DIESE — sonst stünde „Kopf" zweimal da, einmal leer und einmal
       // mit Bild. Nur ein Name außerhalb der Liste bekommt ein eigenes Fach;
       // das kommt heute nicht vor, soll aber nicht brechen.
-      const vorhandeneId = standardIds.get(slot.name.trim().toLowerCase())
+      //
+      // AUSNAHME „Kopf": Dieser Slot legt sein Bild NICHT in die Variante
+      // „Kopf" — die liest die Referenzkette (PROJ-48) als Beweis, dass das
+      // Kopf-SHEET (fünf Blickwinkel) schon erzeugt wurde, und überspränge
+      // den echten Schritt. Ein einzelnes, von Hand hochgeladenes
+      // Ausgangsfoto gehört stattdessen in KOPF_ORIGINAL_VARIANTE — Mark hat
+      // denselben Fehler am 03.09.2026 zuerst an der Erweiterung bemerkt.
+      const zielName = slot.name.trim().toLowerCase() === VARIANTEN_NAME.kopf.toLowerCase()
+        ? KOPF_ORIGINAL_VARIANTE
+        : slot.name
+
+      const vorhandeneId = standardIds.get(zielName.trim().toLowerCase())
 
       let variantId = vorhandeneId
       if (!variantId) {
@@ -162,7 +174,7 @@ export function useCharacters() {
           .insert({
             character_id: char.id,
             user_id: user.id,
-            name: slot.name,
+            name: zielName,
             sort_order: naechsteOrdnung++,
           })
           .select('id')

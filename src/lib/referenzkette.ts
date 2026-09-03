@@ -49,6 +49,22 @@ export const SCHRITT_LABEL: Record<KettenSchritt, string> = {
 export const KOERPERFOTO_VARIANTE = 'Körperfoto'
 
 /**
+ * Wohin ein einzelnes, von Mark selbst mitgebrachtes Ausgangsfoto gehört —
+ * zum Beispiel das Bild, mit dem ein Charakter über die Erweiterung angelegt
+ * wird, oder eines, das er beim Anlegen direkt in der App hochlädt.
+ *
+ * MUSS SICH VON `VARIANTEN_NAME.kopf` UNTERSCHEIDEN: `standErmitteln()` in
+ * use-referenzkette.ts liest ein vorhandenes Bild in der Variante „Kopf" als
+ * Beweis, dass das Kopf-SHEET (die fünf Blickwinkel) schon erzeugt wurde, und
+ * überspringt den Schritt. Ein einzelnes Ausgangsfoto dort abzulegen brächte
+ * die Kette dazu, das eigentliche Kopf-Sheet nie zu erzeugen — genau das hat
+ * Mark am 03.09.2026 an einem über die Erweiterung angelegten Charakter
+ * bemerkt. „Kopf Original" ist sichtbar und bearbeitbar wie jede andere
+ * Variante, zählt aber nicht zum Kettenfortschritt.
+ */
+export const KOPF_ORIGINAL_VARIANTE = 'Kopf Original'
+
+/**
  * Welche ROLLE ein mitgegebenes Bild spielt — unabhängig davon, WELCHES Bild
  * es konkret ist.
  *

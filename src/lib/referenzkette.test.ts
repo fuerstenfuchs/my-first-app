@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  KETTEN_SCHRITTE, VARIANTEN_NAME, KOERPERFOTO_VARIANTE,
+  KETTEN_SCHRITTE, VARIANTEN_NAME, KOERPERFOTO_VARIANTE, KOPF_ORIGINAL_VARIANTE,
   quellenFuer, referenzAnsage, kettenPrompt, koerperMerkmaleText, istEigenerSpeicher,
   naechsterSchritt, offeneSchritte,
   type KettenSchritt,
@@ -33,6 +33,16 @@ describe('Reihenfolge und Namen', () => {
   it('das Körperfoto trägt einen eigenen Namen, keinen der drei Kettennamen', () => {
     expect(KOERPERFOTO_VARIANTE).toBe('Körperfoto')
     expect(Object.values(VARIANTEN_NAME)).not.toContain(KOERPERFOTO_VARIANTE)
+  })
+
+  // Mark am 03.09.2026: ein einzelnes Ausgangsfoto (aus der Erweiterung oder
+  // dem Anlege-Formular) landete versehentlich in der Variante „Kopf" — die
+  // Kette las das als „Kopf-Sheet schon erzeugt" und übersprang den echten
+  // Schritt. „Kopf Original" ist dafür der eigene, unterscheidbare Name.
+  it('das Original-Ausgangsfoto trägt einen eigenen Namen, keinen der drei Kettennamen', () => {
+    expect(KOPF_ORIGINAL_VARIANTE).toBe('Kopf Original')
+    expect(Object.values(VARIANTEN_NAME)).not.toContain(KOPF_ORIGINAL_VARIANTE)
+    expect(KOPF_ORIGINAL_VARIANTE.trim().toLowerCase()).not.toBe(VARIANTEN_NAME.kopf.trim().toLowerCase())
   })
 })
 

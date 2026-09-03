@@ -29,6 +29,38 @@ const STANDARD_VARIANTEN = [
   'Calvanize',
 ]
 
+/**
+ * Wohin das Ausgangsfoto gehört, mit dem der Charakter angelegt wurde.
+ *
+ * QUELLE DER WAHRHEIT IST `KOPF_ORIGINAL_VARIANTE` in `src/lib/referenzkette.ts`
+ * IN DER APP — hier eine Kopie, aus demselben technischen Grund wie bei
+ * `STANDARD_VARIANTEN` oben. NICHT `'Kopf'`: Ein Bild dort würde die
+ * Referenzkette glauben lassen, das eigentliche Kopf-Sheet (fünf
+ * Blickwinkel) sei schon erzeugt, und den Schritt überspringen.
+ */
+const KOPF_ORIGINAL_VARIANTE = 'Kopf Original'
+
+/**
+ * Legt die Variante "Kopf Original" an und liefert ihre Kennung — oder
+ * `null`, wenn das Anlegen scheitert. Anders als die sieben Standard-Fächer
+ * ist sie NICHT Teil von `STANDARD_VARIANTEN`: Sie existiert nur, wenn es
+ * tatsächlich ein Ausgangsfoto gibt, nicht immer leer vorab.
+ */
+async function sicherstellenKopfOriginal(characterId: string, userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('character_variants')
+    .insert({
+      character_id: characterId,
+      user_id:      userId,
+      name:         KOPF_ORIGINAL_VARIANTE,
+      sort_order:   STANDARD_VARIANTEN.length,
+    })
+    .select('id')
+    .single()
+  if (error || !data) return null
+  return data.id as string
+}
+
 interface Props {
   capture: PendingCharacterCapture
   onSaved: () => void
@@ -188,14 +220,19 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
       // Charakter normal anlegt, direkt ueber die Seite, dann wird eine
       // Variante generiert." Bisher war das Titelbild hier eine reine
       // URL-Spalte am Charakter, ohne Variante — nirgends sichtbar, nirgends
-      // austauschbar. Das Fach "Kopf" existiert dank der Zeilen oben bereits;
-      // hier bekommt es sein erstes Bild.
-      const kopfVariante = (angelegt ?? []).find(
-        v => String(v.name ?? '').trim().toLowerCase() === 'kopf',
-      )
-      if (kopfVariante && titelbildUrl) {
+      // austauschbar.
+      //
+      // NICHT in die Variante "Kopf": Die Referenzkette liest ein
+      // vorhandenes Bild dort als Beweis, dass das Kopf-SHEET (fuenf
+      // Blickwinkel) schon erzeugt wurde, und ueberspringt den Schritt. Ein
+      // einzelnes Ausgangsfoto dort haette genau das ausgeloest -- von Mark
+      // selbst am 03.09.2026 bemerkt, nachdem die vorherige Fassung dieser
+      // Aenderung "Kopf" traf. KOPF_ORIGINAL_VARIANTE ("Kopf Original") ist
+      // eine eigene, dafuer vorgesehene Variante, die die Kette ignoriert.
+      const kopfOriginalId = await sicherstellenKopfOriginal(neuerCharakter.id, user.id)
+      if (kopfOriginalId && titelbildUrl) {
         const { error: bildErr } = await supabase.from('character_images').insert({
-          variant_id: kopfVariante.id,
+          variant_id: kopfOriginalId,
           user_id:    user.id,
           url:        titelbildUrl,
           storage_path: null,
@@ -203,8 +240,8 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
         })
         if (bildErr) {
           variantenFehler = variantenFehler
-            ? `${variantenFehler} Titelbild konnte nicht als Kopf-Variante abgelegt werden: ${bildErr.message}`
-            : `Titelbild konnte nicht als Kopf-Variante abgelegt werden: ${bildErr.message}`
+            ? `${variantenFehler} Titelbild konnte nicht als Kopf-Original-Variante abgelegt werden: ${bildErr.message}`
+            : `Titelbild konnte nicht als Kopf-Original-Variante abgelegt werden: ${bildErr.message}`
         }
       }
     } else {
