@@ -79,5 +79,6 @@
 | PROJ-48 | Referenzkette fuer Charaktere (Kopf, Koerper, Kombi-Referenz) | In Review | [PROJ-48](PROJ-48-referenzkette-charakter.md) | 2026-09-03 |
 | PROJ-49 | Erfasste Bilder in den eigenen Speicher kopieren | In Progress | [PROJ-49](PROJ-49-bilder-in-den-eigenen-speicher.md) | 2026-09-03 |
 | PROJ-50 | Sieben Standard-Varianten bei Charaktererzeugung | In Review | [PROJ-50](PROJ-50-standard-varianten.md) | 2026-09-03 |
+| PROJ-51 | Titelbild per Knopf aus dem Preset „Calvanize Studio" | In Review | [PROJ-51](PROJ-51-titelbild-preset.md) | 2026-09-03 |
 
-## Next Available ID: PROJ-51
+## Next Available ID: PROJ-52

@@ -505,14 +505,34 @@ export function useCharacterDetail(characterId: string | null) {
     ))
   }
 
-  async function updateCharacterCover(url: string | null, onSynced?: (url: string | null) => void): Promise<void> {
-    if (!characterId) return
+  /**
+   * Titelbild setzen. Liefert, OB es geklappt hat.
+   *
+   * Der Rückgabewert kam am 03.09.2026 dazu: Vorher meldete diese Funktion
+   * einen Fehler nur als Toast und kehrte normal zurück. Ein Aufrufer, der
+   * `await` darauf machte, konnte Erfolg und Misserfolg nicht unterscheiden —
+   * der Titelbild-Knopf (PROJ-51) meldete deshalb „Titelbild gesetzt", während
+   * daneben rot stand, dass genau das nicht ging.
+   *
+   * `stillLeise` für Abläufe, die selbst eine zusammenfassende Meldung zeigen;
+   * sonst stünden zwei Meldungen zur selben Sache untereinander.
+   */
+  async function updateCharacterCover(
+    url: string | null,
+    onSynced?: (url: string | null) => void,
+    stillLeise = false,
+  ): Promise<boolean> {
+    if (!characterId) return false
     const supabase = createClient()
     const { error } = await supabase.from('characters').update({ cover_image_url: url }).eq('id', characterId)
-    if (error) { toast.error('Titelbild konnte nicht gesetzt werden'); return }
+    if (error) {
+      if (!stillLeise) toast.error('Titelbild konnte nicht gesetzt werden')
+      return false
+    }
     setCharacter(prev => prev ? { ...prev, cover_image_url: url } : prev)
     onSynced?.(url)
-    toast.success('Titelbild gesetzt')
+    if (!stillLeise) toast.success('Titelbild gesetzt')
+    return true
   }
 
   return {

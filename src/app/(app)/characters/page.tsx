@@ -37,6 +37,7 @@ import { AlleVariantenBilder } from '@/components/characters/alle-varianten-bild
 import { CharacterMediaManager } from '@/components/characters/character-media-manager'
 import { CharacterSheetDialog } from '@/components/characters/character-sheet-dialog'
 import { ReferenzketteDialog } from '@/components/characters/referenzkette-dialog'
+import { TitelbildKnopf } from '@/components/characters/titelbild-knopf'
 import {
   useCharacters,
   useCharacterDetail,
@@ -299,6 +300,21 @@ export default function CharactersPage() {
                     <Link2 className="h-3.5 w-3.5" />
                     Referenzkette
                   </Button>
+                  {/* Der Schritt DANACH (PROJ-51): aus dem fertigen
+                      Referenzsheet und Marks Preset „Calvanize Studio" ein
+                      Titelbild — ein Klick statt fünf Handgriffen. Gesperrt,
+                      solange kein Referenzsheet vorliegt. */}
+                  <TitelbildKnopf
+                    character={character}
+                    varianten={variants}
+                    // `stillLeise`: Der Knopf fasst am Ende selbst zusammen —
+                    // sonst stünden zwei Meldungen zum selben Vorgang
+                    // untereinander.
+                    titelbildSetzen={url =>
+                      updateCharacterCover(url, newUrl => selectedId && patchCharacterCover(selectedId, newUrl), true)
+                    }
+                    onAenderung={() => { void refetchDetail() }}
+                  />
                   <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-500/40 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
                     onClick={() => setSheetDialogOpen(true)}>
                     <Sparkles className="h-3.5 w-3.5" />

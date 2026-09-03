@@ -35,6 +35,17 @@ export type Ziel = {
   parentName: string
   /** Die Variante darin — null bei Archetypen und Prompts, die keine haben. */
   variantId: string | null
+  /**
+   * Keine eigene Erfolgsmeldung zeigen.
+   *
+   * Für Abläufe, die `uebernehmen` nur als Zwischenschritt benutzen und danach
+   * selbst zusammenfassen. Der Titelbild-Knopf (PROJ-51) braucht das: Dessen
+   * Zweck IST das Ersetzen des Titelbildes, während die Meldung hier wörtlich
+   * „das Titelbild bleibt unverändert" verspricht. Beides nacheinander an
+   * derselben Stelle des Bildschirms — und eine der beiden Aussagen ist
+   * jedes Mal falsch.
+   */
+  stillLeise?: boolean
 }
 
 /**
@@ -207,9 +218,11 @@ export function useBildUebernehmen() {
       // der Baustein noch keines hat. Mark am 02.09.2026: „Da habe ich mühsam
       // schon eigene Titelbilder erstellt, sodass die möglichst alle gleich
       // aussehen." Ein übernommenes Bild ist immer nur ein weiteres Bild.
-      toast.success(`Übernommen nach ${ziel.parentName}`, {
-        description: `Als weiteres Bild hinzugefügt — das Titelbild bleibt unverändert.`,
-      })
+      if (!ziel.stillLeise) {
+        toast.success(`Übernommen nach ${ziel.parentName}`, {
+          description: `Als weiteres Bild hinzugefügt — das Titelbild bleibt unverändert.`,
+        })
+      }
       return true
     } catch (e) {
       toast.error(`Übernehmen fehlgeschlagen: ${(e as Error).message}`)
