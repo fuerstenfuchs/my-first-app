@@ -25,6 +25,17 @@ try {
   })
   if (antwort.ok) {
     gut(`erreichbar unter ${config.proxyUrl}, Token wird angenommen`)
+    // Erreichbar UND Token angenommen heisst noch nicht, dass das Modell da
+    // ist — genau das ist am 03.09.2026 passiert: HTTP 200 auf /v1/models,
+    // aber gpt-image-2 fehlte in der Liste, und der erste Hinweis darauf war
+    // ein fehlgeschlagener Auftrag in der Warteschlange.
+    const daten = await antwort.json().catch(() => null) as { data?: { id?: string }[] } | null
+    const modelle = daten?.data?.map(m => m.id).filter((id): id is string => !!id) ?? []
+    if (modelle.includes('gpt-image-2')) {
+      gut('Modell gpt-image-2 steht in der Liste')
+    } else {
+      schlecht('Modell gpt-image-2 fehlt in der Modell-Liste des Proxys — EasyCLIProxyAPI pruefen (Anmeldung des "codex"-Anbieters abgelaufen?)')
+    }
   } else if (antwort.status === 401 || antwort.status === 403) {
     schlecht(`${config.proxyUrl} antwortet, lehnt den Token aber ab (HTTP ${antwort.status}). PROXY_TOKEN prüfen.`)
   } else {
