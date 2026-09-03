@@ -49,10 +49,10 @@
 | PROJ-29 | Look & Grading System (Stil + Grading, Standard + eigene Einträge, KI-Erzeugung) | Deployed | — | 2026-06-17 |
 | PROJ-30 | Studio-Hintergrund (Farbwahl als Location-Fallback) | Deployed | — | 2026-06-17 |
 | PROJ-31A | Preset-System für Scene Builder (Speichern/Laden/Duplizieren/Export/Import, 9 Standard-Presets) | Deployed | — | 2026-06-18 |
-| PROJ-32 | Location Archetypes (generische Locations, KI-Beschreibung, Scene Builder Kombination) | Deployed | — | 2026-06-18 |
+| PROJ-32 | Location Archetypes (generische Locations, KI-Beschreibung, Scene Builder Kombination)  | Zurueckgebaut (PROJ-52) | — | 2026-06-18 |
 | PROJ-33 | Location Sheets-Button (Location/Cinematic/Gebäude, feste Prompts aus Prompt Tresor) | Deployed | — | 2026-06-18 |
-| PROJ-34 | Eigene Kategorien für Locations & Location Archetypes (Standard + selbst erstellte) | Deployed | — | 2026-06-18 |
-| PROJ-35 | Character Archetypes & Outfit Archetypes (generische Charaktere/Outfits, KI-Beschreibung mit Recherche-Modus, Scene Builder Kombination) | Deployed | — | 2026-06-22 |
+| PROJ-34 | Eigene Kategorien für Locations & Location Archetypes (Standard + selbst erstellte)  | Zurueckgebaut (PROJ-52) | — | 2026-06-18 |
+| PROJ-35 | Character Archetypes & Outfit Archetypes (generische Charaktere/Outfits, KI-Beschreibung mit Recherche-Modus, Scene Builder Kombination)  | Zurueckgebaut (PROJ-52) | — | 2026-06-22 |
 | PROJ-36 | Character Capture System (Chrome Extension: Rechtsklick → Crop → KI-Analyse → Speichern) | Deployed | — | 2026-06-23 |
 
 | PROJ-37 | Bildgenerierung (Auftragstabelle, lokaler Arbeiter, Warteschlange) | In Review | [PROJ-37](PROJ-37-bildgenerierung.md) | 2026-09-01 |

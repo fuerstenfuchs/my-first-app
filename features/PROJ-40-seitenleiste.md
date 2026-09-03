@@ -108,3 +108,5 @@ ueberstehende Rand war es.
 - Die Zusammenfassung von Outfits und Fashion Assets zu zwei getrennten Kacheln
   blieb erhalten. Falls Fashion Assets für Mark zu den Outfits gehören, ließe
   sich eine weitere Kachel sparen.
+
+> **Nachtrag 03.09.2026:** Die hier beschriebenen Archetyp-Eintraege gibt es seit PROJ-52 nicht mehr; uebrig sind Charaktere, Outfits und Locations.

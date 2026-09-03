@@ -108,3 +108,5 @@ nicht erst enthält — dafür ist das Bearbeitungsfeld da.
   aber niemand hat sie angeklickt — das braucht Marks Zugang.
 - Der Dialog bietet nur echte Assets, keine Archetypen. Bewusst: Archetypen haben
   meist kein Bild, und der Weg über den Scene Builder deckt sie ab.
+
+> **Nachtrag 03.09.2026:** `loadArchetypeRefImages` ist mit PROJ-52 entfallen — die Archetypen wurden in die Hauptbereiche zusammengelegt.

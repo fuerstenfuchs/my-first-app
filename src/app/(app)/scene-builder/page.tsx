@@ -592,10 +592,18 @@ export default function SceneBuilderPage() {
     // Ein vor PROJ-52 gespeichertes Preset kann noch Archetyp-Felder enthalten.
     // Die werden hier schlicht nicht mehr gelesen — das Laden scheitert daran
     // nicht, siehe EMPTY_PRESET_CONFIG in `scene-preset-types.ts`.
+    // `config.refs?.` mit Rückfall, nicht `config.refs.`: `normalize()` in
+    // `use-scene-presets.ts` ist ein FLACHER Spread über `EMPTY_PRESET_CONFIG`.
+    // Steht in einem gespeicherten Preset `"refs": null`, überschreibt das den
+    // Vorgabewert vollständig — und der Zugriff hier würfe. Und zwar erst NACH
+    // `setScene(...)` weiter oben: Die Szene wäre dann halb angewendet, der
+    // Erfolgshinweis käme nie, und auf dem Bildschirm stünde ein Zustand, den
+    // niemand ausgewählt hat. Ein halb übernommenes Preset ist schlimmer als
+    // ein abgelehntes.
     setSceneRefs({
-      character: config.refs.character,
-      outfit:    config.refs.outfit,
-      location:  config.refs.location,
+      character: config.refs?.character ?? null,
+      outfit:    config.refs?.outfit ?? null,
+      location:  config.refs?.location ?? null,
     })
     if (config.character_id) loadRefImages_forSlot('character', config.character_id)
     if (config.outfit_id) loadRefImages_forSlot('outfit', config.outfit_id)

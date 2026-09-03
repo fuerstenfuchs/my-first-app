@@ -115,3 +115,5 @@ Der Übernehmen-Dialog ist die Stelle, an der es Mark aufgefallen ist. Dieselben
 Listen stehen aber auch im Scene Builder und auf den Baustein-Seiten. Was hier
 entsteht, sollte dorthin nachgezogen werden — als eigener Schritt, damit dieser
 hier klein und prüfbar bleibt.
+
+> **Nachtrag 03.09.2026:** Die `short_description`-Alias-Regel galt den Archetyp-Tabellen. Die sind mit PROJ-52 entfallen; der Alias-Weg in `auswahlSpalten` bleibt bestehen, hat aber derzeit keinen Nutzer.
