@@ -46,6 +46,23 @@ steht es zuerst.
   Einstellungen, weil eine Erweiterung nicht an den `localStorage` der Seite
   kommt. Bewusst so, aber unschön.
 
+## Behoben am 03.09.2026, Nachtrag
+
+- **Speichergrenzen der Baustein-Eimer waren zu knapp fürs eigene
+  Vergrößern.** Mark hatte ein Referenzsheet 4× hochrechnen lassen
+  (SeedVR2) — 6784×3712, 28,1 MB — und wollte es in den Charakter übernehmen.
+  `character-images` liess damals nur 20 MB zu, `location-images` und
+  `pose-action-images` nur 10 MB. Alle fünf „Übernehmen"-Eimer
+  (character-images, outfit-images, fashion-assets, location-images,
+  pose-action-images) stehen jetzt auf 50 MB. Dazu clientseitig
+  `pruefeBildgroesse()` in `src/lib/bausteine.ts`: Vor dem Hochladen prüfen
+  statt erst nach dem vollen Upload-Versuch eine rohe englische
+  Supabase-Meldung zu zeigen.
+- Beim Nachmessen aufgefallen: **Marks Speicherbelegung liegt bei rund
+  1,16 GB** über alle Bild-Eimer. Nicht behoben, nur festgehalten — falls
+  Supabase irgendwann eine Speichergrenze des Kontos meldet, ist das der
+  erste Blick.
+
 ## Kaputt, aber niemandem aufgefallen
 
 - **`npm run lint` läuft nicht.** Das Skript ruft `next lint`, und das gibt es

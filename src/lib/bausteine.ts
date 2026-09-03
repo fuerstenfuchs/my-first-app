@@ -92,6 +92,51 @@ export type Baustein = {
   href: string
 }
 
+/**
+ * Wie groß eine Datei je Eimer sein darf — in Megabyte.
+ *
+ * WARUM DAS HIER STEHT, OBWOHL ES EIGENTLICH IN SUPABASE STEHT: Der Browser
+ * kann `storage.buckets` nicht einfach abfragen (dafür bräuchte es Rechte, die
+ * ein angemeldeter Nutzer nicht hat). Diese Zahlen sind deshalb eine KOPIE,
+ * keine Quelle — die Quelle bleibt Supabase.
+ *
+ * WARUM ES SIE TROTZDEM BRAUCHT: Am 03.09.2026 ist Mark genau hier
+ * hineingelaufen. Er hatte ein Referenzsheet 4× vergrößern lassen (SeedVR2,
+ * verlustfrei) — 6784×3712, 28,1 MB. `character-images` liess damals nur
+ * 20 MB zu. Ohne diese Tabelle waere die einzige Meldung Supabases eigener,
+ * englischer Satz gewesen ("The object exceeded the maximum allowed size"),
+ * ohne Zahl und ohne zu sagen, WESSEN Grenze das ist.
+ *
+ * Die fuenf Eimer, in die ein vergroessertes Ergebnis uebernommen werden kann,
+ * wurden am selben Tag von 10/20 MB auf 50 MB angehoben — 28 MB war schon
+ * knapp am damaligen Limit, und SeedVR2 kann je nach Quellbild noch groesser
+ * werden. `prompt-media` (Video, 100 MB) und die Archetyp-Eimer (kein Limit)
+ * brauchen keinen Eintrag.
+ */
+export const SPEICHERLIMIT_MB: Record<string, number> = {
+  'character-images':  50,
+  'outfit-images':     50,
+  'fashion-assets':    50,
+  'location-images':   50,
+  'pose-action-images': 50,
+}
+
+/**
+ * Passt eine Datei in den Eimer eines Bausteins? `null` heisst ja.
+ *
+ * WARUM CLIENTSEITIG UND NICHT ERST BEIM HOCHLADEN: Ohne diese Pruefung
+ * erfaehrt man es erst nach dem vollen Hochladeversuch — bei 28 MB auf einer
+ * gewoehnlichen Leitung ist das keine Sekunde, sondern eine spuerbare Wartezeit
+ * fuer eine Meldung, die man auch sofort haette geben koennen.
+ */
+export function pruefeBildgroesse(bytes: number, b: Baustein): string | null {
+  const limit = SPEICHERLIMIT_MB[b.bucket]
+  if (!limit) return null
+  const mb = bytes / 1024 / 1024
+  if (mb <= limit) return null
+  return `Das Bild ist ${mb.toFixed(1)} MB groß — ${b.label} erlaubt höchstens ${limit} MB.`
+}
+
 export const BAUSTEINE: Baustein[] = [
   {
     schluessel: 'charaktere', label: 'Charaktere', einzahl: 'Charakter', icon: Users,

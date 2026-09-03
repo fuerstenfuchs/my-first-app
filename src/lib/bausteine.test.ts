@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   passtZurSuche, kategorien, kategorieLabel, auswahlSpalten, baustein,
+  pruefeBildgroesse,
   type SuchbarerEintrag,
 } from './bausteine'
 
@@ -138,5 +139,44 @@ describe('auswahlSpalten', () => {
     // Und dort NICHT die Spalte, die es nicht gibt.
     expect(auswahlSpalten(baustein('charakter-archetypen')))
       .not.toMatch(/(^|, )description(,|$)/)
+  })
+})
+
+describe('pruefeBildgroesse', () => {
+  const MB = 1024 * 1024
+
+  it('lässt Marks tatsächlichen Fall vom 03.09.2026 durch — 28,1 MB, seit der Anhebung erlaubt', () => {
+    // 6784×3712, SeedVR2 4×, gemessen: 29 484 500 Bytes.
+    expect(pruefeBildgroesse(29_484_500, baustein('charaktere'))).toBeNull()
+  })
+
+  it('hätte denselben Fall VOR der Anhebung abgelehnt — hält die alte Grenze als Beleg fest', () => {
+    const alteGrenze = 20 // MB, bis 03.09.2026 in Supabase
+    const mb = 29_484_500 / MB
+    expect(mb).toBeGreaterThan(alteGrenze)
+  })
+
+  it('lässt ein normal großes Bild klar durch', () => {
+    expect(pruefeBildgroesse(3 * MB, baustein('locations'))).toBeNull()
+  })
+
+  it('lehnt ab, wenn es über der Grenze liegt, und nennt beide Zahlen', () => {
+    const meldung = pruefeBildgroesse(51 * MB, baustein('outfits'))
+    expect(meldung).toContain('51.0 MB')
+    expect(meldung).toContain('50 MB')
+    expect(meldung).toContain('Outfits')
+  })
+
+  it('lässt genau die Grenze noch durch — erst DARÜBER wird abgelehnt', () => {
+    expect(pruefeBildgroesse(50 * MB, baustein('fashion'))).toBeNull()
+    expect(pruefeBildgroesse(50 * MB + 1, baustein('fashion'))).not.toBeNull()
+  })
+
+  it('prüft Prompts nicht — der Eimer hat kein Limit in der Tabelle', () => {
+    expect(pruefeBildgroesse(90 * MB, baustein('prompts'))).toBeNull()
+  })
+
+  it('prüft Archetypen nicht — deren Eimer haben in Supabase kein Limit', () => {
+    expect(pruefeBildgroesse(200 * MB, baustein('charakter-archetypen'))).toBeNull()
   })
 })

@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import {
-  BAUSTEINE, ablagepfad, auswahlSpalten,
+  BAUSTEINE, ablagepfad, auswahlSpalten, pruefeBildgroesse,
   type Baustein, type BausteinSchluessel,
 } from '@/lib/bausteine'
 
@@ -130,6 +130,19 @@ export function useBildUebernehmen() {
         return false
       }
 
+      // Bevor irgendetwas hochgeladen wird: Passt es überhaupt in den Eimer?
+      // Ohne diese Prüfung erführe man es erst nach dem vollen Upload-Versuch —
+      // bei einem vergrößerten Ergebnis (20–30 MB) eine spürbare Wartezeit für
+      // eine Meldung, die sofort dagewesen wäre. Am 03.09.2026 gefunden: Ein
+      // 4×-vergrößertes Referenzsheet (28,1 MB) passte nicht in
+      // `character-images` (damals 20 MB) und Supabase antwortete nur auf
+      // Englisch, ohne Zahl.
+      const zuGross = pruefeBildgroesse(blob.size, b)
+      if (zuGross) {
+        toast.error(zuGross)
+        return false
+      }
+
       // 2. Ablegen, im Eimer des Bausteins.
       const pfad = ablagepfad(user.id, ziel.parentId, ziel.variantId, endungAus(quellUrl))
       // Woran die Bildzeile hängt: an der Variante, am Archetyp oder am Prompt.
@@ -139,7 +152,13 @@ export function useBildUebernehmen() {
         .from(b.bucket)
         .upload(pfad, blob, { contentType: blob.type || 'image/png', upsert: false })
       if (hochErr) {
-        toast.error(`Ablegen fehlgeschlagen: ${hochErr.message}`)
+        // Falls die Tabelle in bausteine.ts und die Grenze in Supabase je
+        // auseinanderlaufen (die eine ist eine Kopie der anderen — siehe
+        // SPEICHERLIMIT_MB), fängt das hier den Fall trotzdem lesbar auf.
+        const klingtNachGroesse = /exceed|maximum|too large|payload/i.test(hochErr.message)
+        toast.error(klingtNachGroesse
+          ? `Das Bild ist zu groß für ${b.label} (${(blob.size / 1024 / 1024).toFixed(1)} MB).`
+          : `Ablegen fehlgeschlagen: ${hochErr.message}`)
         return false
       }
 
