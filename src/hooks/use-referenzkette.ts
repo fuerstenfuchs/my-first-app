@@ -7,14 +7,20 @@ import { useImageJobs, ergebnisUrl } from '@/hooks/use-image-jobs'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
 import { type Character } from '@/hooks/use-characters'
 import { GROESSE_VORGABE, type JobStatus } from '@/lib/image-generation'
+import { ablagepfad, pruefeBildgroesse, BAUSTEINE } from '@/lib/bausteine'
 import {
   KOPF_PROMPT, KOERPER_PROMPT, REFERENZSHEET_PROMPT,
 } from '@/components/characters/character-sheet-dialog'
 import {
-  QUELLEN, SCHRITT_LABEL, VARIANTEN_NAME,
-  istEigenerSpeicher, kettenPrompt, naechsterSchritt, offeneSchritte,
-  type KettenSchritt,
+  KOERPERFOTO_VARIANTE, SCHRITT_LABEL, VARIANTEN_NAME,
+  istEigenerSpeicher, kettenPrompt, quellenFuer, naechsterSchritt, offeneSchritte,
+  type KettenSchritt, type KoerperAuswahl,
 } from '@/lib/referenzkette'
+
+/** Derselbe Baustein-Eintrag, den auch `Übernehmen` für Charaktere benutzt —
+ * dieselbe Eimer- und Größengrenze gilt für ein von Hand hochgeladenes
+ * Körperfoto genauso wie für ein übernommenes Kettenergebnis. */
+const CHARAKTER_BAUSTEIN = BAUSTEINE.find(b => b.schluessel === 'charaktere')!
 
 /**
  * Die Referenzkette ausführen (PROJ-48).
@@ -71,11 +77,21 @@ type Stand = {
   vorhanden: Record<KettenSchritt, boolean>
   /** Das jeweils jüngste Bild — die Vorlage für den nächsten Schritt. */
   urls: Partial<Record<KettenSchritt, string>>
+  /**
+   * Marks eigenes Körperfoto, falls er eines hochgeladen hat.
+   *
+   * ZÄHLT AUSDRÜCKLICH NICHT ZU `vorhanden` — das ist eine Eingabe für den
+   * Körper-Schritt, kein Kettenergebnis. Läge sie mit in derselben Zählung,
+   * sähe die Kette nach dem Hochladen so aus, als sei sie schon einen Schritt
+   * weiter, obwohl noch kein einziges Sheet erzeugt wurde.
+   */
+  koerperfotoUrl: string | null
 }
 
 const LEERER_STAND: Stand = {
   vorhanden: { kopf: false, koerper: false, referenzsheet: false },
   urls: {},
+  koerperfotoUrl: null,
 }
 
 export function useReferenzkette(
@@ -94,6 +110,30 @@ export function useReferenzkette(
   const [phase, setPhase] = useState<Phase>({ art: 'bereit' })
   const [stand, setStand] = useState<Stand>(LEERER_STAND)
   const [standGeladen, setStandGeladen] = useState(false)
+  /**
+   * Die frei gewählten Körpermerkmale — Marks Antwort auf „ich weiß aber
+   * nicht, an was sich die KI orientiert … da bräuchte ich dann noch mehr
+   * Eingriffsmöglichkeiten".
+   *
+   * NICHT in der Datenbank gespeichert: Es ist ein Hinweis für DIESEN Lauf,
+   * kein dauerhaftes Merkmal des Charakters. Ein zweiter Lauf mit anderer
+   * Auswahl soll möglich sein, ohne die vorige irgendwo aufzuräumen.
+   */
+  const [koerperAuswahl, setKoerperAuswahl] = useState<KoerperAuswahl>({})
+  /**
+   * Welcher NICHT-Kopf-Schritt gerade „aufgegeben, aber nicht gestoppt" in der
+   * Luft hängt — Critic-Befund R04 vom 03.09.2026.
+   *
+   * „Warten aufgeben" hält nur das Zusehen an, nicht den Auftrag selbst: Der
+   * Arbeiter erzeugt ihn zu Ende, aber `warteAufJob` legt das Ergebnis nie ab,
+   * weil niemand mehr danach fragt. Für den Kopf ist das folgenlos — nichts
+   * hängt von ihm ab, bevor Mark ihn sieht. Für Körper (oder später) heißt es:
+   * Die Vorgaben, mit denen der Auftrag eingereiht wurde, sind schon
+   * verbraucht. Ohne dieses Merkmal würde `stand.vorhanden.koerper` weiter
+   * `false` zeigen, der Vorgaben-Abschnitt im Dialog käme zurück, und jede
+   * Änderung darin sähe aus wie eine echte, obwohl sie nichts mehr bewirkt.
+   */
+  const [jobUnterwegsSchritt, setJobUnterwegsSchritt] = useState<KettenSchritt | null>(null)
   const abbruch = useRef(false)
 
   const titelbild = character.cover_image_url
@@ -118,20 +158,26 @@ export function useReferenzkette(
 
     if (error) throw new Error(`Varianten konnten nicht gelesen werden: ${error.message}`)
 
+    /** Das jüngste Bild einer Variante, nach Namen gesucht — oder `null`. */
+    const juengstesBild = (name: string): string | null => {
+      const v = (data ?? []).find(
+        x => String(x.name ?? '').trim().toLowerCase() === name.toLowerCase(),
+      )
+      const bilder = (v?.images ?? []) as { url: string; sort_order: number }[]
+      if (bilder.length === 0) return null
+      return [...bilder].sort((a, b) => b.sort_order - a.sort_order)[0]!.url
+    }
+
     const neu: Stand = {
       vorhanden: { kopf: false, koerper: false, referenzsheet: false },
       urls: {},
+      koerperfotoUrl: juengstesBild(KOERPERFOTO_VARIANTE),
     }
     for (const schritt of Object.keys(VARIANTEN_NAME) as KettenSchritt[]) {
-      const soll = VARIANTEN_NAME[schritt].toLowerCase()
-      const v = (data ?? []).find(
-        x => String(x.name ?? '').trim().toLowerCase() === soll,
-      )
-      const bilder = (v?.images ?? []) as { url: string; sort_order: number }[]
-      if (bilder.length === 0) continue
-      const juengstes = [...bilder].sort((a, b) => b.sort_order - a.sort_order)[0]
+      const url = juengstesBild(VARIANTEN_NAME[schritt])
+      if (!url) continue
       neu.vorhanden[schritt] = true
-      neu.urls[schritt] = juengstes.url
+      neu.urls[schritt] = url
     }
     return neu
   }, [supabase, character.id])
@@ -157,6 +203,8 @@ export function useReferenzkette(
     if (offen) { abbruch.current = false; return }
     abbruch.current = true
     setPhase({ art: 'bereit' })
+    setKoerperAuswahl({})
+    setJobUnterwegsSchritt(null)
   }, [offen])
 
   useEffect(() => () => { abbruch.current = true }, [])
@@ -195,11 +243,26 @@ export function useReferenzkette(
     }
   }, [supabase])
 
-  /** Einen Schritt einreihen und auf sein Bild warten. */
+  /**
+   * Einen Schritt einreihen und auf sein Bild warten.
+   *
+   * `koerper` trägt, was NUR der Körper-Schritt braucht — Marks eigenes
+   * Körperfoto (falls hochgeladen) und seine Merkmalsauswahl. Bei den anderen
+   * beiden Schritten bleibt es unbenutzt; `quellenFuer` liest es nur im
+   * `'koerper'`-Zweig.
+   */
   const erzeuge = useCallback(async (
-    schritt: KettenSchritt, urls: Partial<Record<KettenSchritt, string>>,
+    schritt: KettenSchritt,
+    urls: Partial<Record<KettenSchritt, string>>,
+    koerper: { koerperfotoUrl: string | null; koerperAuswahl: KoerperAuswahl },
   ): Promise<{ url: string; pfad: string }> => {
-    const referenzen = QUELLEN[schritt].map(q => q === 'titelbild' ? titelbild : urls[q])
+    const hatKoerperfoto = !!koerper.koerperfotoUrl
+    const quellen = quellenFuer(schritt, { hatKoerperfoto })
+    const referenzen = quellen.map(q => {
+      if (q.bild === 'titelbild') return titelbild
+      if (q.bild === 'koerperfoto') return koerper.koerperfotoUrl
+      return urls[q.bild]
+    })
     if (referenzen.some(u => !u)) {
       // Darf nicht vorkommen — die Schritte laufen in fester Reihenfolge. Wenn
       // doch, dann lieber laut als mit einer leeren Referenz weiter.
@@ -207,7 +270,7 @@ export function useReferenzkette(
     }
 
     const job = await anlegen({
-      prompt:          kettenPrompt(schritt, BASIS_PROMPT[schritt]),
+      prompt:          kettenPrompt(schritt, BASIS_PROMPT[schritt], { hatKoerperfoto, koerperAuswahl: koerper.koerperAuswahl }),
       model:           'gpt-image-2',
       size:            GROESSE_VORGABE,
       aspect_ratio:    null,
@@ -230,9 +293,14 @@ export function useReferenzkette(
     return warteAufJob(job.id)
   }, [anlegen, character.name, titelbild, warteAufJob])
 
-  /** Die Variante zu einem Schritt — die vorhandene, sonst eine neue. */
-  const varianteHolen = useCallback(async (schritt: KettenSchritt): Promise<string> => {
-    const name = VARIANTEN_NAME[schritt]
+  /**
+   * Eine Variante über ihren NAMEN — die vorhandene, sonst eine neue.
+   *
+   * Nimmt bewusst den Namen und nicht den Kettenschritt entgegen: Das
+   * Körperfoto braucht denselben Mechanismus, ist aber kein `KettenSchritt` —
+   * es ist eine Eingabe, kein Kettenergebnis (siehe `Stand.koerperfotoUrl`).
+   */
+  const varianteHolen = useCallback(async (name: string): Promise<string> => {
     const { data, error } = await supabase
       .from('character_variants')
       .select('id, name')
@@ -277,7 +345,7 @@ export function useReferenzkette(
     schritt: KettenSchritt, ergebnis: { url: string; pfad: string },
   ): Promise<string> => {
     setPhase({ art: 'legt_ab', schritt })
-    const variantId = await varianteHolen(schritt)
+    const variantId = await varianteHolen(VARIANTEN_NAME[schritt])
 
     const ok = await uebernehmen(ergebnis.url, ergebnis.pfad, {
       baustein:   'charaktere',
@@ -309,15 +377,65 @@ export function useReferenzkette(
     return url
   }, [supabase, uebernehmen, varianteHolen, character.id, character.name])
 
+  /**
+   * Marks eigenes Körperfoto hochladen — Antwort auf: „Ich kann dazu bewusst
+   * auch ein Körperbild als Zweites mit dazuladen."
+   *
+   * Läuft unabhängig vom eigentlichen Kettenlauf: Mark bringt dieses Bild
+   * selbst mit, es ist keine KI-Erzeugung. Dieselbe Größenprüfung wie beim
+   * Übernehmen (`pruefeBildgroesse`) — kein zweiter Weg für dieselbe Regel.
+   */
+  const [koerperfotoLaedt, setKoerperfotoLaedt] = useState(false)
+  const koerperfotoHochladen = useCallback(async (datei: File): Promise<boolean> => {
+    const zuGross = pruefeBildgroesse(datei.size, CHARAKTER_BAUSTEIN)
+    if (zuGross) { toast.error(zuGross); return false }
+
+    setKoerperfotoLaedt(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { toast.error('Nicht angemeldet'); return false }
+
+      const variantId = await varianteHolen(KOERPERFOTO_VARIANTE)
+      const endung = (datei.name.split('.').pop() || 'jpg').toLowerCase()
+      const pfad = ablagepfad(user.id, character.id, variantId, endung)
+
+      const { error: hochErr } = await supabase.storage
+        .from(CHARAKTER_BAUSTEIN.bucket)
+        .upload(pfad, datei, { contentType: datei.type || 'image/jpeg', upsert: false })
+      if (hochErr) { toast.error(`Körperfoto konnte nicht abgelegt werden: ${hochErr.message}`); return false }
+
+      const { data: { publicUrl } } = supabase.storage.from(CHARAKTER_BAUSTEIN.bucket).getPublicUrl(pfad)
+      const { error: zeileErr } = await supabase.from('character_images').insert({
+        variant_id: variantId,
+        user_id:    user.id,
+        url:        publicUrl,
+        storage_path: pfad,
+        sort_order: Date.now(),
+      })
+      if (zeileErr) { toast.error(`Körperfoto konnte nicht eingetragen werden: ${zeileErr.message}`); return false }
+
+      setStand(s => ({ ...s, koerperfotoUrl: publicUrl }))
+      toast.success('Körperfoto gespeichert')
+      return true
+    } catch (e) {
+      toast.error(`Körperfoto fehlgeschlagen: ${(e as Error).message}`)
+      return false
+    } finally {
+      setKoerperfotoLaedt(false)
+    }
+  }, [supabase, varianteHolen, character.id])
+
   // ── Der Ablauf ─────────────────────────────────────────────────────────────
 
   /** Die restlichen Schritte ohne weiteres Zutun. */
   const laufe = useCallback(async (
-    schritte: KettenSchritt[], urls: Partial<Record<KettenSchritt, string>>,
+    schritte: KettenSchritt[],
+    urls: Partial<Record<KettenSchritt, string>>,
+    koerper: { koerperfotoUrl: string | null; koerperAuswahl: KoerperAuswahl },
   ) => {
     const bekannt = { ...urls }
     for (const schritt of schritte) {
-      const ergebnis = await erzeuge(schritt, bekannt)
+      const ergebnis = await erzeuge(schritt, bekannt, koerper)
       bekannt[schritt] = await ablegen(schritt, ergebnis)
     }
     return bekannt
@@ -370,10 +488,11 @@ export function useReferenzkette(
     }
 
     // Der Halt ist nur fällig, wenn der Kopf tatsächlich neu entsteht. Wird
-    // mittendrin wieder aufgenommen, läuft der Rest ohne Rückfrage durch.
+    // mittendrin wieder aufgenommen, läuft der Rest ohne Rückfrage durch — und
+    // dann mit dem, was gerade an Körperfoto/Auswahl vorliegt.
     if (offene[0] === 'kopf') {
       try {
-        const ergebnis = await erzeuge('kopf', aktuell.urls)
+        const ergebnis = await erzeuge('kopf', aktuell.urls, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
         setPhase({ art: 'pruefen', bildUrl: ergebnis.url, bildPfad: ergebnis.pfad })
       } catch (e) {
         fehlerMelden('kopf', e)
@@ -382,7 +501,7 @@ export function useReferenzkette(
     }
 
     try {
-      await laufe(offene, aktuell.urls)
+      await laufe(offene, aktuell.urls, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
       setPhase({ art: 'fertig' })
       toast.success('Referenzkette fertig')
     } catch (e) {
@@ -390,7 +509,7 @@ export function useReferenzkette(
     } finally {
       void nachfuehren()
     }
-  }, [titelbildLiegtEigen, standErmitteln, erzeuge, laufe, fehlerMelden, nachfuehren])
+  }, [titelbildLiegtEigen, standErmitteln, erzeuge, laufe, koerperAuswahl, fehlerMelden, nachfuehren])
 
   /** „Nehmen und weiter" — Kopf ablegen, dann Körper und Referenzsheet. */
   const kopfNehmen = useCallback(async () => {
@@ -402,7 +521,10 @@ export function useReferenzkette(
       const aktuell = await standErmitteln()
       const rest = offeneSchritte(aktuell.vorhanden)
       if (rest.length > 0) schritt = rest[0]
-      await laufe(rest, { ...aktuell.urls, kopf: kopfUrl })
+      // Genau HIER ist Marks Halt — er hat den Kopf gerade genommen. Das
+      // Körperfoto und die Merkmalsauswahl, die er bis zu diesem Klick
+      // gesetzt hat, gelten jetzt für den Rest der Kette.
+      await laufe(rest, { ...aktuell.urls, kopf: kopfUrl }, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
       setPhase({ art: 'fertig' })
       toast.success('Referenzkette fertig')
     } catch (e) {
@@ -410,7 +532,7 @@ export function useReferenzkette(
     } finally {
       void nachfuehren()
     }
-  }, [phase, ablegen, standErmitteln, laufe, fehlerMelden, nachfuehren])
+  }, [phase, ablegen, standErmitteln, laufe, koerperAuswahl, fehlerMelden, nachfuehren])
 
   /**
    * „Neu erzeugen" — noch ein Kopf-Auftrag.
@@ -422,19 +544,27 @@ export function useReferenzkette(
   const kopfVerwerfen = useCallback(async () => {
     try {
       const aktuell = await standErmitteln()
-      const ergebnis = await erzeuge('kopf', aktuell.urls)
+      const ergebnis = await erzeuge('kopf', aktuell.urls, { koerperfotoUrl: aktuell.koerperfotoUrl, koerperAuswahl })
       setPhase({ art: 'pruefen', bildUrl: ergebnis.url, bildPfad: ergebnis.pfad })
     } catch (e) {
       fehlerMelden('kopf', e)
     }
-  }, [standErmitteln, erzeuge, fehlerMelden])
+  }, [standErmitteln, erzeuge, koerperAuswahl, fehlerMelden])
 
-  /** Warten aufgeben. Der Auftrag selbst bleibt in der Warteschlange. */
+  /**
+   * Warten aufgeben. Der Auftrag selbst bleibt in der Warteschlange — siehe
+   * `jobUnterwegsSchritt` oben. Nur beim Kopf ist das folgenlos; ab dem
+   * Körper-Schritt merkt sich der Hook, dass dessen Vorgaben schon vergeben
+   * sind, damit der Dialog sie nicht wieder als änderbar zeigt.
+   */
   const abbrechen = useCallback(() => {
     abbruch.current = true
+    if (phase.art === 'wartet' && phase.schritt !== 'kopf') {
+      setJobUnterwegsSchritt(phase.schritt)
+    }
     setPhase({ art: 'bereit' })
     void nachfuehren()
-  }, [nachfuehren])
+  }, [phase, nachfuehren])
 
   return {
     phase,
@@ -447,5 +577,15 @@ export function useReferenzkette(
     kopfNehmen,
     kopfVerwerfen,
     abbrechen,
+    // Marks Eingriffsmöglichkeiten für den Körper-Schritt — sichtbar für den
+    // Dialog, damit er sie am Halt nach dem Kopf anbieten kann.
+    koerperfotoUrl: stand.koerperfotoUrl,
+    koerperfotoLaedt,
+    koerperfotoHochladen,
+    koerperAuswahl,
+    setKoerperAuswahl,
+    /** Siehe Kommentar an der Deklaration — steuert nur, ob der Dialog die
+     * Körper-Vorgaben noch als änderbar zeigen darf. */
+    jobUnterwegsSchritt,
   }
 }

@@ -37,38 +37,93 @@ export const SCHRITT_LABEL: Record<KettenSchritt, string> = {
 }
 
 /**
- * Woher die Referenzbilder eines Schrittes kommen.
+ * Der Name der Variante für Marks EIGENES Körperfoto — ein Original, das er
+ * bewusst zusätzlich mitgibt, kein Kettenergebnis.
  *
- * `'titelbild'` heißt: das Originalbild des Charakters. Alles andere ist ein
- * vorheriger Schritt der Kette.
- *
- * Der Körper bekommt AUSDRÜCKLICH NUR den erzeugten Kopf und nicht zusätzlich
- * das Original — Marks Antwort 2 vom 03.09.2026. Zwei Vorlagen desselben
- * Gesichts sind für das Bildmodell zwei verschiedene Gesichter.
+ * WARUM SIE NICHT IN `KettenSchritt` MITZÄHLT: `naechsterSchritt()` und
+ * `offeneSchritte()` messen den Fortschritt der Kette an genau drei Varianten
+ * (Kopf, Körper, Referenzsheet). Ein Körperfoto ist eine Eingabe, kein
+ * Kettenergebnis — läge es mit in derselben Zählung, sähe die Kette nach dem
+ * Hochladen eines Körperfotos aus, als sei sie schon einen Schritt weiter.
  */
-export const QUELLEN: Record<KettenSchritt, ('titelbild' | KettenSchritt)[]> = {
-  kopf:          ['titelbild'],
-  koerper:       ['kopf'],
-  referenzsheet: ['kopf', 'koerper'],
-}
+export const KOERPERFOTO_VARIANTE = 'Körperfoto'
 
 /**
- * Was jedes mitgegebene Bild bedeutet — in derselben Reihenfolge, in der die
- * Bilder ans Modell gehen.
+ * Welche ROLLE ein mitgegebenes Bild spielt — unabhängig davon, WELCHES Bild
+ * es konkret ist.
  *
- * WARUM NICHT `referenzZuordnung()` AUS `image-generation.ts`: Die kennt nur
- * die Rollen Charakter/Outfit/Location und würde beim Referenzsheet zweimal
- * „CHARACTER — take the face … of this person" schreiben. Beim dritten Schritt
- * sind es aber zwei verschiedene Aufgaben: aus dem einen Bild kommt das
- * Gesicht, aus dem anderen der Körperbau. Am 01.09.2026 ist genau diese Sorte
- * fehlender Zuordnung schon einmal teuer geworden — das Modell nahm die Person
- * aus dem falschen Bild. Also wird sie hier je Schritt ausbuchstabiert.
+ * WARUM ROLLE UND BILD GETRENNT SIND, SEIT DEM 03.09.2026: Bis dahin gab es
+ * eine Ansage je Bild-Herkunft. Das reichte nicht mehr, als der Körper-Schritt
+ * eine zweite Bildquelle bekam (Marks eigenes Körperfoto ODER das
+ * Originalfoto) — dasselbe Originalfoto spielt in Schritt 1 die Rolle
+ * „Identität" (Gesicht erwünscht) und in Schritt 2, falls es dort als
+ * Körperquelle dient, die Rolle „nur Körperbau" (Gesicht UNERWÜNSCHT). Eine
+ * Ansage, die am Bild statt an der Rolle hängt, hätte das nicht auseinanderhalten
+ * können.
+ *
+ * `koerperbauOriginal` und `koerperbauSheet` klingen ähnlich, sagen aber
+ * bewusst Verschiedenes: Ein echtes Foto zeigt das tatsächliche, unveränderte
+ * Gesicht der Person — das darf den erzeugten Kopf unter gar keinen Umständen
+ * überstimmen, deshalb „ignore … entirely". Das erzeugte Körper-Sheet dagegen
+ * ist selbst schon KI-Ergebnis, im Wissen um die Kopf-Referenz entstanden —
+ * dort reicht „secondary", das unveränderte Verhalten von vorher.
  */
-const ANSAGE: Record<'titelbild' | KettenSchritt, string> = {
-  titelbild:     'ORIGINAL PHOTO OF THE PERSON — take the face, hair, skin tone and identity from it.',
-  kopf:          'HEAD REFERENCE SHEET — take the face, hair and skin tone from it. It shows the same person from several angles.',
-  koerper:       'BODY REFERENCE SHEET — take the body proportions, build and posture from it. The face in it is secondary; the head reference above decides the face.',
-  referenzsheet: 'COMBINED REFERENCE SHEET — face, front and back of the same person.',
+type Rolle = 'identitaet' | 'kopfsheet' | 'koerperbauOriginal' | 'koerperbauSheet'
+
+const ANSAGE_TEXT: Record<Rolle, string> = {
+  identitaet:          'ORIGINAL PHOTO OF THE PERSON — take the face, hair, skin tone and identity from it.',
+  kopfsheet:           'HEAD REFERENCE SHEET — take the face, hair and skin tone from it. It shows the same person from several angles.',
+  koerperbauOriginal:  'ORIGINAL PHOTO — take ONLY the body proportions, build and posture from it. Completely ignore any face visible in it; the head reference above alone decides the face.',
+  koerperbauSheet:     'BODY REFERENCE SHEET — take the body proportions, build and posture from it. The face in it is secondary; the head reference above decides the face.',
+}
+
+export type Bildquelle = 'titelbild' | 'koerperfoto' | KettenSchritt
+
+/**
+ * Ob für den Körper-Schritt ein eigenes Körperfoto vorliegt — das einzige,
+ * was `quellenFuer` von außen wissen muss.
+ */
+export type KoerperOptionen = { hatKoerperfoto: boolean }
+
+/**
+ * Welche Bilder ein Schritt braucht, mit ihrer jeweiligen Rolle.
+ *
+ * WARUM DER KÖRPER-SCHRITT SEIT DEM 03.09.2026 IMMER ZWEI BILDER BEKOMMT: Mark
+ * — „ich habe bisher die Erfahrung gemacht … dass der Körper irgendwie immer
+ * gleich aussieht." Vorher bekam er ausschließlich den erzeugten Kopf, und der
+ * zeigt nur Kopf und Schultern — nirgends in der Kette stand ein Bild, das
+ * zeigt, wie die Person tatsächlich gebaut ist. Das Modell musste den
+ * Körperbau frei erfinden und griff dabei jedes Mal zu etwas Ähnlichem.
+ *
+ * Jetzt kommt als zweites Bild dazu:
+ *   - Marks eigenes Körperfoto, wenn er eines mitgegeben hat — sein Fall
+ *     „Ich kann dazu bewusst auch ein Körperbild als Zweites mit dazuladen."
+ *   - sonst das Originalfoto — sein Fall „ich als Ursprungsbild praktisch
+ *     schon ein Ganzkörperbild habe … das wird dann als Referenzbild für Kopf
+ *     genommen. Und auch für Körper."
+ * Zeigt keins von beiden wirklich einen Körper (reines Kopffoto, kein
+ * Körperfoto hochgeladen), ist das zweite Bild uninformativ, aber nicht
+ * schädlich — für genau diesen Fall gibt es zusätzlich die freie
+ * Merkmalsauswahl in `koerperMerkmaleText()`.
+ */
+export function quellenFuer(
+  schritt: KettenSchritt,
+  optionen: KoerperOptionen,
+): { bild: Bildquelle; rolle: Rolle }[] {
+  switch (schritt) {
+    case 'kopf':
+      return [{ bild: 'titelbild', rolle: 'identitaet' }]
+    case 'koerper':
+      return [
+        { bild: 'kopf', rolle: 'kopfsheet' },
+        { bild: optionen.hatKoerperfoto ? 'koerperfoto' : 'titelbild', rolle: 'koerperbauOriginal' },
+      ]
+    case 'referenzsheet':
+      return [
+        { bild: 'kopf', rolle: 'kopfsheet' },
+        { bild: 'koerper', rolle: 'koerperbauSheet' },
+      ]
+  }
 }
 
 /**
@@ -78,26 +133,91 @@ const ANSAGE: Record<'titelbild' | KettenSchritt, string> = {
  * Verwechslung zweier Bilder, sondern die Frage, welchen Aspekt eines Bildes
  * das Modell übernimmt.
  */
-export function referenzAnsage(schritt: KettenSchritt): string | null {
-  const quellen = QUELLEN[schritt]
+export function referenzAnsage(schritt: KettenSchritt, optionen: KoerperOptionen): string | null {
+  const quellen = quellenFuer(schritt, optionen)
   if (quellen.length === 0) return null
   return [
     'REFERENCE IMAGES — they arrive in this exact order:',
-    ...quellen.map((q, i) => `Image ${i + 1} = ${ANSAGE[q]}`),
+    ...quellen.map((q, i) => `Image ${i + 1} = ${ANSAGE_TEXT[q.rolle]}`),
     'If the text above describes the person differently, follow the reference images and ignore the conflicting words.',
+  ].join('\n')
+}
+
+/**
+ * Die frei wählbaren Körpermerkmale — Marks Liste vom 03.09.2026 wörtlich:
+ * „nicht nur schlank, kräftig, sportlich, groß, sondern auch … große
+ * Oberweite, kleine Oberweite bei Frauen, Ausladen des Beckens … lange Beine,
+ * kurze Beine."
+ *
+ * Jedes Feld ist einzeln optional (`undefined` = keine Angabe) — genau der
+ * Fall, wenn ein Foto schon reicht und nur einzelne Merkmale nachgeschärft
+ * werden sollen, oder wenn ein Merkmal (etwa Oberweite) bei diesem Charakter
+ * gar nicht zutrifft.
+ */
+export type KoerperAuswahl = {
+  bau?: 'schlank' | 'durchschnittlich' | 'kraeftig' | 'sportlich'
+  groesse?: 'klein' | 'durchschnittlich' | 'gross'
+  oberweite?: 'klein' | 'mittel' | 'gross'
+  becken?: 'schmal' | 'durchschnittlich' | 'ausladend'
+  beinlaenge?: 'kurz' | 'durchschnittlich' | 'lang'
+}
+
+const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAuswahl[K]>, string> } = {
+  bau:        { schlank: 'slim build', durchschnittlich: 'average build', kraeftig: 'heavier, solid build', sportlich: 'athletic, toned build' },
+  groesse:    { klein: 'short stature', durchschnittlich: 'average height', gross: 'tall stature' },
+  oberweite:  { klein: 'small bust', mittel: 'medium bust', gross: 'large bust' },
+  becken:     { schmal: 'narrow hips', durchschnittlich: 'average hip width', ausladend: 'wide, flared hips' },
+  beinlaenge: { kurz: 'shorter legs relative to torso', durchschnittlich: 'average leg length', lang: 'long legs relative to torso' },
+}
+
+/**
+ * Die Auswahl als Prompt-Text — oder `null`, wenn nichts ausgewählt wurde.
+ *
+ * Nur die tatsächlich gesetzten Felder werden genannt. Ein Merkmal, zu dem
+ * Mark nichts sagt, soll dem Modell überlassen bleiben (aus dem Referenzbild
+ * oder frei) — nicht mit einer erfundenen Vorgabe belegt werden.
+ */
+export function koerperMerkmaleText(auswahl: KoerperAuswahl): string | null {
+  const zeilen = (Object.keys(MERKMAL_TEXT) as (keyof KoerperAuswahl)[])
+    .map(schluessel => {
+      const wert = auswahl[schluessel]
+      if (!wert) return null
+      return (MERKMAL_TEXT[schluessel] as Record<string, string>)[wert]
+    })
+    // `Boolean` statt `z !== null`: Ein Wert, der es an `MERKMAL_TEXT` vorbei
+    // in `auswahl` schafft (Tippfehler an der Aufrufstelle, veraltete Option),
+    // ergäbe sonst `undefined` und stünde als wörtliche Zeile „- undefined"
+    // im Prompt — ohne Fehler, ohne dass es auffiele. So verschwindet die
+    // Zeile still, statt falsch zu erscheinen.
+    .filter((z): z is string => Boolean(z))
+  if (zeilen.length === 0) return null
+  return [
+    'ADDITIONAL BODY CHARACTERISTICS — apply these specifically, on top of whatever the reference images show:',
+    ...zeilen.map(z => `- ${z}`),
   ].join('\n')
 }
 
 /**
  * Der fertige Prompt eines Schrittes.
  *
- * Der Sheet-Prompt selbst bleibt UNANGETASTET — angehängt wird nur die
- * Zuordnung. Das ist dieselbe Trennung wie in `promptFuerAuftrag()`: Es gibt
- * genau eine Stelle, die den Prompt anfasst, und sie ist prüfbar.
+ * Der Sheet-Prompt selbst bleibt UNANGETASTET — angehängt werden nur die
+ * Merkmalsauswahl (falls Mark eine getroffen hat) und die Zuordnung. Das ist
+ * dieselbe Trennung wie in `promptFuerAuftrag()`: Es gibt genau eine Stelle,
+ * die den Prompt anfasst, und sie ist prüfbar.
  */
-export function kettenPrompt(schritt: KettenSchritt, basis: string): string {
-  const ansage = referenzAnsage(schritt)
-  return ansage ? `${basis}\n\n${ansage}` : basis
+export function kettenPrompt(
+  schritt: KettenSchritt,
+  basis: string,
+  optionen: KoerperOptionen & { koerperAuswahl?: KoerperAuswahl },
+): string {
+  const teile = [basis]
+  if (schritt === 'koerper' && optionen.koerperAuswahl) {
+    const merkmale = koerperMerkmaleText(optionen.koerperAuswahl)
+    if (merkmale) teile.push(merkmale)
+  }
+  const ansage = referenzAnsage(schritt, optionen)
+  if (ansage) teile.push(ansage)
+  return teile.join('\n\n')
 }
 
 /**

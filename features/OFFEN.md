@@ -45,6 +45,13 @@ steht es zuerst.
 - **Zwei Mal derselbe Schlüssel.** App und Erweiterung haben getrennte
   Einstellungen, weil eine Erweiterung nicht an den `localStorage` der Seite
   kommt. Bewusst so, aber unschön.
+- **Körperfoto der Referenzkette lässt sich nicht entfernen.** Einmal
+  hochgeladen (PROJ-48-Erweiterung, 03.09.2026), gibt es nur „Anderes Foto
+  wählen", kein Zurücksetzen — der Rückfall aufs Titelbild als Körperquelle
+  ist ab dann über den Dialog nicht mehr erreichbar. Außerdem legt der Upload
+  eine vierte Charaktervariante „Körperfoto" an, ohne das im Dialog zu sagen —
+  sie taucht bei den Charakter-Varianten auf, ohne dass Mark damit rechnet.
+  Critic-Befund R19 vom 03.09.2026.
 
 ## Behoben am 03.09.2026, Nachtrag
 

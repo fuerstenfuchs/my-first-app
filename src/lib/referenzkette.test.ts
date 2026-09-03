@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  KETTEN_SCHRITTE, VARIANTEN_NAME, QUELLEN,
-  referenzAnsage, kettenPrompt, istEigenerSpeicher,
+  KETTEN_SCHRITTE, VARIANTEN_NAME, KOERPERFOTO_VARIANTE,
+  quellenFuer, referenzAnsage, kettenPrompt, koerperMerkmaleText, istEigenerSpeicher,
   naechsterSchritt, offeneSchritte,
   type KettenSchritt,
 } from './referenzkette'
@@ -30,22 +30,52 @@ describe('Reihenfolge und Namen', () => {
     })
   })
 
-  // Antwort 2: Schritt 2 bekommt NUR den erzeugten Kopf, nicht zusätzlich das
-  // Original. Zwei Vorlagen desselben Gesichts sind für das Modell zwei
-  // Gesichter.
-  it('gibt dem Körper-Schritt nur den Kopf', () => {
-    expect(QUELLEN.koerper).toEqual(['kopf'])
-    expect(QUELLEN.koerper).not.toContain('titelbild')
+  it('das Körperfoto trägt einen eigenen Namen, keinen der drei Kettennamen', () => {
+    expect(KOERPERFOTO_VARIANTE).toBe('Körperfoto')
+    expect(Object.values(VARIANTEN_NAME)).not.toContain(KOERPERFOTO_VARIANTE)
+  })
+})
+
+describe('Referenzquellen des Körper-Schritts — Mark am 03.09.2026', () => {
+  // „Ich kann dazu bewusst auch ein Körperbild als Zweites mit dazuladen."
+  it('nimmt Marks eigenes Körperfoto, wenn eines vorliegt', () => {
+    const q = quellenFuer('koerper', { hatKoerperfoto: true })
+    expect(q).toEqual([
+      { bild: 'kopf', rolle: 'kopfsheet' },
+      { bild: 'koerperfoto', rolle: 'koerperbauOriginal' },
+    ])
   })
 
-  it('gibt dem Referenzsheet Kopf UND Körper, in dieser Reihenfolge', () => {
-    expect(QUELLEN.referenzsheet).toEqual(['kopf', 'koerper'])
+  // „ich als Ursprungsbild praktisch schon ein Ganzkörperbild habe … das wird
+  // dann als Referenzbild für Kopf genommen. Und auch für Körper."
+  it('fällt ohne Körperfoto auf das Originalfoto zurück', () => {
+    const q = quellenFuer('koerper', { hatKoerperfoto: false })
+    expect(q).toEqual([
+      { bild: 'kopf', rolle: 'kopfsheet' },
+      { bild: 'titelbild', rolle: 'koerperbauOriginal' },
+    ])
+  })
+
+  it('gibt dem Referenzsheet Kopf UND das erzeugte Körper-Sheet, in dieser Reihenfolge', () => {
+    expect(quellenFuer('referenzsheet', { hatKoerperfoto: false })).toEqual([
+      { bild: 'kopf', rolle: 'kopfsheet' },
+      { bild: 'koerper', rolle: 'koerperbauSheet' },
+    ])
+    // Ob ein Körperfoto vorliegt, ändert an Schritt 3 nichts — das betrifft
+    // nur, WORAUS der Körper-Schritt selbst gebaut wurde.
+    expect(quellenFuer('referenzsheet', { hatKoerperfoto: true }))
+      .toEqual(quellenFuer('referenzsheet', { hatKoerperfoto: false }))
+  })
+
+  it('braucht für den Kopf nur das Originalfoto, unabhängig vom Körperfoto', () => {
+    expect(quellenFuer('kopf', { hatKoerperfoto: true }))
+      .toEqual([{ bild: 'titelbild', rolle: 'identitaet' }])
   })
 })
 
 describe('Referenzansage', () => {
   it('nummeriert die Bilder in der Reihenfolge, in der sie mitgehen', () => {
-    const text = referenzAnsage('referenzsheet')!
+    const text = referenzAnsage('referenzsheet', { hatKoerperfoto: false })!
     expect(text).toContain('Image 1 = HEAD REFERENCE SHEET')
     expect(text).toContain('Image 2 = BODY REFERENCE SHEET')
     // Die Zuordnung muss auch die Reihenfolge im TEXT halten — sonst zeigt sie
@@ -54,14 +84,88 @@ describe('Referenzansage', () => {
   })
 
   it('sagt auch bei einem einzigen Bild, wofür es steht', () => {
-    expect(referenzAnsage('kopf')).toContain('Image 1 = ORIGINAL PHOTO')
+    expect(referenzAnsage('kopf', { hatKoerperfoto: false })).toContain('Image 1 = ORIGINAL PHOTO')
   })
 
+  // Der eigentliche Kern der heutigen Änderung: Ein ECHTES Foto, das im
+  // Körper-Schritt nur den Körperbau liefern soll, muss das Gesicht darin
+  // STRIKT ausschließen — anders als das erzeugte Körper-Sheet in Schritt 3,
+  // wo „sekundär" reicht (das ist schon KI-Ergebnis im Wissen um den Kopf).
+  it('verlangt bei einem echten Foto als Körperquelle, das Gesicht STRIKT zu ignorieren', () => {
+    const mitKoerperfoto = referenzAnsage('koerper', { hatKoerperfoto: true })!
+    expect(mitKoerperfoto).toContain('Completely ignore any face')
+    expect(mitKoerperfoto).not.toContain('secondary')
+  })
+
+  it('lässt beim erzeugten Körper-Sheet in Schritt 3 die mildere Formulierung', () => {
+    const referenzsheetText = referenzAnsage('referenzsheet', { hatKoerperfoto: false })!
+    expect(referenzsheetText).toContain('secondary')
+  })
+
+  it('sagt beim Originalfoto als Körperquelle dasselbe Strikte wie beim Körperfoto', () => {
+    const mitTitelbild = referenzAnsage('koerper', { hatKoerperfoto: false })!
+    const mitKoerperfoto = referenzAnsage('koerper', { hatKoerperfoto: true })!
+    // Beide sind ein „echtes Foto in der Rolle Körperquelle" — nur WELCHES
+    // Bild es ist, unterscheidet sich, nicht die Anweisung dazu.
+    expect(mitTitelbild.split('Image 2 = ')[1]).toBe(mitKoerperfoto.split('Image 2 = ')[1])
+  })
+})
+
+describe('Körpermerkmale — Marks Liste vom 03.09.2026', () => {
+  it('liefert nichts, wenn nichts ausgewählt wurde', () => {
+    expect(koerperMerkmaleText({})).toBeNull()
+  })
+
+  it('nennt nur die tatsächlich gesetzten Merkmale', () => {
+    const text = koerperMerkmaleText({ bau: 'sportlich', beinlaenge: 'lang' })!
+    expect(text).toContain('athletic')
+    expect(text).toContain('long legs')
+    // Nicht gesetzte Merkmale (Größe, Oberweite, Becken) dürfen NICHT erfunden
+    // auftauchen — sonst legt die Auswahl etwas fest, das Mark nie gewählt hat.
+    expect(text).not.toContain('height')
+    expect(text).not.toContain('bust')
+    expect(text).not.toContain('hips')
+  })
+
+  // Seine wörtliche Liste: „detailliert große Oberweite, kleine Oberweite bei
+  // Frauen. Ausladen des Beckens … lange Beine, kurze Beine."
+  it('deckt alle fünf von Mark genannten Merkmale ab', () => {
+    const alles = koerperMerkmaleText({
+      bau: 'kraeftig', groesse: 'gross', oberweite: 'gross', becken: 'ausladend', beinlaenge: 'kurz',
+    })!
+    expect(alles).toContain('heavier')
+    expect(alles).toContain('tall')
+    expect(alles).toContain('large bust')
+    expect(alles).toContain('wide, flared hips')
+    expect(alles).toContain('shorter legs')
+  })
+})
+
+describe('Der fertige Prompt', () => {
   it('lässt den Sheet-Prompt selbst unangetastet', () => {
     const basis = 'ORIGINALPROMPT BLEIBT SO'
-    const fertig = kettenPrompt('koerper', basis)
+    const fertig = kettenPrompt('koerper', basis, { hatKoerperfoto: true })
     expect(fertig.startsWith(basis)).toBe(true)
     expect(fertig).toContain('Image 1 = HEAD REFERENCE SHEET')
+  })
+
+  it('hängt die Merkmalsauswahl VOR die Referenzansage', () => {
+    const fertig = kettenPrompt('koerper', 'BASIS', {
+      hatKoerperfoto: false, koerperAuswahl: { bau: 'schlank' },
+    })
+    expect(fertig.indexOf('slim build')).toBeLessThan(fertig.indexOf('REFERENCE IMAGES'))
+  })
+
+  it('hängt bei Kopf und Referenzsheet keine Merkmalsauswahl an — die gilt nur für den Körper', () => {
+    const fertig = kettenPrompt('kopf', 'BASIS', {
+      hatKoerperfoto: false, koerperAuswahl: { bau: 'schlank' },
+    })
+    expect(fertig).not.toContain('slim build')
+  })
+
+  it('ohne Auswahl bleibt der Prompt wie zuvor', () => {
+    const fertig = kettenPrompt('koerper', 'BASIS', { hatKoerperfoto: false })
+    expect(fertig).not.toContain('ADDITIONAL BODY CHARACTERISTICS')
   })
 })
 

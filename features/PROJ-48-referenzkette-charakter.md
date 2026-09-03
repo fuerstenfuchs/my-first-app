@@ -118,3 +118,79 @@ durch."** Der Weg ist frei.
   Prompt) — genau wie beim bisherigen Weg über den Sheet-Dialog. Mit
   Referenzbild richtet sich gpt-image-2 ohnehin nach der Vorlage. OFFEN: ob die
   Sheets ausdrücklich quer angefordert werden sollen.
+
+## Erweiterung: Körperquelle für den Körper-Schritt (03.09.2026, zweite Runde)
+
+**Der Befund.** Mark: „Ich habe bisher die Erfahrung gemacht bei den letzten
+Bildern, dass der Körper irgendwie immer gleich aussieht." Ursache, am Code
+nachgemessen: Der Körper-Schritt bekam als einzige Referenz das erzeugte
+Kopf-Sheet — das zeigt aber keinen Körper. Das Modell hatte nichts, an dem es
+sich beim Körperbau hätte orientieren können, und griff auf etwas Generisches
+zurück.
+
+**Marks drei Fälle, wörtlich sinngemäß zusammengefasst:**
+
+1. „Ich such gezielt nach Fotos, bei denen meist nur der Kopf recht groß zu
+   sehen ist … Ich kann dazu bewusst auch ein Körperbild als Zweites mit
+   dazuladen … Dann sollte automatisch erkannt werden — oder man die
+   Möglichkeit hat — ein Körperbild zum Kopfbild mitzuladen." Das
+   Originalfoto liefert dabei NUR den Körperbau, das Gesicht darauf zählt
+   nicht — „bevor das Körperbild drankommt, sollte das Originalkörperbild
+   natürlich genommen werden und nur für den Körper genutzt werden. Das muss
+   im Prompt so drinstehen."
+2. „Als Ursprungsbild hab ich praktisch schon ein Ganzkörperbild mit Kopf.
+   Das wird dann als Referenzbild für Kopf genommen. Und auch für Körper."
+3. Nur ein Kopfbild, kein Körperbezug irgendwo: „Ich bräuchte dann noch mehr
+   Eingriffsmöglichkeiten … nicht nur schlank, kräftig, sportlich, groß,
+   sondern auch detailliert große Oberweite, kleine Oberweite bei Frauen,
+   Ausladung des Beckens, lange Beine, kurze Beine. Das sollte man alles
+   auswählen können."
+
+**Die Lösung — alle drei Fälle ohne Sonderfall-UI:**
+
+- `src/lib/referenzkette.ts`: `quellenFuer(schritt, { hatKoerperfoto })` ersetzt
+  die alte feste `QUELLEN`-Tabelle. Für den Körper-Schritt liefert sie
+  `koerperfoto`, wenn eines hochgeladen wurde, sonst fällt sie automatisch auf
+  `titelbild` zurück — Fall 2 (Ganzkörper-Original) braucht dafür KEIN eigenes
+  Bedienelement, er ist der Normalfall ohne Körperfoto.
+- Ein echtes Foto in der Rolle „Körperquelle" (ob Körperfoto oder Titelbild)
+  bekommt im Prompt die strikte Ansage „Completely ignore any face visible in
+  it" — das erzeugte Körper-Sheet in Schritt 3 dagegen nur die mildere
+  „secondary" (das ist schon KI-Ergebnis im Wissen um den Kopf, kein
+  Verwechslungsrisiko).
+- Neue Variante `KOERPERFOTO_VARIANTE = 'Körperfoto'` für Marks eigenes
+  Hochladen (Fall 1) — bewusst KEIN vierter `KettenSchritt`: Es ist eine
+  Eingabe, kein Kettenergebnis, und zählt darum nicht zum Fortschritt.
+- `KoerperAuswahl` (Fall 3) — fünf einzeln optionale Felder, Marks Liste
+  wörtlich: `bau` (schlank/durchschnittlich/kräftig/sportlich), `groesse`,
+  `oberweite`, `becken`, `beinlaenge`. `koerperMerkmaleText()` hängt NUR die
+  gesetzten Felder an, als „ADDITIONAL BODY CHARACTERISTICS — apply these
+  specifically, on top of whatever the reference images show". Ausdrücklich
+  additiv, nicht nur für Fall 3 gedacht — auch mit Körperfoto/Ganzkörper-
+  Original nutzbar, falls die Referenz z. B. durch Kleidung nicht alles zeigt.
+- `src/hooks/use-referenzkette.ts`: `koerperfotoUrl`, `koerperfotoLaedt`,
+  `koerperfotoHochladen()` (eigener Upload-Pfad, dieselbe Größenprüfung wie
+  beim „Übernehmen"), `koerperAuswahl`/`setKoerperAuswahl` (nur Lauf-Zustand,
+  NICHT in der Datenbank — ein zweiter Lauf mit anderer Auswahl soll möglich
+  sein, ohne die vorige aufzuräumen).
+- `src/components/characters/referenzkette-dialog.tsx`: neuer Abschnitt
+  „Vorgaben für den Körper" — Körperfoto-Vorschau/Upload + die fünf
+  Auswahlfelder. Sichtbar bei `standGeladen && !stand.vorhanden.koerper &&
+  (phase.art === 'bereit' || 'pruefen' || 'fehler')`. Die Einschränkung auf
+  diese drei Phasen ist bewusst: Ab dem Klick auf „Nehmen und weiter" hat
+  `kopfNehmen()` die Werte bereits in den automatisch laufenden Körper-Auftrag
+  übernommen, aber `stand` selbst wird erst nach dem GESAMTEN automatischen
+  Lauf (Körper und Referenzsheet) nachgeführt — ohne diese Einschränkung wäre
+  der Abschnitt während des ganzen automatischen Laufs weiter sichtbar und
+  bedienbar gewesen, obwohl jede Änderung darin wirkungslos verpufft wäre.
+
+**Tests.** `referenzkette.test.ts` von 16 auf 28 Prüfungen erweitert:
+Körperfoto-vor-Titelbild-Vorrang, die unterschiedliche Strenge der
+Gesichts-Ansage (Foto vs. erzeugtes Sheet), alle fünf Merkmalsfelder einzeln,
+und dass die Merkmalsauswahl nur beim Körper-Schritt greift. Alle 28 grün.
+
+**Geändert:** `src/lib/referenzkette.ts`, `src/lib/referenzkette.test.ts`,
+`src/hooks/use-referenzkette.ts`, `src/components/characters/referenzkette-dialog.tsx`.
+`src/lib/bausteine.ts` (Größenprüfung fürs Körperfoto, dieselbe Funktion wie
+beim „Übernehmen") war schon vom vorherigen Fix (Speichergrenzen) an Ort und
+Stelle.

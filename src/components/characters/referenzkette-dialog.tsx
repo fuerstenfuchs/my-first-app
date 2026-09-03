@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Loader2, Check, AlertTriangle, Link2, RefreshCw, ArrowRight, ShieldAlert,
+  Upload, PersonStanding,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -10,9 +11,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Label } from '@/components/ui/label'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { useReferenzkette, HINWEIS_NACH_MS } from '@/hooks/use-referenzkette'
 import {
-  KETTEN_SCHRITTE, SCHRITT_LABEL, VARIANTEN_NAME, type KettenSchritt,
+  KETTEN_SCHRITTE, SCHRITT_LABEL, VARIANTEN_NAME,
+  type KettenSchritt, type KoerperAuswahl,
 } from '@/lib/referenzkette'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
@@ -35,9 +41,97 @@ import { cn } from '@/lib/utils'
 
 const BESCHREIBUNG: Record<KettenSchritt, string> = {
   kopf:          'Gesicht aus allen Perspektiven — Referenz ist das Titelbild.',
-  koerper:       'Ganzkörper, neutrale Kleidung — Referenz ist NUR der erzeugte Kopf.',
+  koerper:       'Ganzkörper, neutrale Kleidung — Referenz ist der erzeugte Kopf plus eine Körperquelle (eigenes Körperfoto, sonst das Titelbild).',
   referenzsheet: 'Großer 3/4-Kopf, Körper vorne ohne Kopf, Körper hinten — Referenz ist Kopf und Körper.',
 }
+
+/**
+ * Der Platzhalterwert für „Keine Angabe".
+ *
+ * NICHT der leere String: Radix' Select benutzt `''` intern, um „nichts
+ * gewählt" darzustellen, und wirft bei einem `SelectItem` mit leerem Wert. Der
+ * Sentinel wird beim Setzen wieder in „Schlüssel entfernen" übersetzt — im
+ * `KoerperAuswahl`-Objekt landet er nie.
+ */
+const KEINE_ANGABE = '__keine__'
+
+/**
+ * Ein Feld pro Schlüssel aus `KoerperAuswahl`, mit GENAU dessen erlaubten
+ * Werten in `optionen` — nicht `wert: string`.
+ *
+ * Critic-Befund R18 vom 03.09.2026: Mit `wert: string` prüfte TypeScript
+ * `MERKMAL_FELDER` unten gar nicht gegen `KoerperAuswahl` nach — ein Tippfehler
+ * in einem Optionswert (oder eine Option, die es in `MERKMAL_TEXT` in
+ * referenzkette.ts nicht gibt) hätte anstandslos kompiliert. Erst zur Laufzeit
+ * wäre daraus eine Zeile „- undefined" im Körper-Prompt geworden, der an
+ * gpt-image-2 geht — ohne Fehler, ohne dass es auffiele. Diese Bauart macht
+ * genau das zu einem Kompilierfehler: Jeder Eintrag wird gegen die Optionen
+ * SEINES EIGENEN `schluessel` geprüft, nicht gegen eine allgemeine `string`.
+ */
+type MerkmalFeld = {
+  [K in keyof KoerperAuswahl]-?: {
+    schluessel: K
+    label: string
+    optionen: { wert: NonNullable<KoerperAuswahl[K]>; text: string }[]
+  }
+}[keyof KoerperAuswahl]
+
+/**
+ * Die Merkmale, die Mark von Hand vorgeben kann.
+ *
+ * Alle fünf werden immer gezeigt: Am Charakter-Datenmodell hängt keine
+ * Geschlechtsangabe, aus der man Felder ableiten könnte. Ein geratenes
+ * Ausblenden nähme Mark genau die Eingriffsmöglichkeit, für die es diesen
+ * Abschnitt gibt.
+ */
+const MERKMAL_FELDER: MerkmalFeld[] = [
+  {
+    schluessel: 'bau',
+    label: 'Körperbau',
+    optionen: [
+      { wert: 'schlank',          text: 'Schlank' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'kraeftig',         text: 'Kräftig' },
+      { wert: 'sportlich',        text: 'Sportlich' },
+    ],
+  },
+  {
+    schluessel: 'groesse',
+    label: 'Größe',
+    optionen: [
+      { wert: 'klein',            text: 'Klein' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'gross',            text: 'Groß' },
+    ],
+  },
+  {
+    schluessel: 'oberweite',
+    label: 'Oberweite',
+    optionen: [
+      { wert: 'klein',  text: 'Klein' },
+      { wert: 'mittel', text: 'Mittel' },
+      { wert: 'gross',  text: 'Groß' },
+    ],
+  },
+  {
+    schluessel: 'becken',
+    label: 'Becken',
+    optionen: [
+      { wert: 'schmal',           text: 'Schmal' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'ausladend',        text: 'Ausladend' },
+    ],
+  },
+  {
+    schluessel: 'beinlaenge',
+    label: 'Beinlänge',
+    optionen: [
+      { wert: 'kurz',             text: 'Kurz' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'lang',             text: 'Lang' },
+    ],
+  },
+]
 
 interface Props {
   offen: boolean
@@ -51,7 +145,11 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
   const {
     phase, stand, standGeladen, titelbild, titelbildLiegtEigen, naechster,
     starte, kopfNehmen, kopfVerwerfen, abbrechen,
+    koerperfotoUrl, koerperfotoLaedt, koerperfotoHochladen,
+    koerperAuswahl, setKoerperAuswahl, jobUnterwegsSchritt,
   } = useReferenzkette(character, offen, onAenderung)
+
+  const dateiFeld = useRef<HTMLInputElement>(null)
 
   // Eine Uhr, damit die Wartezeit sichtbar läuft. Stillstand und „dauert eben"
   // sehen sonst gleich aus — genau die Verwechslung, wegen der man einen
@@ -65,6 +163,30 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
 
   const laeuft = phase.art === 'wartet' || phase.art === 'legt_ab'
   const wartetSeit = phase.art === 'wartet' ? jetzt - phase.seit : 0
+
+  /**
+   * Ob „Vorgaben für den Körper" gerade etwas bewirken würde.
+   *
+   * Sichtbar, solange das Körper-Sheet fehlt UND kein abgegebener Auftrag
+   * schon mit den alten Werten unterwegs ist (`jobUnterwegsSchritt`,
+   * Critic-Befund R04). Zusätzlich zu `bereit`/`pruefen`/`fehler` auch
+   * während `wartet` auf den KOPF selbst: Zu diesem Zeitpunkt hat `kopfNehmen`
+   * die Werte noch gar nicht gelesen — sie werden erst beim Klick auf
+   * „Nehmen und weiter" aus dem dann aktuellen Zustand übernommen (siehe
+   * use-referenzkette.ts). Das Kopf-Warten ist gerade das Zeitfenster, in dem
+   * Mark ohnehin nichts anderes tut — es wegzunehmen, nähme ihm ausgerechnet
+   * die bequemste Gelegenheit.
+   */
+  const koerperVorgabenSichtbar =
+    standGeladen
+    && !stand.vorhanden.koerper
+    && jobUnterwegsSchritt === null
+    && (
+      phase.art === 'bereit'
+      || phase.art === 'pruefen'
+      || phase.art === 'fehler'
+      || (phase.art === 'wartet' && phase.schritt === 'kopf')
+    )
 
   return (
     <Dialog open={offen} onOpenChange={v => { if (!v && !laeuft) onClose() }}>
@@ -148,6 +270,139 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
             })
           )}
         </div>
+
+        {/* ── Vorgaben für den Körper-Schritt ──────────────────────────────
+          * Bedingung: siehe `koerperVorgabenSichtbar` oben. */}
+        {koerperVorgabenSichtbar && (
+          <div className="space-y-4 rounded-xl border border-violet-500/50 bg-violet-500/5 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <PersonStanding className="h-4 w-4 text-violet-400" />
+              Vorgaben für den Körper
+              <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                — freiwillig
+              </span>
+            </p>
+
+            {/* ── Körperfoto ──────────────────────────────────────────── */}
+            <div className="space-y-2">
+              <Label className="text-xs">Eigenes Körperfoto</Label>
+
+              {koerperfotoUrl ? (
+                <div className="flex items-start gap-3">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-violet-500/40 bg-black/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={koerperfotoUrl}
+                      alt="Hochgeladenes Körperfoto"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <p className="text-xs text-emerald-400/80">Körperfoto liegt vor.</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={koerperfotoLaedt}
+                      onClick={() => dateiFeld.current?.click()}
+                    >
+                      {koerperfotoLaedt
+                        ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                      Anderes Foto wählen
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={koerperfotoLaedt}
+                  onClick={() => dateiFeld.current?.click()}
+                >
+                  {koerperfotoLaedt
+                    ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                  Körperfoto auswählen
+                </Button>
+              )}
+
+              <input
+                ref={dateiFeld}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={koerperfotoLaedt}
+                onChange={e => {
+                  const datei = e.target.files?.[0]
+                  // Zurücksetzen, sonst löst dieselbe Datei beim zweiten Mal
+                  // kein `change` mehr aus und es sieht aus, als sei nichts
+                  // passiert.
+                  e.target.value = ''
+                  // Erfolg und Fehler meldet der Hook selbst als Toast — hier
+                  // nichts zusätzlich anzeigen, sonst steht dieselbe Nachricht
+                  // zweimal.
+                  if (datei) void koerperfotoHochladen(datei)
+                }}
+              />
+
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Wird NUR für die Körperform im Körper-Sheet genutzt, nicht fürs
+                Gesicht. Ohne eigenes Foto nimmt die Kette automatisch das
+                Titelbild als Körper-Vorlage.
+              </p>
+            </div>
+
+            {/* ── Merkmale ────────────────────────────────────────────── */}
+            <div className="space-y-2">
+              <Label className="text-xs">Körpermerkmale</Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {MERKMAL_FELDER.map(feld => (
+                  <div key={feld.schluessel} className="space-y-1">
+                    <span className="text-[11px] text-muted-foreground">{feld.label}</span>
+                    <Select
+                      value={koerperAuswahl[feld.schluessel] ?? KEINE_ANGABE}
+                      onValueChange={wert => setKoerperAuswahl(vorher => {
+                        const neu = { ...vorher }
+                        if (wert === KEINE_ANGABE) {
+                          delete neu[feld.schluessel]
+                        } else {
+                          // `feld.schluessel` ist hier weiterhin die Vereinigung
+                          // aller fünf Feldschlüssel; TypeScript verlangt für den
+                          // Schreibzugriff deren Schnittmenge, die leer ist — das
+                          // erzwingt diesen Umweg. Sicher ist er trotzdem: `wert`
+                          // stammt oben aus `feld.optionen.map(o => o.wert)`, und
+                          // die sind seit dem `MerkmalFeld`-Typ compile-geprüft
+                          // genau die erlaubten Werte VON DIESEM `schluessel` —
+                          // kein freier String kann hier ankommen.
+                          ;(neu as Record<string, string>)[feld.schluessel] = wert
+                        }
+                        return neu
+                      })}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={KEINE_ANGABE} className="text-xs">
+                          Keine Angabe
+                        </SelectItem>
+                        {feld.optionen.map(o => (
+                          <SelectItem key={o.wert} value={o.wert} className="text-xs">
+                            {o.text}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Zusätzlich zu dem, was die Referenzbilder zeigen — wird nur beim
+                Körper-Sheet angewendet.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── Zustand und Knöpfe ───────────────────────────────────────── */}
 
