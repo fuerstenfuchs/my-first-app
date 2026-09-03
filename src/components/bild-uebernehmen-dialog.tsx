@@ -186,9 +186,17 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
 
           Der Dialog ist schmal: `flex-wrap` und eine eigene Rollfläche mit
           Höhenlimit, damit viele Kategorien ihn nicht auseinanderziehen.
+
+          `shrink-0` ist hier NICHT schmückendes Beiwerk. Ohne das war die Zeile
+          im Browser 5 Punkte hoch, obwohl ihr Inhalt 23 braucht — von den
+          Chips blieb ein Streifen übrig (am 03.09.2026 nachgemessen). Ein
+          Flex-Kind schrumpft nämlich unter seinen Inhalt, wenn das Geschwister
+          daneben Platz will, und das Bildraster will immer Platz. `max-h-16`
+          war unschuldig: Die Höhe scheiterte nicht an der Obergrenze, sondern
+          am Zusammenquetschen.
         */}
         {chips.length > 0 && (
-          <div className="flex max-h-16 flex-wrap gap-1 overflow-y-auto">
+          <div className="flex max-h-16 shrink-0 flex-wrap gap-1 overflow-y-auto">
             {chips.map(k => {
               const aktiv = kategorie === k.wert
               return (

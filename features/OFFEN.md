@@ -46,6 +46,15 @@ steht es zuerst.
   Einstellungen, weil eine Erweiterung nicht an den `localStorage` der Seite
   kommt. Bewusst so, aber unschön.
 
+## Kaputt, aber niemandem aufgefallen
+
+- **`npm run lint` läuft nicht.** Das Skript ruft `next lint`, und das gibt es
+  in Next 16 nicht mehr — es reicht „lint" als Verzeichnisnamen weiter und
+  bricht ab. Bestand, nicht durch die Arbeit vom 02./03.09. verursacht. Es
+  heißt aber: ESLint prüft hier gerade gar nichts. Der Fix ist eine Zeile in
+  `package.json` (`eslint .`), aber danach ist mit einer Menge angestauter
+  Meldungen zu rechnen — deshalb als eigener Punkt und nicht nebenbei.
+
 ## Kleinkram, seit Längerem offen
 
 - `comfyui.bat`: eine Zeile von `venv` auf `venv312` ändern. Vor Tagen
