@@ -350,7 +350,10 @@ export function useTitelbildErzeugen(
         sheetErmitteln(character.id),
       ])
 
-      const { scene, sceneRefs } = titelbildSzene(
+      // `sceneRefs` wird hier nicht gebraucht: Das Referenzsheet geht weiter
+      // unten als `reference_urls` mit, und der Prompt hängt seit PROJ-52 nicht
+      // mehr an den Referenzbildern.
+      const { scene } = titelbildSzene(
         config,
         {
           poseActions,
@@ -366,7 +369,7 @@ export function useTitelbildErzeugen(
       const rollen = ['character' as const]
 
       const job = await anlegen({
-        prompt:          promptFuerAuftrag(buildPrompt(scene, sceneRefs), aspectRatio, rollen),
+        prompt:          promptFuerAuftrag(buildPrompt(scene), aspectRatio, rollen),
         model:           'gpt-image-2',
         size:            groesseFuerFormat(aspectRatio).size,
         aspect_ratio:    aspectRatio,

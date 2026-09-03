@@ -79,7 +79,7 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
       if (abgebrochen) return
       setVarianten(liste)
       // Hat der Eintrag nur eine Variante, ist die Wahl keine Frage. Gibt es
-      // gar keine (Archetypen, Prompts), bleibt es null — dort hängt das Bild
+      // gar keine (Prompts), bleibt es null — dort hängt das Bild
       // direkt am Eintrag.
       setVariantId(liste[0]?.id ?? null)
     })
@@ -140,8 +140,8 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
           </DialogDescription>
         </DialogHeader>
 
-        {/* Wohin — neun Ziele in drei Reihen, immer sichtbar. Reihe 1 und 2 sind
-            die Bibliotheken und die Prompts, Reihe 3 die Archetypen. */}
+        {/* Wohin — sechs Ziele in zwei Reihen, immer sichtbar: die fünf
+            Bibliotheken und die Prompts. */}
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-3">
           {BAUSTEINE.map(eintrag => {
             const Icon = eintrag.icon

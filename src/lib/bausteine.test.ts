@@ -76,7 +76,7 @@ describe('passtZurSuche', () => {
   })
 
   it('kommt mit fehlenden Zusatzfeldern zurecht', () => {
-    // Charaktere haben keine Kategorie, Archetypen keine `description`.
+    // Charaktere haben zum Beispiel keine Kategorie.
     const nur: SuchbarerEintrag = { name: 'Elena' }
     expect(passtZurSuche(nur, 'elena')).toBe(true)
     expect(passtZurSuche(nur, 'natur')).toBe(false)
@@ -132,13 +132,23 @@ describe('auswahlSpalten', () => {
     expect(auswahlSpalten(baustein('charaktere'))).not.toContain('category')
   })
 
-  it('benennt bei Prompts den Titel und bei Archetypen die Kurzbeschreibung um', () => {
+  it('benennt bei Prompts den Titel um', () => {
     expect(auswahlSpalten(baustein('prompts'))).toContain('name:title')
-    expect(auswahlSpalten(baustein('charakter-archetypen')))
-      .toContain('description:short_description')
-    // Und dort NICHT die Spalte, die es nicht gibt.
-    expect(auswahlSpalten(baustein('charakter-archetypen')))
-      .not.toMatch(/(^|, )description(,|$)/)
+    // Und NICHT die Spalte, die es dort nicht gibt.
+    expect(auswahlSpalten(baustein('prompts'))).not.toMatch(/(^|, )title(,|$)/)
+  })
+
+  /**
+   * Der Alias-Weg für den FLIESSTEXT hat seit PROJ-52 keinen echten Nutzer mehr
+   * — die Archetypen mit ihrer `short_description` waren er. Er bleibt trotzdem
+   * geprüft: Sonst fiele beim nächsten Baustein mit abweichendem Spaltennamen
+   * erst in Supabase auf, dass eine falsche Spalte die GANZE Abfrage scheitern
+   * lässt.
+   */
+  it('biegt einen abweichenden Beschreibungs-Spaltennamen per Alias gerade', () => {
+    const erfunden = { ...baustein('charaktere'), suchFelder: { beschreibung: 'kurztext' } }
+    expect(auswahlSpalten(erfunden)).toContain('description:kurztext')
+    expect(auswahlSpalten(erfunden)).not.toMatch(/(^|, )description(,|$)/)
   })
 })
 
@@ -174,9 +184,5 @@ describe('pruefeBildgroesse', () => {
 
   it('prüft Prompts nicht — der Eimer hat kein Limit in der Tabelle', () => {
     expect(pruefeBildgroesse(90 * MB, baustein('prompts'))).toBeNull()
-  })
-
-  it('prüft Archetypen nicht — deren Eimer haben in Supabase kein Limit', () => {
-    expect(pruefeBildgroesse(200 * MB, baustein('charakter-archetypen'))).toBeNull()
   })
 })

@@ -342,20 +342,16 @@ export function AppSidebar() {
 
         {/*
           Bibliotheken zweispaltig. Sieben Kacheln in vier Reihen statt sieben —
-          die Farbigkeit bleibt, die Höhe halbiert sich. Die Archetypen stehen
-          nicht mehr einzeln hier, sie sind Reiter auf der jeweiligen Seite.
+          die Farbigkeit bleibt, die Höhe halbiert sich.
         */}
         <SidebarGroup className="py-1">
           <SidebarGroupLabel>Bausteine</SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
             <div className="grid grid-cols-2 gap-1.5">
               {BAUSTEINE.map((e, i) => {
-                // Auch die Archetyp-Seite gehoert zu ihrer Kachel: Sonst leuchtet
-                // dort gar nichts, und die Leiste widerspricht dem Reiter oben.
+                // Bis PROJ-52 zaehlten hier auch die drei Archetyp-Seiten mit.
+                // Es gibt sie nicht mehr; je Bereich bleibt eine Adresse.
                 const aktiv = pathname.startsWith(e.href)
-                  || (e.href === '/characters' && pathname.startsWith('/character-archetypes'))
-                  || (e.href === '/outfits' && pathname.startsWith('/outfit-archetypes'))
-                  || (e.href === '/locations' && pathname.startsWith('/location-archetypes'))
                 // Bei ungerader Anzahl die letzte Kachel ueber beide Spalten —
                 // eine halb leere Reihe sieht aus wie ein Fehler.
                 const letzteAllein = i === BAUSTEINE.length - 1 && BAUSTEINE.length % 2 === 1

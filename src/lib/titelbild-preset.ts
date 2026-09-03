@@ -108,11 +108,11 @@ export type Zielcharakter = {
  * jede Fehlermeldung, denn technisch wäre alles in Ordnung. Aufgefallen wäre
  * es erst am fertigen, bezahlten Bild.
  *
- * Aus demselben Grund werden Charakter-Archetyp, Outfit, Outfit-Archetyp,
- * Location und Location-Archetyp samt ihrer Referenzen auf `null` gesetzt: Im
- * Preset „Calvanize Studio" steht dort heute nichts, aber „steht heute nichts
- * drin" ist keine Zusicherung. Ein später hinzugefügter Rest darf nicht
- * unbemerkt in ein Titelbild rutschen.
+ * Aus demselben Grund werden Outfit und Location samt ihrer Referenzen auf
+ * `null` gesetzt: Im Preset „Calvanize Studio" steht dort heute nichts, aber
+ * „steht heute nichts drin" ist keine Zusicherung. Ein später hinzugefügter
+ * Rest darf nicht unbemerkt in ein Titelbild rutschen. (Bis PROJ-52 galt das
+ * ebenso für die drei Archetyp-Felder; die gibt es nicht mehr.)
  *
  * Alles andere — Licht, Kamera, Hintergrund, Stil, Grading, Mimik, Pose,
  * Format — kommt unverändert aus dem Preset. Das ist der Sinn der Sache: Es
@@ -142,11 +142,8 @@ export function titelbildSzene(
     character: ziel.character,
 
     // Bewusst leer geräumt, nicht durchgereicht.
-    character_archetype: null,
     outfit:              null,
-    outfit_archetype:    null,
     location:            null,
-    location_archetype:  null,
 
     pose:       config.pose_id       ? listen.poseActions.find(p => p.id === config.pose_id)   ?? null : null,
     expression: config.expression_id ? listen.expressions.find(e => e.id === config.expression_id) ?? null : null,
@@ -160,11 +157,8 @@ export function titelbildSzene(
     // Knopfes. Die Beschriftung kommt aus `VARIANTEN_NAME`, damit sie nicht
     // neben dem Variantennamen herläuft.
     character: { url: ziel.referenzsheetUrl, label: VARIANTEN_NAME.referenzsheet },
-    character_archetype: null,
-    outfit:              null,
-    outfit_archetype:    null,
-    location:            null,
-    location_archetype:  null,
+    outfit:    null,
+    location:  null,
   }
 
   return { scene, sceneRefs }

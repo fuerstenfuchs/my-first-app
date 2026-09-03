@@ -1,5 +1,5 @@
 import {
-  Users, Shirt, ShoppingBag, MapPin, Drama, FileText, Sparkles, type LucideIcon,
+  Users, Shirt, ShoppingBag, MapPin, Drama, FileText, type LucideIcon,
 } from 'lucide-react'
 
 /**
@@ -10,8 +10,8 @@ import {
  * Bildtabellen dieselben Spalten — bis auf drei Unterschiede, die hier als
  * Felder stehen statt als `if` im Ablauf:
  *
- *  1. Die einen hängen an einer VARIANTE (`variant_id`), die Archetypen direkt
- *     am Eintrag (`archetype_id`), die Prompts am Prompt (`prompt_id`).
+ *  1. Die einen hängen an einer VARIANTE (`variant_id`), die Prompts direkt am
+ *     Prompt (`prompt_id`).
  *  2. `prompt_media` hat KEINE Spalte `storage_path` — dort merkt sich die App
  *     den Speicherpfad nicht.
  *  3. `prompt_media` verlangt ein `type` ('image' oder 'video', per Schranke).
@@ -24,7 +24,6 @@ import {
 
 export type BausteinSchluessel =
   | 'charaktere' | 'outfits' | 'fashion' | 'locations' | 'posen'
-  | 'charakter-archetypen' | 'outfit-archetypen' | 'location-archetypen'
   | 'prompts'
 
 /**
@@ -37,19 +36,17 @@ export type BausteinSchluessel =
  *   characters, outfits, prompts        description, tags
  *   locations, pose_actions,
  *   fashion_assets                      description, category, tags
- *   character_/outfit_archetypes        short_description, tags
- *   location_archetypes                 short_description, category, tags
  *
- * Die Archetypen nennen den Fließtext `short_description` und haben KEINE
- * Spalte `description`. Deshalb steht hier der Spaltenname, nicht ein „ja/nein":
- * die Abfrage benennt ihn per Alias auf `description` um, und die Oberfläche
- * sieht überall dasselbe Feld.
+ * Hier steht der SPALTENNAME und nicht ein „ja/nein": Heißt die Spalte anders,
+ * benennt die Abfrage sie per Alias um, und die Oberfläche sieht überall
+ * dasselbe Feld. Bis PROJ-52 war das nicht bloß Vorsorge — die Archetypen
+ * nannten ihren Fließtext `short_description`.
  *
  * Ein Feld, das hier fehlt, wird schlicht nicht geladen und nicht durchsucht —
  * das ist der sichere Ausgang, kein stiller Fehler.
  */
 export type SuchFelder = {
-  /** Spalte mit dem Fließtext. Bei den Archetypen `short_description`. */
+  /** Spalte mit dem Fließtext. */
   beschreibung?: string
   /** Spalte mit der Kategorie. Nur dort, wo es überhaupt eine gibt. */
   kategorie?: string
@@ -72,14 +69,14 @@ export type Baustein = {
    */
   namensSpalte: 'name' | 'title'
   /**
-   * Variantentabelle und ihr Fremdschlüssel — fehlt bei Archetypen und
-   * Prompts, dort hängen die Bilder direkt am Eintrag.
+   * Variantentabelle und ihr Fremdschlüssel — fehlt bei Prompts, dort hängen
+   * die Bilder direkt am Eintrag.
    */
   varianten?: { tabelle: string; fk: string }
   /** Wohin die Bildzeile geschrieben wird. */
   bildTabelle: string
   /** Der Fremdschlüssel in der Bildtabelle. */
-  bildFk: 'variant_id' | 'archetype_id' | 'prompt_id'
+  bildFk: 'variant_id' | 'prompt_id'
   /** In welchen Speicher-Eimer die Datei kommt. */
   bucket: string
   /** Hat die Bildtabelle eine Spalte `storage_path`? prompt_media nicht. */
@@ -110,8 +107,7 @@ export type Baustein = {
  * Die fuenf Eimer, in die ein vergroessertes Ergebnis uebernommen werden kann,
  * wurden am selben Tag von 10/20 MB auf 50 MB angehoben — 28 MB war schon
  * knapp am damaligen Limit, und SeedVR2 kann je nach Quellbild noch groesser
- * werden. `prompt-media` (Video, 100 MB) und die Archetyp-Eimer (kein Limit)
- * brauchen keinen Eintrag.
+ * werden. `prompt-media` (Video, 100 MB) braucht keinen Eintrag.
  */
 export const SPEICHERLIMIT_MB: Record<string, number> = {
   'character-images':  50,
@@ -197,31 +193,11 @@ export const BAUSTEINE: Baustein[] = [
     href: '/',
   },
 
-  // Die Archetypen haben keine Varianten — die Bilder hängen direkt am Eintrag.
-  {
-    schluessel: 'charakter-archetypen', label: 'Charakter-Arch.', einzahl: 'Archetyp',
-    icon: Sparkles, tabelle: 'character_archetypes', namensSpalte: 'name',
-    bildTabelle: 'character_archetype_images', bildFk: 'archetype_id',
-    bucket: 'character-archetype-images', hatStoragePath: true,
-    suchFelder: { beschreibung: 'short_description', schlagworte: 'tags' },
-    href: '/character-archetypes',
-  },
-  {
-    schluessel: 'outfit-archetypen', label: 'Outfit-Arch.', einzahl: 'Archetyp',
-    icon: Sparkles, tabelle: 'outfit_archetypes', namensSpalte: 'name',
-    bildTabelle: 'outfit_archetype_images', bildFk: 'archetype_id',
-    bucket: 'outfit-archetype-images', hatStoragePath: true,
-    suchFelder: { beschreibung: 'short_description', schlagworte: 'tags' },
-    href: '/outfit-archetypes',
-  },
-  {
-    schluessel: 'location-archetypen', label: 'Location-Arch.', einzahl: 'Archetyp',
-    icon: Sparkles, tabelle: 'location_archetypes', namensSpalte: 'name',
-    bildTabelle: 'location_archetype_images', bildFk: 'archetype_id',
-    bucket: 'location-archetype-images', hatStoragePath: true,
-    suchFelder: { beschreibung: 'short_description', kategorie: 'category', schlagworte: 'tags' },
-    href: '/location-archetypes',
-  },
+  // Hier standen bis PROJ-52 die drei Archetyp-Bausteine. Sie waren die
+  // einzigen ohne Variantentabelle und die einzigen mit `short_description`
+  // statt `description` — beide Sonderfälle sind mit ihnen entfallen. Die
+  // Felder `varianten?` und der Alias in `auswahlSpalten` bleiben trotzdem:
+  // `prompts` braucht sie weiterhin.
 ]
 
 export function baustein(schluessel: BausteinSchluessel): Baustein {
@@ -267,9 +243,10 @@ export type SuchbarerEintrag = {
 /**
  * Die Spaltenliste für die Abfrage, aus den Feldern des Bausteins.
  *
- * `prompts` nennt den Namen `title`, die Archetypen nennen den Fließtext
- * `short_description` — beides wird per Alias auf `name` und `description`
- * gebogen, damit die Oberfläche überall dasselbe sieht.
+ * `prompts` nennt den Namen `title` — das wird per Alias auf `name` gebogen,
+ * damit die Oberfläche überall dasselbe sieht. Derselbe Alias-Weg steht für
+ * den Fließtext bereit; bis PROJ-52 brauchten ihn die Archetypen mit ihrer
+ * `short_description`.
  *
  * Eigene Funktion und kein String im Hook, weil genau hier der Fallstrick
  * sitzt: EINE nicht vorhandene Spalte lässt die ganze Abfrage scheitern und

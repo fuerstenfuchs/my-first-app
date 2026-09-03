@@ -81,4 +81,8 @@
 | PROJ-50 | Sieben Standard-Varianten bei Charaktererzeugung | In Review | [PROJ-50](PROJ-50-standard-varianten.md) | 2026-09-03 |
 | PROJ-51 | Titelbild per Knopf aus dem Preset „Calvanize Studio" | In Review | [PROJ-51](PROJ-51-titelbild-preset.md) | 2026-09-03 |
 
-## Next Available ID: PROJ-52
+| PROJ-52 | Archetypen in die Hauptbereiche zusammenlegen | In Review | [PROJ-52](PROJ-52-archetypen-zusammenlegen.md) | 2026-09-03 |
+| PROJ-53 | Fashion in Outfits zusammenlegen (Kategorie am Eintrag) | Roadmap | — | 2026-09-03 |
+| PROJ-54 | Outfit-Referenzkette (vorne, hinten, Details, Kombi) | Roadmap | — | 2026-09-03 |
+
+## Next Available ID: PROJ-55

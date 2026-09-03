@@ -133,23 +133,23 @@ describe('titelbildSzene — der Zielcharakter setzt sich immer durch', () => {
   })
 
   it('das fremde Gesicht taucht nirgends mehr auf — auch nicht im fertigen Prompt', () => {
-    const prompt = buildPrompt(scene, sceneRefs)
+    const prompt = buildPrompt(scene)
     expect(JSON.stringify({ scene, sceneRefs })).not.toContain('fremdes-gesicht')
     expect(JSON.stringify({ scene, sceneRefs })).not.toContain('FREMDER-CHARAKTER')
     expect(prompt).toContain('Use the provided character reference.')
   })
 
-  it('räumt Archetypen, Outfit und Location samt Referenzen leer', () => {
-    expect(scene.character_archetype).toBeNull()
+  /**
+   * Bis PROJ-52 hieß diese Prüfung „räumt Archetypen, Outfit und Location samt
+   * Referenzen leer“ und nannte zusätzlich `character_archetype`,
+   * `outfit_archetype` und `location_archetype`. Die Felder gibt es nicht mehr;
+   * die Regel für Outfit und Location ist unverändert.
+   */
+  it('räumt Outfit und Location samt Referenzen leer', () => {
     expect(scene.outfit).toBeNull()
-    expect(scene.outfit_archetype).toBeNull()
     expect(scene.location).toBeNull()
-    expect(scene.location_archetype).toBeNull()
-    expect(sceneRefs.character_archetype).toBeNull()
     expect(sceneRefs.outfit).toBeNull()
-    expect(sceneRefs.outfit_archetype).toBeNull()
     expect(sceneRefs.location).toBeNull()
-    expect(sceneRefs.location_archetype).toBeNull()
   })
 
   /**
@@ -161,28 +161,51 @@ describe('titelbildSzene — der Zielcharakter setzt sich immer durch', () => {
   it('lässt auch dann nichts durch, wenn das Preset Outfit und Location gesetzt hat', () => {
     const verseucht: ScenePresetConfig = {
       ...CALVANIZE_STUDIO,
-      character_archetype_id: 'ca-fremd',
       outfit_id: 'o-fremd',
-      outfit_archetype_id: 'oa-fremd',
       location_id: 'l-fremd',
-      location_archetype_id: 'la-fremd',
       refs: {
         character: { url: 'https://speicher.test/fremdes-gesicht.png', label: 'Gesicht' },
-        character_archetype: { url: 'https://speicher.test/x1.png', label: 'x1' },
         outfit: { url: 'https://speicher.test/x2.png', label: 'x2' },
-        outfit_archetype: { url: 'https://speicher.test/x3.png', label: 'x3' },
         location: { url: 'https://speicher.test/x4.png', label: 'x4' },
-        location_archetype: { url: 'https://speicher.test/x5.png', label: 'x5' },
       },
     }
     const ergebnis = titelbildSzene(verseucht, LISTEN, {
       character: ZIEL_CHARAKTER, referenzsheetUrl: SHEET_URL,
     })
     const alsText = JSON.stringify(ergebnis)
-    for (const rest of ['x1.png', 'x2.png', 'x3.png', 'x4.png', 'x5.png', 'fremdes-gesicht', '-fremd']) {
+    for (const rest of ['x2.png', 'x4.png', 'fremdes-gesicht', '-fremd']) {
       expect(alsText).not.toContain(rest)
     }
     expect(ergebnis.sceneRefs.character?.url).toBe(SHEET_URL)
+  })
+
+  /**
+   * UND DER FALL, DEN PROJ-52 NEU MACHT: ein Preset, das noch die alten
+   * Archetyp-Felder trägt. Es ist typseitig keins mehr, kommt aus der Datenbank
+   * aber genau so. Nichts davon darf im Ergebnis auftauchen — und das Bauen
+   * darf daran nicht scheitern.
+   */
+  it('ein Preset mit alten Archetyp-Feldern wird gebaut, ohne sie durchzulassen', () => {
+    const altesFormat = {
+      ...CALVANIZE_STUDIO,
+      character_archetype_id: 'ca-fremd',
+      outfit_archetype_id: 'oa-fremd',
+      location_archetype_id: 'la-fremd',
+      refs: {
+        ...CALVANIZE_STUDIO.refs,
+        character_archetype: { url: 'https://speicher.test/x1.png', label: 'x1' },
+        outfit_archetype: { url: 'https://speicher.test/x3.png', label: 'x3' },
+        location_archetype: { url: 'https://speicher.test/x5.png', label: 'x5' },
+      },
+    } as unknown as ScenePresetConfig
+    const ergebnis = titelbildSzene(altesFormat, LISTEN, {
+      character: ZIEL_CHARAKTER, referenzsheetUrl: SHEET_URL,
+    })
+    const alsText = JSON.stringify(ergebnis)
+    for (const rest of ['x1.png', 'x3.png', 'x5.png', '-fremd']) {
+      expect(alsText).not.toContain(rest)
+    }
+    expect(buildPrompt(ergebnis.scene)).toContain('Use the provided character reference.')
   })
 })
 
@@ -222,9 +245,7 @@ describe('titelbildSzene — alles andere kommt unverändert aus dem Preset', ()
       { character: ZIEL_CHARAKTER, referenzsheetUrl: SHEET_URL },
     )
     expect(s.style).toBeNull()
-    expect(() => buildPrompt(s, titelbildSzene(CALVANIZE_STUDIO, LISTEN, {
-      character: ZIEL_CHARAKTER, referenzsheetUrl: SHEET_URL,
-    }).sceneRefs)).not.toThrow()
+    expect(() => buildPrompt(s)).not.toThrow()
   })
 
   it('ein Preset ohne Pose ergibt keine Pose — es wird nichts erfunden', () => {
@@ -245,10 +266,10 @@ describe('titelbildSzene — alles andere kommt unverändert aus dem Preset', ()
 
 describe('titelbildSzene — der Prompt, der tatsächlich abgeschickt wird', () => {
   it('enthält Marks Studio-Look und die Charakterreferenz', () => {
-    const { scene, sceneRefs } = titelbildSzene(CALVANIZE_STUDIO, LISTEN, {
+    const { scene } = titelbildSzene(CALVANIZE_STUDIO, LISTEN, {
       character: ZIEL_CHARAKTER, referenzsheetUrl: SHEET_URL,
     })
-    const prompt = buildPrompt(scene, sceneRefs)
+    const prompt = buildPrompt(scene)
     expect(prompt.startsWith('Indoor scene.')).toBe(true)
     expect(prompt).toContain('ring light')
     expect(prompt).toContain('85mm')

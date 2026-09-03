@@ -39,11 +39,8 @@ interface Props {
   onImport:    (file: File) => Promise<unknown>
   // Lookups so the detail view can show readable names instead of raw IDs
   characters: NamedRef[]
-  characterArchetypes: NamedRef[]
   outfits:    NamedRef[]
-  outfitArchetypes: NamedRef[]
   locations:  NamedRef[]
-  locationArchetypes: NamedRef[]
   poseActions: NamedRef[]
   expressions: NamedRef[]
   cameras:     NamedRef[]
@@ -60,7 +57,7 @@ function findLabel(list: { key: string; label: string; emoji: string }[], value:
 export function ScenePresetDialog({
   open, onClose, items, loading, currentConfig, autoCoverUrl,
   onApply, onCreate, onDelete, onDuplicate, onExport, onImport,
-  characters, characterArchetypes, outfits, outfitArchetypes, locations, locationArchetypes,
+  characters, outfits, locations,
   poseActions, expressions, cameras, styles, gradings,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -135,7 +132,7 @@ export function ScenePresetDialog({
         const mod = findLabel(LIGHT_MODIFIERS, m); if (mod) list.push({ emoji: mod.split(' ')[0], label: mod.slice(mod.indexOf(' ') + 1) })
       }
     }
-    if (!c.location_id && !c.location_archetype_id && c.background) {
+    if (!c.location_id && c.background) {
       const bg = findLabel(STUDIO_BACKGROUNDS, c.background); if (bg) list.push({ emoji: bg.split(' ')[0], label: bg.slice(bg.indexOf(' ') + 1) })
     }
     const cam = [
@@ -152,16 +149,10 @@ export function ScenePresetDialog({
     const result: { label: string; name: string }[] = []
     const char = c.character_id ? characters.find(x => x.id === c.character_id) : null
     if (char) result.push({ label: 'Charakter', name: char.name })
-    const charArchetype = c.character_archetype_id ? characterArchetypes.find(x => x.id === c.character_archetype_id) : null
-    if (charArchetype) result.push({ label: 'Charakter-Archetyp', name: charArchetype.name })
     const outfit = c.outfit_id ? outfits.find(x => x.id === c.outfit_id) : null
     if (outfit) result.push({ label: 'Outfit', name: outfit.name })
-    const outfitArchetype = c.outfit_archetype_id ? outfitArchetypes.find(x => x.id === c.outfit_archetype_id) : null
-    if (outfitArchetype) result.push({ label: 'Outfit-Archetyp', name: outfitArchetype.name })
     const loc = c.location_id ? locations.find(x => x.id === c.location_id) : null
     if (loc) result.push({ label: 'Location', name: loc.name })
-    const archetype = c.location_archetype_id ? locationArchetypes.find(x => x.id === c.location_archetype_id) : null
-    if (archetype) result.push({ label: 'Archetyp', name: archetype.name })
     const pose = c.pose_id ? poseActions.find(x => x.id === c.pose_id) : null
     if (pose) result.push({ label: 'Pose', name: pose.name })
     const expr = c.expression_id ? expressions.find(x => x.id === c.expression_id) : null
@@ -173,7 +164,7 @@ export function ScenePresetDialog({
     const grading = c.grading_id ? gradings.find(x => x.id === c.grading_id) : null
     if (grading) result.push({ label: 'Grading', name: grading.name })
     return result
-  }, [selected, characters, characterArchetypes, outfits, outfitArchetypes, locations, locationArchetypes, poseActions, expressions, cameras, styles, gradings])
+  }, [selected, characters, outfits, locations, poseActions, expressions, cameras, styles, gradings])
 
   return (
     <>

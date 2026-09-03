@@ -9,9 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCharacters } from '@/hooks/use-characters'
 import { useOutfits } from '@/hooks/use-outfits'
 import { useLocations } from '@/hooks/use-locations'
-import { useLocationArchetypes } from '@/hooks/use-location-archetypes'
-import { useCharacterArchetypes } from '@/hooks/use-character-archetypes'
-import { useOutfitArchetypes } from '@/hooks/use-outfit-archetypes'
 import { usePoseActions } from '@/hooks/use-pose-actions'
 import { useVisualAssets } from '@/hooks/use-visual-assets'
 import { useLookGrading } from '@/hooks/use-look-grading'
@@ -29,7 +26,7 @@ import { useScenePresets } from '@/hooks/use-scene-presets'
 import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialog'
 import { QueueButton } from '@/components/scene-builder/queue-button'
 import type { Referenz, ReferenzRolle } from '@/lib/image-generation'
-import { loadRefImages, loadArchetypeRefImages, type RefImage } from '@/lib/reference-images'
+import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
 import { buildPrompt, type Scene, type SceneRefs } from '@/lib/szene-prompt'
 
@@ -40,15 +37,15 @@ import { buildPrompt, type Scene, type SceneRefs } from '@/lib/szene-prompt'
 // damit der Knopf „Titelbild erzeugen" im Charakter-Bereich denselben Prompt
 // erzeugt und nicht einen zweiten, leicht anderen.
 
-type TabKey = 'charaktere' | 'charakter_archetypen' | 'outfits' | 'outfit_archetypen' | 'locations' | 'archetypen' | 'posen' | 'ausdruck' | 'kamera' | 'stil' | 'grading'
+// Seit PROJ-52 gibt es je Bereich EINEN Reiter: die drei Archetyp-Reiter sind
+// ersatzlos entfallen, mit ihnen die Möglichkeit, eine Beschreibung ohne Bild
+// beizusteuern.
+type TabKey = 'charaktere' | 'outfits' | 'locations' | 'posen' | 'ausdruck' | 'kamera' | 'stil' | 'grading'
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: 'charaktere', label: 'Charaktere', emoji: '👤' },
-  { key: 'charakter_archetypen', label: 'Charakter-Archetyp', emoji: '👥' },
   { key: 'outfits',    label: 'Outfits',    emoji: '👗' },
-  { key: 'outfit_archetypen', label: 'Outfit-Archetyp', emoji: '🧥' },
   { key: 'locations',  label: 'Locations',  emoji: '📍' },
-  { key: 'archetypen', label: 'Archetyp',   emoji: '🏛️' },
   { key: 'posen',      label: 'Posen',      emoji: '🎭' },
   { key: 'ausdruck',   label: 'Mimik',      emoji: '😊' },
   { key: 'kamera',     label: 'Kamera-Asset', emoji: '📷' },
@@ -56,16 +53,13 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: 'grading',    label: 'Grading',    emoji: '🎨' },
 ]
 
-type SlotKey = keyof Pick<Scene, 'character' | 'character_archetype' | 'outfit' | 'outfit_archetype' | 'location' | 'location_archetype' | 'pose' | 'expression' | 'camera' | 'style' | 'grading'>
+type SlotKey = keyof Pick<Scene, 'character' | 'outfit' | 'location' | 'pose' | 'expression' | 'camera' | 'style' | 'grading'>
 type RefSlotKey = keyof SceneRefs
 
 const SLOTS: { key: SlotKey; label: string; emoji: string; tab: TabKey }[] = [
   { key: 'character', label: 'Charakter', emoji: '👤', tab: 'charaktere' },
-  { key: 'character_archetype', label: 'Charakter-Archetyp', emoji: '👥', tab: 'charakter_archetypen' },
   { key: 'outfit',    label: 'Outfit',    emoji: '👗', tab: 'outfits'    },
-  { key: 'outfit_archetype', label: 'Outfit-Archetyp', emoji: '🧥', tab: 'outfit_archetypen' },
   { key: 'location',  label: 'Location',  emoji: '📍', tab: 'locations'  },
-  { key: 'location_archetype', label: 'Archetyp', emoji: '🏛️', tab: 'archetypen' },
   { key: 'pose',      label: 'Pose',      emoji: '🎭', tab: 'posen'      },
   { key: 'expression',label: 'Mimik',     emoji: '😊', tab: 'ausdruck'   },
   { key: 'camera',    label: 'Kamera-Asset', emoji: '📷', tab: 'kamera' },
@@ -73,7 +67,7 @@ const SLOTS: { key: SlotKey; label: string; emoji: string; tab: TabKey }[] = [
   { key: 'grading',   label: 'Grading',    emoji: '🎨', tab: 'grading' },
 ]
 
-const REF_SLOTS: RefSlotKey[] = ['character', 'character_archetype', 'outfit', 'outfit_archetype', 'location', 'location_archetype']
+const REF_SLOTS: RefSlotKey[] = ['character', 'outfit', 'location']
 
 // ── Load reference images from Supabase ───────────────────────────────────────
 
@@ -360,11 +354,8 @@ function RefExportCard({ label, emoji, asset, refImage }: {
 
 export default function SceneBuilderPage() {
   const { characters, loading: loadingChars } = useCharacters()
-  const { archetypes: characterArchetypes, loading: loadingCharArchetypes } = useCharacterArchetypes()
   const { outfits,    loading: loadingOutfits } = useOutfits()
-  const { archetypes: outfitArchetypes, loading: loadingOutfitArchetypes } = useOutfitArchetypes()
   const { locations,  loading: loadingLocs } = useLocations()
-  const { archetypes: locationArchetypes, loading: loadingArchetypes } = useLocationArchetypes()
   const { poseActions, loading: loadingPoses } = usePoseActions()
   const { assets: visualAssets, loading: loadingVisual } = useVisualAssets()
   const { styles, gradings, loading: loadingLookGrading } = useLookGrading()
@@ -382,8 +373,8 @@ export default function SceneBuilderPage() {
     scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
     light_source: null, light_style: null, light_modifiers: [],
     shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
-    character: null, character_archetype: null, outfit: null, outfit_archetype: null,
-    location: null, location_archetype: null, pose: null, expression: null, camera: null,
+    character: null, outfit: null,
+    location: null, pose: null, expression: null, camera: null,
     style: null, grading: null, background: null,
   })
 
@@ -393,14 +384,16 @@ export default function SceneBuilderPage() {
 
   // Selected reference image per ref slot
   const [sceneRefs, setSceneRefs] = useState<SceneRefs>({
-    character: null, character_archetype: null, outfit: null, outfit_archetype: null,
-    location: null, location_archetype: null,
+    character: null, outfit: null, location: null,
   })
 
-  const prompt = useMemo(() => buildPrompt(scene, sceneRefs), [scene, sceneRefs])
+  // Der Prompt hängt seit PROJ-52 nur noch an der Szene, nicht mehr an den
+  // gewählten Referenzbildern — die gehen weiterhin als Bilder mit, siehe
+  // `referenzen` weiter unten.
+  const prompt = useMemo(() => buildPrompt(scene), [scene])
   const hasAnyAsset = Boolean(
-    scene.character || scene.character_archetype || scene.outfit || scene.outfit_archetype ||
-    scene.location || scene.location_archetype || scene.pose || scene.expression || scene.camera || scene.style || scene.grading
+    scene.character || scene.outfit || scene.location ||
+    scene.pose || scene.expression || scene.camera || scene.style || scene.grading
   )
   const hasAnyCondition = Boolean(
     scene.time_of_day || scene.season || scene.weather || scene.light_source || scene.light_style || scene.light_modifiers.length > 0
@@ -459,18 +452,11 @@ export default function SceneBuilderPage() {
   ) => {
     if (refImagesMap[assetId] !== undefined) return // already loaded
     setRefLoadingMap(prev => ({ ...prev, [assetId]: true }))
-    let imgs: RefImage[]
-    if (slotKey === 'character_archetype' || slotKey === 'outfit_archetype' || slotKey === 'location_archetype') {
-      const table = slotKey === 'character_archetype' ? 'character_archetype_images'
-        : slotKey === 'outfit_archetype' ? 'outfit_archetype_images' : 'location_archetype_images'
-      imgs = await loadArchetypeRefImages(table, assetId)
-    } else {
-      const table = slotKey === 'character' ? 'character_variants'
-        : slotKey === 'outfit' ? 'outfit_variants' : 'location_variants'
-      const fk = slotKey === 'character' ? 'character_id'
-        : slotKey === 'outfit' ? 'outfit_id' : 'location_id'
-      imgs = await loadRefImages(table, fk, assetId)
-    }
+    const table = slotKey === 'character' ? 'character_variants'
+      : slotKey === 'outfit' ? 'outfit_variants' : 'location_variants'
+    const fk = slotKey === 'character' ? 'character_id'
+      : slotKey === 'outfit' ? 'outfit_id' : 'location_id'
+    const imgs = await loadRefImages(table, fk, assetId)
     setRefImagesMap(prev => ({ ...prev, [assetId]: imgs }))
     setRefLoadingMap(prev => ({ ...prev, [assetId]: false }))
   }, [refImagesMap])
@@ -500,13 +486,12 @@ export default function SceneBuilderPage() {
       scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
       light_source: null, light_style: null, light_modifiers: [],
       shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
-      character: null, character_archetype: null, outfit: null, outfit_archetype: null,
-      location: null, location_archetype: null, pose: null, expression: null, camera: null,
+      character: null, outfit: null,
+      location: null, pose: null, expression: null, camera: null,
       style: null, grading: null, background: null,
     })
     setSceneRefs({
-      character: null, character_archetype: null, outfit: null, outfit_archetype: null,
-      location: null, location_archetype: null,
+      character: null, outfit: null, location: null,
     })
   }
 
@@ -520,21 +505,17 @@ export default function SceneBuilderPage() {
 
   /**
    * Genau die Bilder, die im Abschnitt „Referenz-Export" angezeigt werden.
-   * Dieselbe Vorrangregel wie dort und in buildPrompt: ein echtes Asset
-   * verdrängt seinen Archetyp, und das gewählte Referenzbild schlägt das
-   * Titelbild des Assets.
+   * Dieselbe Regel wie dort: das gewählte Referenzbild schlägt das Titelbild
+   * des Assets.
    */
   const referenzen = useMemo(() => {
     type MitTitelbild = { cover_image_url?: string | null } | null
     // Die Rolle geht mit, sonst weiß das Bildmodell nicht, welches Bild wofür
     // steht — und nimmt schon mal die Person aus dem Outfit-Bild.
     const paare: [MitTitelbild, RefImage | null, ReferenzRolle][] = [
-      [scene.character,          sceneRefs.character,           'character'],
-      [scene.character ? null : scene.character_archetype, sceneRefs.character_archetype, 'character'],
-      [scene.outfit,             sceneRefs.outfit,              'outfit'],
-      [scene.outfit ? null : scene.outfit_archetype,       sceneRefs.outfit_archetype,    'outfit'],
-      [scene.location,           sceneRefs.location,            'location'],
-      [scene.location ? null : scene.location_archetype,   sceneRefs.location_archetype,  'location'],
+      [scene.character, sceneRefs.character, 'character'],
+      [scene.outfit,    sceneRefs.outfit,    'outfit'],
+      [scene.location,  sceneRefs.location,  'location'],
     ]
     const gesammelt: Referenz[] = []
     for (const [asset, ref, rolle] of paare) {
@@ -563,31 +544,25 @@ export default function SceneBuilderPage() {
       aspect_ratio: scene.aspect_ratio,
       background: scene.background,
       character_id: scene.character?.id ?? null,
-      character_archetype_id: scene.character_archetype?.id ?? null,
       outfit_id: scene.outfit?.id ?? null,
-      outfit_archetype_id: scene.outfit_archetype?.id ?? null,
       location_id: scene.location?.id ?? null,
-      location_archetype_id: scene.location_archetype?.id ?? null,
       pose_id: scene.pose?.id ?? null,
       expression_id: scene.expression?.id ?? null,
       camera_id: scene.camera?.id ?? null,
       style_id: scene.style?.id ?? null,
       grading_id: scene.grading?.id ?? null,
       refs: {
-        character: sceneRefs.character, character_archetype: sceneRefs.character_archetype,
-        outfit: sceneRefs.outfit, outfit_archetype: sceneRefs.outfit_archetype,
-        location: sceneRefs.location, location_archetype: sceneRefs.location_archetype,
+        character: sceneRefs.character,
+        outfit:    sceneRefs.outfit,
+        location:  sceneRefs.location,
       },
     }
   }
 
   const autoPresetCoverUrl =
     sceneRefs.location?.url ?? scene.location?.cover_image_url ??
-    sceneRefs.location_archetype?.url ?? scene.location_archetype?.cover_image_url ??
     sceneRefs.character?.url ?? scene.character?.cover_image_url ??
-    sceneRefs.character_archetype?.url ?? scene.character_archetype?.cover_image_url ??
     sceneRefs.outfit?.url ?? scene.outfit?.cover_image_url ??
-    sceneRefs.outfit_archetype?.url ?? scene.outfit_archetype?.cover_image_url ??
     scene.style?.cover_image_url ?? scene.grading?.cover_image_url ?? null
 
   function applyPresetConfig(config: ScenePresetConfig) {
@@ -606,31 +581,25 @@ export default function SceneBuilderPage() {
       aspect_ratio: config.aspect_ratio as AspectRatioKey | null,
       background: config.background as BackgroundKey | null,
       character: config.character_id ? characters.find(c => c.id === config.character_id) ?? null : null,
-      character_archetype: config.character_archetype_id ? characterArchetypes.find(a => a.id === config.character_archetype_id) ?? null : null,
       outfit: config.outfit_id ? outfits.find(o => o.id === config.outfit_id) ?? null : null,
-      outfit_archetype: config.outfit_archetype_id ? outfitArchetypes.find(a => a.id === config.outfit_archetype_id) ?? null : null,
       location: config.location_id ? locations.find(l => l.id === config.location_id) ?? null : null,
-      location_archetype: config.location_archetype_id ? locationArchetypes.find(a => a.id === config.location_archetype_id) ?? null : null,
       pose: config.pose_id ? poseActions.find(p => p.id === config.pose_id) ?? null : null,
       expression: config.expression_id ? expressions.find(e => e.id === config.expression_id) ?? null : null,
       camera: config.camera_id ? cameras.find(c => c.id === config.camera_id) ?? null : null,
       style: config.style_id ? styles.find(s => s.id === config.style_id) ?? null : null,
       grading: config.grading_id ? gradings.find(g => g.id === config.grading_id) ?? null : null,
     })
+    // Ein vor PROJ-52 gespeichertes Preset kann noch Archetyp-Felder enthalten.
+    // Die werden hier schlicht nicht mehr gelesen — das Laden scheitert daran
+    // nicht, siehe EMPTY_PRESET_CONFIG in `scene-preset-types.ts`.
     setSceneRefs({
       character: config.refs.character,
-      character_archetype: config.refs.character_archetype,
-      outfit: config.refs.outfit,
-      outfit_archetype: config.refs.outfit_archetype,
-      location: config.refs.location,
-      location_archetype: config.refs.location_archetype,
+      outfit:    config.refs.outfit,
+      location:  config.refs.location,
     })
     if (config.character_id) loadRefImages_forSlot('character', config.character_id)
-    if (config.character_archetype_id) loadRefImages_forSlot('character_archetype', config.character_archetype_id)
     if (config.outfit_id) loadRefImages_forSlot('outfit', config.outfit_id)
-    if (config.outfit_archetype_id) loadRefImages_forSlot('outfit_archetype', config.outfit_archetype_id)
     if (config.location_id) loadRefImages_forSlot('location', config.location_id)
-    if (config.location_archetype_id) loadRefImages_forSlot('location_archetype', config.location_archetype_id)
     toast.success('Preset angewendet')
   }
 
@@ -642,25 +611,13 @@ export default function SceneBuilderPage() {
         loading: loadingChars,
         items: characters.map(c => ({ id: c.id, name: c.name, imageUrl: c.cover_image_url, isSelected: scene.character?.id === c.id, onSelect: () => setSlot('character', c) }))
       }
-      case 'charakter_archetypen': return {
-        loading: loadingCharArchetypes,
-        items: characterArchetypes.map(a => ({ id: a.id, name: a.name, imageUrl: a.cover_image_url, isSelected: scene.character_archetype?.id === a.id, onSelect: () => setSlot('character_archetype', a) }))
-      }
       case 'outfits': return {
         loading: loadingOutfits,
         items: outfits.map(o => ({ id: o.id, name: o.name, imageUrl: o.cover_image_url, isSelected: scene.outfit?.id === o.id, onSelect: () => setSlot('outfit', o) }))
       }
-      case 'outfit_archetypen': return {
-        loading: loadingOutfitArchetypes,
-        items: outfitArchetypes.map(a => ({ id: a.id, name: a.name, imageUrl: a.cover_image_url, isSelected: scene.outfit_archetype?.id === a.id, onSelect: () => setSlot('outfit_archetype', a) }))
-      }
       case 'locations': return {
         loading: loadingLocs,
         items: locations.map(l => ({ id: l.id, name: l.name, imageUrl: l.cover_image_url, isSelected: scene.location?.id === l.id, onSelect: () => setSlot('location', l) }))
-      }
-      case 'archetypen': return {
-        loading: loadingArchetypes,
-        items: locationArchetypes.map(a => ({ id: a.id, name: a.name, imageUrl: a.cover_image_url, isSelected: scene.location_archetype?.id === a.id, onSelect: () => setSlot('location_archetype', a) }))
       }
       case 'posen': return {
         loading: loadingPoses,
@@ -684,7 +641,7 @@ export default function SceneBuilderPage() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, characters, characterArchetypes, outfits, outfitArchetypes, locations, locationArchetypes, poseActions, expressions, cameras, styles, gradings, scene, loadingChars, loadingCharArchetypes, loadingOutfits, loadingOutfitArchetypes, loadingLocs, loadingArchetypes, loadingPoses, loadingVisual, loadingLookGrading])
+  }, [activeTab, characters, outfits, locations, poseActions, expressions, cameras, styles, gradings, scene, loadingChars, loadingOutfits, loadingLocs, loadingPoses, loadingVisual, loadingLookGrading])
 
   const currentTab = TABS.find(t => t.key === activeTab)!
 
@@ -833,14 +790,14 @@ export default function SceneBuilderPage() {
               <ChipGroup label="🖥️ Bildorientierung" options={ASPECT_RATIOS} selected={scene.aspect_ratio} onSelect={v => setCameraSetting('aspect_ratio', v)} />
             </div>
 
-            {/* Studio-Hintergrund — nur relevant, solange keine Location/Archetyp gewählt ist */}
-            {!scene.location && !scene.location_archetype && (
+            {/* Studio-Hintergrund — nur relevant, solange keine Location gewählt ist */}
+            {!scene.location && (
               <div className="max-w-2xl mx-auto mb-4 space-y-2.5">
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   🖼️ Studio-Hintergrund
                 </span>
                 <p className="text-[10px] text-muted-foreground/40 -mt-1">
-                  Wird ignoriert, sobald unten eine Location oder ein Location Archetype gewählt wird.
+                  Wird ignoriert, sobald unten eine Location gewählt wird.
                 </p>
                 <ChipGroup label="🎨 Hintergrundfarbe" options={STUDIO_BACKGROUNDS} selected={scene.background} onSelect={setBackground} />
               </div>
@@ -849,14 +806,7 @@ export default function SceneBuilderPage() {
             <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
               {SLOTS.map(slot => {
                 const assetId = (scene[slot.key] as { id: string } | null)?.id
-                // An Archetype's own reference picker only matters when there is no matching
-                // real asset — once a real Character/Outfit/Location is chosen, its image takes
-                // over that role and the Archetype contributes its text description only.
-                const archetypeRefSuppressed =
-                  (slot.key === 'character_archetype' && Boolean(scene.character)) ||
-                  (slot.key === 'outfit_archetype' && Boolean(scene.outfit)) ||
-                  (slot.key === 'location_archetype' && Boolean(scene.location))
-                const hasRef = REF_SLOTS.includes(slot.key as RefSlotKey) && !archetypeRefSuppressed
+                const hasRef = REF_SLOTS.includes(slot.key as RefSlotKey)
                 return (
                   <div key={slot.key} className="group">
                     <SceneSlot
@@ -903,8 +853,7 @@ export default function SceneBuilderPage() {
               aspectRatio={scene.aspect_ratio}
               sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}
               szenenName={
-                scene.character?.name ?? scene.character_archetype?.name ??
-                scene.location?.name ?? scene.location_archetype?.name ??
+                scene.character?.name ?? scene.location?.name ??
                 scene.outfit?.name ?? scene.style?.name ?? null
               }
             />
@@ -978,7 +927,7 @@ export default function SceneBuilderPage() {
                   )}
                 </>
               )}
-              {!scene.location && !scene.location_archetype && scene.background && (
+              {!scene.location && scene.background && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
                   {STUDIO_BACKGROUNDS.find(b => b.key === scene.background)?.emoji} {STUDIO_BACKGROUNDS.find(b => b.key === scene.background)?.label}
                 </span>
@@ -1007,8 +956,7 @@ export default function SceneBuilderPage() {
             </div>
 
             {/* Referenz-Export section */}
-            {(scene.character || scene.character_archetype || scene.outfit || scene.outfit_archetype ||
-              scene.location || scene.location_archetype) && (
+            {(scene.character || scene.outfit || scene.location) && (
               <div className="space-y-2">
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Referenz-Export
@@ -1018,33 +966,9 @@ export default function SceneBuilderPage() {
                 </p>
                 <div className="space-y-2.5">
                   <RefExportCard label="Charakter" emoji="👤" asset={scene.character} refImage={sceneRefs.character} />
-                  {!scene.character && (
-                    <RefExportCard label="Charakter-Archetyp" emoji="👥" asset={scene.character_archetype} refImage={sceneRefs.character_archetype} />
-                  )}
                   <RefExportCard label="Outfit"    emoji="👗" asset={scene.outfit}    refImage={sceneRefs.outfit}    />
-                  {!scene.outfit && (
-                    <RefExportCard label="Outfit-Archetyp" emoji="🧥" asset={scene.outfit_archetype} refImage={sceneRefs.outfit_archetype} />
-                  )}
                   <RefExportCard label="Location"  emoji="📍" asset={scene.location}  refImage={sceneRefs.location}  />
-                  {!scene.location && (
-                    <RefExportCard label="Archetyp" emoji="🏛️" asset={scene.location_archetype} refImage={sceneRefs.location_archetype} />
-                  )}
                 </div>
-                {scene.character && scene.character_archetype && (
-                  <p className="text-[10px] text-amber-400/80">
-                    👥 Kombiniert mit Charakter-Archetyp „{scene.character_archetype.name}" — wird textlich in den Prompt eingebaut.
-                  </p>
-                )}
-                {scene.outfit && scene.outfit_archetype && (
-                  <p className="text-[10px] text-amber-400/80">
-                    🧥 Kombiniert mit Outfit-Archetyp „{scene.outfit_archetype.name}" — wird textlich in den Prompt eingebaut.
-                  </p>
-                )}
-                {scene.location && scene.location_archetype && (
-                  <p className="text-[10px] text-amber-400/80">
-                    🏛️ Kombiniert mit Archetyp „{scene.location_archetype.name}" — wird textlich in den Prompt eingebaut.
-                  </p>
-                )}
               </div>
             )}
 
@@ -1142,11 +1066,8 @@ export default function SceneBuilderPage() {
         onExport={exportPreset}
         onImport={importPresetFromFile}
         characters={characters}
-        characterArchetypes={characterArchetypes}
         outfits={outfits}
-        outfitArchetypes={outfitArchetypes}
         locations={locations}
-        locationArchetypes={locationArchetypes}
         poseActions={poseActions}
         expressions={expressions}
         cameras={cameras}

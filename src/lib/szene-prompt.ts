@@ -17,9 +17,6 @@
 import type { Character } from '@/hooks/use-characters'
 import type { Outfit } from '@/hooks/use-outfits'
 import type { Location } from '@/hooks/use-locations'
-import type { LocationArchetype } from '@/hooks/use-location-archetypes'
-import type { CharacterArchetype } from '@/hooks/use-character-archetypes'
-import type { OutfitArchetype } from '@/hooks/use-outfit-archetypes'
 import type { PoseAction } from '@/hooks/use-pose-actions'
 import type { VisualAsset } from '@/hooks/use-visual-assets'
 import type { LookGradingItem } from '@/hooks/use-look-grading'
@@ -35,11 +32,8 @@ import {
 
 export type SceneRefs = {
   character: RefImage | null
-  character_archetype: RefImage | null
   outfit:    RefImage | null
-  outfit_archetype: RefImage | null
   location:  RefImage | null
-  location_archetype: RefImage | null
 }
 
 export type Scene = {
@@ -56,11 +50,8 @@ export type Scene = {
   depth_of_field: DepthOfFieldKey | null
   aspect_ratio:   AspectRatioKey | null
   character: Character | null
-  character_archetype: CharacterArchetype | null
   outfit:    Outfit | null
-  outfit_archetype: OutfitArchetype | null
   location:  Location | null
-  location_archetype: LocationArchetype | null
   pose:      PoseAction | null
   expression: VisualAsset | null
   camera:    VisualAsset | null
@@ -119,86 +110,43 @@ export function buildCameraSentence(scene: Scene): string | null {
   return capitalize(clauses.join(', ')) + '.'
 }
 
-// Same three-case blending as buildLocationSection below, applied to Character Archetypes:
-// real Character + Archetype → real image is the reference, Archetype contributes text only;
-// Archetype alone → its own image (if any) or just its text; neither → no-op.
-export function buildCharacterSection(scene: Scene, sceneRefs: SceneRefs): string[] {
-  const out: string[] = []
-  const archetype = scene.character_archetype
-  const archPrompt = archetype?.prompt?.trim() || null
-
-  if (scene.character) {
-    out.push('Use the provided character reference.')
-    if (archetype) {
-      out.push(`Depict the character as a ${archetype.name.toLowerCase()}.`)
-      if (archPrompt) out.push(`Follow this character description:\n\n${archPrompt}`)
-    }
-  } else if (archetype) {
-    if (sceneRefs.character_archetype) {
-      out.push('Use the provided character reference.')
-      if (archPrompt) out.push(`Additionally follow this character description:\n\n${archPrompt}`)
-    } else if (archPrompt) {
-      out.push(`Use the following character description:\n\n${archPrompt}`)
-    }
-  }
-
-  return out
+/*
+ * Charakter, Outfit und Location: je ein Satz, wenn etwas gewählt ist.
+ *
+ * BIS PROJ-52 STAND HIER EINE DREIFALL-LOGIK (echtes Objekt / Archetyp mit
+ * Bild / Archetyp ohne Bild). Die Archetypen sind mit PROJ-52 ersatzlos
+ * entfallen — Marks Entscheidung vom 03.09.2026 — und mit ihnen die einzige
+ * Möglichkeit, eine rein textliche Beschreibung ohne Bild in den Prompt zu
+ * bringen. Übrig bleibt der Fall, der praktisch immer galt.
+ *
+ * Der Prompt hängt seitdem NICHT MEHR von den gewählten Referenzbildern ab:
+ * Es zählt allein, OB ein Charakter/Outfit/eine Location in der Szene liegt.
+ * Deshalb nehmen diese Funktionen kein `SceneRefs` mehr entgegen. `SceneRefs`
+ * selbst bleibt — die Bilder gehen weiterhin als Referenzen an das Bildmodell,
+ * nur eben nicht mehr in den Text.
+ */
+export function buildCharacterSection(scene: Scene): string[] {
+  return scene.character ? ['Use the provided character reference.'] : []
 }
 
-// Same three-case blending as buildLocationSection below, applied to Outfit Archetypes.
-export function buildOutfitSection(scene: Scene, sceneRefs: SceneRefs): string[] {
-  const out: string[] = []
-  const archetype = scene.outfit_archetype
-  const archPrompt = archetype?.prompt?.trim() || null
-
-  if (scene.outfit) {
-    out.push('Use the provided outfit reference.')
-    if (archetype) {
-      out.push(`Dress the character in a ${archetype.name.toLowerCase()}.`)
-      if (archPrompt) out.push(`Follow this outfit description:\n\n${archPrompt}`)
-    }
-  } else if (archetype) {
-    if (sceneRefs.outfit_archetype) {
-      out.push('Use the provided outfit reference.')
-      if (archPrompt) out.push(`Additionally follow this outfit description:\n\n${archPrompt}`)
-    } else if (archPrompt) {
-      out.push(`Use the following outfit description:\n\n${archPrompt}`)
-    }
-  }
-
-  return out
+export function buildOutfitSection(scene: Scene): string[] {
+  return scene.outfit ? ['Use the provided outfit reference.'] : []
 }
 
-// The location section has three combination cases: a generic Archetype alone
-// (with or without its own chosen reference image), a real Location alone, or
-// both together — where the real Location supplies the visual reference and the
-// Archetype only contributes its textual description, blended via one sentence.
-export function buildLocationSection(scene: Scene, sceneRefs: SceneRefs): string[] {
-  const out: string[] = []
-  const archetype = scene.location_archetype
-  const archPrompt = archetype?.prompt?.trim() || null
-
-  if (scene.location) {
-    out.push('Use the provided location reference.')
-    if (archetype) {
-      out.push(`Create a ${archetype.name.toLowerCase()} within the ${scene.location.name} environment.`)
-      if (archPrompt) out.push(`Follow this location description:\n\n${archPrompt}`)
-    }
-  } else if (archetype) {
-    if (sceneRefs.location_archetype) {
-      out.push('Use the provided location reference.')
-      if (archPrompt) out.push(`Additionally follow this location description:\n\n${archPrompt}`)
-    } else if (archPrompt) {
-      out.push(`Use the following location description:\n\n${archPrompt}`)
-    }
-  } else if (scene.background) {
-    out.push(capitalize(STUDIO_BACKGROUNDS.find(b => b.key === scene.background)!.prompt) + '.')
+/**
+ * Der Studio-Hintergrund ist der RÜCKFALL, keine weitere Angabe: Er greift nur,
+ * wenn gar keine Location gewählt ist. Das war vor PROJ-52 so und bleibt so —
+ * nur die Zwischenstufe „oder ein Location-Archetyp" ist entfallen.
+ */
+export function buildLocationSection(scene: Scene): string[] {
+  if (scene.location) return ['Use the provided location reference.']
+  if (scene.background) {
+    return [capitalize(STUDIO_BACKGROUNDS.find(b => b.key === scene.background)!.prompt) + '.']
   }
-
-  return out
+  return []
 }
 
-export function buildPrompt(scene: Scene, sceneRefs: SceneRefs): string {
+export function buildPrompt(scene: Scene): string {
   const parts: string[] = []
 
   parts.push(scene.scene_type === 'indoor' ? 'Indoor scene.' : 'Outdoor scene.')
@@ -209,9 +157,9 @@ export function buildPrompt(scene: Scene, sceneRefs: SceneRefs): string {
   const cameraSentence = buildCameraSentence(scene)
   if (cameraSentence) parts.push(cameraSentence)
 
-  parts.push(...buildCharacterSection(scene, sceneRefs))
-  parts.push(...buildOutfitSection(scene, sceneRefs))
-  parts.push(...buildLocationSection(scene, sceneRefs))
+  parts.push(...buildCharacterSection(scene))
+  parts.push(...buildOutfitSection(scene))
+  parts.push(...buildLocationSection(scene))
 
   if (scene.pose) {
     parts.push(scene.pose.description?.trim() || `The character is in a ${scene.pose.name} pose.`)

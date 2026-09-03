@@ -4,7 +4,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 
-export type CategoryScope = 'location' | 'location_archetype'
+/**
+ * Der Bereich, für den eine eigene Kategorie gilt.
+ *
+ * Bis PROJ-52 gab es hier zusätzlich `'location_archetype'`. Die Archetypen
+ * sind entfallen; Zeilen mit diesem Wert können in `custom_categories` noch
+ * stehen, werden aber von nichts mehr abgefragt — die Abfrage filtert immer
+ * auf einen bestimmten `scope`.
+ */
+export type CategoryScope = 'location'
 
 export interface CustomCategory {
   id:         string

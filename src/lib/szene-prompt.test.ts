@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   capitalize, buildEnvironmentSentence, buildCameraSentence,
   buildCharacterSection, buildOutfitSection, buildLocationSection, buildPrompt,
-  type Scene, type SceneRefs,
+  type Scene,
 } from './szene-prompt'
 
 /**
@@ -12,6 +12,10 @@ import {
  * Tests — sie steckte in einer Seitenkomponente und war nur über die Oberfläche
  * erreichbar. Sie steuert aber, was tatsächlich an gpt-image-2 geht, und ein
  * Fehler darin fällt nicht als Fehler auf, sondern als leicht anderes Bild.
+ *
+ * PROJ-52 (03.09.2026) hat die Archetypen ersatzlos entfernt. Was sich dadurch
+ * an den Grundlinien geaendert hat, steht unten bei jeder einzeln dabei — die
+ * fuenf Grundlinien OHNE Archetypen sind zeichengleich geblieben.
  *
  * Ganz unten steht die GEGENPROBE zur Verschiebung: acht Beispielszenen mit
  * ihren Prompts, wörtlich aufgezeichnet aus der Fassung VOR der Verschiebung.
@@ -25,21 +29,13 @@ const LEER: any = {
   scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
   light_source: null, light_style: null, light_modifiers: [],
   shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
-  character: null, character_archetype: null, outfit: null, outfit_archetype: null,
-  location: null, location_archetype: null, pose: null, expression: null, camera: null,
+  character: null, outfit: null,
+  location: null, pose: null, expression: null, camera: null,
   style: null, grading: null, background: null,
 }
 
-const KEINE_REFS: any = {
-  character: null, character_archetype: null, outfit: null, outfit_archetype: null,
-  location: null, location_archetype: null,
-}
-
-const REF = (label: string): any => ({ url: `https://example.test/${label}.png`, label })
-
 /** Eine Szene aus dem leeren Grundzustand plus den gesetzten Feldern. */
 const szene = (felder: Record<string, unknown> = {}): Scene => ({ ...LEER, ...felder })
-const refs  = (felder: Record<string, unknown> = {}): SceneRefs => ({ ...KEINE_REFS, ...felder })
 
 // ── capitalize ────────────────────────────────────────────────────────────────
 
@@ -146,133 +142,112 @@ describe('buildCameraSentence', () => {
 
 // ── Charakter-Abschnitt ───────────────────────────────────────────────────────
 
+/**
+ * Bis PROJ-52 standen hier sechs Faelle: die Dreifall-Logik aus echtem
+ * Charakter, Archetyp mit Bild und Archetyp ohne Bild, dazu die Mischformen.
+ * Die Archetypen sind ersatzlos entfallen (Marks Entscheidung vom 03.09.2026),
+ * und mit ihnen die Saetze "Depict the character as a ...", "Follow this
+ * character description", "Additionally follow ..." und "Use the following
+ * character description". Uebrig bleiben die zwei Faelle, die es wirklich gibt.
+ */
 describe('buildCharacterSection', () => {
-  const archetyp: any = { id: 'ca1', name: 'Detektivin', prompt: '  A weathered detective.  ' }
-  const person: any   = { id: 'c1', name: 'Nora' }
+  const person: any = { id: 'c1', name: 'Nora' }
 
-  it('ohne Charakter und ohne Archetyp bleibt der Abschnitt leer', () => {
-    expect(buildCharacterSection(szene(), refs())).toEqual([])
+  it('ohne Charakter bleibt der Abschnitt leer', () => {
+    expect(buildCharacterSection(szene())).toEqual([])
   })
 
-  it('echter Charakter: nur der Verweis auf die Referenz', () => {
-    expect(buildCharacterSection(szene({ character: person }), refs()))
+  it('echter Charakter: der Verweis auf die Referenz', () => {
+    expect(buildCharacterSection(szene({ character: person })))
       .toEqual(['Use the provided character reference.'])
   })
 
-  it('echter Charakter plus Archetyp: die Referenz gilt, der Archetyp steuert nur Text bei', () => {
-    expect(buildCharacterSection(szene({ character: person, character_archetype: archetyp }), refs()))
-      .toEqual([
-        'Use the provided character reference.',
-        'Depict the character as a detektivin.',
-        'Follow this character description:\n\nA weathered detective.',
-      ])
-  })
-
-  it('nur Archetyp MIT eigenem Bild: Referenz plus „zusätzlich"', () => {
-    expect(buildCharacterSection(
-      szene({ character_archetype: archetyp }),
-      refs({ character_archetype: REF('Archetyp') }),
-    )).toEqual([
-      'Use the provided character reference.',
-      'Additionally follow this character description:\n\nA weathered detective.',
-    ])
-  })
-
-  it('nur Archetyp OHNE Bild: allein die Beschreibung', () => {
-    expect(buildCharacterSection(szene({ character_archetype: archetyp }), refs()))
-      .toEqual(['Use the following character description:\n\nA weathered detective.'])
-  })
-
-  it('Archetyp ohne Text und ohne Bild ergibt gar nichts', () => {
-    expect(buildCharacterSection(
-      szene({ character_archetype: { id: 'x', name: 'Leer', prompt: '   ' } as any }), refs(),
-    )).toEqual([])
+  /**
+   * GEGENPROBE ZUM RUECKBAU: Ein Rest-Archetyp am Szenenobjekt — wie er aus
+   * einem alten, gespeicherten Preset kommen koennte — darf den Prompt NICHT
+   * mehr veraendern. Wuerde die alte Logik noch irgendwo greifen, waere dieser
+   * Test rot.
+   */
+  it('ein uebrig gebliebenes Archetyp-Feld wird ignoriert', () => {
+    const mitRest = szene({
+      character: person,
+      character_archetype: { id: 'ca1', name: 'Detektivin', prompt: 'A weathered detective.' },
+    })
+    expect(buildCharacterSection(mitRest)).toEqual(['Use the provided character reference.'])
   })
 })
 
 // ── Outfit-Abschnitt ──────────────────────────────────────────────────────────
 
+// Wie beim Charakter: Die drei Archetyp-Faelle sind mit PROJ-52 entfallen,
+// samt der Saetze "Dress the character in a ..." und "Follow this outfit
+// description".
 describe('buildOutfitSection', () => {
-  const archetyp: any = { id: 'oa1', name: 'Regenmantel', prompt: 'A long belted raincoat.' }
-  const outfit: any   = { id: 'o1', name: 'Trenchcoat' }
+  const outfit: any = { id: 'o1', name: 'Trenchcoat' }
 
-  it('echtes Outfit plus Archetyp: Referenz plus Anziehsatz plus Beschreibung', () => {
-    expect(buildOutfitSection(szene({ outfit, outfit_archetype: archetyp }), refs()))
-      .toEqual([
-        'Use the provided outfit reference.',
-        'Dress the character in a regenmantel.',
-        'Follow this outfit description:\n\nA long belted raincoat.',
-      ])
+  it('ohne Outfit bleibt der Abschnitt leer', () => {
+    expect(buildOutfitSection(szene())).toEqual([])
   })
 
-  it('nur Archetyp MIT Bild', () => {
-    expect(buildOutfitSection(
-      szene({ outfit_archetype: archetyp }), refs({ outfit_archetype: REF('Archetyp') }),
-    )).toEqual([
-      'Use the provided outfit reference.',
-      'Additionally follow this outfit description:\n\nA long belted raincoat.',
-    ])
+  it('echtes Outfit: der Verweis auf die Referenz', () => {
+    expect(buildOutfitSection(szene({ outfit })))
+      .toEqual(['Use the provided outfit reference.'])
   })
 
-  it('nur Archetyp OHNE Bild', () => {
-    expect(buildOutfitSection(szene({ outfit_archetype: archetyp }), refs()))
-      .toEqual(['Use the following outfit description:\n\nA long belted raincoat.'])
+  it('ein uebrig gebliebenes Archetyp-Feld wird ignoriert', () => {
+    const mitRest = szene({
+      outfit,
+      outfit_archetype: { id: 'oa1', name: 'Regenmantel', prompt: 'A long belted raincoat.' },
+    })
+    expect(buildOutfitSection(mitRest)).toEqual(['Use the provided outfit reference.'])
   })
 })
 
 // ── Location-Abschnitt und der Hintergrund ────────────────────────────────────
 
 describe('buildLocationSection', () => {
-  const archetyp: any = { id: 'la1', name: 'Lagerhalle', prompt: 'A cavernous warehouse.' }
-  const ort: any      = { id: 'l1', name: 'Hafen' }
+  const ort: any = { id: 'l1', name: 'Hafen' }
 
-  it('echte Location plus Archetyp: der Archetyp wird IN die Location gestellt', () => {
-    expect(buildLocationSection(szene({ location: ort, location_archetype: archetyp }), refs()))
-      .toEqual([
-        'Use the provided location reference.',
-        'Create a lagerhalle within the Hafen environment.',
-        'Follow this location description:\n\nA cavernous warehouse.',
-      ])
-  })
-
-  it('nur Archetyp MIT Bild', () => {
-    expect(buildLocationSection(
-      szene({ location_archetype: archetyp }), refs({ location_archetype: REF('Archetyp') }),
-    )).toEqual([
-      'Use the provided location reference.',
-      'Additionally follow this location description:\n\nA cavernous warehouse.',
-    ])
-  })
-
-  it('nur Archetyp OHNE Bild', () => {
-    expect(buildLocationSection(szene({ location_archetype: archetyp }), refs()))
-      .toEqual(['Use the following location description:\n\nA cavernous warehouse.'])
+  it('echte Location: der Verweis auf die Referenz', () => {
+    expect(buildLocationSection(szene({ location: ort })))
+      .toEqual(['Use the provided location reference.'])
   })
 
   /**
-   * Der Studio-Hintergrund ist der Rückfall, nicht eine weitere Angabe: Er
-   * greift NUR, wenn weder eine echte Location noch ein Archetyp gesetzt ist.
-   * Genau das steht in der Oberfläche auch als Hinweis („wird ignoriert,
-   * sobald unten eine Location gewählt wird") — hier ist es nachgemessen.
+   * DER RUECKFALL AUF DEN STUDIO-HINTERGRUND BLEIBT — er ist mit PROJ-52
+   * ausdruecklich NICHT entfallen. Nur die Zwischenstufe "oder ein
+   * Location-Archetyp" ist weg: Der Hintergrund greift jetzt genau dann, wenn
+   * keine Location gewaehlt ist. Genau das steht in der Oberflaeche auch als
+   * Hinweis ("wird ignoriert, sobald unten eine Location gewaehlt wird") —
+   * hier ist es nachgemessen.
    */
   it('Hintergrund allein wird zum Satz', () => {
-    expect(buildLocationSection(szene({ background: 'gradient_grey' }), refs()))
+    expect(buildLocationSection(szene({ background: 'gradient_grey' })))
       .toEqual(['Smooth grey gradient seamless studio backdrop background.'])
   })
 
-  it('Hintergrund wird von einer echten Location verdrängt', () => {
-    const teile = buildLocationSection(szene({ background: 'white', location: ort }), refs())
+  it('Hintergrund wird von einer echten Location verdraengt', () => {
+    const teile = buildLocationSection(szene({ background: 'white', location: ort }))
     expect(teile).toEqual(['Use the provided location reference.'])
     expect(teile.join(' ')).not.toContain('background')
   })
 
-  it('Hintergrund wird von einem Location-Archetyp verdrängt', () => {
-    const teile = buildLocationSection(szene({ background: 'white', location_archetype: archetyp }), refs())
-    expect(teile.join(' ')).not.toContain('seamless studio backdrop')
+  /**
+   * Die Kehrseite dazu: Ein Rest-Archetyp aus einem alten Preset darf den
+   * Hintergrund NICHT mehr verdraengen. Frueher tat er das — wer heute nur
+   * einen Hintergrund waehlt, muss ihn auch bekommen.
+   */
+  it('ein uebrig gebliebener Location-Archetyp verdraengt den Hintergrund NICHT mehr', () => {
+    const mitRest = szene({
+      background: 'gradient_grey',
+      location_archetype: { id: 'la1', name: 'Lagerhalle', prompt: 'A cavernous warehouse.' },
+    })
+    expect(buildLocationSection(mitRest))
+      .toEqual(['Smooth grey gradient seamless studio backdrop background.'])
   })
 
   it('ohne alles bleibt der Abschnitt leer', () => {
-    expect(buildLocationSection(szene(), refs())).toEqual([])
+    expect(buildLocationSection(szene())).toEqual([])
   })
 })
 
@@ -280,16 +255,16 @@ describe('buildLocationSection', () => {
 
 describe('buildPrompt', () => {
   it('nennt Innen und Außen ausdrücklich', () => {
-    expect(buildPrompt(szene({ scene_type: 'indoor' }), refs()).startsWith('Indoor scene.')).toBe(true)
-    expect(buildPrompt(szene({ scene_type: 'outdoor' }), refs()).startsWith('Outdoor scene.')).toBe(true)
+    expect(buildPrompt(szene({ scene_type: 'indoor' })).startsWith('Indoor scene.')).toBe(true)
+    expect(buildPrompt(szene({ scene_type: 'outdoor' })).startsWith('Outdoor scene.')).toBe(true)
   })
 
   it('schließt immer mit „Photorealistic."', () => {
-    expect(buildPrompt(szene(), refs()).endsWith('Photorealistic.')).toBe(true)
+    expect(buildPrompt(szene()).endsWith('Photorealistic.')).toBe(true)
   })
 
   it('trennt die Abschnitte durch eine Leerzeile', () => {
-    expect(buildPrompt(szene(), refs())).toBe('Outdoor scene.\n\nPhotorealistic.')
+    expect(buildPrompt(szene())).toBe('Outdoor scene.\n\nPhotorealistic.')
   })
 
   it('nimmt bei Pose, Mimik und Kamera-Asset die Beschreibung, sonst den Namen', () => {
@@ -297,7 +272,7 @@ describe('buildPrompt', () => {
       pose:       { id: 'p', name: 'Kontrapost', description: 'Weight on one leg.' } as any,
       expression: { id: 'e', name: 'Lächeln', description: '   ' } as any,
       camera:     { id: 'k', name: 'Dolly', description: null } as any,
-    }), refs())
+    }))
     expect(p).toContain('Weight on one leg.')
     expect(p).toContain('Lächeln facial expression.')
     expect(p).toContain('Dolly.')
@@ -312,7 +287,7 @@ describe('buildPrompt', () => {
     const p = buildPrompt(szene({
       style:   { id: 's', name: 'S', prompt: 'Gritty neo-noir look' } as any,
       grading: { id: 'g', name: 'G', prompt: 'Cool teal shadows' } as any,
-    }), refs())
+    }))
     expect(p).toContain('Gritty neo-noir look.')
     expect(p).toContain('Cool teal shadows.')
   })
@@ -321,7 +296,7 @@ describe('buildPrompt', () => {
     const p = buildPrompt(szene({
       style:   { id: 's', name: 'S', prompt: 'Already ends properly.' } as any,
       grading: { id: 'g', name: 'G', prompt: 'Teal and orange grading!' } as any,
-    }), refs())
+    }))
     expect(p).toContain('Already ends properly.')
     expect(p).not.toContain('Already ends properly..')
     expect(p).toContain('Teal and orange grading!')
@@ -335,7 +310,7 @@ describe('buildPrompt', () => {
       character: { id: 'c', name: 'Nora' } as any,
       outfit:    { id: 'o', name: 'Trench' } as any,
       location:  { id: 'l', name: 'Hafen' } as any,
-    }), refs())
+    }))
     const i = [
       p.indexOf('Cinematic lighting'),
       p.indexOf('Close-up portrait framing'),
@@ -362,13 +337,14 @@ describe('buildPrompt', () => {
  * absichtlich, wird dieser Test rot; das ist gewollt: Dann muss jemand
  * bestätigen, dass die Änderung Absicht war.
  */
-const GRUNDLINIE: { name: string; scene: Scene; sceneRefs: SceneRefs; erwartet: string }[] = [
+const GRUNDLINIE: { name: string; scene: Scene; erwartet: string }[] = [
+  // UNVERAENDERT seit der Aufzeichnung.
   {
     name: 'leer_outdoor',
     scene: szene(),
-    sceneRefs: refs(),
     erwartet: 'Outdoor scene.\n\nPhotorealistic.',
   },
+  // UNVERAENDERT seit der Aufzeichnung.
   {
     name: 'calvanize_studio',
     scene: szene({
@@ -387,11 +363,30 @@ const GRUNDLINIE: { name: string; scene: Scene; sceneRefs: SceneRefs; erwartet: 
       style: { id: 'standard:s1', name: 'Stil', prompt: 'Cinematic film still' },
       grading: { id: 'standard:bleach_bypass', name: 'Bleach Bypass', prompt: 'Bleach bypass grading.' },
     }),
-    sceneRefs: refs({ character: REF('Referenzsheet') }),
     erwartet: 'Indoor scene.\n\nCinematic lighting with dramatic contrast, even, shadowless ring light illumination, soft hair light highlighting the hair, subtle catchlights in the eyes, clean indoor lighting setup, natural skin tones.\n\nClose-up portrait framing, eye-level camera angle with natural perspective, professional 85mm portrait lens, shallow depth of field with soft background blur, vertical portrait composition (4:5).\n\nUse the provided character reference.\n\nSmooth grey gradient seamless studio backdrop background.\n\nCalm, neutral expression.\n\nCinematic film still.\n\nBleach bypass grading.\n\nPhotorealistic.',
   },
+  /**
+   * GEAENDERT DURCH PROJ-52. Hiess bis dahin `outdoor_voll_mit_archetypen`.
+   *
+   * Die Szene ist unveraendert geblieben, samt der drei Archetyp-Felder — die
+   * stehen hier absichtlich noch drin, wie sie aus einem alten gespeicherten
+   * Preset kommen koennten. Entfallen sind aus dem erwarteten Prompt genau die
+   * sechs Saetze, die die Archetypen beigesteuert haben:
+   *
+   *   'Depict the character as a detektivin.'
+   *   'Follow this character description:\n\nA weathered detective.'
+   *   'Dress the character in a regenmantel.'
+   *   'Follow this outfit description:\n\nA long belted raincoat.'
+   *   'Create a lagerhalle within the Hafen environment.'
+   *   'Follow this location description:\n\nA cavernous warehouse.'
+   *
+   * Alles andere — Umgebung, Kamera, die drei Referenzsaetze, Pose, Mimik,
+   * Kamera-Asset, Stil, Grading, Schlusszeile — steht Zeichen fuer Zeichen
+   * unveraendert da. Der Hintergrund 'white' wird weiterhin von der echten
+   * Location verdraengt.
+   */
   {
-    name: 'outdoor_voll_mit_archetypen',
+    name: 'outdoor_voll_mit_archetyp_resten',
     scene: szene({
       scene_type: 'outdoor',
       time_of_day: 'golden_hour',
@@ -415,70 +410,81 @@ const GRUNDLINIE: { name: string; scene: Scene; sceneRefs: SceneRefs; erwartet: 
       grading: { id: 'g1', name: 'Grading', prompt: 'Teal and orange grading!' },
       background: 'white',
     }),
-    sceneRefs: refs({
-      character: REF('Charakter'),
-      character_archetype: REF('CharakterArchetyp'),
-      outfit: REF('Outfit'),
-      outfit_archetype: REF('OutfitArchetyp'),
-      location: REF('Location'),
-      location_archetype: REF('LocationArchetyp'),
-    }),
-    erwartet: 'Outdoor scene.\n\nWarm golden-hour sunlight, soft long shadows, crisp autumn atmosphere with golden and red fallen leaves, foggy atmosphere with reduced visibility, natural outdoor lighting, atmospheric depth, realistic environmental illumination.\n\nFull body environmental shot, 24mm wide-angle lens, strong sense of place, natural environmental context.\n\nUse the provided character reference.\n\nDepict the character as a detektivin.\n\nFollow this character description:\n\nA weathered detective.\n\nUse the provided outfit reference.\n\nDress the character in a regenmantel.\n\nFollow this outfit description:\n\nA long belted raincoat.\n\nUse the provided location reference.\n\nCreate a lagerhalle within the Hafen environment.\n\nFollow this location description:\n\nA cavernous warehouse.\n\nThe character is in a Stehend pose.\n\nErnst facial expression.\n\nHandheld camera feel.\n\nGritty neo-noir look.\n\nTeal and orange grading!\n\nPhotorealistic.',
+    erwartet: 'Outdoor scene.\n\nWarm golden-hour sunlight, soft long shadows, crisp autumn atmosphere with golden and red fallen leaves, foggy atmosphere with reduced visibility, natural outdoor lighting, atmospheric depth, realistic environmental illumination.\n\nFull body environmental shot, 24mm wide-angle lens, strong sense of place, natural environmental context.\n\nUse the provided character reference.\n\nUse the provided outfit reference.\n\nUse the provided location reference.\n\nThe character is in a Stehend pose.\n\nErnst facial expression.\n\nHandheld camera feel.\n\nGritty neo-noir look.\n\nTeal and orange grading!\n\nPhotorealistic.',
   },
+  /**
+   * GEAENDERT DURCH PROJ-52. Hiess bis dahin `nur_archetypen_mit_bild`.
+   *
+   * Hier ist die Aenderung am groessten, und sie ist der Kern der Entscheidung:
+   * Eine Szene NUR aus Archetypen ergibt jetzt gar keinen Asset-Abschnitt mehr.
+   * Weggefallen sind alle sechs Zeilen ('Use the provided … reference.' und
+   * 'Additionally follow this … description: …' fuer Charakter, Outfit und
+   * Location).
+   *
+   * DAFUER KOMMT ETWAS HINZU: der Studio-Hintergrund 'black'. Er stand vorher
+   * im Prompt NICHT, weil der Location-Archetyp ihn verdraengt hat. Ohne
+   * Archetypen ist keine Location mehr gesetzt, und damit greift der Rueckfall
+   * wie vorgesehen. Das ist gewollt.
+   */
   {
-    name: 'nur_archetypen_mit_bild',
+    name: 'nur_archetyp_reste_mit_hintergrund',
     scene: szene({
       character_archetype: { id: 'ca1', name: 'Detektivin', prompt: 'A weathered detective.' },
       outfit_archetype: { id: 'oa1', name: 'Regenmantel', prompt: 'A long belted raincoat.' },
       location_archetype: { id: 'la1', name: 'Lagerhalle', prompt: 'A cavernous warehouse.' },
       background: 'black',
     }),
-    sceneRefs: refs({
-      character_archetype: REF('CharakterArchetyp'),
-      outfit_archetype: REF('OutfitArchetyp'),
-      location_archetype: REF('LocationArchetyp'),
-    }),
-    erwartet: 'Outdoor scene.\n\nUse the provided character reference.\n\nAdditionally follow this character description:\n\nA weathered detective.\n\nUse the provided outfit reference.\n\nAdditionally follow this outfit description:\n\nA long belted raincoat.\n\nUse the provided location reference.\n\nAdditionally follow this location description:\n\nA cavernous warehouse.\n\nPhotorealistic.',
+    erwartet: 'Outdoor scene.\n\nPlain black seamless studio backdrop background.\n\nPhotorealistic.',
   },
+  /**
+   * GEAENDERT DURCH PROJ-52. Hiess bis dahin `nur_archetypen_ohne_bild`.
+   *
+   * Weggefallen ist der Satz 'Use the following character description:\n\nA
+   * weathered detective.' — das war die Sonderfaehigkeit der Archetypen, eine
+   * Beschreibung OHNE eigenes Bild in den Prompt zu bringen. Mark hat sie am
+   * 03.09.2026 ausdruecklich ersatzlos gestrichen.
+   *
+   * Hinzugekommen ist auch hier der Hintergrund, aus demselben Grund wie beim
+   * Fall darueber: 'beige' statt vorher gar nichts.
+   */
   {
-    name: 'nur_archetypen_ohne_bild',
+    name: 'archetyp_reste_ohne_bild',
     scene: szene({
       character_archetype: { id: 'ca1', name: 'Detektivin', prompt: 'A weathered detective.' },
       outfit_archetype: { id: 'oa1', name: 'Regenmantel', prompt: '   ' },
       location_archetype: { id: 'la1', name: 'Lagerhalle', prompt: null },
       background: 'beige',
     }),
-    sceneRefs: refs(),
-    erwartet: 'Outdoor scene.\n\nUse the following character description:\n\nA weathered detective.\n\nPhotorealistic.',
+    erwartet: 'Outdoor scene.\n\nPlain warm beige seamless studio backdrop background.\n\nPhotorealistic.',
   },
+  // UNVERAENDERT seit der Aufzeichnung.
   {
     name: 'nur_hintergrund',
     scene: szene({ scene_type: 'indoor', light_style: 'high_key', background: 'green_screen' }),
-    sceneRefs: refs(),
     erwartet: 'Indoor scene.\n\nBright, high-key lighting with minimal shadows, clean indoor lighting setup, natural skin tones.\n\nFlat chroma key green screen background.\n\nPhotorealistic.',
   },
+  // UNVERAENDERT seit der Aufzeichnung.
   {
     name: 'kamera_override_135',
     scene: szene({ shot_type: 'closeup', lens: '135mm', camera_angle: 'birds_eye', aspect_ratio: 'square_1_1' }),
-    sceneRefs: refs(),
     erwartet: 'Outdoor scene.\n\nProfessional close-up portrait, 135mm telephoto lens, strong background compression, flattering facial proportions, shallow depth of field.\n\nPhotorealistic.',
   },
+  // UNVERAENDERT seit der Aufzeichnung.
   {
     name: 'pose_ohne_beschreibung',
     scene: szene({
       pose: { id: 'p1', name: 'Kontrapost', description: null },
-      expression: { id: 'e1', name: 'Lächeln', description: '   ' },
+      expression: { id: 'e1', name: 'L\u00e4cheln', description: '   ' },
       camera: { id: 'k1', name: 'Dolly', description: null },
     }),
-    sceneRefs: refs(),
-    erwartet: 'Outdoor scene.\n\nThe character is in a Kontrapost pose.\n\nLächeln facial expression.\n\nDolly.\n\nPhotorealistic.',
+    erwartet: 'Outdoor scene.\n\nThe character is in a Kontrapost pose.\n\nL\u00e4cheln facial expression.\n\nDolly.\n\nPhotorealistic.',
   },
 ]
 
-describe('Gegenprobe: der Prompt ist nach der Verschiebung Zeichen für Zeichen derselbe', () => {
+describe('Gegenprobe: der Prompt ist Zeichen f\u00fcr Zeichen der aufgezeichnete', () => {
   for (const fall of GRUNDLINIE) {
     it(fall.name, () => {
-      expect(buildPrompt(fall.scene, fall.sceneRefs)).toBe(fall.erwartet)
+      expect(buildPrompt(fall.scene)).toBe(fall.erwartet)
     })
   }
 })

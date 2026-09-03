@@ -15,7 +15,6 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { LibraryTabs } from '@/components/library-tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -140,7 +139,6 @@ export default function CharactersPage() {
       <div className="flex flex-col w-72 shrink-0 border-r border-border">
         <header className="border-b shrink-0 px-4 py-3 flex items-center gap-3">
           <SidebarTrigger />
-          <LibraryTabs />
           <h1 className="text-base font-semibold flex-1 truncate">Charaktere</h1>
           <Button
             size="icon"

@@ -45,26 +45,6 @@ export async function loadRefImages(
   return results
 }
 
-// Archetype images (Character/Outfit/Location) have no variant grouping — they hang
-// directly off the archetype, so this is a flat lookup instead of the variant+images join above.
-export async function loadArchetypeRefImages(
-  table: 'character_archetype_images' | 'outfit_archetype_images' | 'location_archetype_images',
-  archetypeId: string,
-): Promise<RefImage[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from(table)
-    .select('url, sort_order')
-    .eq('archetype_id', archetypeId)
-    .order('sort_order', { ascending: true })
-  if (error) {
-    // Nicht als "keine Bilder" ausgeben: Netzfehler, RLS-Ablehnung und ein
-    // wirklich leeres Ergebnis sähen für den Benutzer sonst gleich aus.
-    console.error('Referenzbilder konnten nicht geladen werden:', error.message)
-    throw new Error(error.message)
-  }
-  if (!data) return []
-  return (data as Array<{ url: string }>)
-    .filter(img => img.url)
-    .map(img => ({ url: img.url, label: 'Referenzbild' }))
-}
+// Hier stand bis PROJ-52 `loadArchetypeRefImages` — der flache Sonderweg für
+// Archetyp-Bilder, die ohne Variante direkt am Eintrag hingen. Mit den
+// Archetypen ist auch er entfallen; es gibt nur noch den Weg über Varianten.

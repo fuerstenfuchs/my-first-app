@@ -33,7 +33,7 @@ export type Ziel = {
   /** Der vorhandene Eintrag, in den es soll. */
   parentId: string
   parentName: string
-  /** Die Variante darin — null bei Archetypen und Prompts, die keine haben. */
+  /** Die Variante darin — null bei Prompts, die keine haben. */
   variantId: string | null
   /**
    * Keine eigene Erfolgsmeldung zeigen.
@@ -95,7 +95,7 @@ export function useBildUebernehmen() {
   const variantenLaden = useCallback(async (
     b: Baustein, parentId: string,
   ): Promise<Variante[]> => {
-    // Archetypen und Prompts haben keine Varianten — dort hängen die Bilder
+    // Prompts haben keine Varianten — dort hängen die Bilder
     // direkt am Eintrag. Eine leere Liste heißt hier also NICHT „geht nicht".
     if (!b.varianten) return []
     const { data, error } = await supabase
@@ -156,7 +156,7 @@ export function useBildUebernehmen() {
 
       // 2. Ablegen, im Eimer des Bausteins.
       const pfad = ablagepfad(user.id, ziel.parentId, ziel.variantId, endungAus(quellUrl))
-      // Woran die Bildzeile hängt: an der Variante, am Archetyp oder am Prompt.
+      // Woran die Bildzeile hängt: an der Variante oder am Prompt.
       const anker = b.varianten ? ziel.variantId : ziel.parentId
       if (!anker) { toast.error('Kein Ziel für das Bild gefunden.'); return false }
       const { error: hochErr } = await supabase.storage

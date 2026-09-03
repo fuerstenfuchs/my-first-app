@@ -50,9 +50,9 @@ export const PROMPTS: NavEintrag = {
 /**
  * Die Bibliotheken — zweispaltig als Raster.
  *
- * Die Archetypen stehen nicht mehr einzeln hier: Sie sind Reiter auf der
- * jeweiligen Seite (LibraryTabs). Inhaltlich gehören sie dorthin, und das spart
- * drei Einträge.
+ * Die Archetypen standen hier einmal als drei eigene Einträge, dann als Reiter
+ * auf der jeweiligen Seite. Seit PROJ-52 gibt es sie gar nicht mehr: Charaktere,
+ * Outfits und Locations sind je EIN Bereich.
  */
 export const BAUSTEINE: NavEintrag[] = [
   {
