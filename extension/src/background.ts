@@ -10,8 +10,8 @@ const MENU_CHARACTER_ADD_ID    = 'promptdb-character-add-image'
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: MENU_ID,                title: 'In PromptDB speichern',              contexts: ['all'] })
-  chrome.contextMenus.create({ id: MENU_FASHION_ID,        title: 'Als Fashion Asset speichern',        contexts: ['image'] })
-  chrome.contextMenus.create({ id: MENU_FASHION_ADD_ID,    title: 'Zu Kleidungsstück hinzufügen',       contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_FASHION_ID,        title: 'Als Kleidungsstück speichern',       contexts: ['image'] })
+  chrome.contextMenus.create({ id: MENU_FASHION_ADD_ID,    title: 'Zu Outfit / Kleidungsstück hinzufügen', contexts: ['image'] })
   chrome.contextMenus.create({ id: MENU_OUTFIT_ID,         title: 'Als Outfit speichern',               contexts: ['image'] })
   chrome.contextMenus.create({ id: MENU_LOCATION_ID,       title: 'Als Location speichern',             contexts: ['image'] })
   chrome.contextMenus.create({ id: MENU_LOCATION_ADD_ID,   title: 'Zu Location hinzufügen',             contexts: ['image'] })

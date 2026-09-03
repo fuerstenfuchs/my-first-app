@@ -4,15 +4,24 @@ import { bildSichern, sicherungsHinweis } from '../lib/bildSichern'
 import { CropTool } from './CropTool'
 import type { PendingFashionImageAdd } from '../types'
 
+/**
+ * „Zu Kleidungsstück hinzufügen" — seit PROJ-53 auf `outfits`.
+ *
+ * Fashion und Outfits sind EIN Bereich; die Auswahlliste zeigt deshalb ALLE
+ * Einträge, Komplett-Looks eingeschlossen. Das ist gewollt: Wer ein gefundenes
+ * Bild einem gespeicherten Look zuordnen will, konnte das bisher nur über den
+ * Umweg eines neuen Outfits.
+ */
 const CATEGORY_EMOJI: Record<string, string> = {
+  komplett: '🧍',
   oberteile: '👕', unterteile: '👖', kleider: '👗', jacken: '🧥',
   schuhe: '👞', accessoires: '🕶️', kopfbedeckungen: '🎩', sonstiges: '🛍️',
 }
 
-interface FashionAsset {
+interface OutfitEntry {
   id: string
   name: string
-  category: string
+  category: string | null
   cover_image_url: string | null
   tags: string[]
 }
@@ -24,7 +33,7 @@ interface Props {
 }
 
 export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
-  const [assets, setAssets]     = useState<FashionAsset[]>([])
+  const [assets, setAssets]     = useState<OutfitEntry[]>([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -41,7 +50,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
 
   useEffect(() => {
     supabase
-      .from('fashion_assets')
+      .from('outfits')
       .select('id, name, category, cover_image_url, tags')
       .order('updated_at', { ascending: false })
       .then(({ data }) => {
@@ -71,24 +80,41 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
       // Zeile aber um die gesamte Bilddatei auf. Beides gehoert in den
       // Speicher; erst dann taugt das Bild auch als Referenz.
       setSicherung(croppedDataUrl ? 'Zuschnitt wird gesichert …' : 'Bild wird gesichert …')
-      const gesichert = await bildSichern(croppedDataUrl ?? capture.imageUrl, 'fashion')
+      const gesichert = await bildSichern(croppedDataUrl ?? capture.imageUrl, 'outfit')
       setSicherung(null)
 
-      // Get or create first variant
+      // Ziel ist die Variante „Sonstige" — NICHT einfach „die erste".
+      //
+      // Gleicher Befund und gleiche Vorsicht wie in AddCharacterImageScreen.tsx
+      // vom 03.09.2026: Ein Outfit, das über das Formular der App angelegt
+      // wird, bekommt benannte Fächer (Vorne, Seite, Hinten, Detail). „Erste
+      // Variante nach sort_order" wäre damit immer „Vorne" — und ein beliebiges
+      // hier hinzugefügtes Fundstück läge still in der Vorderansicht. Die
+      // geplante Outfit-Referenzkette (PROJ-54) liest genau solche Fächer als
+      // Beweis, dass ein Schritt erledigt ist, und würde ihn mit dem falschen
+      // Bild überspringen. „Sonstige" ist das Sammelfach dafür und wird hier
+      // angelegt, wenn es noch keines gibt.
+      const ZIEL_VARIANTE = 'Sonstige'
       const { data: variants } = await supabase
-        .from('fashion_asset_variants')
-        .select('id')
-        .eq('asset_id', selectedId)
-        .order('sort_order')
-        .limit(1)
+        .from('outfit_variants')
+        .select('id, name')
+        .eq('outfit_id', selectedId)
 
       let variantId: string
-      if (variants && variants.length > 0) {
-        variantId = variants[0].id
+      const treffer = (variants ?? []).find(
+        v => String(v.name ?? '').trim().toLowerCase() === ZIEL_VARIANTE.toLowerCase(),
+      )
+      if (treffer) {
+        variantId = treffer.id
       } else {
         const { data: newVariant, error: varErr } = await supabase
-          .from('fashion_asset_variants')
-          .insert({ asset_id: selectedId, user_id: user.id, name: 'Standard-Ansicht', sort_order: 0 })
+          .from('outfit_variants')
+          .insert({
+            outfit_id: selectedId,
+            user_id: user.id,
+            name: ZIEL_VARIANTE,
+            sort_order: (variants ?? []).length,
+          })
           .select('id')
           .single()
         if (varErr || !newVariant) {
@@ -101,11 +127,11 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
 
       // Count existing images for sort_order
       const { count } = await supabase
-        .from('fashion_asset_images')
+        .from('outfit_images')
         .select('*', { count: 'exact', head: true })
         .eq('variant_id', variantId)
 
-      const { error: imgErr } = await supabase.from('fashion_asset_images').insert({
+      const { error: imgErr } = await supabase.from('outfit_images').insert({
         variant_id: variantId,
         user_id: user.id,
         url: gesichert.url,
@@ -161,7 +187,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
           ← Zurück
         </button>
         <span className="flex-1 text-xs font-medium text-rose-300 text-center">
-          👕 Zu Kleidungsstück hinzufügen
+          👕 Zu Outfit / Kleidungsstück hinzufügen
         </span>
       </div>
 
@@ -202,7 +228,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Kleidungsstück suchen…"
+          placeholder="Outfit oder Kleidungsstück suchen…"
           autoFocus
           className="w-full px-2.5 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-rose-500 transition-colors"
         />
@@ -216,7 +242,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-xs text-zinc-500 text-center py-6">
-            {search ? 'Keine Treffer' : 'Noch keine Kleidungsstücke vorhanden'}
+            {search ? 'Keine Treffer' : 'Noch keine Einträge vorhanden'}
           </p>
         ) : (
           filtered.map(asset => (
@@ -232,7 +258,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
               <div className="w-9 h-9 rounded-md overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
                 {asset.cover_image_url
                   ? <img src={asset.cover_image_url} alt="" className="w-full h-full object-cover" />
-                  : <span className="text-lg leading-none">{CATEGORY_EMOJI[asset.category] ?? '👕'}</span>
+                  : <span className="text-lg leading-none">{CATEGORY_EMOJI[asset.category ?? ''] ?? '👕'}</span>
                 }
               </div>
               <div className="flex-1 min-w-0">
@@ -270,7 +296,7 @@ export function AddFashionImageScreen({ capture, onSaved, onBack }: Props) {
             saved ? 'bg-emerald-600' : 'bg-rose-600 hover:bg-rose-500'
           }`}
         >
-          {saved ? '✓ Hinzugefügt!' : sicherung ? sicherung : saving ? 'Speichern…' : selectedId ? 'Bild hinzufügen' : 'Kleidungsstück auswählen'}
+          {saved ? '✓ Hinzugefügt!' : sicherung ? sicherung : saving ? 'Speichern…' : selectedId ? 'Bild hinzufügen' : 'Eintrag auswählen'}
         </button>
       </div>
     </div>

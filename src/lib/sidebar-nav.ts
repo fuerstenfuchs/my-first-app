@@ -1,5 +1,5 @@
 import {
-  LayoutGrid, Users, Shirt, ShoppingBag, MapPin, Drama, Camera, Palette,
+  LayoutGrid, Users, Shirt, MapPin, Drama, Camera, Palette,
   Clapperboard, Images, Aperture, type LucideIcon,
 } from 'lucide-react'
 
@@ -53,6 +53,10 @@ export const PROMPTS: NavEintrag = {
  * Die Archetypen standen hier einmal als drei eigene Einträge, dann als Reiter
  * auf der jeweiligen Seite. Seit PROJ-52 gibt es sie gar nicht mehr: Charaktere,
  * Outfits und Locations sind je EIN Bereich.
+ *
+ * „Fashion Assets" stand hier bis PROJ-53 als eigener Eintrag. Die einzelnen
+ * Kleidungsstücke sind seither Einträge unter „Outfits" mit einer Kategorie —
+ * ein Bereich weniger in einer Leiste, die genau daran krankte.
  */
 export const BAUSTEINE: NavEintrag[] = [
   {
@@ -64,11 +68,6 @@ export const BAUSTEINE: NavEintrag[] = [
     href: '/outfits', label: 'Outfits', icon: Shirt,
     farben: f(['#1a0e06', '#181108'], ['#fb923c', '#f97316'], ['#ea580c', '#c2410c'],
       '0 0 18px rgba(234,88,12,0.2), 0 0 18px rgba(194,65,12,0.15)', 'text-orange-400'),
-  },
-  {
-    href: '/fashion-assets', label: 'Fashion Assets', kurz: 'Fashion', icon: ShoppingBag,
-    farben: f(['#1a0614', '#170610'], ['#fb7185', '#f43f5e'], ['#e11d48', '#be123c'],
-      '0 0 18px rgba(225,29,72,0.2), 0 0 18px rgba(190,18,60,0.15)', 'text-rose-400'),
   },
   {
     href: '/locations', label: 'Locations', icon: MapPin,

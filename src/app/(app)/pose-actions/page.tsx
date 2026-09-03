@@ -19,7 +19,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { PoseActionForm } from '@/components/pose-actions/pose-action-form'
 import { PoseActionVariantForm } from '@/components/pose-actions/pose-action-variant-form'
-import { FashionAssetVariantCard } from '@/components/fashion-assets/fashion-asset-variant-card'
+// Eine Variantenkarte für alle Bibliotheken. Bis PROJ-53 lag sie unter
+// `components/fashion-assets/`; mit der Zusammenlegung von Fashion und Outfits
+// ist sie dorthin gezogen, wo sie jetzt zuhause ist. `accent="rose"` haelt das
+// Aussehen dieser Seite unveraendert — die Outfit-Seite selbst ist orange.
+import { OutfitVariantCard } from '@/components/outfits/outfit-variant-card'
 import {
   POSE_CATEGORIES,
   usePoseActions, usePoseActionDetail,
@@ -640,9 +644,10 @@ export default function PoseActionsPage() {
                           <SortableContext items={variants.map(v => v.id)} strategy={rectSortingStrategy}>
                             <div className="grid grid-cols-3 gap-2">
                               {variants.map(v => (
-                                <FashionAssetVariantCard
+                                <OutfitVariantCard
                                   key={v.id}
-                                  variant={v as unknown as Parameters<typeof FashionAssetVariantCard>[0]['variant']}
+                                  accent="rose"
+                                  variant={v as unknown as Parameters<typeof OutfitVariantCard>[0]['variant']}
                                   isSelected={selectedVariantId === v.id}
                                   onClick={() => { setSelectedVariantId(prev => prev === v.id ? null : v.id); setGalleryImageIndex(0) }}
                                   onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}

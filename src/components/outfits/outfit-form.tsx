@@ -12,6 +12,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Outfit, OutfitInput, InitialOutfitSlot } from '@/hooks/use-outfits'
+import {
+  OUTFIT_KATEGORIEN, OUTFIT_KATEGORIE_STANDARD, type OutfitKategorie,
+} from '@/lib/outfit-kategorien'
 
 const PREDEFINED_SLOTS = [
   { key: 'vorne',  label: 'Vorne' },
@@ -26,14 +29,30 @@ interface Props {
   open: boolean
   onClose: () => void
   outfit?: Outfit | null
+  /** Womit die Auswahl startet — die gerade geöffnete Kategorie der Seite. */
+  defaultCategory?: OutfitKategorie
   onSave: (input: OutfitInput, slots: InitialOutfitSlot[]) => Promise<boolean | Outfit | null>
 }
 
-export function OutfitForm({ open, onClose, outfit, onSave }: Props) {
+/** Beispielnamen je Kategorie — aus dem Fashion-Formular übernommen. */
+const NAME_BEISPIEL: Record<OutfitKategorie, string> = {
+  komplett:        'z.B. Schlager-Auftritt, Business, Cowboy…',
+  oberteile:       'z.B. Weißes Hemd, Schwarzes T-Shirt…',
+  unterteile:      'z.B. Jeans, Lederhose…',
+  kleider:         'z.B. Sommerkleid, Abendkleid…',
+  jacken:          'z.B. Lederjacke, Blazer…',
+  schuhe:          'z.B. Sneaker, High Heels…',
+  accessoires:     'z.B. Sonnenbrille, Uhr…',
+  kopfbedeckungen: 'z.B. Cowboyhut, Basecap…',
+  sonstiges:       'z.B. Gürtel, Schal…',
+}
+
+export function OutfitForm({ open, onClose, outfit, defaultCategory, onSave }: Props) {
   const isEdit = !!outfit
 
   const [name, setName]               = useState('')
   const [description, setDescription] = useState('')
+  const [category, setCategory]       = useState<OutfitKategorie>(defaultCategory ?? OUTFIT_KATEGORIE_STANDARD)
   const [tagInput, setTagInput]       = useState('')
   const [tags, setTags]               = useState<string[]>([])
   const [saving, setSaving]           = useState(false)
@@ -52,12 +71,13 @@ export function OutfitForm({ open, onClose, outfit, onSave }: Props) {
     if (open) {
       setName(outfit?.name ?? '')
       setDescription(outfit?.description ?? '')
+      setCategory(outfit?.category ?? defaultCategory ?? OUTFIT_KATEGORIE_STANDARD)
       setTags(outfit?.tags ?? [])
       setTagInput('')
       clearSlots()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, outfit])
+  }, [open, outfit, defaultCategory])
 
   function clearSlots() {
     Object.values(slotPreviews).forEach(u => u && URL.revokeObjectURL(u))
@@ -87,6 +107,7 @@ export function OutfitForm({ open, onClose, outfit, onSave }: Props) {
     const input: OutfitInput = {
       name: name.trim(),
       description: description.trim() || undefined,
+      category,
       tags,
     }
 
@@ -100,6 +121,7 @@ export function OutfitForm({ open, onClose, outfit, onSave }: Props) {
   }
 
   const filledSlots = PREDEFINED_SLOTS.filter(s => slotFiles[s.key] !== null).length
+  const selectedCat = OUTFIT_KATEGORIEN.find(c => c.key === category) ?? OUTFIT_KATEGORIEN[0]
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -108,17 +130,42 @@ export function OutfitForm({ open, onClose, outfit, onSave }: Props) {
         style={{ background: 'linear-gradient(160deg, hsl(20,60%,9%) 0%, hsl(15,20%,6%) 45%, hsl(200,30%,8%) 100%)' } as React.CSSProperties}
       >
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Outfit bearbeiten' : 'Neues Outfit'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Eintrag bearbeiten' : 'Neuer Outfit-Eintrag'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* Kategorie — ein Komplett-Look oder ein einzelnes Kleidungsstück */}
           <div className="space-y-1.5">
-            <Label htmlFor="outfit-name">Name *</Label>
+            <Label>Kategorie *</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {OUTFIT_KATEGORIEN.map(cat => (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => setCategory(cat.key)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all',
+                    category === cat.key
+                      ? 'bg-orange-500/20 border-orange-500/60 text-orange-300'
+                      : 'bg-white/5 border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground'
+                  )}
+                >
+                  <span>{cat.emoji}</span>
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="outfit-name">
+              Name * <span className="text-muted-foreground font-normal text-xs">({selectedCat.label})</span>
+            </Label>
             <Input
               id="outfit-name"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="z.B. Lederhose, Business, Cowboy…"
+              placeholder={NAME_BEISPIEL[category]}
               required
             />
           </div>

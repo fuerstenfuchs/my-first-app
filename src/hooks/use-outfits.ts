@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
+import {
+  OUTFIT_KATEGORIE_STANDARD, alsKategorie, type OutfitKategorie,
+} from '@/lib/outfit-kategorien'
 
 export type { UploadingFile } from './use-prompt-media'
 export { IMAGE_TYPES, IMAGE_MAX }
@@ -13,8 +16,18 @@ export interface Outfit {
   user_id: string
   name: string
   description: string | null
+  /**
+   * Was für ein Eintrag das ist — Komplett-Look oder Kleidungsstück (PROJ-53).
+   * Die Spalte hat in der Datenbank die Vorgabe 'komplett'.
+   */
+  category: OutfitKategorie
   tags: string[]
   cover_image_url: string | null
+  /** Woher der Eintrag stammt — von der Erweiterung beim Erfassen gesetzt. */
+  source_url: string | null
+  source_title: string | null
+  /** Der Zuschnitt, falls beim Erfassen einer gemacht wurde. */
+  crop_image_url: string | null
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
@@ -46,8 +59,11 @@ export interface OutfitVariant {
 export interface OutfitInput {
   name: string
   description?: string
+  category: OutfitKategorie
   tags?: string[]
   cover_image_url?: string | null
+  source_url?: string | null
+  source_title?: string | null
 }
 
 export interface OutfitVariantInput {
@@ -80,7 +96,11 @@ export function useOutfits() {
     const { data, error } = await supabase
       .from('outfits')
       .select('*')
-      .order('created_at', { ascending: true })
+      // Nach NAMEN, nicht nach Anlagedatum (geändert mit PROJ-53): Der Bereich
+      // trägt seit der Zusammenlegung zwei Sorten Einträge, und die 19
+      // umgezogenen Kleidungsstücke stünden nach Datum in einer Reihenfolge,
+      // die niemand sieht. Die Fashion-Seite hat es immer so gemacht.
+      .order('name', { ascending: true })
     if (error) {
       toast.error('Fehler beim Laden der Outfits')
     } else {
@@ -104,8 +124,12 @@ export function useOutfits() {
       .insert({
         name: input.name.trim(),
         description: input.description?.trim() || null,
+        category: input.category ?? OUTFIT_KATEGORIE_STANDARD,
         tags: input.tags ?? [],
         user_id: user.id,
+        source_url: input.source_url ?? null,
+        source_title: input.source_title ?? null,
+        cover_image_url: input.cover_image_url ?? null,
       })
       .select()
       .single()
@@ -150,7 +174,7 @@ export function useOutfits() {
     }
 
     const normalized = normalizeOutfit(outfit)
-    setOutfits(prev => [...prev, normalized])
+    setOutfits(prev => [...prev, normalized].sort((a, b) => a.name.localeCompare(b.name)))
     return normalized
   }
 
@@ -159,6 +183,7 @@ export function useOutfits() {
     const patch: Record<string, unknown> = {
       name: input.name.trim(),
       description: input.description?.trim() || null,
+      category: input.category ?? OUTFIT_KATEGORIE_STANDARD,
       tags: input.tags ?? [],
     }
     if ('cover_image_url' in input) patch.cover_image_url = input.cover_image_url
@@ -416,8 +441,15 @@ function normalizeOutfit(raw: Record<string, unknown>): Outfit {
     user_id: raw.user_id as string,
     name: raw.name as string,
     description: (raw.description as string | null) ?? null,
+    // Ein unbekannter Wert wird zur Vorgabe statt durchgereicht zu werden:
+    // Sonst filtert die Seite auf eine Kategorie, die es in der Leiste gar
+    // nicht gibt, und der Eintrag ist unsichtbar statt falsch einsortiert.
+    category: alsKategorie(raw.category),
     tags: (raw.tags as string[]) ?? [],
     cover_image_url: (raw.cover_image_url as string | null) ?? null,
+    source_url: (raw.source_url as string | null) ?? null,
+    source_title: (raw.source_title as string | null) ?? null,
+    crop_image_url: (raw.crop_image_url as string | null) ?? null,
     metadata: (raw.metadata as Record<string, unknown>) ?? {},
     created_at: raw.created_at as string,
     updated_at: raw.updated_at as string,

@@ -6,8 +6,20 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { FASHION_CATEGORIES, type FashionAsset, type FashionCategory } from '@/hooks/use-fashion-assets'
+import type { Outfit } from '@/hooks/use-outfits'
+import { KATEGORIE_EN, kategorieEintrag } from '@/lib/outfit-kategorien'
 import { cn } from '@/lib/utils'
+
+/**
+ * DER NAME BLEIBT. Dieses Fenster erzeugt Sheets für KLEIDUNGSSTÜCKE und hängt
+ * dafür an der Kategorie des Eintrags (`oberteile` → „top / shirt"). Genau
+ * deswegen gibt es die Kategorien überhaupt. Mit PROJ-53 ist es von
+ * `components/fashion-assets/` nach `components/outfits/` gezogen und arbeitet
+ * jetzt auf einem `Outfit` — der Zweck ist unverändert.
+ *
+ * Angeboten wird es NICHT für `komplett`: Ein kompletter Look bekommt das
+ * Ghost-Mannequin-Sheet je Variante (`/api/generate-outfit-sheet`).
+ */
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -37,23 +49,14 @@ const SHEET_TYPES: { id: SheetType; label: string; icon: string; description: st
   },
 ]
 
-// ── Category → English label ──────────────────────────────────────────────────
-
-const CATEGORY_EN: Record<FashionCategory, string> = {
-  oberteile:       'top / shirt',
-  unterteile:      'pants / trousers',
-  kleider:         'dress',
-  jacken:          'jacket / coat',
-  schuhe:          'shoes',
-  accessoires:     'accessory',
-  kopfbedeckungen: 'hat / headwear',
-  sonstiges:       'garment',
-}
+// Die Zuordnung Kategorie → englische Bezeichnung steht in
+// `@/lib/outfit-kategorien` (KATEGORIE_EN) — dieselbe Liste, aus der die
+// Kategorieleiste gebaut wird. Zwei Listen wären zwei Stellen zum Vergessen.
 
 // ── Prompt generator ──────────────────────────────────────────────────────────
 
-function generatePrompt(type: SheetType, asset: FashionAsset): string {
-  const cat  = CATEGORY_EN[asset.category as FashionCategory] ?? 'garment'
+function generatePrompt(type: SheetType, asset: Outfit): string {
+  const cat  = KATEGORIE_EN[asset.category] ?? 'garment'
   const tags = asset.tags.length > 0 ? asset.tags.join(', ') : null
   const desc = asset.description?.trim() || null
 
@@ -136,7 +139,7 @@ Ultra-detailed. High resolution.`
 interface Props {
   open: boolean
   onClose: () => void
-  asset: FashionAsset
+  asset: Outfit
 }
 
 export function FashionSheetDialog({ open, onClose, asset }: Props) {
@@ -169,7 +172,7 @@ export function FashionSheetDialog({ open, onClose, asset }: Props) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const catLabel = FASHION_CATEGORIES.find(c => c.key === asset.category)
+  const catLabel = kategorieEintrag(asset.category)
   const selectedType = SHEET_TYPES.find(t => t.id === selected)
 
   return (
@@ -197,7 +200,7 @@ export function FashionSheetDialog({ open, onClose, asset }: Props) {
               )}
               <div className="min-w-0">
                 <p className="text-xs font-medium truncate">{asset.name}</p>
-                <p className="text-[11px] text-muted-foreground">{catLabel?.emoji} {catLabel?.label}</p>
+                <p className="text-[11px] text-muted-foreground">{catLabel.emoji} {catLabel.label}</p>
                 {asset.tags.length > 0 && (
                   <p className="text-[10px] text-muted-foreground/60 truncate">{asset.tags.slice(0, 4).join(' · ')}</p>
                 )}

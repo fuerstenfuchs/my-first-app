@@ -12,6 +12,23 @@ import type { OutfitVariant } from '@/hooks/use-outfits'
 
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/gif'
 
+/**
+ * Die Akzentfarbe der Auswahl.
+ *
+ * WARUM ES DIESEN SCHALTER GIBT: Bis PROJ-53 gab es zwei bis aufs Wort gleiche
+ * Variantenkarten — eine orange für Outfits, eine rose unter
+ * `components/fashion-assets/`. Die rose wurde ausserdem von den Seiten
+ * Locations und Posen mitbenutzt. Beim Zusammenlegen bleibt EINE Karte übrig;
+ * damit sich dort nicht ungefragt die Farbe ändert, reichen jene Seiten
+ * `accent="rose"` durch.
+ */
+type Akzent = 'orange' | 'rose'
+
+const AKZENT: Record<Akzent, string> = {
+  orange: 'border-orange-500/60 bg-orange-500/5 ring-1 ring-orange-500/30',
+  rose:   'border-rose-500/60 bg-rose-500/5 ring-1 ring-rose-500/30',
+}
+
 interface Props {
   variant: OutfitVariant
   isSelected: boolean
@@ -19,9 +36,12 @@ interface Props {
   onEdit: () => void
   onDelete: () => void
   onUploadImages: (files: File[]) => void
+  accent?: Akzent
 }
 
-export function OutfitVariantCard({ variant, isSelected, onClick, onEdit, onDelete, onUploadImages }: Props) {
+export function OutfitVariantCard({
+  variant, isSelected, onClick, onEdit, onDelete, onUploadImages, accent = 'orange',
+}: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const coverImage = variant.images[0]
 
@@ -40,7 +60,7 @@ export function OutfitVariantCard({ variant, isSelected, onClick, onEdit, onDele
       style={style}
       className={`rounded-lg border transition-all cursor-pointer group relative ${
         isSelected
-          ? 'border-orange-500/60 bg-orange-500/5 ring-1 ring-orange-500/30'
+          ? AKZENT[accent]
           : 'border-border/50 bg-card/60 hover:border-border hover:bg-card'
       }`}
       onClick={onClick}

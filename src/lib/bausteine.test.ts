@@ -178,8 +178,8 @@ describe('pruefeBildgroesse', () => {
   })
 
   it('lässt genau die Grenze noch durch — erst DARÜBER wird abgelehnt', () => {
-    expect(pruefeBildgroesse(50 * MB, baustein('fashion'))).toBeNull()
-    expect(pruefeBildgroesse(50 * MB + 1, baustein('fashion'))).not.toBeNull()
+    expect(pruefeBildgroesse(50 * MB, baustein('posen'))).toBeNull()
+    expect(pruefeBildgroesse(50 * MB + 1, baustein('posen'))).not.toBeNull()
   })
 
   it('prüft Prompts nicht — der Eimer hat kein Limit in der Tabelle', () => {

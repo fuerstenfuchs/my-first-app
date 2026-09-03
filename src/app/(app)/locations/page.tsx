@@ -23,7 +23,11 @@ import { LocationForm } from '@/components/locations/location-form'
 import { LocationVariantForm } from '@/components/locations/location-variant-form'
 import { LocationSheetDialog } from '@/components/locations/location-sheet-dialog'
 import { LocationImportWizard } from '@/components/locations/location-import-wizard'
-import { FashionAssetVariantCard } from '@/components/fashion-assets/fashion-asset-variant-card'
+// Eine Variantenkarte für alle Bibliotheken. Bis PROJ-53 lag sie unter
+// `components/fashion-assets/`; mit der Zusammenlegung von Fashion und Outfits
+// ist sie dorthin gezogen, wo sie jetzt zuhause ist. `accent="rose"` haelt das
+// Aussehen dieser Seite unveraendert — die Outfit-Seite selbst ist orange.
+import { OutfitVariantCard } from '@/components/outfits/outfit-variant-card'
 import { CustomCategoryDialog } from '@/components/categories/custom-category-dialog'
 import { useCustomCategories } from '@/hooks/use-custom-categories'
 import {
@@ -754,9 +758,10 @@ export default function LocationsPage() {
                           <SortableContext items={variants.map(v => v.id)} strategy={rectSortingStrategy}>
                             <div className="grid grid-cols-3 gap-2">
                               {variants.map(v => (
-                                <FashionAssetVariantCard
+                                <OutfitVariantCard
                                   key={v.id}
-                                  variant={v as unknown as Parameters<typeof FashionAssetVariantCard>[0]['variant']}
+                                  accent="rose"
+                                  variant={v as unknown as Parameters<typeof OutfitVariantCard>[0]['variant']}
                                   isSelected={selectedVariantId === v.id}
                                   onClick={() => { setSelectedVariantId(prev => prev === v.id ? null : v.id); setLightboxVariantIndex(null) }}
                                   onEdit={() => { setEditingVariant(v); setVariantFormOpen(true) }}

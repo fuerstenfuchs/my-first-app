@@ -37,8 +37,8 @@
 | PROJ-18 | Prompt-Varianten | Deployed | [PROJ-18](PROJ-18-prompt-varianten.md) | 2026-06-13 |
 | PROJ-19 | Character Vault (Charakterverwaltung) | Deployed | — | 2026-06-15 |
 | PROJ-20 | Outfit-Bibliothek | Deployed | — | 2026-06-15 |
-| PROJ-21 | Fashion Assets (Kategoriebasierte Kleidungsverwaltung) | Deployed | — | 2026-06-16 |
-| PROJ-22 | Fashion Capture (Rechtsklick → Fashion Asset via Extension) | Deployed | — | 2026-06-16 |
+| PROJ-21 | Fashion Assets (Kategoriebasierte Kleidungsverwaltung) | Zusammengelegt (PROJ-53) | — | 2026-06-16 |
+| PROJ-22 | Fashion Capture (Rechtsklick → Fashion Asset via Extension) | Zusammengelegt (PROJ-53) | — | 2026-06-16 |
 | PROJ-23 | Kamera & Licht (Camera & Lighting Library) | Deployed | — | 2026-06-17 |
 | PROJ-24 | Scene Builder (MVP + Referenz-Auswahl) | Deployed | — | 2026-06-17 |
 | PROJ-25A | Scene Type (Indoor / Outdoor) | Deployed | — | 2026-06-17 |
@@ -82,7 +82,7 @@
 | PROJ-51 | Titelbild per Knopf aus dem Preset „Calvanize Studio" | In Review | [PROJ-51](PROJ-51-titelbild-preset.md) | 2026-09-03 |
 
 | PROJ-52 | Archetypen in die Hauptbereiche zusammenlegen | In Review | [PROJ-52](PROJ-52-archetypen-zusammenlegen.md) | 2026-09-03 |
-| PROJ-53 | Fashion in Outfits zusammenlegen (Kategorie am Eintrag) | Roadmap | — | 2026-09-03 |
+| PROJ-53 | Fashion in Outfits zusammenlegen (Kategorie am Eintrag) | In Review | [PROJ-53](PROJ-53-fashion-in-outfits.md) | 2026-09-03 |
 | PROJ-54 | Outfit-Referenzkette (vorne, hinten, Details, Kombi) | Roadmap | — | 2026-09-03 |
 
 ## Next Available ID: PROJ-55

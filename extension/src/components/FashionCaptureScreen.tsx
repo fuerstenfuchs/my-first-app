@@ -5,6 +5,20 @@ import { analyzeAsset } from '../lib/analyzeAsset'
 import { CropTool } from './CropTool'
 import type { PendingFashionCapture } from '../types'
 
+/**
+ * Die Kategorien eines Kleidungsstücks.
+ *
+ * SEIT PROJ-53 landen die Einträge in `outfits`, nicht mehr in
+ * `fashion_assets` — es gibt nur noch EINEN Bereich, und die Kategorie am
+ * Eintrag unterscheidet Kleidungsstück von Komplett-Look. Die neunte Kategorie
+ * `komplett` steht hier ABSICHTLICH NICHT: Dieser Bildschirm erfasst genau ein
+ * Kleidungsstück; für den kompletten Look gibt es „Als Outfit speichern"
+ * (Knopf oben rechts) und den OutfitCaptureScreen.
+ *
+ * Die Liste ist eine Kopie von `src/lib/outfit-kategorien.ts` der App. Die
+ * Erweiterung ist ein eigenes Vite-Projekt und importiert nichts aus `src/` —
+ * ändert sich dort ein SCHLÜSSEL, muss er hier mitgeändert werden.
+ */
 const CATEGORIES = [
   { key: 'oberteile',       label: 'Oberteile',       emoji: '👕' },
   { key: 'unterteile',      label: 'Unterteile',      emoji: '👖' },
@@ -105,7 +119,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
     let coverUrl: string | null = null
     if (hasImage && capture.imageUrl) {
       setSicherung('Bild wird gesichert …')
-      const r = await bildSichern(capture.imageUrl, 'fashion')
+      const r = await bildSichern(capture.imageUrl, 'outfit')
       ergebnisse.push(r)
       coverUrl = r.url
     }
@@ -116,7 +130,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
     let cropUrl: string | null = null
     if (croppedDataUrl) {
       setSicherung('Zuschnitt wird gesichert …')
-      const r = await bildSichern(croppedDataUrl, 'fashion')
+      const r = await bildSichern(croppedDataUrl, 'outfit')
       ergebnisse.push(r)
       cropUrl = r.url
     }
@@ -129,8 +143,10 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
     // 03.09.2026.
     const titelbildUrl = cropUrl ?? coverUrl
 
+    // Ziel ist `outfits` — seit PROJ-53 die einzige Tabelle für Looks UND
+    // Kleidungsstücke. Die Kategorie sagt, welches von beidem.
     const { error: insertError } = await supabase
-      .from('fashion_assets')
+      .from('outfits')
       .insert({
         user_id: user.id,
         name: name.trim(),
@@ -189,7 +205,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
           ← Zurück
         </button>
         <span className="flex-1 text-xs font-medium text-rose-300 text-center">
-          🛍️ Fashion Asset speichern
+          🛍️ Kleidungsstück speichern
         </span>
       </div>
 
@@ -351,7 +367,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
             saved ? 'bg-emerald-600' : 'bg-rose-600 hover:bg-rose-500'
           }`}
         >
-          {saved ? '✓ Gespeichert!' : sicherung ? sicherung : saving ? 'Speichern…' : '🛍️ Als Fashion Asset speichern'}
+          {saved ? '✓ Gespeichert!' : sicherung ? sicherung : saving ? 'Speichern…' : '🛍️ Als Kleidungsstück speichern'}
         </button>
       </div>
     </div>

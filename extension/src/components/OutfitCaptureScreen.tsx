@@ -100,6 +100,10 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
         user_id: user.id,
         name: name.trim(),
         description: description.trim() || null,
+        // Ausdrücklich statt auf die Spaltenvorgabe zu vertrauen (PROJ-53):
+        // Ein Komplett-Look ist genau das, was dieser Bildschirm erfasst, und
+        // das soll in der Zeile stehen und nicht in der Tabellendefinition.
+        category: 'komplett',
         tags: parsedTags,
         cover_image_url: firstImageUrl,
       })

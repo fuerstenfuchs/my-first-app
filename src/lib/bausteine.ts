@@ -1,5 +1,5 @@
 import {
-  Users, Shirt, ShoppingBag, MapPin, Drama, FileText, type LucideIcon,
+  Users, Shirt, MapPin, Drama, FileText, type LucideIcon,
 } from 'lucide-react'
 
 /**
@@ -23,7 +23,7 @@ import {
  */
 
 export type BausteinSchluessel =
-  | 'charaktere' | 'outfits' | 'fashion' | 'locations' | 'posen'
+  | 'charaktere' | 'outfits' | 'locations' | 'posen'
   | 'prompts'
 
 /**
@@ -33,9 +33,8 @@ export type BausteinSchluessel =
  * gleich, und eine fehlende Spalte lässt die GANZE Abfrage scheitern — nicht
  * nur das eine Feld. Nachgemessen am 03.09.2026 an den Typen der Hooks:
  *
- *   characters, outfits, prompts        description, tags
- *   locations, pose_actions,
- *   fashion_assets                      description, category, tags
+ *   characters, prompts                 description, tags
+ *   outfits, locations, pose_actions    description, category, tags
  *
  * Hier steht der SPALTENNAME und nicht ein „ja/nein": Heißt die Spalte anders,
  * benennt die Abfrage sie per Alias um, und die Oberfläche sieht überall
@@ -112,6 +111,12 @@ export type Baustein = {
 export const SPEICHERLIMIT_MB: Record<string, number> = {
   'character-images':  50,
   'outfit-images':     50,
+  // Kein Baustein zeigt seit PROJ-53 mehr auf diesen Eimer — die Zeile bleibt
+  // trotzdem stehen: Dort liegen die Bilder der 19 umgezogenen
+  // Kleidungsstücke weiterhin, und die Tabellen `fashion_assets` & Co. sind
+  // als Sicherheitsnetz noch da. Ein Eintrag ohne Nutzer kostet nichts; ein
+  // fehlender, sobald doch wieder etwas dorthin schreibt, kostet eine
+  // englische Fehlermeldung ohne Zahl.
   'fashion-assets':    50,
   'location-images':   50,
   'pose-action-images': 50,
@@ -144,22 +149,18 @@ export const BAUSTEINE: Baustein[] = [
     href: '/characters',
   },
   {
+    // Seit PROJ-53 EIN Baustein für komplette Looks UND Kleidungsstücke. Der
+    // Baustein `fashion` (Tabelle `fashion_assets`) ist damit entfallen — und
+    // mit ihm die Gefahr, dass ein übernommenes Bild je nach Tageslaune in der
+    // einen oder der anderen Bibliothek landet. `outfits` hat seither eine
+    // Kategoriespalte, die hier deshalb neu mitgeführt wird.
     schluessel: 'outfits', label: 'Outfits', einzahl: 'Outfit', icon: Shirt,
     tabelle: 'outfits', namensSpalte: 'name',
     varianten: { tabelle: 'outfit_variants', fk: 'outfit_id' },
     bildTabelle: 'outfit_images', bildFk: 'variant_id',
     bucket: 'outfit-images', hatStoragePath: true,
-    suchFelder: { beschreibung: 'description', schlagworte: 'tags' },
-    href: '/outfits',
-  },
-  {
-    schluessel: 'fashion', label: 'Fashion', einzahl: 'Fashion Asset', icon: ShoppingBag,
-    tabelle: 'fashion_assets', namensSpalte: 'name',
-    varianten: { tabelle: 'fashion_asset_variants', fk: 'asset_id' },
-    bildTabelle: 'fashion_asset_images', bildFk: 'variant_id',
-    bucket: 'fashion-assets', hatStoragePath: true,
     suchFelder: { beschreibung: 'description', kategorie: 'category', schlagworte: 'tags' },
-    href: '/fashion-assets',
+    href: '/outfits',
   },
   {
     schluessel: 'locations', label: 'Locations', einzahl: 'Location', icon: MapPin,

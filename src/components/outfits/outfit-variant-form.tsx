@@ -15,10 +15,12 @@ interface Props {
   open: boolean
   onClose: () => void
   variant?: OutfitVariant | null
+  /** Vorschlag für den Namen einer NEUEN Variante — z.B. der Name des Eintrags. */
+  defaultName?: string
   onSave: (input: OutfitVariantInput, files: File[]) => Promise<boolean | OutfitVariant | null>
 }
 
-export function OutfitVariantForm({ open, onClose, variant, onSave }: Props) {
+export function OutfitVariantForm({ open, onClose, variant, defaultName, onSave }: Props) {
   const isEdit = !!variant
   const [name, setName]               = useState('')
   const [description, setDescription] = useState('')
@@ -30,12 +32,12 @@ export function OutfitVariantForm({ open, onClose, variant, onSave }: Props) {
 
   useEffect(() => {
     if (open) {
-      setName(variant?.name ?? '')
+      setName(variant?.name ?? defaultName ?? '')
       setDescription(variant?.description ?? '')
       setFiles([])
       setPreviews([])
     }
-  }, [open, variant])
+  }, [open, variant, defaultName])
 
   useEffect(() => {
     return () => { previews.forEach(p => URL.revokeObjectURL(p)) }
