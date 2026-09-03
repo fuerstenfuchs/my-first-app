@@ -7,6 +7,28 @@ import type { PendingCharacterCapture } from '../types'
 
 type AnalysisStatus = 'pending' | 'completed' | 'outdated'
 
+/**
+ * Die sieben leeren Varianten, die jeder neue Charakter mitbekommt.
+ *
+ * QUELLE DER WAHRHEIT IST `src/lib/charakter-varianten.ts` IN DER APP — hier
+ * steht eine Kopie, weil die Erweiterung ein eigenes Vite-Projekt ist und
+ * nichts aus `src/` der App importieren kann. Dasselbe Muster gilt in diesem
+ * Projekt schon fuer die Einstellungen, aus demselben technischen Grund.
+ * Wird die Liste dort geaendert, muss sie hier mitgeaendert werden.
+ *
+ * Die Reihenfolge ist die sort_order 0…6 und mit Mark abgestimmt. Es wird
+ * NICHTS erzeugt — auch „Calvanize" ist nur ein leeres Fach.
+ */
+const STANDARD_VARIANTEN = [
+  'Kopf',
+  'Körper',
+  'Referenzsheet',
+  'Ausdrücke',
+  'Sonstige',
+  'Outfit',
+  'Calvanize',
+]
+
 interface Props {
   capture: PendingCharacterCapture
   onSaved: () => void
@@ -107,7 +129,7 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
     }
     setSicherung(null)
 
-    const { error: insertError } = await supabase
+    const { data: neuerCharakter, error: insertError } = await supabase
       .from('characters')
       .insert({
         user_id: user.id,
@@ -120,16 +142,56 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
         source_title: capture.sourceTitle || null,
         metadata: { prompt: prompt.trim() || null, attributes },
       })
+      .select('id')
+      .single()
 
     if (insertError) { setError(`Speichern fehlgeschlagen: ${insertError.message}`); setSaving(false); return }
+
+    // ── Die sieben leeren Standard-Varianten ────────────────────────────────
+    // Mark legt die meisten Charaktere ueber diese Erweiterung an. Bis hierher
+    // entstand dabei ueberhaupt keine Variante, und er musste sie jedes Mal in
+    // der App von Hand nachziehen. Sie werden LEER angelegt; ob spaeter Bilder
+    // hineinkommen, ist eine andere Frage.
+    let variantenFehler: string | null = null
+    if (neuerCharakter?.id) {
+      // `.select('id')` + Laengenpruefung statt nur auf `error === null` zu
+      // vertrauen: Dies ist der Weg, ueber den Mark die meisten Charaktere
+      // anlegt — dieselbe Nachmess-Regel, die in use-characters.ts fuer den
+      // App-Weg gilt, soll hier nicht schwaecher sein, nur weil es ein anderes
+      // Projekt ist.
+      const { data: angelegt, error: varError } = await supabase
+        .from('character_variants')
+        .insert(STANDARD_VARIANTEN.map((varName, idx) => ({
+          character_id: neuerCharakter.id,
+          user_id:      user.id,
+          name:         varName,
+          sort_order:   idx,
+        })))
+        .select('id')
+      if (varError) variantenFehler = varError.message
+      else if ((angelegt ?? []).length !== STANDARD_VARIANTEN.length) {
+        variantenFehler = `Nur ${angelegt?.length ?? 0} von ${STANDARD_VARIANTEN.length} Varianten kamen an.`
+      }
+    } else {
+      variantenFehler = 'Die Kennung des neuen Charakters kam nicht zurueck.'
+    }
 
     setSaving(false)
     setSaved(true)
 
     // Nur wegblenden, wenn es nichts zu lesen gibt. Ein Hinweis, der nach
     // 800 ms verschwindet, ist kein Hinweis.
+    const hinweise: string[] = []
     const h = sicherungsHinweis(ergebnisse)
-    if (h) setHinweis(h)
+    if (h) hinweise.push(h)
+    // Der Charakter selbst steht — deshalb kein Fehler, aber auch kein
+    // Schweigen: Sonst sieht ein Charakter ohne Faecher aus wie einer, der
+    // eben keine hat, und niemand wuesste, dass etwas schiefging.
+    if (variantenFehler) {
+      hinweise.push(`Der Charakter ist gespeichert, aber die Standard-Varianten konnten nicht angelegt werden: ${variantenFehler}`)
+    }
+
+    if (hinweise.length > 0) setHinweis(hinweise.join(' '))
     else setTimeout(() => onSaved(), 800)
   }
 
@@ -285,11 +347,15 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
 
       {/* Save */}
       <div className="px-2 pb-2 pt-1 border-t border-zinc-700 shrink-0">
+        {/* `saved && !hinweis`, nicht nur `saved`: Steht daneben ein
+            Bernstein-Hinweis (z.B. die Standard-Varianten konnten nicht
+            angelegt werden), waere ein gruener Haken samt "Gespeichert!" eine
+            zweite, widerspruechliche Aussage direkt neben der ersten. */}
         <button onClick={handleSave} disabled={saving || saved || !name.trim()}
           className={`w-full py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors ${
-            saved ? 'bg-emerald-600' : 'bg-violet-600 hover:bg-violet-500'
+            saved && !hinweis ? 'bg-emerald-600' : 'bg-violet-600 hover:bg-violet-500'
           }`}>
-          {saved ? '✓ Gespeichert!' : sicherung ? sicherung : saving ? 'Speichern…' : '👤 Als Charakter speichern'}
+          {saved && !hinweis ? '✓ Gespeichert!' : saved && hinweis ? 'Gespeichert — siehe Hinweis' : sicherung ? sicherung : saving ? 'Speichern…' : '👤 Als Charakter speichern'}
         </button>
       </div>
     </div>

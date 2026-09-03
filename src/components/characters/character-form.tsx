@@ -16,9 +16,20 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Character, CharacterInput, InitialSlot } from '@/hooks/use-characters'
 
+/**
+ * `label` ist NICHT nur Beschriftung — es wird als Variantenname gespeichert
+ * (`InitialSlot.name`). Jeder neue Charakter bekommt seit dem 03.09.2026
+ * automatisch die sieben leeren Fächer aus `@/lib/charakter-varianten`; ein
+ * hochgeladenes Bild soll in das PASSENDE davon fallen. Deshalb heißt der
+ * mittlere Slot „Ausdrücke" wie dort und nicht mehr „Gesichtsausdruck" —
+ * sonst entstünde daneben eine achte, abweichend benannte Variante.
+ *
+ * `key` bleibt `gesichtsausdruck`: Er ist nur der interne Bezeichner der
+ * Formularfelder und taucht in keiner Datenbankzeile auf.
+ */
 const PREDEFINED_SLOTS = [
   { key: 'kopf',             label: 'Kopf' },
-  { key: 'gesichtsausdruck', label: 'Gesichtsausdruck' },
+  { key: 'gesichtsausdruck', label: 'Ausdrücke' },
   { key: 'gesichtsdetails',  label: 'Gesichtsdetails' },
 ] as const
 

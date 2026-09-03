@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
+import { STANDARD_VARIANTEN, fehlendeStandardVarianten } from '@/lib/charakter-varianten'
 
 export type { UploadingFile } from './use-prompt-media'
 export { IMAGE_TYPES, IMAGE_MAX }
@@ -118,20 +119,61 @@ export function useCharacters() {
 
     if (error) { toast.error('Charakter konnte nicht erstellt werden'); return null }
 
+    // ── Die sieben leeren Standard-Varianten ─────────────────────────────────
+    // Sie entstehen VOR den Bild-Slots, damit ein hochgeladenes Bild in das
+    // vorbereitete Fach fällt und nicht daneben ein zweites gleichen Namens
+    // aufmacht. Der Charakter ist gerade erst entstanden, es kann also nichts
+    // vorhanden sein — trotzdem wird das Ergebnis NACHGEMESSEN statt
+    // angenommen: Was tatsächlich in der Tabelle steht, sagt nur die Antwort
+    // der Datenbank.
+    const standardIds = new Map<string, string>()
+    const { data: angelegt, error: varErr } = await supabase
+      .from('character_variants')
+      .insert(STANDARD_VARIANTEN.map((name, idx) => ({
+        character_id: char.id,
+        user_id: user.id,
+        name,
+        sort_order: idx,
+      })))
+      .select('id, name')
+
+    for (const v of angelegt ?? []) {
+      standardIds.set(String(v.name ?? '').trim().toLowerCase(), v.id as string)
+    }
+
     let firstImageUrl: string | null = null
+    // Fortlaufend NUR für tatsächlich neu angelegte Fächer erhöht — nicht der
+    // Schleifenindex über `slots`: Sonst reißt die sort_order Lücken, sobald
+    // nicht jeder Slot ein eigenes Fach braucht (die meisten treffen ja schon
+    // eine Standard-Variante).
+    let naechsteOrdnung = STANDARD_VARIANTEN.length
 
-    for (const [idx, slot] of slots.entries()) {
-      const { data: v } = await supabase
-        .from('character_variants')
-        .insert({ character_id: char.id, user_id: user.id, name: slot.name, sort_order: idx })
-        .select()
-        .single()
+    for (const slot of slots) {
+      // Ein Slot, dessen Name schon als Standard-Variante bereitliegt, füllt
+      // GENAU DIESE — sonst stünde „Kopf" zweimal da, einmal leer und einmal
+      // mit Bild. Nur ein Name außerhalb der Liste bekommt ein eigenes Fach;
+      // das kommt heute nicht vor, soll aber nicht brechen.
+      const vorhandeneId = standardIds.get(slot.name.trim().toLowerCase())
 
-      if (!v) continue
+      let variantId = vorhandeneId
+      if (!variantId) {
+        const { data: v } = await supabase
+          .from('character_variants')
+          .insert({
+            character_id: char.id,
+            user_id: user.id,
+            name: slot.name,
+            sort_order: naechsteOrdnung++,
+          })
+          .select('id')
+          .single()
+        if (!v) continue
+        variantId = v.id as string
+      }
 
       const file = slot.file
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-      const storagePath = `${user.id}/${v.id}/${crypto.randomUUID()}.${ext}`
+      const storagePath = `${user.id}/${variantId}/${crypto.randomUUID()}.${ext}`
 
       const { error: upErr } = await supabase.storage
         .from('character-images')
@@ -143,7 +185,7 @@ export function useCharacters() {
           .getPublicUrl(storagePath)
 
         await supabase.from('character_images').insert({
-          variant_id: v.id,
+          variant_id: variantId,
           user_id: user.id,
           url: publicUrl,
           storage_path: storagePath,
@@ -152,6 +194,27 @@ export function useCharacters() {
 
         if (!firstImageUrl) firstImageUrl = publicUrl
       }
+    }
+
+    // Erst JETZT nachmessen, ob alle sieben Standard-Varianten wirklich da
+    // sind — nicht direkt nach dem Batch-Insert oben: Die Slot-Schleife kann
+    // ein zunächst fehlgeschlagenes Standard-Fach nachträglich angelegt haben
+    // (wenn ein hochgeladener Slot zufällig denselben Namen trägt), und eine
+    // Meldung von vorhin wäre dann schon wieder falsch — sie stünde da,
+    // obwohl das Fach längst existiert.
+    const { data: alleVarianten } = await supabase
+      .from('character_variants')
+      .select('name')
+      .eq('character_id', char.id)
+    const fehlend = fehlendeStandardVarianten((alleVarianten ?? []).map(v => String(v.name ?? '')))
+    if (fehlend.length > 0) {
+      // Kein Abbruch: Der Charakter selbst steht schon, und die fehlenden
+      // Fächer lassen sich von Hand nachtragen. Aber es wird gesagt — still
+      // fehlende Varianten sähen aus wie „hat halt keine".
+      toast.warning(
+        `Charakter angelegt, aber ${fehlend.length} von ${STANDARD_VARIANTEN.length} Varianten fehlen: ${fehlend.join(', ')}`,
+        { description: varErr?.message },
+      )
     }
 
     if (firstImageUrl) {

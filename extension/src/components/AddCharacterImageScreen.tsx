@@ -68,21 +68,41 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
       const gesichert = await bildSichern(croppedDataUrl ?? capture.imageUrl, 'character')
       setSicherung(null)
 
-      // Get or create first variant
+      // Ziel ist die Variante "Sonstige" — NICHT einfach "die erste".
+      //
+      // Seit jeder neue Charakter automatisch sieben benannte Faecher bekommt
+      // (Kopf, Koerper, Referenzsheet, ...; siehe src/lib/charakter-varianten.ts
+      // in der App), waere "erste Variante nach sort_order" hier ab jetzt IMMER
+      // "Kopf" (sort_order 0). Ein beliebiges hier hinzugefuegtes Foto — Outfit,
+      // Screenshot, was auch immer — laenge dann still im Kopf-Fach. Die
+      // Referenzkette liest ein vorhandenes Bild in "Kopf" als Beweis, dass der
+      // Kopf-Schritt schon erledigt ist, und ueberspringt ihn — mit einem
+      // falschen Bild als Referenz fuer den Koerper-Schritt. Kritischer Befund
+      // eines Review-Durchgangs vom 03.09.2026, noch vor dem ersten echten
+      // Auftreten behoben. "Sonstige" ist das dafuer vorgesehene Sammelfach und
+      // existiert bei neuen Charakteren garantiert; bei aelteren wird es hier
+      // bei Bedarf angelegt.
+      const ZIEL_VARIANTE = 'Sonstige'
       const { data: variants } = await supabase
         .from('character_variants')
-        .select('id')
+        .select('id, name')
         .eq('character_id', selectedId)
-        .order('sort_order')
-        .limit(1)
 
       let variantId: string
-      if (variants && variants.length > 0) {
-        variantId = variants[0].id
+      const treffer = (variants ?? []).find(
+        v => String(v.name ?? '').trim().toLowerCase() === ZIEL_VARIANTE.toLowerCase(),
+      )
+      if (treffer) {
+        variantId = treffer.id
       } else {
         const { data: newVariant, error: varErr } = await supabase
           .from('character_variants')
-          .insert({ character_id: selectedId, user_id: user.id, name: 'Standard-Ansicht', sort_order: 0 })
+          .insert({
+            character_id: selectedId,
+            user_id: user.id,
+            name: ZIEL_VARIANTE,
+            sort_order: (variants ?? []).length,
+          })
           .select('id')
           .single()
         if (varErr || !newVariant) {
