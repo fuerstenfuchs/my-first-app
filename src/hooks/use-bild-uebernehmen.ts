@@ -3,7 +3,10 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
-import { BAUSTEINE, ablagepfad, type Baustein, type BausteinSchluessel } from '@/lib/bausteine'
+import {
+  BAUSTEINE, ablagepfad, auswahlSpalten,
+  type Baustein, type BausteinSchluessel,
+} from '@/lib/bausteine'
 
 /**
  * Ein fertiges Bild aus der Warteschlange in einen Baustein übernehmen.
@@ -34,7 +37,20 @@ export type Ziel = {
   variantId: string | null
 }
 
-export type Eintrag = { id: string; name: string; cover_image_url: string | null }
+/**
+ * Ein Eintrag der Auswahlliste.
+ *
+ * Die drei Zusatzfelder sind optional, weil nicht jeder Baustein sie hat —
+ * welcher welche hat, steht in `BAUSTEINE.suchFelder` und nicht hier.
+ */
+export type Eintrag = {
+  id: string
+  name: string
+  cover_image_url: string | null
+  description?: string | null
+  category?: string | null
+  tags?: string[] | null
+}
 export type Variante = { id: string; name: string; sort_order: number }
 
 /** Die Dateiendung aus einem Speicherpfad — Vorgabe png. */
@@ -49,12 +65,13 @@ export function useBildUebernehmen() {
 
   /** Die Einträge eines Bausteins, für die Auswahlliste. */
   const eintraegeLaden = useCallback(async (b: Baustein): Promise<Eintrag[]> => {
-    // `prompts` nennt die Spalte `title`, alle anderen `name`. Der Alias macht
-    // daraus für die Oberfläche wieder einen einheitlichen `name`.
-    const spalte = b.namensSpalte === 'title' ? 'name:title' : 'name'
+    // Welche Spalten es gibt, steht am Baustein — samt der Umbenennungen
+    // (`title` → `name`, `short_description` → `description`). Eine Spalte, die
+    // es in der Tabelle nicht gibt, ließe die GANZE Abfrage scheitern und die
+    // Liste bliebe wortlos leer. Deshalb wird hier nichts geraten.
     const { data, error } = await supabase
       .from(b.tabelle)
-      .select(`id, ${spalte}, cover_image_url`)
+      .select(auswahlSpalten(b))
       .order(b.namensSpalte, { ascending: true })
       .limit(500)
     if (error) {

@@ -27,6 +27,36 @@ export type BausteinSchluessel =
   | 'charakter-archetypen' | 'outfit-archetypen' | 'location-archetypen'
   | 'prompts'
 
+/**
+ * Welche Zusatzspalten ein Baustein hat — und wie sie dort HEISSEN.
+ *
+ * WARUM ALS DATUM UND NICHT ALS `if` IM HOOK: Die Spalten sind nicht überall
+ * gleich, und eine fehlende Spalte lässt die GANZE Abfrage scheitern — nicht
+ * nur das eine Feld. Nachgemessen am 03.09.2026 an den Typen der Hooks:
+ *
+ *   characters, outfits, prompts        description, tags
+ *   locations, pose_actions,
+ *   fashion_assets                      description, category, tags
+ *   character_/outfit_archetypes        short_description, tags
+ *   location_archetypes                 short_description, category, tags
+ *
+ * Die Archetypen nennen den Fließtext `short_description` und haben KEINE
+ * Spalte `description`. Deshalb steht hier der Spaltenname, nicht ein „ja/nein":
+ * die Abfrage benennt ihn per Alias auf `description` um, und die Oberfläche
+ * sieht überall dasselbe Feld.
+ *
+ * Ein Feld, das hier fehlt, wird schlicht nicht geladen und nicht durchsucht —
+ * das ist der sichere Ausgang, kein stiller Fehler.
+ */
+export type SuchFelder = {
+  /** Spalte mit dem Fließtext. Bei den Archetypen `short_description`. */
+  beschreibung?: string
+  /** Spalte mit der Kategorie. Nur dort, wo es überhaupt eine gibt. */
+  kategorie?: string
+  /** Spalte mit den Schlagworten. */
+  schlagworte?: string
+}
+
 export type Baustein = {
   schluessel: BausteinSchluessel
   /** Wie es im Menü heißt. */
@@ -56,6 +86,8 @@ export type Baustein = {
   hatStoragePath: boolean
   /** Feste Zusatzfelder beim Einfügen — `prompt_media` verlangt `type`. */
   zusatz?: Record<string, unknown>
+  /** Welche Zusatzspalten es gibt — siehe {@link SuchFelder}. */
+  suchFelder: SuchFelder
   /** Wohin in der App, um das Ergebnis anzusehen. */
   href: string
 }
@@ -66,35 +98,45 @@ export const BAUSTEINE: Baustein[] = [
     tabelle: 'characters', namensSpalte: 'name',
     varianten: { tabelle: 'character_variants', fk: 'character_id' },
     bildTabelle: 'character_images', bildFk: 'variant_id',
-    bucket: 'character-images', hatStoragePath: true, href: '/characters',
+    bucket: 'character-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'description', schlagworte: 'tags' },
+    href: '/characters',
   },
   {
     schluessel: 'outfits', label: 'Outfits', einzahl: 'Outfit', icon: Shirt,
     tabelle: 'outfits', namensSpalte: 'name',
     varianten: { tabelle: 'outfit_variants', fk: 'outfit_id' },
     bildTabelle: 'outfit_images', bildFk: 'variant_id',
-    bucket: 'outfit-images', hatStoragePath: true, href: '/outfits',
+    bucket: 'outfit-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'description', schlagworte: 'tags' },
+    href: '/outfits',
   },
   {
     schluessel: 'fashion', label: 'Fashion', einzahl: 'Fashion Asset', icon: ShoppingBag,
     tabelle: 'fashion_assets', namensSpalte: 'name',
     varianten: { tabelle: 'fashion_asset_variants', fk: 'asset_id' },
     bildTabelle: 'fashion_asset_images', bildFk: 'variant_id',
-    bucket: 'fashion-assets', hatStoragePath: true, href: '/fashion-assets',
+    bucket: 'fashion-assets', hatStoragePath: true,
+    suchFelder: { beschreibung: 'description', kategorie: 'category', schlagworte: 'tags' },
+    href: '/fashion-assets',
   },
   {
     schluessel: 'locations', label: 'Locations', einzahl: 'Location', icon: MapPin,
     tabelle: 'locations', namensSpalte: 'name',
     varianten: { tabelle: 'location_variants', fk: 'location_id' },
     bildTabelle: 'location_images', bildFk: 'variant_id',
-    bucket: 'location-images', hatStoragePath: true, href: '/locations',
+    bucket: 'location-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'description', kategorie: 'category', schlagworte: 'tags' },
+    href: '/locations',
   },
   {
     schluessel: 'posen', label: 'Posen', einzahl: 'Pose', icon: Drama,
     tabelle: 'pose_actions', namensSpalte: 'name',
     varianten: { tabelle: 'pose_action_variants', fk: 'pose_action_id' },
     bildTabelle: 'pose_action_images', bildFk: 'variant_id',
-    bucket: 'pose-action-images', hatStoragePath: true, href: '/pose-actions',
+    bucket: 'pose-action-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'description', kategorie: 'category', schlagworte: 'tags' },
+    href: '/pose-actions',
   },
 
   // Prompts: Bilder hängen am Prompt, die Tabelle kennt keinen Speicherpfad
@@ -105,6 +147,8 @@ export const BAUSTEINE: Baustein[] = [
     bildTabelle: 'prompt_media', bildFk: 'prompt_id',
     bucket: 'prompt-media', hatStoragePath: false,
     zusatz: { type: 'image' },
+    // Prompts haben `description` und `tags`, aber KEINE `category`.
+    suchFelder: { beschreibung: 'description', schlagworte: 'tags' },
     href: '/',
   },
 
@@ -114,6 +158,7 @@ export const BAUSTEINE: Baustein[] = [
     icon: Sparkles, tabelle: 'character_archetypes', namensSpalte: 'name',
     bildTabelle: 'character_archetype_images', bildFk: 'archetype_id',
     bucket: 'character-archetype-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'short_description', schlagworte: 'tags' },
     href: '/character-archetypes',
   },
   {
@@ -121,6 +166,7 @@ export const BAUSTEINE: Baustein[] = [
     icon: Sparkles, tabelle: 'outfit_archetypes', namensSpalte: 'name',
     bildTabelle: 'outfit_archetype_images', bildFk: 'archetype_id',
     bucket: 'outfit-archetype-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'short_description', schlagworte: 'tags' },
     href: '/outfit-archetypes',
   },
   {
@@ -128,6 +174,7 @@ export const BAUSTEINE: Baustein[] = [
     icon: Sparkles, tabelle: 'location_archetypes', namensSpalte: 'name',
     bildTabelle: 'location_archetype_images', bildFk: 'archetype_id',
     bucket: 'location-archetype-images', hatStoragePath: true,
+    suchFelder: { beschreibung: 'short_description', kategorie: 'category', schlagworte: 'tags' },
     href: '/location-archetypes',
   },
 ]
@@ -154,4 +201,146 @@ export function ablagepfad(
   const marke = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const mitte = variantId ? `${parentId}/${variantId}` : parentId
   return `${userId}/${mitte}/${marke}.${endung}`
+}
+
+// ─── Finden statt scrollen (PROJ-46) ────────────────────────────────────────
+
+/**
+ * Ein Eintrag, so wie ihn die Suche sieht.
+ *
+ * Absichtlich kleiner als der Eintrag aus dem Hook: Was hier nicht steht, kann
+ * die Suche auch nicht heimlich benutzen. Alle Zusatzfelder sind optional —
+ * ein Baustein ohne Kategorie liefert schlicht keine.
+ */
+export type SuchbarerEintrag = {
+  name: string
+  description?: string | null
+  category?: string | null
+  tags?: string[] | null
+}
+
+/**
+ * Die Spaltenliste für die Abfrage, aus den Feldern des Bausteins.
+ *
+ * `prompts` nennt den Namen `title`, die Archetypen nennen den Fließtext
+ * `short_description` — beides wird per Alias auf `name` und `description`
+ * gebogen, damit die Oberfläche überall dasselbe sieht.
+ *
+ * Eigene Funktion und kein String im Hook, weil genau hier der Fallstrick
+ * sitzt: EINE nicht vorhandene Spalte lässt die ganze Abfrage scheitern und
+ * die Liste bleibt leer. Als Funktion ist sie prüfbar.
+ */
+export function auswahlSpalten(b: Baustein): string {
+  const teile = ['id']
+  teile.push(b.namensSpalte === 'title' ? 'name:title' : 'name')
+  teile.push('cover_image_url')
+  const { beschreibung, kategorie, schlagworte } = b.suchFelder
+  if (beschreibung) {
+    teile.push(beschreibung === 'description' ? 'description' : `description:${beschreibung}`)
+  }
+  if (kategorie) {
+    teile.push(kategorie === 'category' ? 'category' : `category:${kategorie}`)
+  }
+  if (schlagworte) {
+    teile.push(schlagworte === 'tags' ? 'tags' : `tags:${schlagworte}`)
+  }
+  return teile.join(', ')
+}
+
+/**
+ * Text auf eine vergleichbare Form bringen.
+ *
+ * Kleinschreibung, und die deutschen Umlaute auf ihre Ersatzschreibung — so
+ * findet „moenchengladbach" denselben Eintrag wie „Mönchengladbach". Der Weg
+ * geht nur in DIESE Richtung: ae→ä zurückzuraten wäre falsch, sobald ein Wort
+ * das „ae" wirklich meint.
+ *
+ * Das anschließende Zerlegen (NFD) räumt übrige Akzente weg, damit „Café"
+ * auch als „cafe" gefunden wird.
+ */
+function normalisiere(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+/**
+ * Passt der Eintrag zur Eingabe?
+ *
+ * WORTWEISE, NICHT ALS ZEICHENKETTE. Mark benennt seine Bausteine beschreibend:
+ * „Arme verschränkt, Blick nach unten, sitzend". Wer „sitzend arme" eintippt,
+ * meint genau diesen Eintrag — die bisherige Suche über `includes()` auf dem
+ * ganzen Text fand ihn nie, weil die Wörter in anderer Reihenfolge stehen.
+ *
+ * Die Regel: JEDES eingetippte Wort muss irgendwo vorkommen, die Reihenfolge
+ * ist egal, Groß- und Kleinschreibung auch. Innerhalb eines Wortes gilt
+ * weiterhin Teiltreffer — sonst fände „gladbach" den BORUSSIA-PARK in
+ * Mönchengladbach nicht.
+ *
+ * Gesucht wird über Name, Beschreibung, Kategorie und Schlagworte. Eine leere
+ * Eingabe passt auf alles — kein Filter ist kein Filter.
+ */
+export function passtZurSuche(eintrag: SuchbarerEintrag, suche: string): boolean {
+  const woerter = normalisiere(suche).split(/\s+/).filter(Boolean)
+  if (woerter.length === 0) return true
+  const heuhaufen = normalisiere([
+    eintrag.name ?? '',
+    eintrag.description ?? '',
+    eintrag.category ?? '',
+    ...(eintrag.tags ?? []),
+  ].join(' '))
+  return woerter.every(wort => heuhaufen.includes(wort))
+}
+
+/**
+ * Welche Kategorien in einer Liste vorkommen — mit Anzahl, häufigste zuerst.
+ *
+ * Die Anzahl steht ABSICHTLICH neben dem Namen: Bei Marks Locations liegen
+ * hinter „stadien_deutschland" 31 Einträge und hinter „natur" zehn. Ohne die
+ * Zahl klickt man blind und landet wieder im Scrollen.
+ *
+ * Gleich häufige Kategorien stehen alphabetisch — sonst wackelt die Reihenfolge
+ * je nach Ladereihenfolge der Daten, und wer einmal weiß, wo „natur" steht,
+ * fände es beim nächsten Öffnen woanders.
+ */
+export function kategorien(
+  eintraege: SuchbarerEintrag[],
+): Array<{ wert: string; anzahl: number }> {
+  const zaehler = new Map<string, number>()
+  for (const e of eintraege) {
+    const wert = e.category?.trim()
+    if (!wert) continue
+    zaehler.set(wert, (zaehler.get(wert) ?? 0) + 1)
+  }
+  return [...zaehler.entries()]
+    .map(([wert, anzahl]) => ({ wert, anzahl }))
+    .sort((a, b) => b.anzahl - a.anzahl || a.wert.localeCompare(b.wert, 'de'))
+}
+
+/**
+ * Feste Kategorien, deren technischer Schlüssel einen Umlaut ersetzt.
+ *
+ * Nur diese eine Ausnahme, und keine allgemeine Regel „ae wird ä": Marks
+ * eigene Kategorien (PROJ-34) dürfen alles heißen, und aus „aerial" würde
+ * sonst „ärial".
+ */
+const LESBARE_KATEGORIE: Record<string, string> = {
+  gebaeude: 'Gebäude',
+}
+
+/**
+ * Der technische Kategoriewert als lesbare Beschriftung.
+ *
+ * In der Datenbank steht „stadien_deutschland" — auf dem Knopf steht „Stadien
+ * Deutschland". Die Werte selbst bleiben unangetastet; das ist reine Anzeige.
+ */
+export function kategorieLabel(wert: string): string {
+  const fest = LESBARE_KATEGORIE[wert]
+  if (fest) return fest
+  return wert
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
