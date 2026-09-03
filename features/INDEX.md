@@ -83,6 +83,6 @@
 
 | PROJ-52 | Archetypen in die Hauptbereiche zusammenlegen | In Review | [PROJ-52](PROJ-52-archetypen-zusammenlegen.md) | 2026-09-03 |
 | PROJ-53 | Fashion in Outfits zusammenlegen (Kategorie am Eintrag) | In Review | [PROJ-53](PROJ-53-fashion-in-outfits.md) | 2026-09-03 |
-| PROJ-54 | Outfit-Referenzkette (vorne, hinten, Details, Kombi) | Roadmap | — | 2026-09-03 |
+| PROJ-54 | Outfit-Referenzkette (vorne, hinten, Details, Kombi) | In Review | [PROJ-54](PROJ-54-outfit-referenzkette.md) | 2026-09-03 |
 
 ## Next Available ID: PROJ-55

@@ -15,13 +15,16 @@ import type { Outfit, OutfitInput, InitialOutfitSlot } from '@/hooks/use-outfits
 import {
   OUTFIT_KATEGORIEN, OUTFIT_KATEGORIE_STANDARD, type OutfitKategorie,
 } from '@/lib/outfit-kategorien'
+import { FORMULAR_SLOTS } from '@/lib/outfit-kette'
 
-const PREDEFINED_SLOTS = [
-  { key: 'vorne',  label: 'Vorne' },
-  { key: 'seite',  label: 'Seite' },
-  { key: 'hinten', label: 'Hinten' },
-  { key: 'detail', label: 'Detail' },
-] as const
+/**
+ * Die vier Slots stehen seit PROJ-54 in `@/lib/outfit-kette` und nicht mehr
+ * hier: Die Referenzkette darf mit keinem von ihnen denselben Variantennamen
+ * benutzen, sonst hielte sie ein von Hand hochgeladenes Foto für ein erzeugtes
+ * Blatt. Nur wenn beide Listen an EINEM Ort liegen, kann ein Test sie
+ * gegeneinander halten, ohne eine davon abzuschreiben.
+ */
+const PREDEFINED_SLOTS = FORMULAR_SLOTS
 
 type SlotKey = typeof PREDEFINED_SLOTS[number]['key']
 

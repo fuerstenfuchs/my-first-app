@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Copy, Check } from 'lucide-react'
+import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Copy, Check, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
@@ -21,6 +21,8 @@ import { OutfitVariantForm } from '@/components/outfits/outfit-variant-form'
 import { OutfitVariantCard } from '@/components/outfits/outfit-variant-card'
 import { OutfitMediaManager } from '@/components/outfits/outfit-media-manager'
 import { FashionSheetDialog } from '@/components/outfits/fashion-sheet-dialog'
+import { OutfitKetteDialog } from '@/components/outfits/outfit-kette-dialog'
+import { istEigenerSpeicher } from '@/lib/outfit-kette'
 import {
   useOutfits, useOutfitDetail,
   type Outfit, type OutfitVariant, type OutfitInput, type OutfitVariantInput,
@@ -165,6 +167,22 @@ export default function OutfitsPage() {
   const [sheetError, setSheetError]               = useState<string | null>(null)
 
   const [sheetDialogOpen, setSheetDialogOpen]     = useState(false)
+  const [ketteDialogOpen, setKetteDialogOpen]     = useState(false)
+
+  /**
+   * Warum die Referenzkette gerade nicht geht — oder `null`, wenn sie geht.
+   *
+   * Als GRUND und nicht als `boolean`: Ein Knopf, der grau ist und nichts
+   * sagt, ist ein Knopf, den Mark für kaputt hält. Die zweite Bedingung ist
+   * dieselbe Schranke, die der Arbeiter zieht — sie hier VORHER zu prüfen
+   * erspart einen Auftrag, der sicher scheitert.
+   */
+  const ketteGesperrtGrund: string | null =
+    !outfit?.cover_image_url
+      ? 'Dieses Outfit hat kein Titelbild — die Kette braucht ein Ausgangsbild.'
+      : !istEigenerSpeicher(outfit.cover_image_url)
+        ? 'Das Titelbild liegt nicht im eigenen Speicher — der Arbeiter würde es als Referenz ablehnen. Erst sichern.'
+        : null
 
   const [aiAnalyzing, setAiAnalyzing]   = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<{
@@ -525,6 +543,23 @@ export default function OutfitsPage() {
                     Sheet
                   </Button>
                 )}
+                {/* Die Referenzkette (PROJ-54) — vier Blätter ohne Person,
+                    jedes die Vorlage der folgenden. Anders als „Sheet" hängt
+                    sie NICHT an der Kategorie: Ein Komplett-Look braucht seine
+                    Ansichten genauso wie ein einzelnes Kleidungsstück.
+                    Der Grund fürs Sperren steht im `title` — ein grauer Knopf
+                    ohne Erklärung sieht aus wie ein kaputter. */}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={ketteGesperrtGrund !== null}
+                  title={ketteGesperrtGrund ?? 'Vorne freigestellt, Rückseite, Details und Referenzsheet nacheinander erzeugen'}
+                  className="h-7 px-2 shrink-0 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 disabled:opacity-40 text-[11px] font-medium gap-1"
+                  onClick={() => setKetteDialogOpen(true)}
+                >
+                  <Link2 className="h-3 w-3" />
+                  Referenzkette
+                </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingOutfit(outfit); setOutfitFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -797,6 +832,17 @@ export default function OutfitsPage() {
           open={sheetDialogOpen}
           onClose={() => setSheetDialogOpen(false)}
           asset={outfit}
+        />
+      )}
+
+      {outfit && (
+        <OutfitKetteDialog
+          offen={ketteDialogOpen}
+          onClose={() => setKetteDialogOpen(false)}
+          outfit={outfit}
+          // Die Kette legt Varianten und Bilder an — ohne das Nachladen stünde
+          // die Detailspalte weiter auf dem Stand von vor dem Lauf.
+          onAenderung={() => { void refetchDetail() }}
         />
       )}
 
