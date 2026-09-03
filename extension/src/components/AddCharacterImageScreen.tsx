@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { bildSichern, sicherungsHinweis } from '../lib/bildSichern'
 import { CropTool } from './CropTool'
 import type { PendingCharacterImageAdd } from '../types'
 
@@ -27,6 +28,10 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
   const [imageError, setImageError] = useState(false)
   const [croppedDataUrl, setCroppedDataUrl] = useState<string | null>(null)
   const [showCrop, setShowCrop]     = useState(false)
+  // Sichtbarer Zustand waehrend das Bild kopiert wird — ein fremder Server
+  // laesst sich Zeit, und ein stummer Knopf sieht dann aus wie ein Haenger.
+  const [sicherung, setSicherung]   = useState<string | null>(null)
+  const [hinweis, setHinweis]       = useState<string | null>(null)
 
   useEffect(() => {
     supabase
@@ -52,6 +57,16 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setError('Nicht eingeloggt.'); setSaving(false); return }
+
+      // ── Bild zuerst in den eigenen Speicher holen ───────────────────────
+      // Hier landete bisher entweder die fremde Adresse (laeuft ab, dann ist
+      // das Bild weg) oder — nach einem Zuschnitt — die vollstaendige
+      // `data:`-Adresse IN der Datenbankspalte. Das laedt zwar, blaeht die
+      // Zeile aber um die gesamte Bilddatei auf. Beides gehoert in den
+      // Speicher; erst dann taugt das Bild auch als Referenz.
+      setSicherung(croppedDataUrl ? 'Zuschnitt wird gesichert …' : 'Bild wird gesichert …')
+      const gesichert = await bildSichern(croppedDataUrl ?? capture.imageUrl, 'character')
+      setSicherung(null)
 
       // Get or create first variant
       const { data: variants } = await supabase
@@ -87,7 +102,7 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
       const { error: imgErr } = await supabase.from('character_images').insert({
         variant_id: variantId,
         user_id: user.id,
-        url: croppedDataUrl ?? capture.imageUrl,
+        url: gesichert.url,
         storage_path: null,
         sort_order: count ?? 0,
       })
@@ -100,7 +115,12 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
 
       setSaving(false)
       setSaved(true)
-      setTimeout(() => onSaved(), 800)
+
+      // Nur wegblenden, wenn es nichts zu lesen gibt. Ein Hinweis, der nach
+      // 800 ms verschwindet, ist kein Hinweis.
+      const h = sicherungsHinweis([gesichert])
+      if (h) setHinweis(h)
+      else setTimeout(() => onSaved(), 800)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unbekannter Fehler')
       setSaving(false)
@@ -221,6 +241,16 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
         )}
       </div>
 
+      {hinweis && (
+        <div className="text-xs text-amber-300 bg-amber-950/40 border-t border-amber-900/50 px-3 py-1.5 shrink-0 space-y-1.5">
+          <p>{hinweis}</p>
+          <button type="button" onClick={onSaved}
+            className="px-2 py-1 rounded bg-amber-700/60 hover:bg-amber-600/60 text-amber-50 text-[11px] font-medium transition-colors">
+            Verstanden
+          </button>
+        </div>
+      )}
+
       {error && (
         <p className="text-xs text-red-400 bg-red-950/40 border-t border-red-900/50 px-3 py-1.5 shrink-0">{error}</p>
       )}
@@ -234,7 +264,7 @@ export function AddCharacterImageScreen({ capture, onSaved, onBack }: Props) {
             saved ? 'bg-emerald-600' : 'bg-violet-600 hover:bg-violet-500'
           }`}
         >
-          {saved ? '✓ Hinzugefügt!' : saving ? 'Speichern…' : selectedId ? 'Bild hinzufügen' : 'Charakter auswählen'}
+          {saved ? '✓ Hinzugefügt!' : sicherung ? sicherung : saving ? 'Speichern…' : selectedId ? 'Bild hinzufügen' : 'Charakter auswählen'}
         </button>
       </div>
     </div>

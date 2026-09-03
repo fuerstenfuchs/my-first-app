@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { bilderSichern, sicherungsHinweis } from '../lib/bildSichern'
 import { analyzeAsset } from '../lib/analyzeAsset'
 import type { PendingOutfitCapture, OutfitImage } from '../types'
 
@@ -20,6 +21,11 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
   const [analysisStatus, setAnalysisStatus] = useState<'pending' | 'completed'>('pending')
   const [error, setError]             = useState<string | null>(null)
   const [imgErrors, setImgErrors]     = useState<Set<number>>(new Set())
+  // Ein Outfit hat mehrere Ansichten. Die werden nacheinander gesichert, und
+  // hier steht, bei welcher wir gerade sind — sonst sieht das Speichern bei
+  // acht Bildern von einem langsamen Server wie ein Absturz aus.
+  const [sicherung, setSicherung] = useState<string | null>(null)
+  const [hinweis, setHinweis]     = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
   // Listen for additional images added via right-click while popup is open
@@ -65,7 +71,27 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
     if (!user) { setError('Nicht eingeloggt.'); setSaving(false); return }
 
     const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean)
-    const firstImageUrl = images[0]?.imageUrl ?? null
+
+    // ── Alle Ansichten zuerst in den eigenen Speicher holen ───────────────
+    // Bis PROJ-49 standen hier die fremden Adressen direkt in `outfit_images`.
+    // Von 15 Outfits mit Bild zeigten am 03.09.2026 dreizehn nach aussen —
+    // die schlechteste Quote aller Bausteine. Solche Verweise laufen ab, und
+    // dann ist das Bild weg, ohne dass irgendetwas meldet.
+    //
+    // ERST sichern, DANN das Outfit anlegen: Bricht das Sichern mittendrin ab,
+    // gibt es lieber gar keinen halben Datensatz als einen mit Luecken.
+    const ergebnisse = await bilderSichern(
+      images.map(i => i.imageUrl),
+      'outfit',
+      (fertig, gesamt) => setSicherung(
+        gesamt > 1
+          ? `Bild ${Math.min(fertig + 1, gesamt)} von ${gesamt} wird gesichert …`
+          : 'Bild wird gesichert …',
+      ),
+    )
+    setSicherung(null)
+
+    const firstImageUrl = ergebnisse[0]?.url ?? null
 
     // 1. Create outfit
     const { data: outfit, error: outfitErr } = await supabase
@@ -109,7 +135,7 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
       await supabase.from('outfit_images').insert({
         variant_id: variant.id,
         user_id: user.id,
-        url: images[i].imageUrl,
+        url: ergebnisse[i]!.url,
         storage_path: null,
         sort_order: i,
       })
@@ -117,7 +143,11 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
 
     setSaving(false)
     setSaved(true)
-    setTimeout(() => onSaved(), 800)
+
+    // Nur wegblenden, wenn es nichts zu lesen gibt.
+    const h = sicherungsHinweis(ergebnisse)
+    if (h) setHinweis(h)
+    else setTimeout(() => onSaved(), 800)
   }
 
   function removeImage(index: number) {
@@ -244,6 +274,16 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
           />
         </div>
 
+        {hinweis && (
+          <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-900/50 rounded px-2 py-1.5 space-y-1.5">
+            <p>{hinweis}</p>
+            <button type="button" onClick={onSaved}
+              className="px-2 py-1 rounded bg-amber-700/60 hover:bg-amber-600/60 text-amber-50 text-[11px] font-medium transition-colors">
+              Verstanden
+            </button>
+          </div>
+        )}
+
         {error && (
           <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded px-2 py-1">{error}</p>
         )}
@@ -258,7 +298,7 @@ export function OutfitCaptureScreen({ capture, onSaved, onBack }: Props) {
             saved ? 'bg-emerald-600' : 'bg-orange-600 hover:bg-orange-500'
           }`}
         >
-          {saved ? '✓ Outfit gespeichert!' : saving ? 'Speichern…' : `🧥 Als Outfit speichern (${images.length} Bild${images.length !== 1 ? 'er' : ''})`}
+          {saved ? '✓ Outfit gespeichert!' : sicherung ? sicherung : saving ? 'Speichern…' : `🧥 Als Outfit speichern (${images.length} Bild${images.length !== 1 ? 'er' : ''})`}
         </button>
       </div>
     </div>

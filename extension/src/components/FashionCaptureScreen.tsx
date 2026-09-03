@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { bildSichern, sicherungsHinweis, type Sicherungsergebnis } from '../lib/bildSichern'
 import { analyzeAsset } from '../lib/analyzeAsset'
 import { CropTool } from './CropTool'
 import type { PendingFashionCapture } from '../types'
@@ -37,6 +38,13 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
   const [analyzing, setAnalyzing]     = useState(false)
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>('pending')
   const [croppedDataUrl, setCroppedDataUrl] = useState<string | null>(null)
+  // Was das Sichern gerade tut — steht sichtbar auf dem Knopf, damit das
+  // Speichern nicht wie ein Haenger aussieht. Ein fremder Server laesst sich
+  // Zeit, und ohne diese Zeile sieht man dem Knopf das nicht an.
+  const [sicherung, setSicherung] = useState<string | null>(null)
+  // Ist das Sichern misslungen, wird der Baustein trotzdem angelegt — aber
+  // dann NICHT weggeblendet, sondern mit diesem Hinweis stehen gelassen.
+  const [hinweis, setHinweis]     = useState<string | null>(null)
   const [showCrop, setShowCrop]       = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
 
@@ -87,6 +95,33 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
 
     const parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean)
 
+    // ── Bild zuerst in den eigenen Speicher holen ─────────────────────────
+    // Bis PROJ-49 stand hier die fremde Adresse direkt in der Spalte. Solche
+    // Verweise laufen ab (Facebook-CDN und aehnliche) — am 03.09.2026 waren
+    // 28 von 431 schon tot, ohne dass je etwas gemeldet haette. Und als
+    // Referenzbild taugen sie ohnehin nicht.
+    const ergebnisse: Sicherungsergebnis[] = []
+
+    let coverUrl: string | null = null
+    if (hasImage && capture.imageUrl) {
+      setSicherung('Bild wird gesichert …')
+      const r = await bildSichern(capture.imageUrl, 'fashion')
+      ergebnisse.push(r)
+      coverUrl = r.url
+    }
+
+    // Der Zuschnitt kommt als `data:`-Adresse herein und landete bisher in
+    // voller Laenge IN der Datenbankspalte. Das laedt zwar, blaeht die Zeile
+    // aber um die gesamte Bilddatei auf.
+    let cropUrl: string | null = null
+    if (croppedDataUrl) {
+      setSicherung('Zuschnitt wird gesichert …')
+      const r = await bildSichern(croppedDataUrl, 'fashion')
+      ergebnisse.push(r)
+      cropUrl = r.url
+    }
+    setSicherung(null)
+
     const { error: insertError } = await supabase
       .from('fashion_assets')
       .insert({
@@ -95,8 +130,8 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
         description: description.trim() || null,
         category,
         tags: parsedTags,
-        cover_image_url: hasImage ? capture.imageUrl : null,
-        crop_image_url: croppedDataUrl ?? null,
+        cover_image_url: coverUrl,
+        crop_image_url: cropUrl,
         source_url: capture.sourceUrl || null,
         source_title: capture.sourceTitle || null,
       })
@@ -109,7 +144,12 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
 
     setSaving(false)
     setSaved(true)
-    setTimeout(() => onSaved(), 800)
+
+    // Nur wegblenden, wenn es nichts zu lesen gibt. Ein Hinweis, der nach
+    // 800 ms verschwindet, ist kein Hinweis.
+    const h = sicherungsHinweis(ergebnisse)
+    if (h) setHinweis(h)
+    else setTimeout(() => onSaved(), 800)
   }
 
   // Full-screen crop mode: replaces the entire form to avoid layout shifts
@@ -280,6 +320,16 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
           />
         </div>
 
+        {hinweis && (
+          <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-900/50 rounded px-2 py-1.5 space-y-1.5">
+            <p>{hinweis}</p>
+            <button type="button" onClick={onSaved}
+              className="px-2 py-1 rounded bg-amber-700/60 hover:bg-amber-600/60 text-amber-50 text-[11px] font-medium transition-colors">
+              Verstanden
+            </button>
+          </div>
+        )}
+
         {error && (
           <p className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded px-2 py-1">{error}</p>
         )}
@@ -294,7 +344,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
             saved ? 'bg-emerald-600' : 'bg-rose-600 hover:bg-rose-500'
           }`}
         >
-          {saved ? '✓ Gespeichert!' : saving ? 'Speichern…' : '🛍️ Als Fashion Asset speichern'}
+          {saved ? '✓ Gespeichert!' : sicherung ? sicherung : saving ? 'Speichern…' : '🛍️ Als Fashion Asset speichern'}
         </button>
       </div>
     </div>

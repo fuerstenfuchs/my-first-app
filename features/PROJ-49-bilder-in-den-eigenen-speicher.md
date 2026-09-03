@@ -94,5 +94,34 @@ kann laufen.
   Adressen stehen darin, bevor sie überschrieben werden — nichts geht
   unwiederbringlich verloren.
 
-**Noch zu bauen:** Punkt 1 der Spezifikation — beim Erfassen kopieren, damit
-sich der Bestand nicht wieder aufbaut.
+## Punkt 1 gebaut (03.09.2026) — beim Erfassen kopieren
+
+Neu: `extension/src/lib/bildSichern.ts`. `bildSichern(quelle, art)` holt ein Bild
+(auch eine `data:`-Adresse) und legt es unter `${user.id}/erfasst/<uuid>.<endung>`
+im passenden Eimer ab. Liegt die Adresse schon im eigenen Speicher, passiert
+nichts. Scheitert das Kopieren, kommt die **ursprüngliche** Adresse zurück plus
+ein Satz zum Warum — der Baustein wird trotzdem angelegt.
+
+Die Erweiterung darf fremde Adressen selbst abrufen (`<all_urls>` in den
+`host_permissions`). Die Server-Route `/api/referenz-holen` wird hier nicht
+gebraucht.
+
+Umgestellt sind alle acht genannten Stellen in sieben Bildschirmen — dazu die
+vier `crop_image_url`-Spalten in den Erfassungsbildschirmen, wo bisher der ganze
+Zuschnitt als `data:`-Text in der Datenbankzeile stand.
+
+**Drei Entscheidungen, die man kennen sollte:**
+
+- **Der Bildtyp wird an den ersten Bytes abgelesen, nicht am `Content-Type`.**
+  Manche Server liefern `application/octet-stream`, manche eine Fehlerseite in
+  HTML mit Status 200. Gegengeprüft an echten Dateien: JPEG/PNG/GIF/WebP/BMP
+  werden erkannt, HTML und SVG abgelehnt.
+- **`data:`-Adressen werden mit `atob` aufgelöst, nicht über `fetch`.** Auf einer
+  Erweiterungsseite gilt eine eigene Inhaltsrichtlinie; ein Umweg über das Netz
+  bei Daten, die schon im Speicher liegen, wäre nur eine Fehlerquelle mehr.
+- **Bei einem misslungenen Kopieren blendet der Bildschirm nicht weg.** Sonst
+  stünde der Hinweis 800 ms lang da. Mark muss „Verstanden" drücken.
+
+**Nicht geprüft:** Der Ablauf im Browser. Das geht nur, indem Mark die
+Erweiterung neu lädt (`dist/` ist gebaut) und einmal etwas erfasst — je einen
+Fund von einer fremden Seite und einen mit Zuschnitt.
