@@ -63,12 +63,14 @@ export const KOPF_PROMPT = `Using @image1-3 as the reference character, create a
 
 Preserve exact facial structure and appearance. Do not modify or reinterpret any facial feature.
 
-The sheet should focus entirely on facial consistency and include:
+The sheet contains exactly five panels, arranged in a single horizontal row — nothing above or below, no second row, no grid:
 - Front-facing headshot
 - 3/4 left view
 - Left profile view
 - 3/4 right view
 - Right profile view
+
+CRITICAL RULE: each of these five views appears exactly ONCE. Do not repeat the sequence, do not duplicate the row, do not add a second set of the same views anywhere on the sheet.
 
 Use neutral facial expressions throughout.
 
@@ -92,12 +94,14 @@ function ausdrueckePrompt(gender: Gender): string {
 
 Preserve exact facial structure, facial features, skin tone, hairstyle, hair color, eye color, and overall appearance. Do not modify or reinterpret the character in any way.
 
-Include the following expressions:
+The sheet contains exactly five panels, arranged in a single horizontal row — nothing above or below, no second row, no grid:
 - Neutral expression
 - Natural smile
 - Big smile
 - Thoughtful expression
 - Confident expression
+
+CRITICAL RULE: each of these five expressions appears exactly ONCE. Do not repeat the sequence, do not duplicate the row, do not add a second set of the same expressions anywhere on the sheet.
 
 Ensure that every expression still clearly looks like the same ${gender}. Maintain consistency in facial proportions, eye shape, nose shape, lip shape, and overall facial structure.
 
@@ -122,11 +126,13 @@ export const KOERPER_PROMPT = `Using @image1-3 as the reference character, creat
 
 Preserve exact facial features, body proportions, skin tone, hairstyle, hair color, and overall appearance. Do not redesign, alter, or reinterpret the character in any way.
 
-Display the person in the following views:
+The sheet contains exactly four panels, arranged in a single horizontal row — nothing above or below, no second row, no grid:
 - Full-body front view
 - Full-body 3/4 left view
 - Full-body left side profile
 - Full-body back view
+
+CRITICAL RULE: each of these four views appears exactly ONCE. Do not repeat the sequence, do not duplicate the row, do not add a second set of the same views anywhere on the sheet.
 
 Use the exact same outfit, hairstyle, and styling in every view.
 
@@ -221,12 +227,14 @@ const GESICHTSDETAILS_PROMPT = `Using @image1-3 as the reference character, crea
 
 Preserve exact appearance and facial structure. Do not redesign, alter, or reinterpret any feature.
 
-Include detailed close-up references showing:
+The sheet contains exactly five panels, arranged in a single horizontal row — nothing above or below, no second row, no grid:
 - Eyes
 - Eyebrows
 - Nose
 - Lips
 - Jawline and face shape
+
+CRITICAL RULE: each of these five details appears exactly ONCE. Do not repeat the sequence, do not duplicate the row, do not add a second set of the same details anywhere on the sheet.
 
 Each detail should be clearly visible and given enough space to capture fine characteristics accurately.
 
