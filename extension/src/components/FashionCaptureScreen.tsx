@@ -122,6 +122,13 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
     }
     setSicherung(null)
 
+    // Zuschnitt vor Original: Sonst landet als Titelbild immer das
+    // unbeschnittene Bild, obwohl `crop_image_url` daneben brav den
+    // Zuschnitt enthaelt — eine Spalte, die nirgends im Projekt gelesen wird.
+    // Gleicher Befund und gleicher Fix wie in CharacterCaptureScreen.tsx am
+    // 03.09.2026.
+    const titelbildUrl = cropUrl ?? coverUrl
+
     const { error: insertError } = await supabase
       .from('fashion_assets')
       .insert({
@@ -130,7 +137,7 @@ export function FashionCaptureScreen({ capture, onSaved, onBack, onSwitchToOutfi
         description: description.trim() || null,
         category,
         tags: parsedTags,
-        cover_image_url: coverUrl,
+        cover_image_url: titelbildUrl,
         crop_image_url: cropUrl,
         source_url: capture.sourceUrl || null,
         source_title: capture.sourceTitle || null,

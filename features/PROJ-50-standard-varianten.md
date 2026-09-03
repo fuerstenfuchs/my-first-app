@@ -91,6 +91,35 @@ dieses Feature selbst:
 - **Keine Beschreibung an der „Calvanize"-Variante**, die erklärt, wofür sie
   steht — kosmetisch, siehe PROJ-51.
 
+## Nachtrag (03.09.2026) — Zuschnitt wurde nie zum Titelbild
+
+Mark meldete: ein über die Erweiterung angelegter Charakter zeigte nirgends
+eine Variante für sein Titelbild, und ein Kopf-Sheet-Auftrag scheiterte an der
+Moderation, obwohl er das Bild beim Anlegen extra zugeschnitten hatte.
+
+Ursache, am Code bestätigt: `CharacterCaptureScreen.tsx` lud sowohl das
+Original als auch den Zuschnitt hoch, benutzte für `cover_image_url` aber
+immer das **Original** (`coverUrl`) — der Zuschnitt landete nur in
+`crop_image_url`, einer Spalte, die im ganzen Projekt nirgends wieder gelesen
+wird. Das unbeschnittene Bild — mit allem, was Mark extra hatte entfernen
+wollen — war also immer die tatsächliche Referenz, auch für die
+Kopf-Sheet-Generierung. Das erklärt die Moderationsablehnung direkt.
+
+Behoben: `cover_image_url` nimmt jetzt `cropUrl ?? coverUrl`. Zusätzlich legt
+die Erweiterung das gewählte Titelbild jetzt auch in die (dank dieses
+Features garantiert vorhandene) Variante „Kopf" — genau das, was Mark an der
+In-App-Erzeugung als Vorbild nannte: „Wenn man einen Charakter normal anlegt,
+direkt über die Seite, dann wird eine Variante generiert."
+
+**Derselbe Befund bestand identisch** in `FashionCaptureScreen.tsx`,
+`LocationCaptureScreen.tsx`, `PoseCaptureScreen.tsx` — dort nur die
+URL-Priorität korrigiert (keine Variante dort, das System kennt für diese drei
+keine Standard-Fächer).
+
+**Nicht rückwirkend korrigiert**: bereits angelegte Charaktere/Assets mit
+falschem Titelbild bleiben, wie sie sind. Mark kann sie über die jetzt
+sichtbare Variante (bei Charakteren) bzw. von Hand neu setzen.
+
 ## Folgefeature
 
 PROJ-51 (noch nicht spezifiziert): ein Knopf, der das „Calvanize

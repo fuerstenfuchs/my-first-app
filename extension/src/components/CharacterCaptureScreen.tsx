@@ -129,6 +129,17 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
     }
     setSicherung(null)
 
+    // Das TATSAECHLICH gewaehlte Bild ist der Zuschnitt, wenn Mark einen
+    // gemacht hat — sonst das Original. Vorher stand hier immer `coverUrl`
+    // (das Original), der Zuschnitt landete nur in `crop_image_url`, einer
+    // Spalte, die nirgends im Projekt wieder gelesen wird. Das Bild, das man
+    // extra zuschneidet, WEIL es zum Original noch etwas zeigt, das nicht
+    // hinsoll, wurde also nie das Titelbild, sondern immer das Original mit
+    // allem drauf. Genau das hat am 03.09.2026 auch den Kopf-Sheet-Auftrag
+    // an der Moderation scheitern lassen: nicht der Zuschnitt, sondern das
+    // unbeschnittene Original wurde als Referenz verschickt.
+    const titelbildUrl = cropUrl ?? coverUrl
+
     const { data: neuerCharakter, error: insertError } = await supabase
       .from('characters')
       .insert({
@@ -136,7 +147,7 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
         name: name.trim(),
         description: description.trim() || null,
         tags: parsedTags,
-        cover_image_url: coverUrl,
+        cover_image_url: titelbildUrl,
         crop_image_url: cropUrl,
         source_url: capture.sourceUrl || null,
         source_title: capture.sourceTitle || null,
@@ -167,10 +178,34 @@ export function CharacterCaptureScreen({ capture, onSaved, onBack }: Props) {
           name:         varName,
           sort_order:   idx,
         })))
-        .select('id')
+        .select('id, name')
       if (varError) variantenFehler = varError.message
       else if ((angelegt ?? []).length !== STANDARD_VARIANTEN.length) {
         variantenFehler = `Nur ${angelegt?.length ?? 0} von ${STANDARD_VARIANTEN.length} Varianten kamen an.`
+      }
+
+      // Das Titelbild auch als Variante ablegen — Mark: „Wenn man einen
+      // Charakter normal anlegt, direkt ueber die Seite, dann wird eine
+      // Variante generiert." Bisher war das Titelbild hier eine reine
+      // URL-Spalte am Charakter, ohne Variante — nirgends sichtbar, nirgends
+      // austauschbar. Das Fach "Kopf" existiert dank der Zeilen oben bereits;
+      // hier bekommt es sein erstes Bild.
+      const kopfVariante = (angelegt ?? []).find(
+        v => String(v.name ?? '').trim().toLowerCase() === 'kopf',
+      )
+      if (kopfVariante && titelbildUrl) {
+        const { error: bildErr } = await supabase.from('character_images').insert({
+          variant_id: kopfVariante.id,
+          user_id:    user.id,
+          url:        titelbildUrl,
+          storage_path: null,
+          sort_order: 0,
+        })
+        if (bildErr) {
+          variantenFehler = variantenFehler
+            ? `${variantenFehler} Titelbild konnte nicht als Kopf-Variante abgelegt werden: ${bildErr.message}`
+            : `Titelbild konnte nicht als Kopf-Variante abgelegt werden: ${bildErr.message}`
+        }
       }
     } else {
       variantenFehler = 'Die Kennung des neuen Charakters kam nicht zurueck.'
