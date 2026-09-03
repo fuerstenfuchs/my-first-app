@@ -31,8 +31,14 @@ describe('Reihenfolge und Namen', () => {
   })
 
   it('das Körperfoto trägt einen eigenen Namen, keinen der drei Kettennamen', () => {
-    expect(KOERPERFOTO_VARIANTE).toBe('Körperfoto')
+    expect(KOERPERFOTO_VARIANTE).toBe('Körper Original')
     expect(Object.values(VARIANTEN_NAME)).not.toContain(KOERPERFOTO_VARIANTE)
+    // Der gefährliche Nachbar: „Körper Original" darf NIE als „Körper" gelten,
+    // sonst hielte die Kette den Körper-Schritt für erledigt, sobald Mark ein
+    // eigenes Ausgangsbild hochlädt — derselbe Fehler, den „Kopf Original"
+    // vermeidet.
+    expect(KOERPERFOTO_VARIANTE.trim().toLowerCase())
+      .not.toBe(VARIANTEN_NAME.koerper.trim().toLowerCase())
   })
 
   // Mark am 03.09.2026: ein einzelnes Ausgangsfoto (aus der Erweiterung oder

@@ -51,9 +51,10 @@ describe('fehlendeStandardVarianten', () => {
   })
 
   it('lässt sich von fremden Varianten nicht beirren', () => {
-    // „Körperfoto" ist eine EIGENE Variante der Referenzkette und darf nicht
-    // als „Körper" durchgehen — sonst bliebe das Körper-Fach ungebaut.
-    const fehlt = fehlendeStandardVarianten(['Körperfoto', 'Gesichtsdetails'])
+    // „Körper Original" ist Marks eigenes Ausgangsbild und darf NICHT als
+    // „Körper" durchgehen — sonst bliebe das Körper-Fach ungebaut und die
+    // Kette hielte ihren Körper-Schritt für erledigt.
+    const fehlt = fehlendeStandardVarianten(['Körper Original', 'Kopf Original', 'Gesichtsdetails'])
     expect(fehlt).toEqual(STANDARD_VARIANTEN)
   })
 })
@@ -66,7 +67,8 @@ describe('istStandardVariante', () => {
 
   it('sagt bei allem anderen nein', () => {
     expect(istStandardVariante('Gesichtsausdruck')).toBe(false)
-    expect(istStandardVariante('Körperfoto')).toBe(false)
+    expect(istStandardVariante('Körper Original')).toBe(false)
+    expect(istStandardVariante('Kopf Original')).toBe(false)
     expect(istStandardVariante('')).toBe(false)
   })
 })

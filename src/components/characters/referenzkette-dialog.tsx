@@ -41,7 +41,7 @@ import { cn } from '@/lib/utils'
 
 const BESCHREIBUNG: Record<KettenSchritt, string> = {
   kopf:          'Gesicht aus allen Perspektiven — Referenz ist das Titelbild.',
-  koerper:       'Ganzkörper, neutrale Kleidung — Referenz ist der erzeugte Kopf plus eine Körperquelle (eigenes Körperfoto, sonst das Titelbild).',
+  koerper:       'Ganzkörper, neutrale Kleidung — Referenz ist der erzeugte Kopf plus eine Körperquelle (eigenes „Körper Original", sonst das Titelbild).',
   referenzsheet: 'Großer 3/4-Kopf, Körper vorne ohne Kopf, Körper hinten — Referenz ist Kopf und Körper.',
 }
 
@@ -285,7 +285,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
 
             {/* ── Körperfoto ──────────────────────────────────────────── */}
             <div className="space-y-2">
-              <Label className="text-xs">Eigenes Körperfoto</Label>
+              <Label className="text-xs">Eigenes „Körper Original"</Label>
 
               {koerperfotoUrl ? (
                 <div className="flex items-start gap-3">
@@ -293,12 +293,12 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={koerperfotoUrl}
-                      alt="Hochgeladenes Körperfoto"
+                      alt="Hochgeladenes Körper-Original"
                       className="h-full w-full object-cover"
                     />
                   </div>
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    <p className="text-xs text-emerald-400/80">Körperfoto liegt vor.</p>
+                    <p className="text-xs text-emerald-400/80">„Körper Original" liegt vor.</p>
                     <Button
                       size="sm"
                       variant="outline"
@@ -322,7 +322,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                   {koerperfotoLaedt
                     ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                     : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-                  Körperfoto auswählen
+                  „Körper Original" auswählen
                 </Button>
               )}
 

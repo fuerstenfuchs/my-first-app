@@ -136,6 +136,33 @@ Fehler schon vor PROJ-50 enthielt, nur bislang folgenlos, weil es die
 Referenzkette noch nicht gab. Test in `referenzkette.test.ts` ergänzt: der
 neue Name darf nie mit `VARIANTEN_NAME.kopf` zusammenfallen.
 
+### Dritter Durchgang — die Upload-Fächer im Anlege-Formular (03.09.2026)
+
+Mark, mit Bildschirmfoto: „Unten die Referenzbilder sind noch vom alten
+Ablauf. Da sollte stehen Kopf Original und Körper Original … wobei man nicht
+beide eingeben muss."
+
+Das Formular bot weiterhin **Kopf**, **Ausdrücke**, **Gesichtsdetails** an —
+drei Fächer aus der Zeit vor der Referenzkette. Zwei Denkfehler darin:
+„Ausdrücke" und „Gesichtsdetails" sind Blätter, die die KI *erzeugt*, keine
+Fotos, die man mitbringt; und ein Bild im Fach „Kopf" hätte die Kette glauben
+lassen, das Kopf-Sheet sei schon fertig (siehe zweiter Durchgang).
+
+Jetzt genau zwei Fächer, beide freiwillig: **Kopf Original** und **Körper
+Original**. Beide Namen kommen aus `referenzkette.ts` und werden im Formular
+nicht abgeschrieben — der angezeigte Name IST der Variantenname, unter dem die
+Kette später sucht.
+
+**Umbenennung:** `KOERPERFOTO_VARIANTE` hieß bis dahin „Körperfoto" und heißt
+jetzt „Körper Original". Vor der Umbenennung nachgemessen: In der Datenbank
+existierte **keine einzige** Variante dieses Namens, es konnte also nichts
+verwaisen. Umgekehrt hatte Mark „Kopf original" bereits zweimal von Hand
+angelegt (Lini, Vanessa Liberté) — die Suche vergleicht ohne Rücksicht auf
+Groß-/Kleinschreibung, seine bestehenden Fächer passen also weiter.
+
+Bestehende „Gesichtsausdruck"- (15) und „Gesichtsdetails"-Varianten (13)
+bleiben unangetastet; sie werden nur nicht mehr beim Anlegen angeboten.
+
 ## Folgefeature
 
 PROJ-51 (noch nicht spezifiziert): ein Knopf, der das „Calvanize

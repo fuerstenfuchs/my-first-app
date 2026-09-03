@@ -46,7 +46,15 @@ export const SCHRITT_LABEL: Record<KettenSchritt, string> = {
  * Kettenergebnis — läge es mit in derselben Zählung, sähe die Kette nach dem
  * Hochladen eines Körperfotos aus, als sei sie schon einen Schritt weiter.
  */
-export const KOERPERFOTO_VARIANTE = 'Körperfoto'
+/**
+ * Hieß bis zum 03.09.2026 „Körperfoto". Mark benennt seine beiden
+ * mitgebrachten Ausgangsbilder selbst „Kopf Original" und „Körper Original" —
+ * er hatte „Kopf original" schon von Hand angelegt, bevor er es mir sagte.
+ * Ein Name, den der Benutzer ohnehin benutzt, ist der richtige. Zum Zeitpunkt
+ * der Umbenennung gab es keine einzige Variante namens „Körperfoto" in der
+ * Datenbank (nachgemessen), es konnte also nichts verwaisen.
+ */
+export const KOERPERFOTO_VARIANTE = 'Körper Original'
 
 /**
  * Wohin ein einzelnes, von Mark selbst mitgebrachtes Ausgangsfoto gehört —

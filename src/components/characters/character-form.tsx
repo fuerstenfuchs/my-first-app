@@ -15,22 +15,25 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Character, CharacterInput, InitialSlot } from '@/hooks/use-characters'
+import { KOPF_ORIGINAL_VARIANTE, KOERPERFOTO_VARIANTE } from '@/lib/referenzkette'
 
 /**
- * `label` ist NICHT nur Beschriftung — es wird als Variantenname gespeichert
- * (`InitialSlot.name`). Jeder neue Charakter bekommt seit dem 03.09.2026
- * automatisch die sieben leeren Fächer aus `@/lib/charakter-varianten`; ein
- * hochgeladenes Bild soll in das PASSENDE davon fallen. Deshalb heißt der
- * mittlere Slot „Ausdrücke" wie dort und nicht mehr „Gesichtsausdruck" —
- * sonst entstünde daneben eine achte, abweichend benannte Variante.
+ * Die Bilder, die Mark selbst mitbringt — beide freiwillig, keines Pflicht.
  *
- * `key` bleibt `gesichtsausdruck`: Er ist nur der interne Bezeichner der
- * Formularfelder und taucht in keiner Datenbankzeile auf.
+ * Bis zum 03.09.2026 standen hier „Kopf", „Ausdrücke" und „Gesichtsdetails",
+ * also drei Fächer aus der Zeit VOR der Referenzkette. Zwei Probleme damit:
+ * „Ausdrücke" und „Gesichtsdetails" sind Blätter, die die KI erzeugt, keine
+ * Fotos, die man mitbringt — und ein Bild im Fach „Kopf" ließ die
+ * Referenzkette glauben, das Kopf-Sheet sei schon fertig.
+ *
+ * Jetzt genau die zwei Ausgangsbilder, die die Kette wirklich als Vorlage
+ * nimmt: das Gesicht und (falls vorhanden) der Körperbau. Die Namen kommen
+ * aus `referenzkette.ts` und werden NICHT hier abgeschrieben — der Name ist
+ * zugleich der Variantenname, unter dem die Kette danach sucht.
  */
 const PREDEFINED_SLOTS = [
-  { key: 'kopf',             label: 'Kopf' },
-  { key: 'gesichtsausdruck', label: 'Ausdrücke' },
-  { key: 'gesichtsdetails',  label: 'Gesichtsdetails' },
+  { key: 'kopf_original',    label: KOPF_ORIGINAL_VARIANTE },
+  { key: 'koerper_original', label: KOERPERFOTO_VARIANTE },
 ] as const
 
 type SlotKey = typeof PREDEFINED_SLOTS[number]['key']
@@ -51,13 +54,12 @@ export function CharacterForm({ open, onClose, character, onSave }: Props) {
   const [tags, setTags]               = useState<string[]>([])
   const [saving, setSaving]           = useState(false)
 
-  const [slotFiles, setSlotFiles]       = useState<Record<SlotKey, File | null>>({ kopf: null, gesichtsausdruck: null, gesichtsdetails: null })
-  const [slotPreviews, setSlotPreviews] = useState<Record<SlotKey, string | null>>({ kopf: null, gesichtsausdruck: null, gesichtsdetails: null })
+  const [slotFiles, setSlotFiles]       = useState<Record<SlotKey, File | null>>({ kopf_original: null, koerper_original: null })
+  const [slotPreviews, setSlotPreviews] = useState<Record<SlotKey, string | null>>({ kopf_original: null, koerper_original: null })
 
   const fileRefs = {
-    kopf:             useRef<HTMLInputElement>(null),
-    gesichtsausdruck: useRef<HTMLInputElement>(null),
-    gesichtsdetails:  useRef<HTMLInputElement>(null),
+    kopf_original:    useRef<HTMLInputElement>(null),
+    koerper_original: useRef<HTMLInputElement>(null),
   }
 
   useEffect(() => {
@@ -73,8 +75,8 @@ export function CharacterForm({ open, onClose, character, onSave }: Props) {
 
   function clearSlots() {
     Object.values(slotPreviews).forEach(u => u && URL.revokeObjectURL(u))
-    setSlotFiles({ kopf: null, gesichtsausdruck: null, gesichtsdetails: null })
-    setSlotPreviews({ kopf: null, gesichtsausdruck: null, gesichtsdetails: null })
+    setSlotFiles({ kopf_original: null, koerper_original: null })
+    setSlotPreviews({ kopf_original: null, koerper_original: null })
   }
 
   const setSlot = useCallback((key: SlotKey, file: File | null) => {
@@ -184,10 +186,14 @@ export function CharacterForm({ open, onClose, character, onSave }: Props) {
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
               <p className="text-xs text-muted-foreground -mt-1">
-                Jedes Bild wird als eigene Variante gespeichert.
+                Deine eigenen Ausgangsbilder — beides freiwillig, eines reicht.
+                Die Referenzkette nimmt „{KOPF_ORIGINAL_VARIANTE}" fürs Gesicht
+                und „{KOERPERFOTO_VARIANTE}" für den Körperbau; ohne
+                „{KOERPERFOTO_VARIANTE}" benutzt sie fürs Gesicht wie für den
+                Körper das Titelbild.
               </p>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {PREDEFINED_SLOTS.map(slot => {
                   const preview = slotPreviews[slot.key]
                   const hasFile = !!slotFiles[slot.key]
