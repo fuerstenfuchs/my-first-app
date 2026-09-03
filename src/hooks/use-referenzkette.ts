@@ -404,13 +404,23 @@ export function useReferenzkette(
         .upload(pfad, datei, { contentType: datei.type || 'image/jpeg', upsert: false })
       if (hochErr) { toast.error(`Körperfoto konnte nicht abgelegt werden: ${hochErr.message}`); return false }
 
+      // `sort_order` ist in der Datenbank ein normales 4-Byte `integer`
+      // (max. rund 2,1 Milliarden) — `Date.now()` liegt heute bei rund
+      // 1,76 Billionen und ließ den Insert mit „out of range for type
+      // integer" scheitern. Stattdessen wie überall sonst im Projekt: die
+      // vorhandenen Bilder DIESER Variante zählen, das neue kommt ans Ende.
+      const { count } = await supabase
+        .from('character_images')
+        .select('*', { count: 'exact', head: true })
+        .eq('variant_id', variantId)
+
       const { data: { publicUrl } } = supabase.storage.from(CHARAKTER_BAUSTEIN.bucket).getPublicUrl(pfad)
       const { error: zeileErr } = await supabase.from('character_images').insert({
         variant_id: variantId,
         user_id:    user.id,
         url:        publicUrl,
         storage_path: pfad,
-        sort_order: Date.now(),
+        sort_order: count ?? 0,
       })
       if (zeileErr) { toast.error(`Körperfoto konnte nicht eingetragen werden: ${zeileErr.message}`); return false }
 
