@@ -142,3 +142,86 @@ Das ist der eigentliche Auftrag; alles andere ist die Voraussetzung dafür.
   Builder im Betrieb gesehen hat.
 - Die versteckten Bildlaufleisten (`right: '-17px'`) — durch die neue Ordnung
   entschärft, aber nicht beseitigt.
+
+## Was gebaut wurde (04.09.2026)
+
+`src/app/(app)/scene-builder/papier.css` ist der einzige Ort mit Farbwerten.
+Er setzt innerhalb von `.sb-papier` dieselben Namen neu, die shadcn/Tailwind
+ohnehin benutzt (`--background`, `--card`, `--border`, `--primary` …) — dadurch
+werden `bg-card`, `border-border`, Input, Select und Button von selbst hell,
+ohne einen Farbwert im Markup. Bei dunklem `next-themes` bleibt die Seite hell,
+weil `.dark` auf `<html>` sitzt und diese Werte auf einem Nachfahren: beim
+Erben gewinnt der nähere Vorfahr. Ausrollen später heißt, den Token-Block nach
+`:root` zu verschieben — im Markup nichts.
+
+`page.tsx` wurde vollständig neu gezeichnet, die Logik wörtlich übernommen.
+Neu in `scene-builder-options.ts`: `optionLabel` und `optionLabels`, damit die
+zugeklappten Zeilen ihren Wert aus derselben Liste holen, aus der die Chips
+gezeichnet werden.
+
+### Abweichungen von der Vorlage
+
+1. **„Zur Warteschlange" bleibt grün.** Im Entwurf ist der große Knopf orange.
+   Direkt darunter sitzt „Reihe erzeugen", ebenfalls orange — und der kostet
+   je Klick Geld. Zwei orange Knöpfe übereinander sind auf einen Blick
+   derselbe Knopf.
+2. **„Farbstimmung" gibt es nicht.** Der Entwurf hatte es für die Optik
+   erfunden. Zugeklappt sind stattdessen: Kamerawinkel (immer), Wetter
+   (draußen), Lichtstil und Lichtmodifier (drinnen).
+3. **135mm ist drin.** Im Entwurf fehlte es nur, damit die Zeile nicht
+   umbricht; der Umbruch ist jetzt erlaubt.
+4. **Der Preset-Dialog zieht mit.** War zuerst als „eigener Umbau" liegen
+   gelassen — beim Nachmessen benutzt er fast nur Tokens, es waren vier
+   Handgriffe. Sonst wäre ausgerechnet der Dialog, den Mark am häufigsten
+   öffnet, als einzige dunkle Fläche über dem hellen Papier aufgegangen.
+
+### Nach der Prüfung nachgebessert
+
+**Der erste Stand hatte denselben Fehler wie der alte Bildschirm, nur eine
+Stufe milder.** Alle Werte nach WCAG aus den Hexwerten gerechnet:
+
+| Stelle | vorher | jetzt |
+|---|---|---|
+| `--sb-ink3`, zweite Textebene | 3,75:1 | 5,09:1 |
+| Orange als Schriftfarbe | 3,56:1 | 6,08:1 |
+| Weiß auf Orange | 3,62:1 | 6,18:1 |
+| Preset-Knöpfe, weiß auf Bernstein | 3,19:1 (Hover 2,15) | 5,02:1 (Hover 7,09) |
+
+`--sb-ink3` trägt die halbe Seite: Randnummern, Feldnamen, „wählen",
+Trefferzahlen, Fußzeile, „nicht gesetzt", jeden Hinweis unter einer Kachel.
+Beim Preset-Dialog wurde die Beschriftung beim Daraufzeigen *schlechter*
+lesbar als vorher — auf hellem Grund muss ein Knopf beim Zeigen dunkler
+werden, nicht heller. Der Dialog hatte außerdem die Vergrößerung nie bekommen
+(durchgehend 9–12px) und wird jetzt wie `.sb-filter` von außen angehoben.
+
+**Die geratene Zahl ist weg.** `min-[1200px]` und `min-[1450px]` messen das
+Fenster, begrenzend ist aber die mittlere Spalte: Seitenleiste 256 +
+Auswahlspalte 416 + rechte Spalte 400 = 1072px fest. Bei 1200px Fenster blieben
+der Mitte 128px — und dort schaltete `min-[1200px]` auf vier Spalten, deren
+Überstand `overflow-x-hidden` abgeschnitten hätte, ohne Rollbalken und ohne
+Hinweis. Ersetzt durch `auto-fit`/`minmax`: es passen so viele Spalten hinein
+wie Platz ist, keine fällt unter ihre Mindestbreite, und es gibt keine
+Schwelle mehr, die falsch geraten sein kann.
+
+### Geprüft
+
+519 Tests grün (vorher wie nachher), `tsc` sauber bis auf die zwei bekannten
+Altlasten, Build übersetzt.
+
+**Dass beim Neuzeichnen kein Verhalten verloren ging, ist gemessen, nicht
+behauptet.** Ein reiner `git diff` taugt hier nicht: die Datei wurde
+vollständig neu gezeichnet, im Diff verschwindet deshalb jede Zeile einmal und
+taucht einmal wieder auf — ein verlorener Handler sieht dort aus wie ein
+verschobener. Stattdessen wurden die Bestände beider Fassungen gegeneinander
+gezählt: `setCondition` 5/5, `setCameraSetting` 5/5, `setSlot` 8/8, neun
+namentliche Aufrufe (`buildPrompt`, `applyPresetConfig`, `loadRefImages` …)
+9/9, 21 Szenenfelder 21/21. Deckungsgleich.
+
+**Im Browser nicht nachgemessen** — der Scene Builder liegt hinter der
+Anmeldung. Die Kontraste sind aus den Hexwerten gerechnet; alpha-überlagerte
+Werte bleiben Schätzungen.
+
+### Offen
+
+Die verbleibenden Befunde stehen in `features/OFFEN.md` unter
+„Offen aus der PROJ-55-Prüfung".

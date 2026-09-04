@@ -71,6 +71,54 @@ steht es zuerst.
   Supabase irgendwann eine Speichergrenze des Kontos meldet, ist das der
   erste Blick.
 
+## Offen aus der PROJ-55-Prüfung (04.09.2026)
+
+Der Scene Builder ist neu gestaltet und live. Die schweren Befunde sind
+behoben (Kontrast der zweiten Textebene, Orange als Schriftfarbe, die
+Bernsteinknöpfe im Preset-Dialog, die geratenen Haltepunkte). Offen bleibt:
+
+### Sollte Mark sehen
+
+- **Die Kamerawinkel heißen auf Deutsch-Englisch.** Zugeklappt steht dort
+  „Kamerawinkel — Eye Level", nicht „Augenhöhe". Die Labels in
+  `CAMERA_ANGLES` (`scene-builder-options.ts:126`) sind englisch, die
+  Beschriftungen drumherum deutsch. Fällt erst auf, seit der Wert zugeklappt
+  sichtbar ist. Betrifft auch andere Listen — eine Entscheidung für Mark, weil
+  Fachbegriffe wie „Bleach Bypass" englisch bleiben sollten, „Eye Level" aber
+  nicht.
+
+### Kleinere Befunde, nicht behoben
+
+- **Label und Emoji werden ein zweites Mal getippt.** `RefExportCard` und
+  `NebenAsset` (`page.tsx:1428–1444`) schreiben „Charakter 👤", „Outfit 👗"
+  usw. noch einmal hin, obwohl dieselben Werte in `SLOTS` (`page.tsx:75–84`)
+  stehen. Genau die Drift, gegen die `optionLabel` eingeführt wurde.
+- **`findLabel` im Preset-Dialog** (`scene-preset-dialog.tsx:64`) ist eine
+  dritte eigene Fassung derselben Sache. Gehört auf `optionLabel` gezogen.
+- **Ein unbekannter Schlüssel lässt die zugeklappte Gruppe lügen.** Kommt über
+  `importPresetFromFile` ein Preset mit einem Wert, den es nicht mehr gibt,
+  zeigt der Kopf „nicht gesetzt", obwohl ein Wert gesetzt IST. Bei einer
+  zugeklappten Gruppe ist das die einzige Information. (Derselbe unbekannte
+  Schlüssel lässt `buildPrompt` schon vorher hart abstürzen —
+  `szene-prompt.ts:137`, `CAMERA_ANGLES.find(...)!.prompt`. Vorbestehend.)
+- **Toasts und der Quick-Capture-Knopf sind noch dunkel.** Sie kommen aus
+  `layout.tsx` und schweben über der hellen Seite. Bei Toasts vertretbar
+  (App-Ebene), beim runden Knopf unten rechts ein Fremdkörper.
+- **Unter rund 1100px Fensterbreite gibt es keine Anpassung.** Seitenleiste,
+  Auswahlspalte und rechte Spalte sind zusammen 1072px fest; darunter
+  schrumpft die Mitte gegen null. Die Karten selbst passen sich seit dem
+  `auto-fit`-Umbau an, die drei festen Spalten nicht. Vorbestehend, aber die
+  Hausregel in `.claude/rules/frontend.md` fordert 375px.
+- **`--sb-k-or` wird an einer Stelle als Aktionsfarbe benutzt**
+  (`page.tsx:451`, Entfernen-Knopf). Es ist die Kennfarbe der Karte
+  „Bild & Schärfe". Der Hexwert ist zufällig derselbe wie `--destructive`,
+  man sieht also nichts — semantisch mischt es zwei Systeme, die `papier.css`
+  ausdrücklich trennt.
+- **Toter `disabled`-Prop** an `Chip` (`page.tsx:124/135`), wird nie übergeben.
+- Der Dateikopf von `papier.css` sagt, es gebe *einen* Geltungsbereich
+  `.sb-papier` — die Klassen `.sb-blatt`, `.sb-mod`, `.sb-plate` usw. stehen
+  aber global. Folgenlos, weil die Namen eindeutig sind; als Aussage falsch.
+
 ## Marks Einwand gegen PROJ-44 (04.09.2026) — die Achse ist falsch gewählt
 
 Mark, nachdem er die fertige Einstellungsreihe gesehen hat:
