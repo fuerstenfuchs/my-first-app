@@ -117,3 +117,23 @@
 */
 .werkbank-buehne { max-width: none; max-height: none; }
 .werkbank-buehne .ReactCrop__child-wrapper { overflow: visible; max-height: none; }
+
+/*
+  Rollflaechen ohne sichtbaren Rollbalken (04.09.2026)
+
+  VORHER STAND AN 15 STELLEN `style={{ right: '-17px' }}`: Die Rollflaeche
+  wurde 17 Pixel ueber den rechten Rand ihres Rahmens hinausgeschoben, damit
+  der Rollbalken dort im Verborgenen sitzt. Das setzt voraus, dass der
+  Rollbalken GENAU 17 Pixel breit ist.
+
+  Ist er das nicht — und das ist der Normalfall: Chrome misst je nach Version,
+  Zoomstufe und Windows-Einstellung 15, 16 oder 0 Pixel (Overlay) — dann ist
+  die Flaeche breiter als ihr Rahmen, und der Rahmen schneidet rechts ab. Bei
+  den Kacheln der Seitenleiste traf es den 2px-Farbrand: links da, rechts weg.
+  Mark hat es gemeldet, und zwar zum zweiten Mal.
+
+  Diese Regel raet nicht, sondern schaltet den Rollbalken ab. Die Flaeche darf
+  dann buendig im Rahmen liegen (`right-0`) und nichts wird geschnitten.
+*/
+.ohne-rollbalken { scrollbar-width: none; -ms-overflow-style: none; }
+.ohne-rollbalken::-webkit-scrollbar { width: 0; height: 0; }

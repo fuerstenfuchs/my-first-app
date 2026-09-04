@@ -351,7 +351,7 @@ export default function VisualAssetsPage() {
         </header>
 
         <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-4" style={{ right: '-17px' }}>
+          <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken overflow-y-auto overflow-x-hidden p-4">
             {loading ? (
               <div className={cn('grid gap-3', detailOpen ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5')}>
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -421,7 +421,7 @@ export default function VisualAssetsPage() {
               </div>
 
               <div className="flex-1 overflow-hidden relative">
-                <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-17px' }}>
+                <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken overflow-y-auto overflow-x-hidden">
 
                   {/* Cover image */}
                   <div className="relative bg-black/20 group/cover">

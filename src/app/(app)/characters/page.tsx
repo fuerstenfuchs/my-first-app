@@ -171,7 +171,7 @@ export default function CharactersPage() {
         </div>
 
         <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-17px' }}>
+          <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken overflow-y-auto overflow-x-hidden">
             {loading ? (
               <div className="p-2 space-y-1">
                 {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}

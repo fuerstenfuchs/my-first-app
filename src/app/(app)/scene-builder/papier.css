@@ -221,18 +221,26 @@
 .sb-kante-l { border-left: 1px double var(--sb-rule); }
 
 /*
-  Die Rollbalken der drei Spalten sind seit jeher mit `right: -17px`
-  weggeschoben. Das bleibt in PROJ-55 unangetastet (eigener Befund), aber auf
-  hellem Grund faellt eine fehlende Anzeige mehr auf — deshalb wenigstens ein
-  schmaler, farblich passender Balken dort, wo er doch sichtbar wird.
+  Ein schmaler, farblich passender Rollbalken fuer alles, was INNERHALB der
+  Seite rollt: Auswahllisten, der Preset-Dialog, lange Textfelder.
+
+  DIE DREI SPALTEN SELBST SIND AUSGENOMMEN. Sie tragen seit dem 04.09.2026
+  `.ohne-rollbalken` und zeigen gar keinen — vorher wurde ihr Rollbalken mit
+  `right: -17px` aus dem Bild geschoben, und weil ein Rollbalken nicht immer
+  17 Pixel breit ist, schnitt der Rahmen rechts den Inhalt ab.
+
+  `:not(.ohne-rollbalken)` steht hier nicht aus Ordnungsliebe: Ohne das haetten
+  beide Regeln dieselbe Spezifitaet, und dann entschiede die Ladereihenfolge
+  der Dateien darueber, ob Marks Rand abgeschnitten wird. Das ist keine
+  Grundlage.
 */
-.sb-papier ::-webkit-scrollbar { width: 9px; height: 9px; }
-.sb-papier ::-webkit-scrollbar-track { background: transparent; }
-.sb-papier ::-webkit-scrollbar-thumb {
+.sb-papier :not(.ohne-rollbalken)::-webkit-scrollbar { width: 9px; height: 9px; }
+.sb-papier :not(.ohne-rollbalken)::-webkit-scrollbar-track { background: transparent; }
+.sb-papier :not(.ohne-rollbalken)::-webkit-scrollbar-thumb {
   background: var(--sb-rule);
   border-radius: 5px;
 }
-.sb-papier ::-webkit-scrollbar-thumb:hover { background: var(--sb-ink3); }
+.sb-papier :not(.ohne-rollbalken)::-webkit-scrollbar-thumb:hover { background: var(--sb-ink3); }
 
 /* Gepunktete Fuellinie in der Spaltenueberschrift. */
 .sb-punktlinie {

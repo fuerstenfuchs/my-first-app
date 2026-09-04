@@ -415,10 +415,13 @@ const SidebarContent = React.forwardRef<
         ref={ref}
         data-sidebar="content"
         className={cn(
-          "absolute inset-y-0 left-0 flex flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+          // `right-0` plus `ohne-rollbalken` statt der frueheren 17 Pixel
+          // Ueberhang — siehe die Begruendung in `globals.css`. Genau hier
+          // wurde Marks Farbrand rechts abgeschnitten.
+          "absolute inset-y-0 left-0 right-0 ohne-rollbalken flex flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
           className
         )}
-        style={{ ...style, right: '-17px' }}
+        style={style}
         {...props}
       />
     </div>

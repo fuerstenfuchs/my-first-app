@@ -995,7 +995,7 @@ export default function SceneBuilderPage() {
 
         {/* Kachelliste */}
         <div className="relative flex-1 overflow-hidden">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-3.5" style={{ right: '-17px' }}>
+          <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken overflow-y-auto overflow-x-hidden p-3.5">
             <div className="mb-2.5 flex items-center gap-2.5 pr-4">
               <b className="text-[13px] uppercase tracking-[0.15em] text-[var(--sb-ink2)]">{currentTab.label}</b>
               <div
@@ -1082,7 +1082,7 @@ export default function SceneBuilderPage() {
         </header>
 
         <div className="relative flex-1 overflow-hidden">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden px-6 py-[18px]" style={{ right: '-17px' }}>
+          <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken overflow-y-auto overflow-x-hidden px-6 py-[18px]">
 
             {/* ══ Bausteine — ganz oben, weil man erst weiss WER im Bild ist ══ */}
             <div className="mb-2.5 flex items-center gap-3">
@@ -1376,7 +1376,7 @@ export default function SceneBuilderPage() {
         </header>
 
         <div className="relative flex-1 overflow-hidden">
-          <div className="absolute inset-y-0 left-0 space-y-4 overflow-y-auto overflow-x-hidden p-4" style={{ right: '-17px' }}>
+          <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken space-y-4 overflow-y-auto overflow-x-hidden p-4">
 
             {/* Bildgenerierung (PROJ-37) — der Prompt bleibt unverändert, er wird nur weitergereicht */}
             <QueueButton

@@ -240,6 +240,21 @@ Format) ist behoben und aufgeschrieben, siehe
   passieren, weil dort nur gültige Werte wählbar sind — aus einem importierten
   Preset alter Fassung aber schon.
 
+## Behoben am 04.09.2026, Abend
+
+- **Der rechte Rand wurde in der ganzen App abgeschnitten.** Mark hat es zum
+  zweiten Mal gemeldet — an den Kacheln der Seitenleiste fehlte rechts der
+  2px-Farbrand. Ursache war an **15 Stellen** dasselbe:
+  `style={{ right: '-17px' }}`. Die Rollflaeche wurde 17 Pixel ueber ihren
+  Rahmen hinausgeschoben, damit der Rollbalken dort im Verborgenen sitzt — was
+  voraussetzt, dass er genau 17 Pixel breit ist. Chrome misst je nach Version,
+  Zoomstufe und Windows-Einstellung 15, 16 oder 0 (Overlay); dann ist die
+  Flaeche breiter als ihr Rahmen und der Rahmen schneidet ab.
+  Ersetzt durch `.ohne-rollbalken` in `globals.css` — der Rollbalken wird
+  abgeschaltet statt weggeschoben, die Flaeche liegt buendig (`right-0`).
+  Nachgewiesen mit einem Bildschirmfoto beider Fassungen nebeneinander, bevor
+  eine Zeile geaendert wurde.
+
 ## Kaputt, aber niemandem aufgefallen
 
 - **`npm run lint` läuft nicht.** Das Skript ruft `next lint`, und das gibt es
