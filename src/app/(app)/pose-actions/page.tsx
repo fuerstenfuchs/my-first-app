@@ -33,6 +33,7 @@ import {
 import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { passtZurSuche } from '@/lib/bausteine'
+import { bildFuerAnalyse } from '@/lib/bild-fuer-analyse'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -195,14 +196,11 @@ export default function PoseActionsPage() {
         const imgRes = await fetch(poseAction.cover_image_url)
         if (!imgRes.ok) throw new Error('fetch failed')
         const blob = await imgRes.blob()
-        const mediaType = blob.type || 'image/jpeg'
-        const imageBase64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? '')
-          reader.onerror = reject
-          reader.readAsDataURL(blob)
-        })
-        body = { imageBase64, mediaType }
+        // DEN TYP ABLESEN, NICHT GLAUBEN — und was die Analyse nicht
+        // versteht (AVIF, HEIC, BMP) vorher nach PNG umwandeln. Hier stand
+        // `blob.type || 'image/jpeg'`, und daran ist Mark am 04.09.2026
+        // gescheitert: „Image format image/jpeg not supported".
+        body = await bildFuerAnalyse(blob)
       } catch {
         body = { imageUrl: poseAction.cover_image_url }
       }

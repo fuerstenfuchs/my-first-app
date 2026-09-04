@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { analyseTypBestimmen } from '@/lib/bildtyp'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -14,12 +15,6 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
 }
 
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-
-function normalizeMediaType(mime: string): Anthropic.Base64ImageSource['media_type'] {
-  const base = mime.split(';')[0].trim().toLowerCase()
-  return (ALLOWED_MIME.has(base) ? base : 'image/jpeg') as Anthropic.Base64ImageSource['media_type']
-}
 
 async function urlToBase64(url: string): Promise<{ data: string; mediaType: Anthropic.Base64ImageSource['media_type'] } | null> {
   try {
@@ -35,10 +30,16 @@ async function urlToBase64(url: string): Promise<{ data: string; mediaType: Anth
     const ct = res.headers.get('content-type') ?? 'image/jpeg'
     if (!ct.startsWith('image/')) return null
     const buf = await res.arrayBuffer()
-    return {
-      data: Buffer.from(buf).toString('base64'),
-      mediaType: normalizeMediaType(ct),
-    }
+    const data = Buffer.from(buf).toString('base64')
+    // Den Typ an der Signatur bestimmen statt am gemeldeten Content-Type.
+    // Diese Funktion holt Bilder von FREMDEN Servern — dort stimmt der
+    // gemeldete Typ besonders oft nicht, und `normalizeMediaType` machte
+    // aus allem Unbekannten stillschweigend „image/jpeg".
+    // `null` heisst hier seit jeher „dieses Bild ueberspringen"; ein Bild,
+    // das die Analyse nicht lesen kann, gehoert genau dorthin.
+    const befund = analyseTypBestimmen(data, ct)
+    if (!befund.ok) return null
+    return { data, mediaType: befund.typ }
   } catch {
     return null
   }

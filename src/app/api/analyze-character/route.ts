@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { ANALYSE_PROMPT } from '@/lib/analyse-prompts'
+import { analyseTypBestimmen } from '@/lib/bildtyp'
 
 // Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
 // Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
@@ -23,12 +24,6 @@ export async function OPTIONS() {
 
 const CHARACTER_SYSTEM_PROMPT = ANALYSE_PROMPT.character
 
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-
-function normalizeMediaType(mime: string): Anthropic.Base64ImageSource['media_type'] {
-  const base = mime.split(';')[0].trim().toLowerCase()
-  return (ALLOWED_MIME.has(base) ? base : 'image/jpeg') as Anthropic.Base64ImageSource['media_type']
-}
 
 export async function POST(req: NextRequest) {
   let user = null
@@ -68,7 +63,17 @@ export async function POST(req: NextRequest) {
 
     if (body.imageBase64) {
       imageData = body.imageBase64
-      imageMime = normalizeMediaType(body.mediaType ?? 'image/jpeg')
+      // DEN TYP AN DER SIGNATUR BESTIMMEN, NICHT UMBENENNEN.
+      // Hier stand `normalizeMediaType(...)`, und die machte aus jedem
+      // unbekannten Typ stillschweigend „image/jpeg". Ein AVIF ging damit als
+      // JPEG an Anthropic, und die Antwort lautete „Image format image/jpeg
+      // not supported" — eine Meldung, die aussieht, als laege es an JPEG.
+      // Mark am 04.09.2026 beim Prompt aus einem Outfit-Foto.
+      const befund = analyseTypBestimmen(body.imageBase64, body.mediaType)
+      if (!befund.ok) {
+        return NextResponse.json({ error: befund.grund }, { status: 415 })
+      }
+      imageMime = befund.typ
     } else if (body.imageUrl) {
       const referer = (() => { try { return new URL(body.imageUrl).origin + '/' } catch { return '' } })()
       const res = await fetch(body.imageUrl, {
@@ -98,7 +103,14 @@ export async function POST(req: NextRequest) {
       }
       const buf = await res.arrayBuffer()
       imageData = Buffer.from(buf).toString('base64')
-      imageMime = normalizeMediaType(mime)
+      // Auch hier die Signatur befragen: Was ein fremder Server im
+      // Content-Type meldet, stimmt oft nicht — und manche liefern auf ein
+      // fehlendes Bild eine HTML-Seite mit Status 200.
+      const befundUrl = analyseTypBestimmen(imageData, mime)
+      if (!befundUrl.ok) {
+        return NextResponse.json({ error: befundUrl.grund }, { status: 415 })
+      }
+      imageMime = befundUrl.typ
     } else {
       return NextResponse.json({ error: 'Kein Bild übergeben.' }, { status: 400, headers: CORS_HEADERS })
     }
