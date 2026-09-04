@@ -1592,7 +1592,6 @@ export default function SceneBuilderPage() {
             {/* Bildgenerierung (PROJ-37) — der Prompt bleibt unverändert, er wird nur weitergereicht */}
             <QueueButton
               prompt={prompt}
-              scene={scene}
               referenzen={referenzen}
               aspectRatio={scene.aspect_ratio}
               sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}

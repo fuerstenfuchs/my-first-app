@@ -1,6 +1,6 @@
 # PROJ-44: Einstellungsreihe — Kontinuität über mehrere Einstellungen
 
-## Status: In Review
+## Status: Zurückgestellt (Motor bleibt, nichts rendert ihn)
 **Created:** 2026-09-03
 
 ## Warum
@@ -193,3 +193,55 @@ deshalb hier und nicht nur im Quelltext.
   gleichlautende hinterher wären nur Lärm.
 - **Im Browser nicht nachgemessen.** Der Scene Builder liegt hinter der
   Anmeldung; die Prüfung liegt deshalb in den Tests der Logik.
+
+## Zurückgestellt am 04.09.2026 — und warum
+
+Mark, nachdem er die Reihe im Betrieb gesehen hat:
+
+> „Das mit der Einstellungsreihe habe ich selber noch gar keine Idee, was wir
+> da machen könnten. Die Idee an sich ist auch gar nicht so schlecht. Aber ich
+> weiß nicht, wie ich sie nutzen kann. Kannst Du die auch erst mal komplett
+> wieder rausnehmen … weil sie hindert den Blick auf den Prompt. Da muss ich
+> immer runterscrollen, wenn ich den Prompt lesen möchte."
+
+Zwei Gründe, und beide sind berechtigt:
+
+1. **Die Achse ist falsch gewählt.** Steht seit dem Morgen des 04.09.2026 in
+   `features/OFFEN.md`: Mark will Reihen über **Presets** — eine Person,
+   mehrere Looks —, nicht über Einstellungsgrößen. Nur weit und nah zu
+   variieren bringt ihm nichts.
+2. **Der Kasten kostet Platz, den der Prompt braucht.** Die rechte Spalte ist
+   400px breit; der Reihen-Kasten schob den Prompt so weit nach unten, dass
+   Mark zum Lesen scrollen musste. Ein Bauteil, das nichts liefert und dafür
+   das Wichtigste verdeckt, gehört weg.
+
+### Was entfernt wurde und was nicht
+
+**Entfernt:** nur die Darstellung. In `queue-button.tsx` rendert niemand mehr
+den `ReiheButton`, die `scene`-Prop und ihre Weitergabe aus `page.tsx` sind
+mit weggefallen.
+
+**Nicht entfernt — und das ist Absicht:**
+- `src/components/scene-builder/reihe-button.tsx` samt Test
+- `src/lib/einstellungsreihe.ts` samt Test
+
+Der Motor ist geprüft und lauffähig: N Aufträge statt N Durchläufe, alles
+gepinnt bis auf eine Achse, gemeinsame `reihe_id`, jeder Auftrag einzeln
+wiederholbar, die Bildzahl vor dem Klick sichtbar, Doppelklick-Sperre im Ref,
+Abwählen nach Teilabbruch. Falsch ist an dieser Arbeit nur **eine** Sache: dass
+`baueReihe` über `shot_type` iteriert statt über Presets.
+
+**Wer das wieder aufnimmt**, ändert die Achse in `baueReihe` und rendert den
+Kasten wieder — der Rest steht. Das gehört zu „Reihe über Presets" in
+`features/OFFEN.md`.
+
+### Was aus diesem Feature dauerhaft geblieben ist
+
+Auch wenn die Reihe selbst zurückgestellt ist, hat sie zwei echte Fehler
+zutage gefördert, die sonst niemand gefunden hätte:
+
+- **`CAMERA_COMBO_OVERRIDES` verwarf Kamerawinkel, Tiefenschärfe und Format**
+  bei `closeup+135mm` und `full_body+24mm` — auch bei Einzelbildern. Behoben.
+- **Die Doppelklick-Sperre lag im State statt im Ref.** Zwei schnelle Klicks
+  legten zwei bezahlte Aufträge an. Behoben, und der Auftragsknopf hat es
+  mitbekommen.

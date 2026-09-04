@@ -71,7 +71,7 @@
 
 | PROJ-43 | Bildstudio (Uebernehmen, Lichttisch, freie Erzeugung, Werkbank) | In Review | [PROJ-43](PROJ-43-bildstudio.md) | 2026-09-02 |
 
-| PROJ-44 | Einstellungsreihe (Kontinuitaet ueber mehrere Einstellungen) | In Review | [PROJ-44](PROJ-44-einstellungsreihe.md) | 2026-09-03 |
+| PROJ-44 | Einstellungsreihe (Kontinuitaet ueber mehrere Einstellungen) | Zurueckgestellt (Achse falsch, Motor bleibt) | [PROJ-44](PROJ-44-einstellungsreihe.md) | 2026-09-03 |
 | PROJ-45 | Lichttisch als Auswahlwerkzeug (Bilder gegeneinander halten) | Planned | [PROJ-45](PROJ-45-lichttisch-vergleich.md) | 2026-09-03 |
 | PROJ-46 | Bausteine finden statt scrollen | In Review | [PROJ-46](PROJ-46-bausteine-finden.md) | 2026-09-03 |
 | PROJ-47 | Prompt-Assistent im Bildstudio (Text-KI ueber den Proxy) | In Review | [PROJ-47](PROJ-47-prompt-assistent.md) | 2026-09-03 |

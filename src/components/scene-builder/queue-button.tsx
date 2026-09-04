@@ -15,8 +15,6 @@ import {
   type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
 } from '@/lib/image-generation'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
-import { ReiheButton } from '@/components/scene-builder/reihe-button'
-import type { Scene } from '@/lib/szene-prompt'
 
 interface QueueButtonProps {
   prompt: string
@@ -25,12 +23,6 @@ interface QueueButtonProps {
   sceneMeta: Record<string, unknown>
   /** Kurzname der Szene, wandert in den Dateinamen beim Download. */
   szenenName?: string | null
-  /**
-   * Die ganze Szene — nur für die Einstellungsreihe (PROJ-44), die je
-   * Einstellungsgröße einen eigenen Prompt baut. Ohne sie bleibt der
-   * Reihen-Kasten weg; der Auftragsknopf funktioniert unverändert.
-   */
-  scene?: Scene | null
 }
 
 /**
@@ -41,7 +33,7 @@ interface QueueButtonProps {
  * die Zuordnung, welches Bild wofür steht, und die Formatansage.
  */
 export function QueueButton({
-  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, scene = null,
+  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null,
 }: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
   const [modell, setModell] = useState<ModellId>('gpt-image-2')
@@ -185,18 +177,21 @@ export function QueueButton({
       </Button>
 
       {/*
-        Welches Bild wofür steht — auf einen Blick, in derselben Reihenfolge, in
-        der die Bilder ans Modell gehen. Ohne diese Zuordnung nahm es schon mal
-        die Person aus dem Outfit-Bild.
-      */}
-      {rollen.length >= 1 && (
-        <p className="border border-dashed border-amber-600/60 bg-amber-50 px-2 py-1.5 text-[13px] leading-snug text-[var(--sb-ink2)]">
-          <span className="font-bold text-amber-800">Bei Widerspruch gewinnt das Bild.</span>{' '}
-          Beschreibt der Prompt die Person, die Kleidung oder den Ort anders als das
-          Referenzbild, folgt das Modell dem Bild — Szene, Licht und Kamera weiter dem Text.
-        </p>
-      )}
+        HIER STAND „Bei Widerspruch gewinnt das Bild" (bis 04.09.2026).
 
+        Mark: „Auch der Kasten ‚bei Widerspruch gewinnt das Bild' — das weiß
+        ich jetzt schon, das muss dort nicht mehr stehen." Ein Hinweis, der
+        seinen Zweck erfüllt hat, ist ab dann nur noch Fläche, die den Blick
+        auf den Prompt verstellt.
+
+        WICHTIG: Die REGEL selbst bleibt unangetastet. Sie steht als Ansage im
+        Prompt, den `referenzZuordnung` in `image-generation.ts` zusammenbaut,
+        und ist dort durch einen Test abgesichert. Entfernt wurde nur die
+        Erklärung an Mark, nicht die Anweisung ans Modell.
+
+        Welches Bild wofür steht, bleibt dagegen stehen: Ohne diese Zuordnung
+        nahm das Modell schon mal die Person aus dem Outfit-Bild.
+      */}
       {rollen.length >= 1 && (
         <div className="border border-dashed border-[var(--sb-rule)] px-2 py-1.5">
           <p className="mb-1 text-[13px] font-bold uppercase tracking-[0.15em] text-[var(--sb-ink3)]">
@@ -229,22 +224,26 @@ export function QueueButton({
       </p>
 
       {/*
-        Die Einstellungsreihe (PROJ-44) — direkt unter dem Auftragsknopf, damit
-        Modell und Größenklasse oben nur EINMAL gewählt werden müssen und für
-        beide Wege gelten.
+        HIER STAND DER KASTEN „EINSTELLUNGSREIHE" (PROJ-44, bis 04.09.2026).
+
+        Mark: „Das mit der Einstellungsreihe habe ich selber noch gar keine
+        Idee, was wir da machen könnten. Die Idee an sich ist auch gar nicht so
+        schlecht. Aber ich weiß nicht, wie ich sie nutzen kann. Kannst Du die
+        auch erst mal komplett wieder rausnehmen … weil sie hindert den Blick
+        auf den Prompt. Da muss ich immer runterscrollen, wenn ich den Prompt
+        lesen möchte."
+
+        Der Kasten ist also nicht falsch, sondern kostet Platz an einer
+        Stelle, an der Platz knapp ist — und liefert dafür nichts, was Mark
+        heute braucht. Die falsche Achse war schon vorher bekannt: Er will
+        Reihen über PRESETS, nicht über Einstellungsgrößen.
+
+        NICHTS DAVON IST GELÖSCHT. `reihe-button.tsx`,
+        `lib/einstellungsreihe.ts` und beide Testdateien bleiben im Bestand,
+        geprüft und lauffähig. Es rendert sie nur niemand mehr. Wenn die Achse
+        auf Presets umgestellt wird, ist der Motor da — die Begründung steht in
+        `features/PROJ-44-einstellungsreihe.md`.
       */}
-      {scene && (
-        <ReiheButton
-          scene={scene}
-          prompt={prompt}
-          referenzen={referenzen}
-          aspectRatio={aspectRatio}
-          sceneMeta={sceneMeta}
-          szenenName={szenenName}
-          modell={modell}
-          zielKlasse={inKlassen ? klasse : null}
-        />
-      )}
 
       {/* Wörtlich zeigen, was zusätzlich abgeschickt wird — sonst steht rechts
           ein anderer Text als der, für den bezahlt wird. */}
