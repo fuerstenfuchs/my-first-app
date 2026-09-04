@@ -19,6 +19,43 @@ steht es zuerst.
    `reihe_gesamt`) steht seit dem 04.09.2026 in `scene_meta`, wird aber
    nirgends gelesen.
 
+## Der Arbeiter kann still einfrieren (04.09.2026, 19:30)
+
+Nachgemessen, als Mark fragte, ob Proxy und Arbeiter laufen:
+
+- **Proxy: in Ordnung.** `npm run pruefen` meldet alle acht Punkte grün,
+  `gpt-image-2` steht in der Modell-Liste.
+- **Arbeiter: Prozess lebt, tut aber nichts.** Letztes Lebenszeichen
+  **17:40:02** — genau die Sekunde, in der er den Auftrag geholt hat. Er
+  schreibt sonst alle 20 Sekunden eines. Zwei spätere Aufträge (19:23, 19:28)
+  hat er nie angefasst.
+- **Er hängt, er dreht nicht durch:** 2,95 Sekunden Rechenzeit in 406 Minuten
+  Laufzeit. Er wartet auf etwas, das nie kommt.
+
+Auslöser war laut Mark das erschöpfte `gpt-image-2`-Kontingent um 17:40. Ein
+HTTP 429 allein erklärt es aber **nicht**: Der Proxy-Aufruf hat eine
+Zeitgrenze von 300 Sekunden (`REQUEST_TIMEOUT_MS`), und die Fehlerbehandlung
+in `index.ts:53-84` setzt den Auftrag danach auf „fehlgeschlagen" oder zurück
+in die Warteschlange. Beides ist nicht passiert — der Auftrag blieb auf
+`running` mit `attempts = 1`.
+
+**Was das heißt: Es gibt einen Weg, auf dem der Arbeiter hängt, ohne dass eine
+der eingebauten Zeitgrenzen greift.** Wo genau, ist offen. Alle `fetch`-Aufrufe
+in `supabase.ts` und `proxy.ts` haben eine Frist; `netz.ts` hat mit `mitFrist`
+sogar einen Helfer dafür. Verdächtig bleibt der Teil zwischen dem Holen des
+Auftrags und dem ersten Netzaufruf.
+
+**Und der eigentliche Mangel: Niemand merkt es.** Das Lebenszeichen wird
+geschrieben (PROJ-41) und in der Warteschlange angezeigt, aber nichts schlägt
+Alarm, wenn es zwei Stunden alt ist. Stillstand sieht genauso aus wie „keine
+Aufträge da" — derselbe Fehlermodus wie beim Auftragsmappen-Wächter im FILM
+STUDIO. Ein Hinweis in der Warteschlange („Arbeiter seit 1h 52min stumm")
+wäre wenig Arbeit und würde die Stunden sparen.
+
+Sofortmaßnahme am 04.09.2026: `requeue_stale_image_jobs(30, 3)` von Hand
+gerufen, der hängende Auftrag ist wieder eingereiht. Der Arbeiter muss neu
+gestartet werden — er kommt von selbst nicht zurück.
+
 ## Noch nie im Betrieb gesehen
 
 - **Die Chrome-Erweiterung über den Proxy.** Gebaut, gebaut geprüft, und
