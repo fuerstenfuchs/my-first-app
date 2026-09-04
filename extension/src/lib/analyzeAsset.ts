@@ -1,4 +1,5 @@
 import { proxyLesen, proxyBereit, analyseUeberProxy } from './proxy'
+import { alsAnalysebild, typAusBytes, fuerAnalyseGeeignet } from './bildart'
 
 export type AssetAnalysisType = 'fashion' | 'location' | 'pose' | 'outfit' | 'character'
 
@@ -32,22 +33,30 @@ export async function analyzeAsset(
     const commaIdx = overrideDataUrl.indexOf(',')
     const header = overrideDataUrl.slice(0, commaIdx)
     const b64 = overrideDataUrl.slice(commaIdx + 1)
-    const mediaType = header.match(/data:(.*?);/)?.[1] ?? 'image/jpeg'
-    requestBody = { imageBase64: b64, mediaType }
+    // Auch hier nicht dem Kopf glauben: Ein `data:image/jpeg`-Kopf sagt nichts
+    // darueber, was dahinter wirklich steht — der Zuschnitt liefert zwar
+    // sauberes JPEG, aber diese Abzweigung nimmt auch fremde Adressen.
+    const gemeldet = header.match(/data:(.*?);/)?.[1] ?? 'image/jpeg'
+    const echt = typAusBytes(Uint8Array.from(atob(b64.slice(0, 64)), z => z.charCodeAt(0)))
+    requestBody = { imageBase64: b64, mediaType: fuerAnalyseGeeignet(echt) ? echt! : gemeldet }
   } else {
     try {
       const imgRes = await fetch(imageUrl)
       if (!imgRes.ok) throw new Error('fetch failed')
       const blob = await imgRes.blob()
-      const mediaType = blob.type || 'image/jpeg'
-      const imageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? '')
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      })
-      requestBody = { imageBase64, mediaType }
-    } catch {
+      // DEN TYP ABLESEN, NICHT GLAUBEN. Hier stand
+      //   const mediaType = blob.type || 'image/jpeg'
+      // und genau daran ist Mark am 04.09.2026 gescheitert: Ein AVIF-Bild ohne
+      // gemeldeten Typ ging als „image/jpeg" hinaus, und der Dienst antwortete
+      // „Image format image/jpeg not supported". `alsAnalysebild` liest die
+      // Signatur und wandelt um, was die Analyse nicht versteht.
+      const { base64, mediaType } = await alsAnalysebild(blob)
+      requestBody = { imageBase64: base64, mediaType }
+    } catch (err) {
+      // Ein erkennbarer Grund darf nicht im stillen Rueckfall verschwinden:
+      // „kein Bild" und „Umwandlung gescheitert" sind Auskuenfte, mit denen
+      // Mark etwas anfangen kann. Nur beim Netzfehler die Adresse weiterreichen.
+      if (err instanceof Error && /kein erkennbares Bild|Umwandlung/.test(err.message)) throw err
       requestBody = { imageUrl }
     }
   }

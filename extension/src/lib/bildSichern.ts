@@ -1,4 +1,7 @@
 import { supabase } from './supabase'
+// Die Erkennung steht seit dem 04.09.2026 in `bildart.ts` — die Analyse
+// braucht sie auch, und zwei Kopien liefen irgendwann auseinander.
+import { typAusBytes } from './bildart'
 
 /**
  * Erfasste Bilder in den eigenen Speicher holen.
@@ -78,33 +81,6 @@ function speicherHerkunft(): string | null {
 export function liegtImEigenenSpeicher(url: string): boolean {
   const herkunft = speicherHerkunft()
   return !!herkunft && url.startsWith(herkunft)
-}
-
-/**
- * Den Bildtyp an den ersten Bytes ABLESEN statt ihn zu glauben.
- *
- * WARUM: Manche Server liefern `application/octet-stream` oder gar keinen Typ,
- * und manche liefern eine Fehlerseite in HTML mit Status 200. Beides wuerde
- * ungeprueft als „Bild" im Speicher landen. Die Signatur luegt nicht.
- */
-function typAusBytes(bytes: Uint8Array): string | null {
-  const b = bytes
-  if (b.length < 12) return null
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png'
-  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif'
-  if (b[0] === 0x42 && b[1] === 0x4d) return 'image/bmp'
-  // RIFF....WEBP
-  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp'
-  // ....ftyp… — AVIF und HEIC teilen sich den Rahmen, die Marke steht dahinter
-  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-    const marke = String.fromCharCode(b[8]!, b[9]!, b[10]!, b[11]!)
-    if (marke.startsWith('avif') || marke.startsWith('avis')) return 'image/avif'
-    if (marke.startsWith('heic') || marke.startsWith('heix') || marke.startsWith('mif1')) return 'image/heic'
-  }
-  // SVG ist Text und hat keine Signatur — bewusst nicht unterstuetzt.
-  return null
 }
 
 /** Dateiendung zum Typ. Ohne Punkt. */

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { PendingCapture } from '../types'
 import { proxyLesen, proxyBereit, analyseUeberProxy } from '../lib/proxy'
+import { alsAnalysebild } from '../lib/bildart'
 
 interface Props {
   capture: PendingCapture
@@ -174,15 +175,16 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           const bild = await fetch(coverImageUrl)
           if (!bild.ok) throw new Error(`Bild nicht ladbar (${bild.status})`)
           const blob = await bild.blob()
-          const b64 = await new Promise<string>((ja, nein) => {
-            const l = new FileReader()
-            l.onloadend = () => ja((l.result as string).split(',')[1] ?? '')
-            l.onerror = nein
-            l.readAsDataURL(blob)
-          })
+          // DEN TYP ABLESEN, NICHT GLAUBEN — hier stand
+          // `blob.type || 'image/jpeg'`, und genau daran scheiterte am
+          // 04.09.2026 erst der Proxy („does not represent a valid image")
+          // und danach der bezahlte Dienst („Image format image/jpeg not
+          // supported"). `alsAnalysebild` liest die Signatur und wandelt
+          // AVIF, HEIC und BMP vorher nach PNG um.
+          const { base64: b64, mediaType: typ } = await alsAnalysebild(blob)
           const { prompt } = await analyseUeberProxy<{ prompt: string }>(
             personPlaceholder ? 'bildPlatzhalter' : 'bild',
-            b64, blob.type || 'image/jpeg', pe,
+            b64, typ, pe,
             selectedModel,   // die Wahl aus der Leiste gilt auch hier
           )
           setContent(prompt)

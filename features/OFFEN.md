@@ -80,6 +80,11 @@ gestartet werden — er kommt von selbst nicht zurück.
   gemeldeten Typ. Ein SVG käme durch und scheiterte erst am Modell. Der
   Arbeiter hat für genau diese Frage `bildart()` über Magic Bytes — das ließe
   sich übernehmen. Critic-Befund M5.
+  **In der ERWEITERUNG am 04.09.2026 behoben** (`extension/src/lib/bildart.ts`),
+  weil Mark genau darüber gestolpert ist: `blob.type || 'image/jpeg'` schickte
+  ein AVIF-Bild als JPEG los, und Anthropic antwortete „Image format image/jpeg
+  not supported". **In der App selbst steht der Befund weiterhin offen** — dort
+  wird der gemeldete Typ nach wie vor geglaubt.
 - **Zwei Mal derselbe Schlüssel.** App und Erweiterung haben getrennte
   Einstellungen, weil eine Erweiterung nicht an den `localStorage` der Seite
   kommt. Bewusst so, aber unschön.
