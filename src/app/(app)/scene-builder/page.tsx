@@ -286,7 +286,7 @@ function AssetThumb({
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-[var(--sb-pap2)]">
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
+          <img src={imageUrl} alt={name} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-3xl opacity-25">
             {emoji}
@@ -383,7 +383,7 @@ function RefPicker({
         onClick={() => onSelect(null)}
         title="Kein eigenes Referenzbild — es gilt das Titelbild"
         className={cn(
-          'flex h-[88px] w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded border text-[12px] transition-colors',
+          'flex h-24 w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded border text-[12px] transition-colors',
           selectedUrl === null
             ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] text-[var(--sb-or-t)]'
             : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)]',
@@ -397,21 +397,42 @@ function RefPicker({
           key={i}
           onClick={() => onSelect(img)}
           title={img.label}
-          className="group shrink-0"
+          className="group flex min-w-[86px] max-w-[210px] shrink-0 flex-col items-center"
         >
-          <div className={cn(
-            'h-[88px] w-[88px] overflow-hidden rounded border-2 transition-all',
-            selectedUrl === img.url
-              ? 'border-[var(--sb-or)] shadow-[0_1px_4px_rgba(190,90,20,0.35)]'
-              : 'border-[var(--sb-rule)] group-hover:border-[var(--sb-ink3)]',
-          )}>
-            <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
-          </div>
+          {/*
+            `object-contain` UND EINE BREITE, DIE DEM BILD FOLGT.
+
+            Vorher: quadratisch mit `object-cover`. Mark am 04.09.2026: „Finde
+            es auch immer total nervig, dass man die Bilder immer nur halb
+            sieht, gerade wenn links und rechts etwas ist auf dem Bild — was
+            bei allen Referenzbildern fast der Fall ist. Dann sieht man
+            ueberhaupt nichts."
+
+            Er hat recht, und es war das eigentliche Problem: Ein Referenzsheet
+            ist BREIT — mehrere Ansichten nebeneinander. In ein Quadrat
+            geschnitten bleibt der mittlere Streifen uebrig, also genau das,
+            was am wenigsten aussagt.
+
+            Feste HOEHE, freie Breite: Ein breites Sheet wird breit, ein
+            Hochformat schmal, und beide sind vollstaendig zu sehen. Bei fester
+            Breite waere stattdessen jedes Sheet auf Briefmarkenhoehe
+            geschrumpft.
+          */}
+          <img
+            src={img.url}
+            alt={img.label}
+            className={cn(
+              'h-24 w-auto max-w-[210px] rounded border-2 bg-[var(--sb-pap2)] object-contain transition-all',
+              selectedUrl === img.url
+                ? 'border-[var(--sb-or)] shadow-[0_1px_4px_rgba(190,90,20,0.35)]'
+                : 'border-[var(--sb-rule)] group-hover:border-[var(--sb-ink3)]',
+            )}
+          />
           <span className={cn(
-            // Etwas breiter als die Kachel und in den Zwischenraum hinein:
-            // „Referenzsheet" passt bei 72px sonst nicht und wurde zu
-            // „Referenzsh…" — ausgerechnet der Name, auf den es ankommt.
-            'mx-[-6px] mt-1 block w-[100px] truncate text-center text-[12px] leading-tight',
+            // Die Beschriftung folgt der Kachel: Die ist jetzt so breit wie
+            // das Bild, und `min-w-[86px]` am Knopf sorgt dafuer, dass auch
+            // ein schmales Hochformat genug Platz fuer „Referenzsheet" laesst.
+            'mt-1 block w-full truncate text-center text-[12px] leading-tight',
             selectedUrl === img.url
               ? 'font-semibold text-[var(--sb-or-t)]'
               : 'text-[var(--sb-ink3)]',
@@ -470,7 +491,7 @@ function SzenenFeld({
       <div className="flex items-center gap-[11px]">
         <div className="h-[54px] w-[54px] flex-none overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
           {displayImage ? (
-            <img src={displayImage} alt={asset.name} className="h-full w-full object-cover" />
+            <img src={displayImage} alt={asset.name} className="h-full w-full object-contain" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl opacity-40">{slot.emoji}</div>
           )}
@@ -524,7 +545,7 @@ function RefExportCard({ label, emoji, asset, refImage }: {
     <div className="flex items-start gap-2.5">
       <div className="h-14 w-14 shrink-0 overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
         {imageUrl ? (
-          <img src={imageUrl} alt={asset.name} className="h-full w-full object-cover" />
+          <img src={imageUrl} alt={asset.name} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-lg">{emoji}</div>
         )}
@@ -552,7 +573,7 @@ function NebenAsset({ label, emoji, asset }: {
     <div className="flex items-center gap-2.5">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)] text-base">
         {asset.cover_image_url
-          ? <img src={asset.cover_image_url} alt={asset.name} className="h-full w-full object-cover" />
+          ? <img src={asset.cover_image_url} alt={asset.name} className="h-full w-full object-contain" />
           : emoji}
       </div>
       <div className="min-w-0">
