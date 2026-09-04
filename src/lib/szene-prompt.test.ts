@@ -251,13 +251,37 @@ describe('buildLocationSection', () => {
    * Hinweis ("wird ignoriert, sobald unten eine Location gewaehlt wird") —
    * hier ist es nachgemessen.
    */
-  it('Hintergrund allein wird zum Satz', () => {
-    expect(buildLocationSection(szene({ background: 'gradient_grey' })))
+  /*
+   * ACHTUNG, DIESE ZEILEN HABEN EIN JAHR LANG DAS FALSCHE FESTGESCHRIEBEN.
+   * `szene()` steht auf `outdoor` (siehe LEER) — der Test hat also genau den
+   * Fall abgesegnet, den Mark am 04.09.2026 gemeldet hat: eine Aussenszene
+   * mit Studio-Hintergrund. Im Prompt stand dann woertlich
+   *   „Outdoor scene. … Smooth grey gradient seamless studio backdrop
+   *   background."
+   * Zwei einander widersprechende Anweisungen an ein Bildmodell, das dafuer
+   * bezahlt wird. Der Studio-Hintergrund ist der RUECKFALL fuer eine fehlende
+   * Location — drinnen. Draussen gibt es keinen Hintergrundkarton.
+   */
+  it('Hintergrund allein wird DRINNEN zum Satz', () => {
+    expect(buildLocationSection(szene({ scene_type: 'indoor', background: 'gradient_grey' })))
       .toEqual(['Smooth grey gradient seamless studio backdrop background.'])
   })
 
+  it('DRAUSSEN wird der Studio-Hintergrund nicht verwendet', () => {
+    expect(buildLocationSection(szene({ scene_type: 'outdoor', background: 'gradient_grey' })))
+      .toEqual([])
+  })
+
+  it('der ganze Prompt widerspricht sich draussen nicht mehr', () => {
+    // Die Gegenprobe eine Ebene hoeher: Es geht nicht darum, was eine
+    // Hilfsfunktion zurueckgibt, sondern was tatsaechlich an gpt-image-2 geht.
+    const p = buildPrompt(szene({ scene_type: 'outdoor', background: 'gradient_grey' }))
+    expect(p).toContain('Outdoor scene.')
+    expect(p.toLowerCase()).not.toContain('studio backdrop')
+  })
+
   it('Hintergrund wird von einer echten Location verdraengt', () => {
-    const teile = buildLocationSection(szene({ background: 'white', location: ort }))
+    const teile = buildLocationSection(szene({ scene_type: 'indoor', background: 'white', location: ort }))
     expect(teile).toEqual(['Use the provided location reference.'])
     expect(teile.join(' ')).not.toContain('background')
   })
@@ -269,6 +293,7 @@ describe('buildLocationSection', () => {
    */
   it('ein uebrig gebliebener Location-Archetyp verdraengt den Hintergrund NICHT mehr', () => {
     const mitRest = szene({
+      scene_type: 'indoor',
       background: 'gradient_grey',
       location_archetype: { id: 'la1', name: 'Lagerhalle', prompt: 'A cavernous warehouse.' },
     })
@@ -469,8 +494,15 @@ const GRUNDLINIE: { name: string; scene: Scene; erwartet: string }[] = [
       outfit_archetype: { id: 'oa1', name: 'Regenmantel', prompt: 'A long belted raincoat.' },
       location_archetype: { id: 'la1', name: 'Lagerhalle', prompt: 'A cavernous warehouse.' },
       background: 'black',
+      // DRINNEN seit 04.09.2026: Der Studio-Hintergrund wirkt nur dort.
+      // Vorher stand hier `outdoor`, und die Aufzeichnung segnete damit
+      // den Satz „Outdoor scene. … studio backdrop background.\u201c ab —
+      // zwei widerspruechliche Anweisungen an das Bildmodell. Die Frage
+      // dieses Falls (verdraengt ein Archetyp-Rest den Hintergrund?)
+      // bleibt unveraendert.
+      scene_type: 'indoor',
     }),
-    erwartet: 'Outdoor scene.\n\nPlain black seamless studio backdrop background.\n\nPhotorealistic.',
+    erwartet: 'Indoor scene.\n\nPlain black seamless studio backdrop background.\n\nPhotorealistic.',
   },
   /**
    * GEAENDERT DURCH PROJ-52. Hiess bis dahin `nur_archetypen_ohne_bild`.
@@ -489,9 +521,10 @@ const GRUNDLINIE: { name: string; scene: Scene; erwartet: string }[] = [
       character_archetype: { id: 'ca1', name: 'Detektivin', prompt: 'A weathered detective.' },
       outfit_archetype: { id: 'oa1', name: 'Regenmantel', prompt: '   ' },
       location_archetype: { id: 'la1', name: 'Lagerhalle', prompt: null },
+      scene_type: 'indoor', // siehe oben, gleicher Grund
       background: 'beige',
     }),
-    erwartet: 'Outdoor scene.\n\nPlain warm beige seamless studio backdrop background.\n\nPhotorealistic.',
+    erwartet: 'Indoor scene.\n\nPlain warm beige seamless studio backdrop background.\n\nPhotorealistic.',
   },
   // UNVERAENDERT seit der Aufzeichnung.
   {

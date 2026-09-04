@@ -1235,8 +1235,19 @@ export default function SceneBuilderPage() {
               einzelnes Kind fuellt die Zeile.
             */}
             <div className="sb-raster-karten">
-              {/* Studio-Hintergrund — nur relevant, solange keine Location gewählt ist */}
-              {!scene.location && (
+              {/*
+                Studio-Hintergrund — er wirkt nur DRINNEN und nur, solange keine
+                Location im Baustein sitzt. Deshalb steht die Karte auch nur
+                dann da.
+
+                VORHER STAND SIE AUCH DRAUSSEN, mit dem Hinweis „wird
+                ignoriert". Sie wurde aber nicht ignoriert: Der Prompt-Bau
+                fragte den Szenentyp gar nicht und schrieb den Hintergrundkarton
+                mitten in die Aussenszene. Mark hat das am 04.09.2026 gemeldet.
+                Ein Hinweis, der nicht stimmt, ist schlimmer als keiner — jetzt
+                kann der Fall gar nicht mehr entstehen.
+              */}
+              {scene.scene_type !== 'outdoor' && !scene.location && (
                 <Karte titel="Studio-Hintergrund" dim>
                   <ChipGroup
                     label="Grundton"
@@ -1246,8 +1257,9 @@ export default function SceneBuilderPage() {
                     gedaempft
                   />
                   <p className="mt-2.5 text-[13px] leading-relaxed text-[var(--sb-ink3)]">
-                    Wird ignoriert, sobald oben eine <b className="font-semibold text-[var(--sb-ink2)]">Location</b> im
-                    Baustein sitzt.
+                    Der Rückfall, wenn keine <b className="font-semibold text-[var(--sb-ink2)]">Location</b> gewählt
+                    ist. Sobald oben eine im Baustein sitzt, gewinnt sie — und draußen gibt es keinen
+                    Hintergrundkarton, dort steht diese Karte deshalb gar nicht.
                   </p>
                 </Karte>
               )}

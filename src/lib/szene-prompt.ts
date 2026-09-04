@@ -173,10 +173,26 @@ export function buildOutfitSection(scene: Scene): string[] {
  * Der Studio-Hintergrund ist der RÜCKFALL, keine weitere Angabe: Er greift nur,
  * wenn gar keine Location gewählt ist. Das war vor PROJ-52 so und bleibt so —
  * nur die Zwischenstufe „oder ein Location-Archetyp" ist entfallen.
+ *
+ * UND ER GILT NUR DRINNEN. Bis zum 04.09.2026 fragte diese Funktion den
+ * Szenentyp gar nicht, und im Prompt stand dann wörtlich:
+ *
+ *     „Outdoor scene. … Smooth grey gradient seamless studio backdrop
+ *      background."
+ *
+ * Zwei einander widersprechende Anweisungen an ein Bildmodell, für das Mark je
+ * Bild bezahlt. Ein Hintergrundkarton ist ein Studiogegenstand; draußen gibt es
+ * ihn nicht. Mark hat es an der Oberfläche bemerkt („steht zwar unten, wird
+ * ignoriert, aber erscheint trotzdem im Prompt") — der Hinweistext in der
+ * Oberfläche nannte damals nur die Location als Grund, nicht den Szenentyp.
+ *
+ * Ein Wert, den ein altes Preset draußen mitbringt, wird dadurch still
+ * übergangen statt still widersprochen. Sichtbar bleibt er trotzdem: die
+ * Oberfläche zeigt die Karte draußen gar nicht mehr an.
  */
 export function buildLocationSection(scene: Scene): string[] {
   if (scene.location) return ['Use the provided location reference.']
-  if (scene.background) {
+  if (scene.background && scene.scene_type !== 'outdoor') {
     return [capitalize(STUDIO_BACKGROUNDS.find(b => b.key === scene.background)!.prompt) + '.']
   }
   return []
