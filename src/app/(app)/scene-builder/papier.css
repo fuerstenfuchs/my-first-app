@@ -52,7 +52,17 @@
   --sb-card:  #fffdf8;
   --sb-ink:   #1b1a16;
   --sb-ink2:  #4b473e;
-  --sb-ink3:  #807a6c;
+  /*
+     NACHGEMESSEN AM 04.09.2026, nach der Pruefung: #807a6c ergab auf dem
+     Papier nur 3,75:1 — unter dem Schwellwert 4,5:1 fuer normalen Text, und
+     damit derselbe Fehler wie vorher im Dunkeln, nur eine Stufe milder.
+     Diese eine Farbe traegt die halbe Seite: Randnummern, Feldnamen,
+     "waehlen", Trefferzahlen, Fusszeile, "nicht gesetzt", jeden Hinweis
+     unter einer Kachel. #6b6558 bringt 5,09:1 und aendert die Anmutung kaum.
+     Mark hat dieses Feature bekommen, WEIL er blasse Schrift nicht lesen
+     konnte — hier von 4,5 abzuweichen hiesse, den Auftrag zu verfehlen.
+  */
+  --sb-ink3:  #6b6558;
   --sb-rule:  #cec6b2;
   --sb-rule2: #e0d9c7;
   --sb-or:    #dc6210;
@@ -240,3 +250,35 @@
 .sb-filter input { font-size: 14px; height: 34px; }
 .sb-filter button { font-size: 13px; }
 .sb-filter input { background: var(--sb-card); }
+
+/* ── Raster ohne Ratezahl (Nachtrag 04.09.2026) ─────────────────────────────
+   WARUM KEINE `min-[…px]`-ABFRAGE MEHR: Die misst das FENSTER, begrenzend ist
+   aber die mittlere Spalte. Zwischen ihr und dem Fensterrand liegen fest:
+   Seitenleiste 256px + Auswahlspalte 416px + rechte Spalte 400px = 1072px.
+   Bei 1200px Fenster blieben der Mitte also 128px — und `min-[1200px]`
+   schaltete dort auf VIER Spalten. Der Ueberstand waere von
+   `overflow-x-hidden` abgeschnitten worden, ohne Rollbalken, ohne Hinweis.
+   Gefunden bei der Pruefung; die Schwelle war geschaetzt, nicht gemessen.
+
+   `auto-fit` mit `minmax` braucht ueberhaupt keine Schwelle: es passen so
+   viele Spalten hinein, wie Platz ist, und keine faellt je unter ihre
+   Mindestbreite. Damit gibt es keine Zahl mehr, die falsch geraten sein
+   koennte — und die Seite folgt der Spalte statt dem Fenster.
+*/
+.sb-raster-felder { display:grid; gap:11px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
+.sb-raster-karten { display:grid; gap:14px; align-items:start;
+  grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); }
+
+/* ── Preset-Dialog (Nachtrag 04.09.2026) ────────────────────────────────────
+   Er traegt `sb-papier`, weil er im Portal haengt — hatte die Vergroesserung
+   aber nie bekommen: durchgehend 9–12px, dazu Graustufen mit `/50` und `/60`,
+   die auf Papier bei rund 2:1 landen. Auf Dunkel war das ein dezenter
+   Schatten, auf Papier ist es weg. Von aussen angehoben, wie bei
+   `.sb-filter` — so bleibt die Schriftgroessen-Regel an EINER Stelle.
+*/
+.sb-papier .text-\[9px\],
+.sb-papier .text-\[10px\],
+.sb-papier .text-\[11px\] { font-size:13px; }
+.sb-papier .text-xs { font-size:13.5px; }
+.sb-papier [class*="text-muted-foreground/"] { color:var(--sb-ink3); }

@@ -136,7 +136,7 @@ function Chip({
       className={cn(
         'flex items-center gap-1.5 rounded-[3px] border px-[11px] py-[7px] text-sm transition-colors',
         aktiv
-          ? 'border-[var(--sb-or)] bg-[var(--sb-or)] font-bold text-white'
+          ? 'border-[var(--sb-or)] bg-[var(--sb-or-t)] font-bold text-white'
           : gedaempft
             ? 'border-[var(--sb-rule)] bg-[#faf8f2] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink2)]'
             : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink2)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink)]',
@@ -237,7 +237,7 @@ function Fold({ label, wert, offen, onToggle, children }: {
         <span className="flex-1 text-sm text-[var(--sb-ink2)]">{label}</span>
         <span className={cn(
           'text-[14.5px] font-bold',
-          wert ? 'text-[var(--sb-or)]' : 'text-[var(--sb-ink3)] font-normal',
+          wert ? 'text-[var(--sb-or-t)]' : 'text-[var(--sb-ink3)] font-normal',
         )}>
           {wert ?? 'nicht gesetzt'}
         </span>
@@ -292,7 +292,7 @@ function AssetThumb({
         )}
         {isSelected && (
           <div className="absolute inset-0 flex items-center justify-center bg-primary/15">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sb-or)]">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sb-or-t)]">
               <span className="text-xs font-bold text-white">✓</span>
             </div>
           </div>
@@ -1020,7 +1020,7 @@ export default function SceneBuilderPage() {
                 </p>
                 <button
                   onClick={() => { filter.setSuche(''); filter.setKategorie(null) }}
-                  className="text-sm font-medium text-[var(--sb-or-t)] underline underline-offset-2 hover:text-[var(--sb-or)]"
+                  className="text-sm font-medium text-[var(--sb-or-t)] underline underline-offset-2 hover:text-[var(--sb-or-t)]"
                 >
                   Filter aufheben
                 </button>
@@ -1094,7 +1094,7 @@ export default function SceneBuilderPage() {
                 die Spalte schmal wird und das Raster auf zwei Spalten
                 umbricht, stuende „03 — LOC" ueber dem Charakterfeld.
               */}
-              <div className="grid grid-cols-2 gap-[11px] min-[1200px]:grid-cols-4">
+              <div className="sb-raster-felder">
                 {SLOTS.map((slot, i) => {
                   const assetId = (scene[slot.key] as { id: string } | null)?.id
                   const hasRef = REF_SLOTS.includes(slot.key as RefSlotKey)
@@ -1103,7 +1103,7 @@ export default function SceneBuilderPage() {
                       <div className="mb-[5px] flex items-baseline gap-2 text-[13px] tabular-nums tracking-[0.14em] text-[var(--sb-ink3)]">
                         <span>{String(i + 1).padStart(2, '0')} — {slot.code}</span>
                         {scene[slot.key] && (
-                          <span className="ml-auto font-bold tracking-[0.14em] text-[var(--sb-or)]">GEWÄHLT</span>
+                          <span className="ml-auto font-bold tracking-[0.14em] text-[var(--sb-or-t)]">GEWÄHLT</span>
                         )}
                       </div>
                       <SzenenFeld
@@ -1132,7 +1132,7 @@ export default function SceneBuilderPage() {
             {/* Ab hier: weiche Karten. Alles Druckgrafische bleibt oberhalb. */}
             <Doppellinie />
 
-            <div className="mb-3.5 grid grid-cols-1 items-start gap-3.5 min-[1450px]:grid-cols-[0.62fr_1fr]">
+            <div className="mb-3.5 sb-raster-karten">
               <Karte titel="Szenentyp" farbe="gr">
                 <div className="flex flex-wrap gap-[7px]">
                   {SCENE_TYPES.map(t => (
@@ -1169,7 +1169,7 @@ export default function SceneBuilderPage() {
               </Karte>
             </div>
 
-            <div className="mb-3.5 grid grid-cols-1 items-start gap-3.5 min-[1450px]:grid-cols-[1fr_0.72fr]">
+            <div className="mb-3.5 sb-raster-karten">
               <Karte titel="Kamera-Einstellungen" farbe="am">
                 <ChipGroup
                   label="Bildausschnitt"
@@ -1211,13 +1211,11 @@ export default function SceneBuilderPage() {
             {/*
               Sitzt oben eine Location im Baustein, faellt die Karte
               „Studio-Hintergrund" weg — dann bekommt „Zugeklappt" die ganze
-              Zeile. Sonst stuende die Karte auf 56 % Breite mit einer leeren
-              Spalte daneben.
+              Zeile. Frueher stand dafuer eine Fallunterscheidung hier; seit
+              das Raster `auto-fit` benutzt, erledigt sich das von selbst: ein
+              einzelnes Kind fuellt die Zeile.
             */}
-            <div className={cn(
-              'grid grid-cols-1 items-start gap-3.5',
-              !scene.location && 'min-[1450px]:grid-cols-[1fr_0.78fr]',
-            )}>
+            <div className="sb-raster-karten">
               {/* Studio-Hintergrund — nur relevant, solange keine Location gewählt ist */}
               {!scene.location && (
                 <Karte titel="Studio-Hintergrund" dim>
@@ -1329,7 +1327,7 @@ export default function SceneBuilderPage() {
           <Passkreuz />
           <span className="flex-1 text-base font-bold tracking-[0.06em]">Prompt &amp; Referenzen</span>
           <Button size="sm" onClick={handleCopy} disabled={!prompt}
-            className="h-9 shrink-0 bg-[var(--sb-or)] text-sm font-bold text-white hover:bg-[var(--sb-or-t)] disabled:opacity-40">
+            className="h-9 shrink-0 bg-[var(--sb-or-t)] text-sm font-bold text-white hover:bg-[var(--sb-or-t)] disabled:opacity-40">
             <Copy className="mr-1.5 h-3.5 w-3.5" />Kopieren
           </Button>
         </header>
@@ -1398,7 +1396,7 @@ export default function SceneBuilderPage() {
             <div>
               <Feldname>
                 <span className="inline-flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-[var(--sb-or)]" aria-hidden="true" />
+                  <Sparkles className="h-3.5 w-3.5 text-[var(--sb-or-t)]" aria-hidden="true" />
                   Prompt
                 </span>
               </Feldname>

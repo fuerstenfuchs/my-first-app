@@ -188,7 +188,7 @@ export function ScenePresetDialog({
             <Button size="sm" variant="outline" onClick={() => importRef.current?.click()}>
               <Upload className="mr-1.5 h-3.5 w-3.5" />Importieren
             </Button>
-            <Button size="sm" className="bg-amber-600 hover:bg-amber-500" onClick={openSaveForm}>
+            <Button size="sm" className="bg-amber-700 hover:bg-amber-800" onClick={openSaveForm}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />Preset speichern
             </Button>
             <input ref={importRef} type="file" accept="application/json" className="hidden"
@@ -217,7 +217,7 @@ export function ScenePresetDialog({
                         {item.cover_image_url ? (
                           <img src={item.cover_image_url} alt={item.name} className="w-full h-full object-contain" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/20">📁</div>
+                          <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/70">📁</div>
                         )}
                         {item.isStandard && (
                           <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 text-[9px] bg-black/60 text-white/70 px-1.5 py-0.5 rounded font-medium">
@@ -276,7 +276,7 @@ export function ScenePresetDialog({
                 )}
 
                 <div className="space-y-1.5 pt-1">
-                  <Button className="w-full bg-amber-600 hover:bg-amber-500" onClick={() => { onApply(selected.config); handleClose() }}>
+                  <Button className="w-full bg-amber-700 hover:bg-amber-800" onClick={() => { onApply(selected.config); handleClose() }}>
                     <Check className="mr-1.5 h-3.5 w-3.5" />Preset anwenden
                   </Button>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -349,7 +349,7 @@ export function ScenePresetDialog({
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="ghost" onClick={() => setSaveOpen(false)}>Abbrechen</Button>
-              <Button type="submit" disabled={saving || !name.trim()} className="bg-amber-600 hover:bg-amber-500">
+              <Button type="submit" disabled={saving || !name.trim()} className="bg-amber-700 hover:bg-amber-800">
                 {saving ? 'Speichern…' : 'Speichern'}
               </Button>
             </div>
