@@ -10,13 +10,14 @@ Mark hat am 03.09.2026 zugestimmt, dass PROJ-44 und PROJ-45 „auf jeden Fall"
 gemacht werden. PROJ-46 hat er selbst als heutiges Problem benannt — deshalb
 steht es zuerst.
 
-1. **PROJ-46 — Bausteine finden statt scrollen.** Der erste Schritt ist klein
-   und tut sofort weh, wenn er fehlt: ein Suchfeld im Übernehmen-Dialog. Mark:
-   „wenn ich ein Bild vom Lichttisch in einen Prompt-Baustein übergeben will und
-   da schon ewig scrollen muss".
-2. **PROJ-45 — Lichttisch als Auswahlwerkzeug.** Zwei Bilder gegeneinander
-   halten und durchschalten.
-3. **PROJ-44 — Einstellungsreihe.** Mehrere Einstellungen desselben Moments.
+1. ~~**PROJ-46 — Bausteine finden statt scrollen.**~~ Erledigt am 03.09.2026.
+2. ~~**PROJ-44 — Einstellungsreihe.**~~ Erledigt am 04.09.2026 — Mark hat sie
+   an diesem Morgen vorgezogen („Erst Projekt vierundvierzig").
+3. **PROJ-45 — Lichttisch als Auswahlwerkzeug.** Zwei Bilder gegeneinander
+   halten und durchschalten. **Dazu gehört jetzt auch**, die Reihe aus PROJ-44
+   dort zusammenhängend zu zeigen — die Kennung (`reihe_id`, `reihe_nr`,
+   `reihe_gesamt`) steht seit dem 04.09.2026 in `scene_meta`, wird aber
+   nirgends gelesen.
 
 ## Noch nie im Betrieb gesehen
 
@@ -126,6 +127,10 @@ repariert, muss den anderen mitnehmen, sonst bleibt die ältere Kette stehen.
 2. **Doppelklick = zwei Aufträge.** Der Startknopf bleibt vom Klick bis zur
    Antwort von `anlegen` klickbar — zwei Netzwerkrunden ohne Rückmeldung.
    Gilt auch für „Nehmen und weiter" und „Neu erzeugen". Auch in PROJ-48.
+   **Teilweise behoben am 04.09.2026:** Im Scene Builder liegt die Sperre jetzt
+   in einem `useRef` statt im State (`queue-button.tsx`, `reihe-button.tsx`),
+   beide in `try/finally`. Das Muster ist damit erprobt und lässt sich
+   übertragen — **in den beiden Ketten-Dialogen steht der Fehler unverändert**.
 3. **Ein bezahltes Blatt geht beim Schließen am Halt verloren.** Der Dialog
    lässt sich in der Prüfen-Phase schließen; das fertige Vorne-Blatt ist dann
    weg, und der nächste Klick bezahlt es erneut. Beim Weg „Neu erzeugen" sagt

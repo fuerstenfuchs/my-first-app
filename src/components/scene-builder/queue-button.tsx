@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Loader2, Send, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,8 @@ import {
   type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
 } from '@/lib/image-generation'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
+import { ReiheButton } from '@/components/scene-builder/reihe-button'
+import type { Scene } from '@/lib/szene-prompt'
 
 interface QueueButtonProps {
   prompt: string
@@ -23,6 +25,12 @@ interface QueueButtonProps {
   sceneMeta: Record<string, unknown>
   /** Kurzname der Szene, wandert in den Dateinamen beim Download. */
   szenenName?: string | null
+  /**
+   * Die ganze Szene — nur für die Einstellungsreihe (PROJ-44), die je
+   * Einstellungsgröße einen eigenen Prompt baut. Ohne sie bleibt der
+   * Reihen-Kasten weg; der Auftragsknopf funktioniert unverändert.
+   */
+  scene?: Scene | null
 }
 
 /**
@@ -33,7 +41,7 @@ interface QueueButtonProps {
  * die Zuordnung, welches Bild wofür steht, und die Formatansage.
  */
 export function QueueButton({
-  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null,
+  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, scene = null,
 }: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
   const [modell, setModell] = useState<ModellId>('gpt-image-2')
@@ -68,25 +76,42 @@ export function QueueButton({
   const ansage = mitReferenz ? formatAnsage(aspectRatio) : null
   const rollenBlock = referenzZuordnung(rollen)
 
+  /**
+   * Die Sperre liegt im Ref, nicht im State: `setLaeuft(true)` wirkt erst beim
+   * nächsten Rendern, zwei schnelle Klicks kämen beide durch `if (laeuft)` und
+   * legten zwei Aufträge an. Steht so in `features/OFFEN.md`.
+   */
+  const laeuftRef = useRef(false)
+
   async function handleQueue() {
-    if (!prompt || laeuft) return
+    if (!prompt || laeuftRef.current) return
+    laeuftRef.current = true
     setLaeuft(true)
 
-    const job = await anlegen({
-      prompt:          promptFuerAuftrag(prompt, aspectRatio, rollen),
-      model:           modell,
-      size:            zuordnung.size,
-      aspect_ratio:    aspectRatio,
-      variants:        durchlaeufe,
-      ziel_klasse:     inKlassen ? klasse : null,
-      reference_urls:  referenzen.map(r => r.url),
-      reference_roles: rollen,
-      // name fuer den Dateinamen beim Download — ohne ihn hiessen alle Bilder
-      // aus dem Scene Builder nur "tresor-<datum>.png".
-      scene_meta:      { ...sceneMeta, name: szenenName },
-    })
+    // MIT `finally`, wie in der Reihe daneben: `anlegen` faengt Datenbank-
+    // fehler selbst ab, aber `auth.getUser()` darin kann bei abgerissener
+    // Verbindung werfen. Ohne `finally` bliebe der Knopf dann fuer immer
+    // gesperrt, und nur ein Neuladen der Seite holte ihn zurueck.
+    let job = null
+    try {
+      job = await anlegen({
+        prompt:          promptFuerAuftrag(prompt, aspectRatio, rollen),
+        model:           modell,
+        size:            zuordnung.size,
+        aspect_ratio:    aspectRatio,
+        variants:        durchlaeufe,
+        ziel_klasse:     inKlassen ? klasse : null,
+        reference_urls:  referenzen.map(r => r.url),
+        reference_roles: rollen,
+        // name fuer den Dateinamen beim Download — ohne ihn hiessen alle Bilder
+        // aus dem Scene Builder nur "tresor-<datum>.png".
+        scene_meta:      { ...sceneMeta, name: szenenName },
+      })
+    } finally {
+      laeuftRef.current = false
+      setLaeuft(false)
+    }
 
-    setLaeuft(false)
     if (!job) return
 
     toast.success(
@@ -197,6 +222,24 @@ export function QueueButton({
           )}
         </span>
       </p>
+
+      {/*
+        Die Einstellungsreihe (PROJ-44) — direkt unter dem Auftragsknopf, damit
+        Modell und Größenklasse oben nur EINMAL gewählt werden müssen und für
+        beide Wege gelten.
+      */}
+      {scene && (
+        <ReiheButton
+          scene={scene}
+          prompt={prompt}
+          referenzen={referenzen}
+          aspectRatio={aspectRatio}
+          sceneMeta={sceneMeta}
+          szenenName={szenenName}
+          modell={modell}
+          zielKlasse={inKlassen ? klasse : null}
+        />
+      )}
 
       {/* Wörtlich zeigen, was zusätzlich abgeschickt wird — sonst steht rechts
           ein anderer Text als der, für den bezahlt wird. */}

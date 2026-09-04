@@ -1,6 +1,6 @@
 # PROJ-44: Einstellungsreihe — Kontinuität über mehrere Einstellungen
 
-## Status: Planned
+## Status: In Review
 **Created:** 2026-09-03
 
 ## Warum
@@ -29,13 +29,112 @@ Vorschlag für die Auflösungen, angelehnt an das, was im Schnitt gebraucht wird
 Auswählbar, nicht alle acht zwangsweise. Alle Bausteine bleiben gebunden, nur
 Kameraeinstellung und Bildausschnitt variieren.
 
-## Offene Fragen
+## Die offenen Fragen, beantwortet (04.09.2026)
 
-- Erzeugt eine Reihe einen Auftrag mit N Durchläufen oder N Aufträge? Ein
-  Auftrag wäre billiger zu verwalten, N Aufträge lassen sich einzeln
-  wiederholen, wenn eine Einstellung misslingt.
-- Bekommt die Reihe eine eigene Kennung, damit der Lichttisch sie
-  zusammenhängend zeigen kann? Ohne die zerfällt sie dort sofort wieder.
-- Referenzbilder: Bei gpt-image-2 richtet sich die Ausgabegröße nach der
-  Vorlage (gemessen 01.09.2026). Eine Reihe mit wechselndem Format wäre damit
-  nicht zuverlässig — das muss vorher geklärt werden.
+**1. Ein Auftrag mit N Durchläufen oder N Aufträge? → N Aufträge.**
+Das ist keine Vorliebe, sondern von der Bauart entschieden: `anlegen()` nimmt
+EINEN Prompt und erzeugt ihn `variants`-mal. Jede Einstellung braucht aber
+einen ANDEREN Prompt — die Einstellungsgröße steckt als Textbaustein darin
+(`SHOT_TYPES[].prompt`, z.B. „close-up portrait framing" gegen „wide shot with
+strong environmental context"). Ein Auftrag mit sieben Durchläufen erzeugte
+also siebenmal dieselbe Einstellung. Nebeneffekt, der ohnehin gewollt ist:
+Eine misslungene Einstellung lässt sich einzeln wiederholen.
+
+**2. Eigene Kennung für den Lichttisch? → Ja, in `scene_meta`.**
+Das Feld ist `jsonb` und trägt schon `name`, `herkunft` und `schritt`. Eine
+`reihe_id` plus `reihe_nr` kostet keine Schemaänderung. Ob der Lichttisch sie
+zusammenhängend ANZEIGT, ist ein eigener Schritt — aber ohne die Kennung wäre
+er später gar nicht möglich, und sie jetzt mitzuschreiben ist umsonst.
+
+**3. Wechselndes Format ist unzuverlässig? → Die Frage stellt sich nicht.**
+Eine Einstellungsreihe ist genau dann eine Reihe, wenn das Format GLEICH
+bleibt — was sich ändert, ist der Bildausschnitt, nicht das Seitenverhältnis.
+Kein Schnitt wechselt mitten in der Szene von 16:9 auf hochkant. Damit
+entfällt das gemessene Problem von selbst: ein Format für die ganze Reihe,
+aus der Szene übernommen.
+
+## Die Einstellungen — aus dem, was der Scene Builder schon kann
+
+Der ursprüngliche Vorschlag nannte Totale, Halbtotale, Halbnah, Nah, Detail,
+Schulterblick und Gegenschuss. Fünf davon gibt es bereits als `SHOT_TYPES`,
+mitsamt erprobtem Prompt-Baustein:
+
+| Vorschlag | Vorhanden als |
+|---|---|
+| Totale | `establishing_shot` / `wide_shot` |
+| Halbtotale | `full_body` / `three_quarter` |
+| Halbnah | `half_body` |
+| Nah | `closeup` |
+| Detail | `extreme_closeup` |
+| **Schulterblick** | **fehlt** |
+| **Gegenschuss** | **fehlt** |
+
+Die Reihe baut auf den zehn vorhandenen Einstellungsgrößen auf — sie sind im
+Prompt-Bau verdrahtet und Mark kennt sie aus dem Scene Builder.
+
+**Schulterblick und Gegenschuss sind bewusst ausgeklammert.** Sie sind keine
+Einstellungsgrößen, sondern Kamerapositionen in Bezug auf ein Gegenüber — sie
+setzen eine zweite Person voraus, die es in der Szene bisher nicht gibt. Das
+ist ein eigener Baustein, kein Auswahlpunkt.
+
+## Was gebaut wurde (04.09.2026)
+
+**`src/lib/einstellungsreihe.ts`** — die ganze Logik, ohne React, mit Tests
+daneben (`einstellungsreihe.test.ts`).
+
+- `REIHEN_ORDNUNG` wird aus `SHOT_TYPES` **abgeleitet** (`.map().reverse()`),
+  nicht danebengeschrieben. Kommt eine elfte Einstellungsgröße dazu, steht sie
+  ohne Zutun in der Reihe.
+- `sortiereEinstellungen()` bringt die Auswahl in Schnittfolge — weit nach nah,
+  nicht in der Reihenfolge, in der Mark die Knöpfe gedrückt hat.
+- `baueReihe()` ist der Kern der Kontinuität. Er ruft für jede Einstellung
+  `buildPrompt({ ...scene, shot_type })` auf — genau **ein** Feld wechselt,
+  alles andere ist dieselbe Szene. Damit ist die Zusicherung nicht behauptet,
+  sondern von der Bauart erzwungen.
+- `reiheMeta()` schreibt `reihe_id`, `reihe_nr` und `reihe_gesamt` in
+  `scene_meta`. Der Lichttisch zeigt die Reihe noch nicht gruppiert; ohne die
+  Kennung wäre das aber später gar nicht mehr möglich, und sie jetzt
+  mitzuschreiben kostet nichts.
+
+**`src/components/scene-builder/reihe-button.tsx`** — ein Kasten unter dem
+Auftragsknopf. Mehrfachauswahl der Einstellungsgrößen, Vorbelegung mit dem
+Vorschlag aus dem Schnitt, **die Bildzahl steht vor dem Klick im Knopf**. Modell
+und Größenklasse werden oben im Auftragsknopf einmal gewählt und gelten für
+beide Wege.
+
+**`queue-button.tsx`** nimmt die Szene jetzt optional entgegen und zeigt den
+Reihen-Kasten nur, wenn sie da ist — ohne sie arbeitet der Auftragsknopf
+unverändert weiter.
+
+### Nebenbei erledigt
+
+Die Doppelklick-Sperre beider Knöpfe liegt jetzt in einem `useRef` statt im
+State. `setLaeuft(true)` wirkt erst beim nächsten Rendern; zwei schnelle Klicks
+kamen vorher beide durch die Prüfung und legten zwei bezahlte Aufträge an. Das
+war Punkt 2 in `features/OFFEN.md`. Beide Sperren stehen in `try/finally` —
+`anlegen()` fängt Datenbankfehler selbst ab, aber das `auth.getUser()` darin
+kann bei abgerissener Verbindung werfen, und ohne `finally` bliebe der Knopf
+dann bis zum Neuladen gesperrt.
+
+### Geprüft
+
+508 Tests in 32 Dateien grün (vorher 484 in 31), `tsc` sauber bis auf die zwei
+bekannten Altlasten, Build übersetzt.
+
+Zwei Mutationsproben, weil grüne Tests allein nichts über ihre Schärfe sagen:
+
+1. Sortierung auf Klickreihenfolge umgestellt → **7 Tests rot**.
+2. `lens: '50mm'` in `baueReihe` eingeschmuggelt → **genau 1 Test rot**, und
+   zwar der Kontinuitätswächter. Er trifft, was er treffen soll, und nichts
+   sonst.
+
+### Bewusst offen
+
+- **Der Lichttisch gruppiert die Reihe noch nicht.** Die Kennung liegt in der
+  Datenbank, das Anzeigen ist ein eigener Schritt (gehört zu PROJ-45).
+- **Ein Fehlschlag hält die Reihe an**, statt die restlichen Einstellungen
+  trotzdem einzureihen. Bei bezahlten Erzeugungen ist Anhalten die
+  vorsichtigere Richtung — der Grund steht schon in der Meldung, und neun
+  gleichlautende hinterher wären nur Lärm.
+- **Im Browser nicht nachgemessen.** Der Scene Builder liegt hinter der
+  Anmeldung; die Prüfung liegt deshalb in den Tests der Logik.
