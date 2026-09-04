@@ -89,4 +89,6 @@
 
 | PROJ-56 | Wetter, Boden und Wind trennen (Windmaschine im Studio) | In Review | [PROJ-56](PROJ-56-wetter-boden-wind.md) | 2026-09-04 |
 
-## Next Available ID: PROJ-57
+| PROJ-57 | Stillstand des Arbeiters sichtbar machen | In Review | [PROJ-57](PROJ-57-arbeiter-stillstand-melden.md) | 2026-09-04 |
+
+## Next Available ID: PROJ-58

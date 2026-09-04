@@ -19,6 +19,7 @@ import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/i
 import { preis, VERFAHREN_NAME, kostetGeld } from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
+import { arbeiterLage } from '@/lib/arbeiter-lage'
 
 function zeit(iso: string): string {
   const d = new Date(iso)
@@ -70,7 +71,33 @@ export default function QueuePage() {
     })
   }
 
-  const wartend = jobs.filter(j => j.status === 'queued' || j.status === 'running').length
+  const wartend  = jobs.filter(j => j.status === 'queued' || j.status === 'running').length
+  const inWarte  = jobs.filter(j => j.status === 'queued').length
+  const inArbeit = jobs.filter(j => j.status === 'running').length
+
+  /*
+    Wie lange laeuft der aelteste laufende Auftrag schon?
+
+    HIER WIRD BEWUSST DIE BROWSER-UHR BENUTZT, anders als bei `sekunden_her`,
+    das die Datenbank rechnet. Grund: Der Vergleich dort entscheidet bei 60
+    Sekunden, und die PC-Uhr wich am 01.09.2026 um 34 Sekunden ab — das haette
+    gereicht, um „laeuft" in „weg" zu drehen. Hier geht es um eine Schwelle von
+    20 Minuten; eine halbe Minute Abweichung spielt keine Rolle.
+  */
+  const laengsterLaufSekunden = (() => {
+    const laufend = jobs
+      .filter(j => j.status === 'running' && j.started_at)
+      .map(j => (Date.now() - new Date(j.started_at!).getTime()) / 1000)
+    return laufend.length > 0 ? Math.max(...laufend) : null
+  })()
+
+  const lage = arbeiterLage({
+    zustand: arbeiter.zustand,
+    sekundenHer: arbeiter.zustand === 'laeuft' || arbeiter.zustand === 'weg' ? arbeiter.sekundenHer : 0,
+    wartend: inWarte,
+    inArbeit,
+    laengsterLaufSekunden,
+  })
 
   return (
     <div className="flex h-svh flex-col overflow-hidden">
@@ -94,9 +121,11 @@ export default function QueuePage() {
           <span
             className={cn(
               'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium',
-              arbeiter.zustand === 'laeuft'
-                ? 'bg-emerald-500/15 text-emerald-400'
-                : 'bg-amber-500/15 text-amber-400',
+              lage.art === 'alarm'
+                ? 'bg-red-500/20 text-red-300'
+                : arbeiter.zustand === 'laeuft'
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-amber-500/15 text-amber-400',
             )}
             title={
               arbeiter.zustand === 'laeuft'
@@ -106,7 +135,8 @@ export default function QueuePage() {
           >
             <span className={cn(
               'h-1.5 w-1.5 rounded-full',
-              arbeiter.zustand === 'laeuft' ? 'bg-emerald-400' : 'bg-amber-400',
+              lage.art === 'alarm' ? 'bg-red-400 animate-pulse'
+                : arbeiter.zustand === 'laeuft' ? 'bg-emerald-400' : 'bg-amber-400',
             )} />
             {arbeiter.zustand === 'laeuft'
               ? 'Arbeiter läuft'
@@ -116,6 +146,46 @@ export default function QueuePage() {
           </span>
         )}
       </header>
+
+      {/*
+        DER KASTEN, DER AM 04.09.2026 GEFEHLT HAT.
+
+        Die Ampel oben rechts zeigte damals das Richtige — „Arbeiter zuletzt
+        vor 2 Stunden", in Gelb — und trotzdem stand fast zwei Stunden alles
+        still, ohne dass es jemandem auffiel. Ein 10px-Abzeichen neben der
+        Ueberschrift ist keine Meldung. Und der Hinweistext lautete „Starte den
+        Arbeiter auf dem PC", obwohl der Arbeiter LIEF; er hing nur.
+
+        Deshalb hier: gross, an der Stelle, an der die Auftragsliste anfaengt,
+        mit dem Grund statt nur dem Zustand — und nur dann, wenn wirklich etwas
+        zu melden ist. Was der Kasten sagt, entscheidet `arbeiterLage`.
+      */}
+      {lage.art !== 'still' && (
+        <div
+          role={lage.art === 'alarm' ? 'alert' : 'status'}
+          className={cn(
+            'mx-4 mt-3 shrink-0 rounded-lg border px-4 py-3',
+            lage.art === 'alarm'
+              ? 'border-red-500/40 bg-red-500/10'
+              : 'border-amber-500/35 bg-amber-500/5',
+          )}
+        >
+          <p className={cn(
+            'text-sm font-semibold',
+            lage.art === 'alarm' ? 'text-red-300' : 'text-amber-300',
+          )}>
+            {lage.art === 'alarm' ? '\u26a0 ' : ''}{lage.titel}
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+            {lage.text}
+          </p>
+          {lage.befehl && (
+            <code className="mt-2 inline-block rounded bg-background/60 px-2 py-1 text-[12px] text-foreground/80">
+              {lage.befehl}
+            </code>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4">
         {loading ? (
