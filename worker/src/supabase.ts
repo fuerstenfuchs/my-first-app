@@ -211,11 +211,23 @@ export async function bildHolen(url: string): Promise<{ daten: ArrayBuffer; typ:
   if (!antwort.ok) {
     throw new Error(`Referenzbild ${url.slice(0, 80)} → HTTP ${antwort.status}`)
   }
-  const typ = antwort.headers.get('content-type') ?? 'image/png'
-  if (!typ.startsWith('image/')) {
-    throw new Error(`Referenz ist kein Bild, sondern ${typ}`)
+  const daten = await antwort.arrayBuffer()
+
+  // DEN TYP AN DER SIGNATUR LESEN, NICHT AM KOPF.
+  // Hier stand `antwort.headers.get('content-type') ?? 'image/png'`. Der
+  // Speicher gibt genau das zurueck, was beim Hochladen behauptet wurde — und
+  // das stimmt oft nicht. Am 04.09.2026 lehnte das Bildmodell deshalb eine
+  // Vorlage ab: „Invalid image data ... images[0].image_url". `bildart` liest
+  // die ersten Bytes, und die luegen nicht.
+  const art = bildart(daten)
+  if (!art) {
+    const gemeldet = antwort.headers.get('content-type') ?? 'unbekannt'
+    throw new Error(
+      `Referenz ist kein lesbares Bild (gemeldet als ${gemeldet}). `
+      + 'Haeufigste Ursachen: eine SVG-Datei oder eine Fehlerseite mit Status 200.',
+    )
   }
-  return { daten: await antwort.arrayBuffer(), typ }
+  return { daten, typ: art.typ }
 }
 
 /**

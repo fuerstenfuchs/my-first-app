@@ -80,11 +80,17 @@ gestartet werden — er kommt von selbst nicht zurück.
   gemeldeten Typ. Ein SVG käme durch und scheiterte erst am Modell. Der
   Arbeiter hat für genau diese Frage `bildart()` über Magic Bytes — das ließe
   sich übernehmen. Critic-Befund M5.
-  **In der ERWEITERUNG am 04.09.2026 behoben** (`extension/src/lib/bildart.ts`),
-  weil Mark genau darüber gestolpert ist: `blob.type || 'image/jpeg'` schickte
-  ein AVIF-Bild als JPEG los, und Anthropic antwortete „Image format image/jpeg
-  not supported". **In der App selbst steht der Befund weiterhin offen** — dort
-  wird der gemeldete Typ nach wie vor geglaubt.
+  **Am 04.09.2026 an ALLEN DREI Stellen behoben**, nachdem Mark nacheinander
+  über jede gestolpert ist:
+  1. **Erweiterung** (`extension/src/lib/bildart.ts`) — `blob.type ||
+     'image/jpeg'` schickte ein AVIF als JPEG los.
+  2. **App** (`src/lib/bildtyp.ts`) — vier Seiten taten dasselbe, und sieben
+     API-Routen benannten jeden unbekannten Typ still in „image/jpeg" um.
+  3. **Arbeiter** (`worker/src/netz.ts`, `proxy.ts`) — `bildHolen` glaubte dem
+     `content-type` des Speichers, also dem, was beim Hochladen behauptet
+     wurde. Das Bildmodell antwortete „Invalid image data".
+  Überall gilt jetzt: Signatur schlägt Etikett, und was der Dienst nicht lesen
+  kann, wird vorher umgewandelt statt umbenannt.
 - **Zwei Mal derselbe Schlüssel.** App und Erweiterung haben getrennte
   Einstellungen, weil eine Erweiterung nicht an den `localStorage` der Seite
   kommt. Bewusst so, aber unschön.

@@ -7,9 +7,10 @@
  */
 
 import { config, ohneGeheimnis } from './config.ts'
-import { PROXY_UNERREICHBAR } from './netz.ts'
+import { PROXY_UNERREICHBAR, bildart } from './netz.ts'
 import { bildHolen } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
+import sharp from 'sharp'
 
 /** Was gpt-image-2 tatsächlich kann. Alles andere lehnt die Gegenstelle ab. */
 export const ERLAUBTE_GROESSEN = ['1024x1024', '1536x1024', '1024x1536'] as const
@@ -50,7 +51,31 @@ export async function bildErzeugen(job: ImageJob, signal?: AbortSignal): Promise
 
     const einzeln = job.reference_urls.length === 1
     for (const [i, url] of job.reference_urls.entries()) {
-      const { daten, typ } = await bildHolen(url)
+      const geholt = await bildHolen(url)
+      let daten = geholt.daten
+      let typ = geholt.typ
+
+      /*
+        WAS DAS MODELL NICHT LESEN KANN, WIRD VORHER UMGEWANDELT.
+
+        Am 04.09.2026 lehnte gpt-image-2 eine Vorlage ab:
+          HTTP 400 "Invalid image data." · images[0].image_url
+        Der Grund war ein Format, das `/v1/images/edits` nicht annimmt — AVIF
+        etwa, das immer mehr Seiten ausliefern. Vorher fiel das gar nicht auf,
+        weil der Typ aus dem Kopf der Antwort geglaubt wurde.
+
+        Ablehnen waere die halbe Loesung: Der Arbeiter hat `sharp`, kann AVIF,
+        HEIC und BMP lesen und daraus ein PNG machen. Ein Auftrag, den Mark
+        bezahlt hat, soll nicht an einem Dateiformat scheitern, das ihn nicht
+        interessiert.
+      */
+      const art = bildart(daten)
+      if (art && !art.vomModell) {
+        // Still: Diese Funktion hat keinen Melder, und der neue Typ steht
+        // gleich im Dateinamen der angehaengten Vorlage.
+        daten = (await sharp(Buffer.from(daten)).png().toBuffer()).buffer as ArrayBuffer
+        typ = 'image/png'
+      }
       // Sprechender Dateiname statt "referenz-0": Die eigentliche Zuordnung
       // steht im Prompt, aber ein Name wie "1-character.png" kann nur helfen —
       // und er macht die Fehlersuche lesbar.

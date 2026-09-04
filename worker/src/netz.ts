@@ -84,28 +84,56 @@ export function uebersetzeFehler(
  * Anbieter, der das Format wechselt, soll keinen Auftrag zum Scheitern
  * bringen — geprüft wird, dass es ein BILD ist, nicht welches.
  */
-export const KENNUNGEN: Record<string, { bytes: number[]; endung: string; typ: string }> = {
-  PNG:  { bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], endung: 'png',  typ: 'image/png' },
-  JPEG: { bytes: [0xff, 0xd8, 0xff],                               endung: 'jpg',  typ: 'image/jpeg' },
-  WEBP: { bytes: [0x52, 0x49, 0x46, 0x46],                         endung: 'webp', typ: 'image/webp' },
+/**
+ * Die Signaturen, die wir lesen koennen.
+ *
+ * WARUM DAS AM 04.09.2026 UEBERARBEITET WURDE: Hier standen nur PNG, JPEG und
+ * WEBP — und die WEBP-Pruefung sah nur `RIFF`, die ersten vier Bytes. Das ist
+ * auch der Anfang einer WAV- und einer AVI-Datei. Ein GIF wurde gar nicht
+ * erkannt, obwohl das Bildmodell es annimmt, und AVIF und HEIC blieben
+ * namenlos, obwohl gerade sie den Fehler ausloesen.
+ */
+export type Bildart = {
+  name: string
+  endung: string
+  typ: string
+  /** Nimmt das Bildmodell dieses Format direkt an? */
+  vomModell: boolean
 }
 
-export type Bildart = { name: string; endung: string; typ: string }
+/** Was `/v1/images/edits` als Vorlage annimmt. */
+export const MODELL_TYPEN = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
 
 /**
- * Was für ein Bild ist das — oder null, wenn es keins ist.
+ * Was fuer ein Bild ist das — oder null, wenn es keins ist.
  *
  * Damit wird auch die Ablage ehrlich: Ein JPEG unter dem Namen `0.png` mit
- * `Content-Type: image/png` zeigt der Browser zwar richtig an (er rät), aber
- * ein strenger Empfänger — Druckerei, Bildprogramm, ImageMagick — lehnt es ab.
- * Der Fehler fällt dann erst außerhalb der App auf.
+ * `Content-Type: image/png` zeigt der Browser zwar richtig an (er raet), aber
+ * ein Bildprogramm oder eine Druckerei lehnt es ab.
  */
 export function bildart(daten: ArrayBuffer | Buffer): Bildart | null {
-  const kopf = daten instanceof Buffer ? daten : new Uint8Array(daten)
-  if (kopf.length < 12) return null
-  for (const [name, k] of Object.entries(KENNUNGEN)) {
-    if (k.bytes.every((b, i) => kopf[i] === b)) {
-      return { name, endung: k.endung, typ: k.typ }
+  const b = daten instanceof Buffer ? daten : new Uint8Array(daten)
+  if (b.length < 12) return null
+
+  const art = (name: string, endung: string, typ: string): Bildart =>
+    ({ name, endung, typ, vomModell: (MODELL_TYPEN as readonly string[]).includes(typ) })
+
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return art('PNG', 'png', 'image/png')
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return art('JPEG', 'jpg', 'image/jpeg')
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return art('GIF', 'gif', 'image/gif')
+  if (b[0] === 0x42 && b[1] === 0x4d) return art('BMP', 'bmp', 'image/bmp')
+  // RIFF....WEBP — die Marke dahinter entscheidet, sonst waere eine WAV-Datei
+  // ein Bild.
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) {
+    return art('WEBP', 'webp', 'image/webp')
+  }
+  // ....ftyp… — AVIF und HEIC teilen sich den Rahmen, die Marke steht dahinter
+  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    const marke = String.fromCharCode(b[8]!, b[9]!, b[10]!, b[11]!)
+    if (marke.startsWith('avif') || marke.startsWith('avis')) return art('AVIF', 'avif', 'image/avif')
+    if (marke.startsWith('heic') || marke.startsWith('heix') || marke.startsWith('mif1')) {
+      return art('HEIC', 'heic', 'image/heic')
     }
   }
   return null

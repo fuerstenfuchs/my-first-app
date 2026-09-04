@@ -91,3 +91,45 @@ test('bildart erkennt die Formate und lehnt alles andere ab', () => {
   assert.equal(bildart(Buffer.from('<!DOCTYPE html><html><body>oops')), null)
   assert.equal(bildart(Buffer.from('kurz')), null, 'zu kurz ist kein Bild')
 })
+
+/*
+ * NACHGESCHAERFT AM 04.09.2026.
+ * Das Bildmodell lehnte eine Vorlage ab: HTTP 400 „Invalid image data",
+ * images[0].image_url. Der Typ kam bis dahin aus dem Content-Type der
+ * Speicher-Antwort — also aus dem, was beim Hochladen behauptet wurde.
+ * Ausserdem sah die WEBP-Pruefung nur `RIFF`, und das ist auch der Anfang
+ * einer WAV-Datei.
+ */
+test('bildart prueft WEBP an der Marke, nicht nur an RIFF', () => {
+  const webp = Buffer.from([0x52,0x49,0x46,0x46, 1,2,3,4, 0x57,0x45,0x42,0x50])
+  const wav  = Buffer.from([0x52,0x49,0x46,0x46, 1,2,3,4, 0x57,0x41,0x56,0x45])
+  assert.equal(bildart(webp)?.typ, 'image/webp')
+  assert.equal(bildart(wav), null, 'eine WAV-Datei ist kein Bild')
+})
+
+test('bildart kennt GIF — das Modell nimmt es an', () => {
+  const gif = Buffer.from([0x47,0x49,0x46,0x38,0x39,0x61, 0,0,0,0,0,0])
+  assert.equal(bildart(gif)?.typ, 'image/gif')
+  assert.equal(bildart(gif)?.vomModell, true)
+})
+
+test('bildart benennt AVIF und HEIC, statt sie zu verschweigen', () => {
+  const rahmen = (marke: string) => Buffer.concat([
+    Buffer.from([0,0,0,0x20, 0x66,0x74,0x79,0x70]),
+    Buffer.from(marke, 'ascii'),
+  ])
+  assert.equal(bildart(rahmen('avif'))?.typ, 'image/avif')
+  assert.equal(bildart(rahmen('heic'))?.typ, 'image/heic')
+  // Der entscheidende Punkt: erkannt, aber NICHT direkt verwendbar — genau
+  // deshalb wandelt `proxy.ts` sie vorher nach PNG um.
+  assert.equal(bildart(rahmen('avif'))?.vomModell, false)
+  assert.equal(bildart(rahmen('heic'))?.vomModell, false)
+})
+
+test('vomModell trennt die vier verwendbaren von den uebrigen', () => {
+  const png = Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a, 0,0,0,0])
+  const bmp = Buffer.from([0x42,0x4d, 0,0,0,0,0,0,0,0,0,0])
+  assert.equal(bildart(png)?.vomModell, true)
+  assert.equal(bildart(bmp)?.typ, 'image/bmp')
+  assert.equal(bildart(bmp)?.vomModell, false, 'BMP muss umgewandelt werden')
+})
