@@ -15,6 +15,11 @@ export interface ScenePresetConfig {
   time_of_day:     string | null
   season:          string | null
   weather:         string | null
+  /** PROJ-56 — Boden und Wind als eigene Achsen. Alte Presets kennen sie
+   *  nicht; `EMPTY_PRESET_CONFIG` unten faengt sie auf, wie schon bei den
+   *  entfallenen Archetyp-Feldern. */
+  ground:          string | null
+  wind:            string | null
   light_source:    string | null
   light_style:     string | null
   light_modifiers: string[]
@@ -56,6 +61,7 @@ export interface ScenePresetConfig {
  */
 export const EMPTY_PRESET_CONFIG: ScenePresetConfig = {
   scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
+  ground: null, wind: null,
   light_source: null, light_style: null, light_modifiers: [],
   shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
   background: null,

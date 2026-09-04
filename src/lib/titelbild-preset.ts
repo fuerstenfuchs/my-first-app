@@ -15,7 +15,7 @@ import type { ScenePresetConfig } from './scene-preset-types'
 import type { Scene, SceneRefs } from './szene-prompt'
 import { VARIANTEN_NAME } from './referenzkette'
 import type {
-  SceneType, TimeOfDayKey, SeasonKey, WeatherKey,
+  SceneType, TimeOfDayKey, SeasonKey, WeatherKey, GroundStateKey, WindKey,
   LightSourceKey, LightStyleKey, LightModifierKey, BackgroundKey,
   ShotTypeKey, CameraAngleKey, LensKey, DepthOfFieldKey, AspectRatioKey,
 } from './scene-builder-options'
@@ -128,6 +128,9 @@ export function titelbildSzene(
     time_of_day:     config.time_of_day as TimeOfDayKey | null,
     season:          config.season as SeasonKey | null,
     weather:         config.weather as WeatherKey | null,
+    // PROJ-56 — Boden und Wind kommen wie alles andere aus dem Preset.
+    ground:          (config.ground ?? null) as GroundStateKey | null,
+    wind:            (config.wind ?? null) as WindKey | null,
     light_source:    config.light_source as LightSourceKey | null,
     light_style:     config.light_style as LightStyleKey | null,
     light_modifiers: (config.light_modifiers ?? []) as LightModifierKey[],

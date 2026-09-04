@@ -34,7 +34,7 @@ vi.mock('sonner', () => ({
 /** Eine Szene, die gerade genug hat, um einen Prompt zu bauen. */
 const SZENE: Scene = {
   scene_type: 'indoor',
-  time_of_day: null, season: null, weather: null,
+  time_of_day: null, season: null, weather: null, ground: null, wind: null,
   light_source: null, light_style: null, light_modifiers: [],
   shot_type: 'closeup', camera_angle: null, lens: null,
   depth_of_field: null, aspect_ratio: 'landscape_16_9',

@@ -27,6 +27,7 @@ import {
 
 const LEER: any = {
   scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
+  ground: null, wind: null,
   light_source: null, light_style: null, light_modifiers: [],
   shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
   character: null, outfit: null,
@@ -100,6 +101,64 @@ describe('buildEnvironmentSentence', () => {
 })
 
 // ── Kamerasatz ────────────────────────────────────────────────────────────────
+
+/*
+ * PROJ-56 — Wetter, Boden und Wind sind drei Achsen, keine.
+ *
+ * Mark am 04.09.2026: „Wenn man Schnee auswaehlt, dann bedeutet das fuer den
+ * Prompt, dass auch Schnee faellt und Schnee am Boden liegt. Es kann
+ * natuerlich auch sein, dass zwar Schnee liegt, aber die Sonne scheint."
+ */
+describe('Boden und Wind als eigene Achsen', () => {
+  it('Sonne UND Schneedecke gehen zusammen — vorher unmoeglich', () => {
+    const satz = buildEnvironmentSentence(szene({
+      scene_type: 'outdoor', weather: 'sonnig', ground: 'schneedecke',
+    }))!
+    expect(satz.toLowerCase()).toContain('clear sunny sky')
+    expect(satz.toLowerCase()).toContain('snow-covered ground')
+    // Und ausdruecklich KEIN Schneefall — das war der ganze Punkt.
+    expect(satz.toLowerCase()).not.toContain('snow falling')
+  })
+
+  it('Schneefall sagt nichts mehr ueber den Boden', () => {
+    const satz = buildEnvironmentSentence(szene({
+      scene_type: 'outdoor', weather: 'schnee',
+    }))!
+    expect(satz.toLowerCase()).toContain('snow falling through the air')
+    expect(satz.toLowerCase()).not.toContain('snow-covered')
+  })
+
+  it('draussen bewegt der Wind die Szene', () => {
+    const satz = buildEnvironmentSentence(szene({
+      scene_type: 'outdoor', wind: 'boeig',
+    }))!
+    expect(satz.toLowerCase()).toContain('gusty wind')
+    expect(satz.toLowerCase()).not.toContain('wind machine')
+  })
+
+  it('drinnen ist derselbe Wind die Windmaschine', () => {
+    // Der springende Punkt: dasselbe Feld, aber im Studio darf kein
+    // Wettertext stehen. Sonst wehten Blaetter durch das Studio.
+    const satz = buildEnvironmentSentence(szene({
+      scene_type: 'indoor', wind: 'boeig',
+    }))!
+    expect(satz.toLowerCase()).toContain('wind machine')
+    expect(satz.toLowerCase()).not.toContain('gusty wind')
+  })
+
+  it('der Boden bleibt drinnen aussen vor', () => {
+    // `ground` ist eine Aussen-Achse. Drinnen darf eine Schneedecke aus einem
+    // alten Preset nicht ploetzlich im Studio liegen.
+    const satz = buildEnvironmentSentence(szene({
+      scene_type: 'indoor', ground: 'schneedecke', light_style: 'rembrandt',
+    }))!
+    expect(satz.toLowerCase()).not.toContain('snow')
+  })
+
+  it('ohne Wind und Boden bleibt der Satz wie er war', () => {
+    expect(buildEnvironmentSentence(szene({ scene_type: 'outdoor' }))).toBeNull()
+  })
+})
 
 describe('buildCameraSentence', () => {
   it('gibt null zurück, wenn keine Kameraeinstellung gewählt ist', () => {

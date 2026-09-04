@@ -53,9 +53,62 @@ export const WEATHERS: { key: WeatherKey; label: string; emoji: string; prompt: 
   { key: 'leichter_regen',  label: 'Leichter Regen',  emoji: '🌦️', prompt: 'light rain falling, wet surfaces with subtle reflections' },
   { key: 'starker_regen',   label: 'Starker Regen',   emoji: '🌧️', prompt: 'heavy rain falling, glistening wet surfaces' },
   { key: 'nebel',           label: 'Nebel',           emoji: '🌫️', prompt: 'foggy atmosphere with reduced visibility' },
-  { key: 'schnee',          label: 'Schnee',          emoji: '🌨️', prompt: 'falling snow over snow-covered surfaces' },
+  // NUR NOCH DER NIEDERSCHLAG (PROJ-56). Vorher stand hier „falling snow
+  // over snow-covered surfaces" — Schneefall UND Schneedecke in einem
+  // Schluessel. Damit war der haeufigste Winterfall, Schneedecke bei klarem
+  // Himmel, gar nicht formulierbar. Was am Boden liegt, steht jetzt in
+  // GROUND_STATES. Der Schluessel bleibt `schnee`, weil gespeicherte
+  // Presets ihn tragen und `find(...)!` sonst hart abstuerzt.
+  { key: 'schnee',          label: 'Schneefall',      emoji: '🌨️', prompt: 'snow falling through the air' },
   { key: 'gewitter',        label: 'Gewitter',        emoji: '⛈️', prompt: 'dark dramatic thunderstorm sky' },
   { key: 'sturm',           label: 'Sturm',           emoji: '🌬️', prompt: 'turbulent stormy sky with strong wind' },
+]
+
+/**
+ * Was am Boden liegt — unabhaengig davon, was vom Himmel kommt (PROJ-56).
+ *
+ * Mark: „Es kann natuerlich auch sein, dass zwar Schnee liegt, aber die Sonne
+ * scheint." Genau dafuer ist diese Achse da. Nur draussen sinnvoll.
+ */
+export type GroundStateKey = 'schneedecke' | 'nass' | 'pfuetzen' | 'laub' | 'trocken'
+
+export const GROUND_STATES: { key: GroundStateKey; label: string; emoji: string; prompt: string }[] = [
+  { key: 'schneedecke', label: 'Schneedecke', emoji: '❄️', prompt: 'snow-covered ground' },
+  { key: 'nass',        label: 'Nasser Boden', emoji: '💧', prompt: 'wet ground with soft reflections' },
+  { key: 'pfuetzen',    label: 'Pfützen',     emoji: '🪞', prompt: 'puddles on the ground mirroring the scene' },
+  { key: 'laub',        label: 'Laub',        emoji: '🍂', prompt: 'fallen leaves covering the ground' },
+  { key: 'trocken',     label: 'Trocken',     emoji: '🏜️', prompt: 'dry, dusty ground' },
+]
+
+/**
+ * Wind — und zwar DRINNEN WIE DRAUSSEN (PROJ-56).
+ *
+ * Mark: „In einem Studio koennte auch eine Windmaschine sein, sodass das Haar
+ * verweht wird. Diese Tatsache sollte man auch noch mit einbauen koennen. Ist
+ * ja auch realistisch."
+ *
+ * WARUM EIN EIGENES FELD UND NICHT IN `WEATHERS`: Die Wetterliste wertet
+ * `buildEnvironmentSentence` ausschliesslich bei `scene_type === 'outdoor'`
+ * aus. Wind soll aber gerade auch drinnen wirken — dort ist er die
+ * Windmaschine. Deshalb zwei Textfassungen je Stufe: `prompt` fuer draussen,
+ * `studio` fuer drinnen. Drinnen darf kein Wettertext auftauchen, sonst stuenden
+ * wehende Blaetter im Studio.
+ */
+export type WindKey = 'windstill' | 'brise' | 'boeig' | 'stark'
+
+export const WINDS: { key: WindKey; label: string; emoji: string; prompt: string; studio: string }[] = [
+  { key: 'windstill', label: 'Windstill', emoji: '🍃',
+    prompt: 'still air, no wind',
+    studio: 'no air movement, hair and fabric completely still' },
+  { key: 'brise',     label: 'Leichte Brise', emoji: '🌾',
+    prompt: 'a light breeze gently moving hair and fabric',
+    studio: 'a soft wind machine gently lifting the hair, subtle fabric movement' },
+  { key: 'boeig',     label: 'Böig', emoji: '💨',
+    prompt: 'gusty wind sweeping hair and clothing sideways',
+    studio: 'a strong wind machine sweeping the hair sideways, clothing caught mid-motion' },
+  { key: 'stark',     label: 'Starker Wind', emoji: '🌪️',
+    prompt: 'strong wind, hair and clothing whipped hard to one side',
+    studio: 'a powerful wind machine, hair whipped hard to one side, fabric snapping in the air' },
 ]
 
 export const LIGHT_SOURCES: { key: LightSourceKey; label: string; emoji: string; prompt: string }[] = [

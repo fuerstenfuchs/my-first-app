@@ -17,6 +17,7 @@ import {
   type SceneType, type TimeOfDayKey, type SeasonKey, type WeatherKey,
   type LightSourceKey, type LightStyleKey, type LightModifierKey, type BackgroundKey,
   type ShotTypeKey, type CameraAngleKey, type LensKey, type DepthOfFieldKey, type AspectRatioKey,
+  type GroundStateKey, type WindKey, GROUND_STATES, WINDS,
   SCENE_TYPES, OUTDOOR_ONLY_TIMES, TIME_OF_DAY, SEASONS, WEATHERS,
   LIGHT_SOURCES, LIGHT_STYLES, LIGHT_MODIFIERS, STUDIO_BACKGROUNDS,
   SHOT_TYPES, CAMERA_ANGLES, LENSES, DEPTH_OF_FIELDS, ASPECT_RATIOS,
@@ -556,6 +557,7 @@ export default function SceneBuilderPage() {
   const [scene, setScene] = useState<Scene>({
     scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
     light_source: null, light_style: null, light_modifiers: [],
+    ground: null, wind: null,
     shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
     character: null, outfit: null,
     location: null, pose: null, expression: null, camera: null,
@@ -622,7 +624,7 @@ export default function SceneBuilderPage() {
     })
   }
 
-  function setCondition<K extends 'time_of_day' | 'season' | 'weather' | 'light_source' | 'light_style'>(key: K, value: Scene[K]) {
+  function setCondition<K extends 'time_of_day' | 'season' | 'weather' | 'ground' | 'wind' | 'light_source' | 'light_style'>(key: K, value: Scene[K]) {
     setScene(prev => ({ ...prev, [key]: value }))
   }
 
@@ -682,6 +684,7 @@ export default function SceneBuilderPage() {
     setScene({
       scene_type: 'outdoor', time_of_day: null, season: null, weather: null,
       light_source: null, light_style: null, light_modifiers: [],
+      ground: null, wind: null,
       shot_type: null, camera_angle: null, lens: null, depth_of_field: null, aspect_ratio: null,
       character: null, outfit: null,
       location: null, pose: null, expression: null, camera: null,
@@ -735,6 +738,8 @@ export default function SceneBuilderPage() {
       light_style: scene.light_style,
       light_modifiers: scene.light_modifiers,
       shot_type: scene.shot_type,
+      ground: scene.ground,
+      wind: scene.wind,
       camera_angle: scene.camera_angle,
       lens: scene.lens,
       depth_of_field: scene.depth_of_field,
@@ -772,6 +777,8 @@ export default function SceneBuilderPage() {
       light_style: config.light_style as LightStyleKey | null,
       light_modifiers: config.light_modifiers as LightModifierKey[],
       shot_type: config.shot_type as ShotTypeKey | null,
+      ground: (config.ground ?? null) as GroundStateKey | null,
+      wind: (config.wind ?? null) as WindKey | null,
       camera_angle: config.camera_angle as CameraAngleKey | null,
       lens: config.lens as LensKey | null,
       depth_of_field: config.depth_of_field as DepthOfFieldKey | null,
@@ -1185,6 +1192,37 @@ export default function SceneBuilderPage() {
                     onSelect={v => setCondition('light_source', v)}
                   />
                 )}
+
+                {/*
+                  BODEN UND WIND SIND EIGENE ACHSEN (PROJ-56).
+
+                  Vorher steckte beides im Wetter: „Schnee" hiess zugleich
+                  Schneefall UND Schneedecke, Wind gab es nur als „Sturm".
+                  Mark: „Es kann natuerlich auch sein, dass zwar Schnee liegt,
+                  aber die Sonne scheint." Genau das geht jetzt.
+                */}
+                {scene.scene_type === 'outdoor' && (
+                  <ChipGroup
+                    label="Bodenzustand"
+                    options={GROUND_STATES}
+                    selected={scene.ground}
+                    onSelect={v => setCondition('ground', v)}
+                  />
+                )}
+
+                {/*
+                  WIND GILT IN BEIDEN SZENENTYPEN — drinnen ist es die
+                  Windmaschine. Deshalb wechselt hier die Beschriftung, nicht
+                  das Feld: derselbe Wert, im Prompt aber ein anderer Satz
+                  (`WINDS[].studio` statt `.prompt`), damit im Studio keine
+                  wehenden Blaetter stehen.
+                */}
+                <ChipGroup
+                  label={scene.scene_type === 'outdoor' ? 'Wind' : 'Windmaschine'}
+                  options={WINDS}
+                  selected={scene.wind}
+                  onSelect={v => setCondition('wind', v)}
+                />
               </Karte>
             </div>
 

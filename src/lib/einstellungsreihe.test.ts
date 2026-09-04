@@ -12,6 +12,8 @@ const SZENE: Scene = {
   time_of_day: null,
   season: null,
   weather: null,
+  ground: null,
+  wind: null,
   light_source: 'fensterlicht',
   light_style: 'rembrandt',
   light_modifiers: [],

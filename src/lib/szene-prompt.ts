@@ -23,11 +23,13 @@ import type { LookGradingItem } from '@/hooks/use-look-grading'
 import type { RefImage } from '@/lib/reference-images'
 import {
   type SceneType, type TimeOfDayKey, type SeasonKey, type WeatherKey,
+  type GroundStateKey, type WindKey,
   type LightSourceKey, type LightStyleKey, type LightModifierKey, type BackgroundKey,
   type ShotTypeKey, type CameraAngleKey, type LensKey, type DepthOfFieldKey, type AspectRatioKey,
   TIME_OF_DAY, SEASONS, WEATHERS,
   LIGHT_SOURCES, LIGHT_STYLES, LIGHT_MODIFIERS, STUDIO_BACKGROUNDS,
   SHOT_TYPES, CAMERA_ANGLES, LENSES, DEPTH_OF_FIELDS, ASPECT_RATIOS,
+  GROUND_STATES, WINDS,
 } from '@/lib/scene-builder-options'
 
 export type SceneRefs = {
@@ -58,6 +60,10 @@ export type Scene = {
   style:     LookGradingItem | null
   grading:   LookGradingItem | null
   background: BackgroundKey | null
+  /** Was am Boden liegt — unabhaengig vom Himmel (PROJ-56). Nur draussen. */
+  ground: GroundStateKey | null
+  /** Wind, drinnen wie draussen; drinnen ist es die Windmaschine (PROJ-56). */
+  wind: WindKey | null
 }
 
 export function capitalize(s: string): string {
@@ -73,12 +79,20 @@ export function buildEnvironmentSentence(scene: Scene): string | null {
     if (scene.time_of_day) clauses.push(TIME_OF_DAY.find(t => t.key === scene.time_of_day)!.prompt)
     if (scene.season)      clauses.push(SEASONS.find(s => s.key === scene.season)!.prompt)
     if (scene.weather)     clauses.push(WEATHERS.find(w => w.key === scene.weather)!.prompt)
+    // Boden und Wind sind eigene Achsen (PROJ-56): „Sonnig" plus „Schneedecke"
+    // muss gehen, ohne dass Schnee faellt.
+    if (scene.ground)      clauses.push(GROUND_STATES.find(g => g.key === scene.ground)!.prompt)
+    if (scene.wind)        clauses.push(WINDS.find(w => w.key === scene.wind)!.prompt)
     if (clauses.length === 0) return null
     clauses.push('natural outdoor lighting', 'atmospheric depth', 'realistic environmental illumination')
   } else {
     if (scene.light_style)  clauses.push(LIGHT_STYLES.find(s => s.key === scene.light_style)!.prompt)
     if (scene.light_source) clauses.push(LIGHT_SOURCES.find(s => s.key === scene.light_source)!.prompt)
     for (const m of scene.light_modifiers) clauses.push(LIGHT_MODIFIERS.find(x => x.key === m)!.prompt)
+    // DRINNEN IST DER WIND DIE WINDMASCHINE — deshalb `studio` und nicht
+    // `prompt`. Der Aussentext spraeche von Wind, der durch die Szene faehrt;
+    // im Studio bewegt sich nur, was vor der Maschine steht.
+    if (scene.wind)         clauses.push(WINDS.find(w => w.key === scene.wind)!.studio)
     if (clauses.length === 0) return null
     clauses.push('clean indoor lighting setup', 'natural skin tones')
   }
