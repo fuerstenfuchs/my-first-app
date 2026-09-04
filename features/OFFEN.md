@@ -71,6 +71,48 @@ steht es zuerst.
   Supabase irgendwann eine Speichergrenze des Kontos meldet, ist das der
   erste Blick.
 
+## Offen aus der PROJ-44-Prüfung (04.09.2026)
+
+Der BLOCKER (`CAMERA_COMBO_OVERRIDES` verwarf Kamerawinkel, Tiefenschärfe und
+Format) ist behoben und aufgeschrieben, siehe
+`features/PROJ-44-einstellungsreihe.md`. Was offen bleibt:
+
+### Eine echte Frage an Mark, keine Aufgabe
+
+- **Eine Reihe wechselt die Einstellungsgröße, aber nicht die Achse.** Im
+  Schnitt springen zwei Einstellungen desselben Motivs aus derselben
+  Kameraposition, wenn sich die Größe nicht deutlich genug ändert — das ist
+  der Grund für die 30-Grad-Regel. Bei benachbarten Paaren wie Nah → Detail
+  oder Halbtotale → Halbnah ist das sichtbar. **Für Auswahlmaterial ist die
+  Reihe genau richtig** („welche Größe nehme ich"), für eine schnittfähige
+  Folge fehlt ein leichter Winkelversatz je Einstellung. Das wäre dann mehr
+  als ein Feldwechsel — deshalb Marks Entscheidung, nicht meine.
+
+### Kleinere Befunde, nicht behoben
+
+- **„Detail" ist an ein Gesicht gebunden.** `extreme_closeup` heißt im Prompt
+  „extreme close-up shot focusing on **facial** details". Im Schnitt ist ein
+  Detail aber oft eine Hand, ein Gegenstand, ein Schild. Bei einer Szene ohne
+  Person liefert dieser Punkt der Vorbelegung ein Gesicht, das dort nichts zu
+  suchen hat.
+- **Eine neue Einstellungsgröße landet an der falschen Stelle der Reihe.**
+  `REIHEN_ORDNUNG` ist `SHOT_TYPES.map().reverse()` — reine Umkehr, kein
+  Merkmal am Eintrag. Wer eine elfte Größe hinten anhängt, bekommt sie als
+  erste, weiteste Einstellung, unabhängig davon, was sie zeigt. Die Ableitung
+  ist trotzdem besser als eine zweite handgetippte Liste; wer eine Größe
+  hinzufügt, muss nur wissen, dass die Position aus der Reihenfolge in
+  `SHOT_TYPES` kommt.
+- **Die Sperre `!prompt` ist wirkungslos** (in `reihe-button.tsx` und
+  `queue-button.tsx`). `buildPrompt` schiebt immer mindestens „Indoor scene."
+  und „Photorealistic." hinein — der String ist nie leer. Die Prüfung schützt
+  nichts, schadet aber auch nicht.
+- **`buildPrompt` stürzt bei einem unbekannten Schlüssel ab** statt ihn zu
+  überspringen (`SEASONS.find(...)!.prompt`). Aufgefallen beim Schreiben der
+  Tests: ein Tippfehler im Schlüssel gibt „Cannot read properties of
+  undefined" mitten im Prompt-Bau. Aus der Oberfläche heraus kann das nicht
+  passieren, weil dort nur gültige Werte wählbar sind — aus einem importierten
+  Preset alter Fassung aber schon.
+
 ## Kaputt, aber niemandem aufgefallen
 
 - **`npm run lint` läuft nicht.** Das Skript ruft `next lint`, und das gibt es

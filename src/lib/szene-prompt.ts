@@ -86,25 +86,61 @@ export function buildEnvironmentSentence(scene: Scene): string | null {
   return capitalize(clauses.join(', ')) + '.'
 }
 
-// A few shot type + lens pairings read much better as one tailored, professionally
-// phrased sentence than as a naive concatenation of their individual fragments.
-const CAMERA_COMBO_OVERRIDES: { shot_type: ShotTypeKey; lens: LensKey; prompt: string }[] = [
-  { shot_type: 'closeup',   lens: '135mm', prompt: 'Professional close-up portrait, 135mm telephoto lens, strong background compression, flattering facial proportions, shallow depth of field.' },
-  { shot_type: 'full_body', lens: '24mm',  prompt: 'Full body environmental shot, 24mm wide-angle lens, strong sense of place, natural environmental context.' },
+/*
+ * A few shot type + lens pairings read much better as one tailored, professionally
+ * phrased sentence than as a naive concatenation of their individual fragments.
+ *
+ * `prompt` ERSETZT NUR EINSTELLUNGSGROESSE UND OBJEKTIV — nicht den ganzen Satz.
+ *
+ * WARUM DAS AM 04.09.2026 GEAENDERT WURDE: Vorher kehrte `buildCameraSentence`
+ * beim Treffer sofort zurueck. Kamerawinkel, Tiefenschaerfe und Formatsatz
+ * fielen damit fuer genau dieses eine Bild weg. Bei einem Einzelbild war das
+ * bloss ungenau — in einer Einstellungsreihe (PROJ-44) bricht es die
+ * Zusicherung des ganzen Features: `closeup` und `full_body` stehen beide in
+ * der Vorbelegung, 24mm und 135mm sind regulaere Auswahlpunkte. Vier Bilder
+ * kamen aus tiefer Kameraposition, das fuenfte ohne Winkelangabe.
+ * Gefunden bei der Pruefung von PROJ-44.
+ */
+const CAMERA_COMBO_OVERRIDES: {
+  shot_type: ShotTypeKey
+  lens: LensKey
+  prompt: string
+  /**
+   * Was der fertige Satz zur Tiefenschaerfe schon sagt. Wird NUR eingesetzt,
+   * wenn die Szene selbst keine waehlt — sonst gewinnt immer Marks Auswahl.
+   */
+  tiefenschaerfeWennKeine?: string
+}[] = [
+  {
+    shot_type: 'closeup', lens: '135mm',
+    prompt: 'professional close-up portrait, 135mm telephoto lens, strong background compression, flattering facial proportions',
+    tiefenschaerfeWennKeine: 'shallow depth of field',
+  },
+  {
+    shot_type: 'full_body', lens: '24mm',
+    prompt: 'full body environmental shot, 24mm wide-angle lens, strong sense of place, natural environmental context',
+  },
 ]
 
 // Merges the structured camera settings into one natural, professionally phrased
 // sentence instead of listing the selected technical terms as raw keywords.
 export function buildCameraSentence(scene: Scene): string | null {
   const override = CAMERA_COMBO_OVERRIDES.find(c => c.shot_type === scene.shot_type && c.lens === scene.lens)
-  if (override) return override.prompt
 
   const clauses: string[] = []
-  if (scene.shot_type)      clauses.push(SHOT_TYPES.find(s => s.key === scene.shot_type)!.prompt)
-  if (scene.camera_angle)   clauses.push(CAMERA_ANGLES.find(a => a.key === scene.camera_angle)!.prompt)
-  if (scene.lens)           clauses.push(LENSES.find(l => l.key === scene.lens)!.prompt)
-  if (scene.depth_of_field) clauses.push(DEPTH_OF_FIELDS.find(d => d.key === scene.depth_of_field)!.prompt)
-  if (scene.aspect_ratio)   clauses.push(ASPECT_RATIOS.find(r => r.key === scene.aspect_ratio)!.prompt)
+
+  // Der Sonderfall deckt Einstellungsgroesse UND Objektiv ab — beide werden
+  // deshalb unten uebersprungen, alles Uebrige haengt sich normal an.
+  if (override)                  clauses.push(override.prompt)
+  else if (scene.shot_type)      clauses.push(SHOT_TYPES.find(s => s.key === scene.shot_type)!.prompt)
+
+  if (scene.camera_angle)        clauses.push(CAMERA_ANGLES.find(a => a.key === scene.camera_angle)!.prompt)
+  if (!override && scene.lens)   clauses.push(LENSES.find(l => l.key === scene.lens)!.prompt)
+
+  if (scene.depth_of_field)      clauses.push(DEPTH_OF_FIELDS.find(d => d.key === scene.depth_of_field)!.prompt)
+  else if (override?.tiefenschaerfeWennKeine) clauses.push(override.tiefenschaerfeWennKeine)
+
+  if (scene.aspect_ratio)        clauses.push(ASPECT_RATIOS.find(r => r.key === scene.aspect_ratio)!.prompt)
 
   if (clauses.length === 0) return null
   return capitalize(clauses.join(', ')) + '.'

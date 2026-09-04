@@ -46,10 +46,18 @@ export function einstellungLabel(key: ShotTypeKey): string {
  * Fünf und nicht zehn, weil ein Klick hier fünf bezahlte Erzeugungen auslöst.
  * Eine Vorbelegung, die zehn Bilder kostet, wäre eine teure Vorgabe für
  * jemanden, der den Knopf zum ersten Mal sieht.
+ *
+ * Die deutschen Namen dahinter sind Marks Sprache, die Schlüssel sind die des
+ * Scene Builders — die beiden decken sich nicht eins zu eins. Die Spezifikation
+ * bietet für „Halbtotale" `full_body` ODER `three_quarter` an; gewählt ist
+ * `full_body` (Ganzfigur, Kopf bis Fuß). Das ist eine Stufe WEITER als die
+ * eigentliche Halbtotale, die `three_quarter` wäre — bewusst so, weil die Reihe
+ * dadurch gleichmäßiger von weit nach nah abstuft. Wer die engere Halbtotale
+ * will, hakt `three_quarter` dazu an.
  */
 export const REIHE_VORBELEGUNG: ShotTypeKey[] = [
-  'establishing_shot', // Totale
-  'full_body',         // Halbtotale
+  'establishing_shot', // Totale (die ganze Szene)
+  'full_body',         // Ganzfigur, Kopf bis Fuß — Marks „Halbtotale"
   'half_body',         // Halbnah
   'closeup',           // Nah
   'extreme_closeup',   // Detail
@@ -100,10 +108,24 @@ export function baueReihe(scene: Scene, keys: ShotTypeKey[]): Einstellung[] {
 /**
  * Die Kennung, die jede Einstellung in `scene_meta` mitbekommt.
  *
- * `scene_meta` ist `jsonb` und trägt schon `name`, `herkunft` und `schritt` —
- * drei weitere Felder kosten keine Schemaänderung. Der Lichttisch zeigt die
- * Reihe vorerst NICHT gruppiert; ohne die Kennung wäre das später aber gar
- * nicht mehr möglich, und sie jetzt mitzuschreiben ist umsonst.
+ * WAS AUF DIESEM WEG WIRKLICH IN `basis` STEHT (nachgemessen, nicht vermutet):
+ * die flachen Felder eines `ScenePresetConfig` — `scene_type`, `time_of_day`,
+ * `season`, `weather`, die vier `light_*`, `shot_type`, `camera_angle`, `lens`,
+ * `depth_of_field`, `aspect_ratio`, `background`, die acht `*_id` und `refs` —
+ * plus `name`, den der Auftragsknopf für den Dateinamen beim Download anhängt.
+ * `scene-builder/page.tsx` baut das mit `buildPresetConfigFromScene()`.
+ *
+ * NICHT dabei sind `herkunft` und `schritt`. `herkunft` setzen andere Wege
+ * (freie Erzeugung, Prompt-Dialog, Vergrößerung); `schritt` kommt in `src/`
+ * überhaupt nicht als `scene_meta`-Feld vor — die Referenzkette nennt so nur
+ * eine eigene Zustandsangabe.
+ *
+ * `scene_meta` ist `jsonb`, drei weitere Felder kosten also keine
+ * Schemaänderung. `shot_type` steht in `basis` schon (aus der Szene) und wird
+ * hier bewusst ÜBERSCHRIEBEN — sonst trüge jede Einstellung der Reihe die
+ * Größe der Ausgangsszene statt ihre eigene. Der Lichttisch zeigt die Reihe
+ * vorerst NICHT gruppiert; ohne die Kennung wäre das später aber gar nicht
+ * mehr möglich, und sie jetzt mitzuschreiben ist umsonst.
  *
  * `reihe_id` kommt von außen (eine `crypto.randomUUID()` je Reihe), damit
  * diese Funktion rein bleibt und im Test vorhersagbar ist.

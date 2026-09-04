@@ -64,6 +64,15 @@ export function ReiheButton({
   const anzahl = reihe.length
   const gesperrt = !prompt || anzahl === 0 || laeuft
 
+  /**
+   * Steckt die Einstellung, die in der Szene selbst eingestellt ist, auch in
+   * der Reihe? Dann liefern der Auftragsknopf oben und die Reihe zusammen
+   * ZWEIMAL denselben Prompt — zwei bezahlte Erzeugungen desselben Bildes,
+   * ohne dass es irgendwo stünde. Geprüft wird gegen `reihe` und nicht gegen
+   * `gewaehlt`, weil nur `reihe` das ist, was wirklich eingereiht wird.
+   */
+  const aktuelleInReihe = !!scene.shot_type && reihe.some(e => e.shot_type === scene.shot_type)
+
   function umschalten(key: ShotTypeKey) {
     setGewaehlt(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
@@ -87,6 +96,10 @@ export function ReiheButton({
     const urls = referenzen.map(r => r.url)
 
     let eingereiht = 0
+    /** Was WIRKLICH durchkam — die Grundlage fürs Abwählen weiter unten. */
+    const erledigt: ShotTypeKey[] = []
+    let abgebrochen = false
+
     try {
       for (const einstellung of reihe) {
         const job = await anlegen({
@@ -96,6 +109,9 @@ export function ReiheButton({
           // EIN Format für die ganze Reihe. Was sich ändert, ist der
           // Bildausschnitt, nicht das Seitenverhältnis.
           aspect_ratio:    aspectRatio,
+          // IMMER genau ein Bild je Einstellung. Die Durchläufe-Auswahl über
+          // diesem Kasten gilt hier NICHT — das steht auch als Satz im Kasten,
+          // weil die Auswahl sonst so aussieht, als gälte sie für beide Knöpfe.
           variants:        1,
           ziel_klasse:     zielKlasse,
           reference_urls:  urls,
@@ -108,14 +124,71 @@ export function ReiheButton({
         // Lärm — und die Reihe ist ohnehin unvollständig.
         if (!job) break
         eingereiht++
+        erledigt.push(einstellung.shot_type)
         setFortschritt(eingereiht)
       }
+    } catch (e) {
+      /**
+       * OHNE DIESES `catch` WÄRE DER FEHLER UNSICHTBAR — und die schon
+       * bezahlten Bilder unsichtbar mit ihm.
+       *
+       * `anlegen` fängt Datenbankfehler selbst ab, aber `supabase.auth
+       * .getUser()` darin wirft bei abgerissener Verbindung. `onClick` nimmt
+       * diese async-Funktion direkt entgegen; die Ausnahme würde also zu einer
+       * unbehandelten Promise-Ablehnung: kein Toast, kein Fehlertext, der
+       * Knopf sieht danach normal aus. Der naheliegende nächste Schritt wäre
+       * ein zweiter Klick — auf Aufträge, die bereits laufen und bezahlt sind.
+       * Deshalb nennt die Meldung die ZAHL: nur so weiß Mark, was schon läuft.
+       */
+      abgebrochen = true
+      console.error('Einstellungsreihe abgebrochen', e)
+      toast.error(
+        eingereiht === 0
+          ? 'Nichts eingereiht — die Verbindung ist abgerissen'
+          : `Abgebrochen nach ${eingereiht} von ${anzahl} Einstellungen`,
+        {
+          description: eingereiht === 0
+            ? 'Es wurde kein Bild in Auftrag gegeben. Nochmal versuchen, sobald die Verbindung wieder steht.'
+            : `Diese ${eingereiht} sind bezahlt und stehen in der Warteschlange. Der Knopf bietet gleich nur noch die übrigen ${anzahl - eingereiht} an.`,
+          ...(eingereiht > 0 && {
+            action: { label: 'Warteschlange', onClick: () => { window.location.href = '/queue' } },
+          }),
+        },
+      )
     } finally {
       laeuftRef.current = false
       setLaeuft(false)
       setFortschritt(0)
     }
 
+    /**
+     * NACH EINEM TEILABBRUCH DIE ERLEDIGTEN ABWÄHLEN.
+     *
+     * Vorher blieben nach „Nur 3 von 5" alle fünf angehakt. Der einzige
+     * angebotene Weg — nochmal klicken — reihte alle fünf erneut ein, drei
+     * davon ein zweites Mal bezahlt; und von außen ist nicht erkennbar, welche
+     * drei durchkamen. Abgewählt bietet der Knopf danach genau die übrigen an,
+     * und die Zahl darin stimmt.
+     *
+     * NUR IM TEILABBRUCH, nicht beim vollen Erfolg. Eine vollständige Reihe zu
+     * wiederholen ist ein gewollter Vorgang: Mark ändert oben Licht, Objektiv
+     * oder Referenz und will dieselben fünf Einstellungen noch einmal. Dort
+     * wäre ein leerer Kasten nach jedem Lauf reine Klickarbeit — und die
+     * Wiederholung kostet auch nichts ungewollt, weil sie der Auftrag ist. Beim
+     * Teilabbruch ist es umgekehrt: dort ist das Wiederholen der Auswahl genau
+     * das, was ungewollt doppelt zahlt.
+     */
+    if (eingereiht > 0 && eingereiht < anzahl) {
+      setGewaehlt(prev => prev.filter(k => !erledigt.includes(k)))
+    }
+
+    // Der Fehlerfall hat seine Meldung schon — mit Zahl. Ein zweiter Toast
+    // hinterher wäre nur Lärm.
+    if (abgebrochen) return
+
+    // BLEIBT ERREICHBAR: Gibt `anlegen` gleich beim ersten Auftrag regulär
+    // `null` zurück (statt zu werfen), gibt es hier nichts zu melden — den
+    // Grund hat `anlegen` selbst schon gesagt.
     if (eingereiht === 0) return
 
     toast.success(
@@ -125,7 +198,7 @@ export function ReiheButton({
       {
         description: eingereiht === anzahl
           ? 'Gleiche Szene, gleiches Licht — nur der Bildausschnitt wechselt.'
-          : 'Der Rest wurde nicht eingereiht. Die Meldung dazu steht darüber.',
+          : `Die ${eingereiht} sind bezahlt. Der Knopf bietet jetzt nur noch die übrigen ${anzahl - eingereiht} an — ein zweiter Klick reiht also nichts doppelt ein.`,
         action: { label: 'Warteschlange', onClick: () => { window.location.href = '/queue' } },
       },
     )
@@ -138,7 +211,16 @@ export function ReiheButton({
         <button
           type="button"
           onClick={() => setGewaehlt(REIHE_VORBELEGUNG)}
-          className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground"
+          /*
+            WÄHREND DES LAUFS GESPERRT, wie die Größen-Knöpfe daneben. Ein Klick
+            mitten im Lauf setzt `gewaehlt` zurück, damit ändert sich `anzahl` —
+            und im Knopf stünde „Einstellung 3 von 5", während neun Aufträge
+            unterwegs sind. Die Schleife selbst läuft auf der bereits gebauten
+            `reihe` weiter; falsch wäre also nur die Anzeige. Genau die muss bei
+            bezahlten Erzeugungen stimmen.
+          */
+          disabled={laeuft}
+          className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-40 disabled:hover:text-muted-foreground/50"
         >
           Vorschlag
         </button>
@@ -149,6 +231,9 @@ export function ReiheButton({
         {REIHEN_ORDNUNG.map(key => {
           const opt = SHOT_TYPES.find(s => s.key === key)!
           const an = gewaehlt.includes(key)
+          // Die Einstellung, die in der Szene selbst steht — genau diese
+          // erzeugt der Auftragsknopf oben.
+          const istAktuelle = key === scene.shot_type
           return (
             <button
               key={key}
@@ -156,11 +241,13 @@ export function ReiheButton({
               aria-pressed={an}
               onClick={() => umschalten(key)}
               disabled={laeuft}
+              title={istAktuelle ? 'Aktuelle Einstellung der Szene' : undefined}
               className={cn(
                 'flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40',
                 an
                   ? 'border-orange-500/50 bg-orange-500/15 text-orange-300'
                   : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground',
+                istAktuelle && 'ring-1 ring-inset ring-emerald-500/60',
               )}
             >
               <span>{opt.emoji}</span>
@@ -194,6 +281,31 @@ export function ReiheButton({
                 Charakter, Outfit, Location, Licht, Objektiv und Format bleiben gleich.</>}
         </span>
       </p>
+
+      {/*
+        DIE DURCHLÄUFE-AUSWAHL SIEHT AUS, ALS GÄLTE SIE AUCH HIER. Sie steht in
+        derselben Karte, ein paar Zeilen höher („1× Bild … 4× Bild"), dieser
+        Kasten sitzt darunter. Wer „3× Bild" einstellt und die Reihe startet,
+        erwartet 15 Bilder und bekommt 5. Ein Bild je Einstellung ist richtig —
+        also wird nicht das Verhalten geändert, sondern gesagt, was gilt.
+      */}
+      <p className="text-[9px] leading-snug text-muted-foreground/50">
+        Die Durchläufe-Auswahl oben gilt nur für den Auftragsknopf. Die Reihe
+        erzeugt immer genau ein Bild je Einstellung.
+      </p>
+
+      {/*
+        Die doppelte Erzeugung wird sichtbar gemacht, nicht verhindert: beide
+        Wege zu nutzen ist legitim (der Auftragsknopf kann mehrere Durchläufe
+        desselben Ausschnitts). Nur soll niemand versehentlich zweimal für
+        dasselbe Bild zahlen.
+      */}
+      {aktuelleInReihe && (
+        <p className="text-[9px] leading-snug text-emerald-500/70">
+          Grün umrandet ist die Einstellung der Szene — sie steckt auch in dieser
+          Reihe. Der Auftragsknopf oben erzeugt dann dasselbe Bild ein zweites Mal.
+        </p>
+      )}
     </div>
   )
 }

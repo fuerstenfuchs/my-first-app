@@ -119,14 +119,44 @@ describe('buildCameraSentence', () => {
   /**
    * Die zwei Sonderfälle sind der Grund, warum diese Funktion überhaupt
    * existiert: Ohne sie stünden hier aneinandergereihte Stichworte statt eines
-   * Satzes. Sie verdrängen ALLES andere — auch eine gewählte Blende oder ein
-   * gewähltes Format tauchen dann nicht auf.
+   * Satzes.
+   *
+   * BIS ZUM 04.09.2026 VERDRÄNGTEN SIE ALLES ANDERE — auch einen gewählten
+   * Kamerawinkel, eine gewählte Blende, ein gewähltes Format. Genau das stand
+   * hier als erwartetes Verhalten, und es war falsch: In einer
+   * Einstellungsreihe (PROJ-44) wechselt nur die Einstellungsgröße, und
+   * ausgerechnet bei `closeup` und `full_body` fiel damit für ein einzelnes
+   * Bild der Kamerawinkel weg, während alle anderen ihn trugen. Jetzt ersetzt
+   * der Sonderfall NUR Einstellungsgröße und Objektiv; alles Übrige hängt
+   * sich normal an.
    */
-  it('Nahaufnahme + 135mm nimmt den fertigen Satz und verwirft die übrigen Angaben', () => {
+  it('Nahaufnahme + 135mm nimmt den fertigen Satz, behält aber Winkel und Format', () => {
     const satz = buildCameraSentence(szene({
       shot_type: 'closeup', lens: '135mm', camera_angle: 'birds_eye', aspect_ratio: 'square_1_1',
-    }))
-    expect(satz).toBe('Professional close-up portrait, 135mm telephoto lens, strong background compression, flattering facial proportions, shallow depth of field.')
+    }))!
+    expect(satz.startsWith('Professional close-up portrait, 135mm telephoto lens')).toBe(true)
+    expect(satz).toContain("bird's-eye perspective")
+    expect(satz).toContain('(1:1)')
+  })
+
+  it('setzt die eingebaute Blende des Sonderfalls nur ein, wenn die Szene keine wählt', () => {
+    const ohne = buildCameraSentence(szene({ shot_type: 'closeup', lens: '135mm' }))!
+    expect(ohne).toContain('shallow depth of field')
+
+    // Marks ausdrückliche Wahl gewinnt gegen den eingebauten Satz — sonst
+    // stünde eine Blende im Prompt, die er gerade abgewählt hat.
+    const mit = buildCameraSentence(szene({
+      shot_type: 'closeup', lens: '135mm', depth_of_field: 'deep_focus',
+    }))!
+    expect(mit).toContain('deep focus')
+    expect(mit).not.toContain('shallow depth of field')
+  })
+
+  it('nennt das Objektiv im Sonderfall genau EINMAL', () => {
+    // Der fertige Satz nennt das Objektiv selbst. Griffe die normale
+    // Objektiv-Zeile zusätzlich, stünde "135mm" doppelt im Prompt.
+    const satz = buildCameraSentence(szene({ shot_type: 'closeup', lens: '135mm' }))!
+    expect(satz.match(/135mm/g)!.length).toBe(1)
   })
 
   it('Ganzkörper + 24mm nimmt den fertigen Satz', () => {
@@ -385,6 +415,12 @@ const GRUNDLINIE: { name: string; scene: Scene; erwartet: string }[] = [
    * unveraendert da. Der Hintergrund 'white' wird weiterhin von der echten
    * Location verdraengt.
    */
+  /*
+   * ABSICHTLICH NEU AUFGEZEICHNET AM 04.09.2026, gleicher Grund wie bei
+   * 'kamera_override_135': Der Sonderfall full_body + 24mm verwarf vorher
+   * den gewaehlten Kamerawinkel, die Tiefenschaerfe und den Formatsatz.
+   * Alle drei stehen jetzt wieder im Prompt.
+   */
   {
     name: 'outdoor_voll_mit_archetyp_resten',
     scene: szene({
@@ -410,7 +446,7 @@ const GRUNDLINIE: { name: string; scene: Scene; erwartet: string }[] = [
       grading: { id: 'g1', name: 'Grading', prompt: 'Teal and orange grading!' },
       background: 'white',
     }),
-    erwartet: 'Outdoor scene.\n\nWarm golden-hour sunlight, soft long shadows, crisp autumn atmosphere with golden and red fallen leaves, foggy atmosphere with reduced visibility, natural outdoor lighting, atmospheric depth, realistic environmental illumination.\n\nFull body environmental shot, 24mm wide-angle lens, strong sense of place, natural environmental context.\n\nUse the provided character reference.\n\nUse the provided outfit reference.\n\nUse the provided location reference.\n\nThe character is in a Stehend pose.\n\nErnst facial expression.\n\nHandheld camera feel.\n\nGritty neo-noir look.\n\nTeal and orange grading!\n\nPhotorealistic.',
+    erwartet: 'Outdoor scene.\n\nWarm golden-hour sunlight, soft long shadows, crisp autumn atmosphere with golden and red fallen leaves, foggy atmosphere with reduced visibility, natural outdoor lighting, atmospheric depth, realistic environmental illumination.\n\nFull body environmental shot, 24mm wide-angle lens, strong sense of place, natural environmental context, low-angle camera view creating a powerful appearance, deep focus with everything sharp from foreground to background, wide landscape composition (16:9).\n\nUse the provided character reference.\n\nUse the provided outfit reference.\n\nUse the provided location reference.\n\nThe character is in a Stehend pose.\n\nErnst facial expression.\n\nHandheld camera feel.\n\nGritty neo-noir look.\n\nTeal and orange grading!\n\nPhotorealistic.',
   },
   /**
    * GEAENDERT DURCH PROJ-52. Hiess bis dahin `nur_archetypen_mit_bild`.
@@ -463,11 +499,20 @@ const GRUNDLINIE: { name: string; scene: Scene; erwartet: string }[] = [
     scene: szene({ scene_type: 'indoor', light_style: 'high_key', background: 'green_screen' }),
     erwartet: 'Indoor scene.\n\nBright, high-key lighting with minimal shadows, clean indoor lighting setup, natural skin tones.\n\nFlat chroma key green screen background.\n\nPhotorealistic.',
   },
-  // UNVERAENDERT seit der Aufzeichnung.
+  /*
+   * ABSICHTLICH NEU AUFGEZEICHNET AM 04.09.2026 — mit Begruendung, so wie es
+   * der Kopf dieser Tabelle verlangt.
+   *
+   * Vorher endete der Satz nach "flattering facial proportions, shallow depth
+   * of field." Der gewaehlte Kamerawinkel (birds_eye) und das gewaehlte
+   * Format (1:1) fehlten. Das war der Fehler, den die Pruefung von PROJ-44
+   * gefunden hat: In einer Einstellungsreihe faellt der Winkel dadurch fuer
+   * genau ein Bild weg, waehrend alle uebrigen ihn tragen.
+   */
   {
     name: 'kamera_override_135',
     scene: szene({ shot_type: 'closeup', lens: '135mm', camera_angle: 'birds_eye', aspect_ratio: 'square_1_1' }),
-    erwartet: 'Outdoor scene.\n\nProfessional close-up portrait, 135mm telephoto lens, strong background compression, flattering facial proportions, shallow depth of field.\n\nPhotorealistic.',
+    erwartet: "Outdoor scene.\n\nProfessional close-up portrait, 135mm telephoto lens, strong background compression, flattering facial proportions, bird's-eye perspective looking directly downward, shallow depth of field, balanced square framing (1:1).\n\nPhotorealistic.",
   },
   // UNVERAENDERT seit der Aufzeichnung.
   {

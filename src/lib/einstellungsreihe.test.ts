@@ -31,6 +31,56 @@ const SZENE: Scene = {
   background: null,
 }
 
+/**
+ * Die zweite Szene traegt genau das, was der ersten fehlt: sie ist DRAUSSEN,
+ * jedes Feld ist belegt, und sie steht auf 135mm.
+ *
+ * WARUM DAS NOETIG WAR: `SZENE` ist innen und hat Charakter, Outfit, Location,
+ * Tageszeit und Wetter auf `null`. Ein Fehler, der genau diese Felder
+ * unterschlaegt, blieb damit unsichtbar — die Tests waren gruen, weil in der
+ * Testszene ohnehin nichts drinstand. Gefunden bei der Pruefung am 04.09.2026.
+ *
+ * 135mm ist kein beliebiger Wert: zusammen mit `closeup` loest es
+ * `CAMERA_COMBO_OVERRIDES` in `szene-prompt.ts` aus. Genau dort brach die
+ * Kontinuitaet.
+ */
+/**
+ * Wie in `szene-prompt.test.ts`: die Bausteine sind im Test nur Attrappen mit
+ * den Feldern, die `buildPrompt` liest. `Record<string, unknown>` ist der
+ * Hausweg dafuer — die vollen Typen (`Character`, `Outfit`, `Location`, …)
+ * haben ein Dutzend Felder, die fuer den Prompt-Bau keine Rolle spielen.
+ */
+const aussen = (felder: Record<string, unknown> = {}): Scene => ({ ...SZENE, ...felder })
+
+/**
+ * Die zweite Testszene traegt genau das, was der ersten fehlt: sie ist
+ * DRAUSSEN, jedes Feld ist belegt, und sie steht auf 135mm.
+ *
+ * WARUM DAS NOETIG WAR: `SZENE` ist innen und hat Charakter, Outfit, Location,
+ * Tageszeit und Wetter auf `null`. Ein Fehler, der genau diese Felder
+ * unterschlaegt, blieb damit unsichtbar — die Tests waren gruen, weil in der
+ * Testszene ohnehin nichts drinstand. Gefunden bei der Pruefung am 04.09.2026.
+ *
+ * 135mm ist kein beliebiger Wert: zusammen mit `closeup` loest es
+ * `CAMERA_COMBO_OVERRIDES` in `szene-prompt.ts` aus. Genau dort brach die
+ * Kontinuitaet — der Sonderfall verwarf Kamerawinkel, Tiefenschaerfe und
+ * Format fuer dieses eine Bild der Reihe.
+ */
+const AUSSEN_SZENE: Scene = aussen({
+  scene_type: 'outdoor',
+  time_of_day: 'golden_hour',
+  season: 'herbst',
+  weather: 'sonnig',
+  light_source: null,
+  lens: '135mm',
+  depth_of_field: 'deep_focus',
+  character: { id: 'c1', name: 'Anna', cover_image_url: null },
+  outfit:    { id: 'o1', name: 'Mantel', cover_image_url: null },
+  location:  { id: 'l1', name: 'Bruecke', cover_image_url: null },
+  pose:      { id: 'p1', name: 'Stehend', description: 'standing upright' },
+  expression: { id: 'e1', name: 'Neutral', description: 'Calm, neutral expression.' },
+})
+
 describe('REIHEN_ORDNUNG', () => {
   it('geht von weit nach nah, nicht umgekehrt', () => {
     expect(REIHEN_ORDNUNG[0]).toBe('establishing_shot')
@@ -141,6 +191,49 @@ describe('baueReihe', () => {
     // Reihe mehr. Der Formatsatz muss deshalb in jedem Prompt derselbe sein.
     const reihe = baueReihe(SZENE, REIHE_VORBELEGUNG)
     for (const e of reihe) expect(e.prompt).toContain('16:9')
+  })
+
+  /*
+   * DER TEST OBEN IST TAUTOLOGISCH — er vergleicht `baueReihe` mit demselben
+   * Ausdruck, den `baueReihe` selbst rechnet. Er faengt nur Fehler INNERHALB
+   * von `baueReihe`. Dass `buildPrompt` im Feld `shot_type` gar nicht oertlich
+   * ist, konnte er nie sehen.
+   *
+   * Die folgenden Tests messen deshalb am Ergebnis: Was nicht die
+   * Einstellungsgroesse ist, muss in JEDEM Bild der Reihe woertlich
+   * dieselbe Angabe tragen.
+   */
+  it('traegt Kamerawinkel, Tiefenschaerfe und Format in JEDEM Bild der Reihe', () => {
+    const reihe = baueReihe(AUSSEN_SZENE, REIHE_VORBELEGUNG)
+    for (const e of reihe) {
+      const p = e.prompt.toLowerCase()
+      expect(p, `${e.shot_type}: Kamerawinkel fehlt`).toContain('low-angle camera view')
+      expect(p, `${e.shot_type}: Tiefenschaerfe fehlt`).toContain('deep focus')
+      expect(p, `${e.shot_type}: Format fehlt`).toContain('16:9')
+    }
+  })
+
+  it('traegt Charakter, Outfit und Location in JEDEM Bild der Reihe', () => {
+    const reihe = baueReihe(AUSSEN_SZENE, REIHE_VORBELEGUNG)
+    for (const e of reihe) {
+      const p = e.prompt.toLowerCase()
+      expect(p, `${e.shot_type}: Charakterreferenz fehlt`).toContain('character reference')
+      expect(p, `${e.shot_type}: Outfitreferenz fehlt`).toContain('outfit reference')
+      expect(p, `${e.shot_type}: Locationreferenz fehlt`).toContain('location reference')
+    }
+  })
+
+  it('traegt Tageszeit und Wetter unveraendert durch die ganze Reihe', () => {
+    // Eine Reihe, die mitten im Schnitt von Abendlicht auf Mittag springt,
+    // ist keine Reihe. Draussen sind das echte Felder — drinnen wertet
+    // `buildEnvironmentSentence` sie gar nicht aus, deshalb die Aussenszene.
+    const reihe = baueReihe(AUSSEN_SZENE, REIHE_VORBELEGUNG)
+    for (const e of reihe) {
+      const p = e.prompt.toLowerCase()
+      expect(p, `${e.shot_type}: Tageszeit fehlt`).toContain('golden-hour')
+      expect(p, `${e.shot_type}: Jahreszeit fehlt`).toContain('autumn')
+      expect(p, `${e.shot_type}: Wetter fehlt`).toContain('clear sunny sky')
+    }
   })
 
   it('gibt den Anzeigenamen aus dem Scene Builder zurück', () => {
