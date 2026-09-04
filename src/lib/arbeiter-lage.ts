@@ -53,6 +53,31 @@ const NEUSTART = 'cd worker && npm start'
  */
 export const LANGLAEUFER_SEKUNDEN = 20 * 60
 
+/**
+ * Ab wann Stille bei einem laufenden Auftrag wirklich „er hängt" bedeutet.
+ *
+ * NICHT die 60 Sekunden der Ampel. Die beantworten „meldet er sich gerade?" —
+ * eine ganz andere Frage.
+ *
+ * WARUM DAS EINE EIGENE ZAHL BRAUCHT (Prüfbefund 04.09.2026): Der Arbeiter
+ * schrieb sein Lebenszeichen bis dahin nur zwischen zwei Aufträgen. Während
+ * eines Bildes — ein bis drei Minuten, bei vier Durchläufen bis zwanzig — kam
+ * keines. Mit der 60-Sekunden-Schwelle meldete dieser Kasten deshalb bei JEDER
+ * normalen Erzeugung „Der Arbeiter hängt, beenden und neu starten". Ein Alarm,
+ * der bei normaler Arbeit losgeht, wird weggeklickt; dann ist er schlechter
+ * als keiner.
+ *
+ * Der Arbeiter meldet sich seit dem 04.09.2026 auf eigenem Takt, damit ist die
+ * Ursache behoben. Diese Schwelle bleibt trotzdem — als Netz für den Fall,
+ * dass eine ÄLTERE Fassung des Arbeiters läuft. Genau das ist wahrscheinlich:
+ * Mark startet ihn von Hand, und die App wird ohne ihn ausgeliefert.
+ *
+ * 25 Minuten liegen über dem längsten redlichen Auftrag (vier Durchläufe à
+ * 300 s Zeitgrenze) und unter `STALE_MINUTES = 30`, ab dem der Arbeiter selbst
+ * aufräumt.
+ */
+export const HAENGT_SEKUNDEN = 25 * 60
+
 /** „1 Std 52 Min" — genau genug, um die Tragweite zu sehen. */
 export function dauerText(sekunden: number): string {
   if (sekunden < 60) return `${Math.max(0, Math.round(sekunden))} Sek`
@@ -70,10 +95,18 @@ export function arbeiterLage(e: LageEingabe): Lage {
 
   const offen = e.wartend + e.inArbeit
 
-  // ── Der Fall vom 04.09.2026: Er lebt laut Prozessliste, meldet sich aber
-  //    nicht mehr, und hält dabei einen Auftrag fest. Das ist KEIN „starte
-  //    ihn", sondern ein „er hängt".
-  if (e.zustand === 'weg' && e.inArbeit > 0) {
+  /*
+    Der Fall vom 04.09.2026: Er lebt laut Prozessliste, meldet sich aber nicht
+    mehr, und hält dabei einen Auftrag fest. Das ist KEIN „starte ihn",
+    sondern ein „er hängt".
+
+    ERST NACH `HAENGT_SEKUNDEN`, nicht schon nach der Ampelschwelle — ein
+    laufender Auftrag ist der Normalfall, kein Notfall. Siehe die Begründung
+    an der Konstanten.
+  */
+  if ((e.zustand === 'weg' || e.zustand === 'nie')
+      && e.inArbeit > 0
+      && e.sekundenHer >= HAENGT_SEKUNDEN) {
     return {
       art: 'alarm',
       titel: 'Der Arbeiter hängt',

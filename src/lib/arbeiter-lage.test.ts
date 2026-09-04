@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { arbeiterLage, dauerText, LANGLAEUFER_SEKUNDEN, type LageEingabe } from './arbeiter-lage'
+import {
+  arbeiterLage, dauerText, LANGLAEUFER_SEKUNDEN, HAENGT_SEKUNDEN, type LageEingabe,
+} from './arbeiter-lage'
 
 const leer: LageEingabe = {
   zustand: 'laeuft', sekundenHer: 5, wartend: 0, inArbeit: 0, laengsterLaufSekunden: null,
@@ -49,11 +51,51 @@ describe('arbeiterLage', () => {
   })
 
   it('der hängende Fall gewinnt gegen den wartenden — er ist die genauere Auskunft', () => {
-    const nurWartend = lage({ zustand: 'weg', sekundenHer: 600, wartend: 3 })
-    const auchInArbeit = lage({ zustand: 'weg', sekundenHer: 600, wartend: 3, inArbeit: 1 })
+    const lang = HAENGT_SEKUNDEN + 60
+    const nurWartend = lage({ zustand: 'weg', sekundenHer: lang, wartend: 3 })
+    const auchInArbeit = lage({ zustand: 'weg', sekundenHer: lang, wartend: 3, inArbeit: 1 })
     if (nurWartend.art === 'still' || auchInArbeit.art === 'still') throw new Error('unerwartet still')
     expect(nurWartend.titel).toBe('Der Arbeiter ist stumm')
     expect(auchInArbeit.titel).toBe('Der Arbeiter hängt')
+  })
+
+  /*
+   * DER FEHLALARM, DEN DIE PRUEFUNG AM 04.09.2026 GEFUNDEN HAT.
+   *
+   * Der Arbeiter schrieb sein Lebenszeichen nur ZWISCHEN zwei Auftraegen —
+   * waehrend eines Bildes (ein bis drei Minuten, bei vier Durchlaeufen bis
+   * zwanzig) kam keines. Mit der 60-Sekunden-Ampelschwelle meldete dieser
+   * Kasten deshalb bei JEDER normalen Erzeugung „Der Arbeiter haengt, beenden
+   * und neu starten" — und der empfohlene Neustart haette bei fal.ai einen
+   * bezahlten Lauf abgebrochen.
+   *
+   * Die Ursache ist behoben (eigener Takt im Arbeiter). Diese Tests sichern
+   * die zweite Haelfte: Selbst mit einer alten Arbeiter-Fassung darf der
+   * Alarm bei normaler Arbeit nicht losgehen.
+   */
+  it('schweigt, solange ein Auftrag NORMAL lange läuft', () => {
+    for (const sek of [61, 120, 300, 900, HAENGT_SEKUNDEN - 1]) {
+      const l = lage({ zustand: 'weg', sekundenHer: sek, inArbeit: 1 })
+      expect(l.art, `${sek}s dürfen keinen Alarm auslösen`).not.toBe('alarm')
+    }
+  })
+
+  it('meldet den Hänger erst jenseits der eigenen Schwelle', () => {
+    expect(lage({ zustand: 'weg', sekundenHer: HAENGT_SEKUNDEN - 1, inArbeit: 1 }).art).not.toBe('alarm')
+    expect(lage({ zustand: 'weg', sekundenHer: HAENGT_SEKUNDEN, inArbeit: 1 }).art).toBe('alarm')
+  })
+
+  it('die Hänger-Schwelle liegt über dem längsten redlichen Auftrag', () => {
+    // Vier Durchlaeufe à 300s Zeitgrenze = 1200s. Alles darunter ist Arbeit,
+    // kein Notfall.
+    expect(HAENGT_SEKUNDEN).toBeGreaterThan(4 * 300)
+  })
+
+  it('ein nie gesehener Arbeiter mit laufendem Auftrag zählt auch als Hänger', () => {
+    // Vorher fiel dieser Fall durch: Der Zweig prüfte nur `weg`, und `nie`
+    // landete im gelben Hinweis „Er meldet sich nicht."
+    const l = lage({ zustand: 'nie', sekundenHer: HAENGT_SEKUNDEN, inArbeit: 1 })
+    expect(l.art).toBe('alarm')
   })
 
   it('schlägt Alarm, wenn Aufträge warten und niemand sie holt', () => {

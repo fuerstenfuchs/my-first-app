@@ -126,20 +126,44 @@ async function hauptschleife(): Promise<void> {
     sage('  Hinweis: WORKER_USER_ID fehlt — die App kann nicht anzeigen, dass er läuft.')
   }
 
+  /*
+    DAS LEBENSZEICHEN LÄUFT AUF EIGENEM TAKT — nicht mehr in der Schleife.
+
+    Hier stand es innerhalb von `while`, mit dem Kommentar „hängt nicht am
+    Auftragstakt". Das war falsch: `durchgang()` weiter unten hält die Schleife
+    für die GANZE DAUER eines Auftrags an (`await auftragAbarbeiten`). Ein Bild
+    braucht ein bis drei Minuten, bei vier Durchläufen bis zu zwanzig — in
+    dieser Zeit kam kein einziges Lebenszeichen.
+
+    Was das anrichtete: Die App hält den Arbeiter nach 60 Sekunden für weg
+    (`SCHWELLE_SEKUNDEN` in `use-worker-status.ts`). Der neue Stillstandsalarm
+    (PROJ-57) meldete deshalb bei JEDER normalen Erzeugung in Rot „Der Arbeiter
+    hängt — beenden und neu starten". Ein Alarm, der bei normaler Arbeit
+    losgeht, wird nach drei Tagen weggeklickt; dann ist er schlechter als
+    keiner. Gefunden bei der Prüfung am 04.09.2026.
+
+    Nebenbei berichtigt das die Beweislage vom selben Tag: Dass das
+    Lebenszeichen um 17:40:02 stehenblieb, war für sich genommen KEIN Beweis
+    für ein Einfrieren — das lieferten erst 406 Minuten Laufzeit bei 2,95
+    Sekunden Rechenzeit.
+  */
+  const herzschlag = config.userId
+    ? setInterval(() => {
+        void lebenszeichen(config.userId!, VERSION).catch(() => {
+          // Ein Aussetzer beim Melden ist kein Grund, die Arbeit zu stören.
+        })
+      }, 20_000)
+    : null
+  if (config.userId) {
+    await lebenszeichen(config.userId, VERSION).catch(() => {})
+  }
+
   let ruhigSeit = 0
-  let letztesLebenszeichen = 0
   let letztesAufraeumen = 0
 
   while (!beenden) {
     const jetzt = Date.now()
     try {
-      // Das Lebenszeichen hängt nicht am Auftragstakt: Die App soll auch dann
-      // sehen, dass er läuft, wenn er nur noch jede Minute nachfragt.
-      if (config.userId && jetzt - letztesLebenszeichen >= 20_000) {
-        await lebenszeichen(config.userId, VERSION)
-        letztesLebenszeichen = jetzt
-      }
-
       // Aufräumen ist Vorsorge, keine Eile — einmal pro Minute genügt.
       const raeumen = jetzt - letztesAufraeumen >= 60_000
       if (raeumen) letztesAufraeumen = jetzt
@@ -160,6 +184,8 @@ async function hauptschleife(): Promise<void> {
     await schlafen(naechsterTakt(ruhigSeit, config.pollIntervalMs))
   }
   sage('Arbeiter beendet.')
+
+  if (herzschlag) clearInterval(herzschlag)
 }
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

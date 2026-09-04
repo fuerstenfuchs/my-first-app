@@ -418,7 +418,13 @@ const SidebarContent = React.forwardRef<
           // `right-0` plus `ohne-rollbalken` statt der frueheren 17 Pixel
           // Ueberhang — siehe die Begruendung in `globals.css`. Genau hier
           // wurde Marks Farbrand rechts abgeschnitten.
-          "absolute inset-y-0 left-0 right-0 ohne-rollbalken flex flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+          // `overflow-y-auto overflow-x-hidden` statt `overflow-auto`: Letzteres gilt
+          // fuer BEIDE Achsen, und zusammen mit dem abgeschalteten Rollbalken
+          // waere waagerecht ueberstehender Inhalt unerreichbar — genau der
+          // Fehler, den Mark am 04.09.2026 am Referenz-Waehler gemeldet hat,
+          // hier aber auf JEDER Seite. Der schlechteste Fall ist jetzt ein
+          // sichtbarer Beschnitt statt unerreichbarem Inhalt.
+          "absolute inset-y-0 left-0 right-0 ohne-rollbalken flex flex-col gap-2 overflow-y-auto overflow-x-hidden group-data-[collapsible=icon]:overflow-hidden",
           className
         )}
         style={style}

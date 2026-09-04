@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { Copy, Sparkles, X, Plus, Loader2, ImageOff, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -746,6 +746,26 @@ export default function SceneBuilderPage() {
   const [refImagesMap, setRefImagesMap] = useState<Record<string, RefImage[]>>({})
   /** Welcher Baustein wartet gerade auf die Wahl seines Referenzbildes (PROJ-59). */
   const [refWahl, setRefWahl] = useState<{ slot: RefSlotKey; assetId: string; name: string } | null>(null)
+
+  /**
+   * Welcher Baustein steckt GERADE in welchem Fach — synchron mitgeführt.
+   *
+   * WARUM EIN REF UND NICHT DER ZUSTAND: Das Laden der Referenzbilder ist
+   * asynchron. Klickt Mark Charakter A und gleich darauf B, kommt A's Antwort
+   * womöglich NACH B zurück. Der Zustand ist innerhalb des laufenden Aufrufs
+   * noch der alte, ein `useState` hilft also nicht. Ein Ref wird sofort
+   * geschrieben und ist beim Zurückkommen aktuell.
+   *
+   * WAS OHNE IHN PASSIERTE (Prüfbefund vom 04.09.2026): Der Wächter fragte nur
+   * „hat Mark schon etwas gewählt" (`prev[slotKey] ? prev : …`). Nach dem
+   * Wechsel auf B ist der Eintrag `null` — A's zurückkommende Antwort schrieb
+   * damit **A's Referenzsheet in das Fach, in dem B sitzt**. In der Oberfläche
+   * sah es aus wie „nichts gewählt", mitgeschickt wurde aber die falsche
+   * Person, in eine bezahlte Erzeugung.
+   */
+  const imFach = useRef<Record<RefSlotKey, string | null>>({
+    character: null, outfit: null, location: null,
+  })
   const [refLoadingMap, setRefLoadingMap] = useState<Record<string, boolean>>({})
 
   // Selected reference image per ref slot
@@ -815,70 +835,93 @@ export default function SceneBuilderPage() {
     }))
   }
 
-  const loadRefImages_forSlot = useCallback(async (
+  /**
+   * Die Referenzbilder eines Bausteins holen — aus dem Zwischenspeicher oder
+   * frisch.
+   *
+   * DIESE FUNKTION ENTSCHEIDET NICHTS MEHR. Sie hat früher nebenbei die
+   * Vorauswahl gesetzt, und das hatte zwei Folgen, die beide in eine bezahlte
+   * Erzeugung liefen (Prüfbefunde vom 04.09.2026):
+   *
+   *  - Beim ZWEITEN Wählen desselben Bausteins kehrte sie am
+   *    Zwischenspeicher früh zurück, und die Vorauswahl unterblieb. Derselbe
+   *    Klick führte also zu einem anderen Ergebnis, je nachdem ob der Baustein
+   *    in dieser Sitzung schon einmal geladen war.
+   *  - `applyPresetConfig` ruft sie ebenfalls auf. Ein gespeichertes Preset,
+   *    in dem Mark ausdrücklich „Titelbild" gewählt hatte, bekam dadurch
+   *    hinterher doch das Referenzsheet untergeschoben.
+   *
+   * Vorauswahl und Dialog gehören deshalb dorthin, wo die Absicht bekannt ist:
+   * in `setSlot`.
+   */
+  const refBilderHolen = useCallback(async (
     slotKey: RefSlotKey,
     assetId: string,
   ): Promise<RefImage[]> => {
-    // GIBT DIE BILDER ZURUECK statt nur den Zustand zu setzen: `setSlot` muss
-    // wissen, wie viele es sind, um zu entscheiden, ob sich der Wahl-Dialog
-    // lohnt (PROJ-59). Aus dem Zustand lesen ginge nicht — der ist im selben
-    // Durchlauf noch der alte.
     const schonDa = refImagesMap[assetId]
     if (schonDa !== undefined) return schonDa
+
     setRefLoadingMap(prev => ({ ...prev, [assetId]: true }))
     const table = slotKey === 'character' ? 'character_variants'
       : slotKey === 'outfit' ? 'outfit_variants' : 'location_variants'
     const fk = slotKey === 'character' ? 'character_id'
       : slotKey === 'outfit' ? 'outfit_id' : 'location_id'
-    const imgs = await loadRefImages(table, fk, assetId)
-    setRefImagesMap(prev => ({ ...prev, [assetId]: imgs }))
-    setRefLoadingMap(prev => ({ ...prev, [assetId]: false }))
-
-    /*
-      DAS REFERENZSHEET VON SELBST NEHMEN (Marks Bitte vom 04.09.2026).
-
-      Nur, wenn es wirklich eines gibt — `standardReferenz` gibt sonst `null`
-      zurueck. Das ist wichtig: Ohne Auswahl nimmt der Scene Builder das
-      TITELBILD des Bausteins, und das ist ein bewusst gewaehltes Bild.
-      Irgendein erstes Bild aus der Liste stattdessen vorzuwaehlen waere
-      schlechter — und es ginge in eine bezahlte Erzeugung.
-
-      Und nur, solange Mark noch nichts eigenes gewaehlt hat: Das Laden kann
-      spaeter zurueckkommen als sein Klick.
-    */
-    const vorschlag = standardReferenz(imgs)
-    if (vorschlag) {
-      setSceneRefs(prev => (prev[slotKey] ? prev : { ...prev, [slotKey]: vorschlag }))
+    try {
+      const imgs = await loadRefImages(table, fk, assetId)
+      setRefImagesMap(prev => ({ ...prev, [assetId]: imgs }))
+      return imgs
+    } catch (e) {
+      // OHNE DIESEN ZWEIG BLIEB DIE LEISTE FUER IMMER AUF „Lade Bilder…".
+      // `loadRefImages` wirft bei Netzfehler und bei einer Ablehnung durch die
+      // Zugriffsregeln — vorher fing das niemand ab, `refLoadingMap` wurde nie
+      // zurueckgesetzt, und es gab keine Meldung und keinen zweiten Versuch.
+      toast.error('Referenzbilder konnten nicht geladen werden — es gilt das Titelbild.', {
+        description: e instanceof Error ? e.message : undefined,
+      })
+      setRefImagesMap(prev => ({ ...prev, [assetId]: [] }))
+      return []
+    } finally {
+      setRefLoadingMap(prev => ({ ...prev, [assetId]: false }))
     }
-    return imgs
   }, [refImagesMap])
 
   function setSlot(key: SlotKey, value: Scene[SlotKey]) {
     setScene(prev => ({ ...prev, [key]: value }))
 
-    // Auto-load ref images for character/outfit/location
     if (REF_SLOTS.includes(key as RefSlotKey) && value) {
       const slotKey = key as RefSlotKey
-      const asset = value as { id: string }
-      // Reset selected ref when changing asset
+      const asset = value as { id: string; name?: string }
+
+      // SOFORT merken, noch vor jedem `await`.
+      imFach.current[slotKey] = asset.id
       setSceneRefs(prev => ({ ...prev, [slotKey]: null }))
 
-      /*
-        ERST LADEN, DANN ERST OEFFNEN (PROJ-59).
-
-        Nicht sofort mit einem Ladekringel aufmachen: Bei einem Baustein mit
-        nur einem Bild ginge das Fenster auf und sofort wieder zu. Ein Fenster,
-        das aufblitzt, ist schlimmer als eines, das eine halbe Sekunde spaeter
-        kommt.
-
-        Ab ZWEI Bildern lohnt sich die Wahl. Bei einem gibt es nichts zu
-        entscheiden — `standardReferenz` hat es ohnehin schon gesetzt, falls es
-        ein Referenzsheet ist.
-      */
       void (async () => {
-        const imgs = await loadRefImages_forSlot(slotKey, asset.id)
+        const imgs = await refBilderHolen(slotKey, asset.id)
+
+        /*
+          GILT DIESE ANTWORT UEBERHAUPT NOCH?
+
+          Zwischen Klick und Antwort kann Mark einen anderen Baustein gewaehlt
+          oder das Fach geleert haben. Ohne diese Frage schrieb die verspaetete
+          Antwort ihr Bild in ein Fach, in dem laengst etwas anderes sitzt —
+          und schickte damit die falsche Person in eine bezahlte Erzeugung.
+        */
+        if (imFach.current[slotKey] !== asset.id) return
+
+        // Die Vorauswahl steht HIER, nicht im Laden: nur beim ausdruecklichen
+        // Waehlen eines Bausteins, nicht beim Anwenden eines Presets.
+        const vorschlag = standardReferenz(imgs)
+        if (vorschlag) setSceneRefs(prev => ({ ...prev, [slotKey]: vorschlag }))
+
+        /*
+          ERST LADEN, DANN OEFFNEN. Nicht sofort mit einem Ladekringel: Bei
+          einem Baustein mit nur einem Bild ginge das Fenster auf und sofort
+          wieder zu, und ein aufblitzendes Fenster ist schlimmer als eines,
+          das eine halbe Sekunde spaeter kommt.
+        */
         if (imgs.length >= 2) {
-          setRefWahl({ slot: slotKey, assetId: asset.id, name: (value as { name?: string }).name ?? '' })
+          setRefWahl({ slot: slotKey, assetId: asset.id, name: asset.name ?? '' })
         }
       })()
     }
@@ -887,6 +930,9 @@ export default function SceneBuilderPage() {
   function clearSlot(key: SlotKey) {
     setScene(prev => ({ ...prev, [key]: null }))
     if (REF_SLOTS.includes(key as RefSlotKey)) {
+      // Auch das Leeren muss im Ref stehen, sonst setzt eine noch unterwegs
+      // befindliche Antwort ihr Bild in ein Fach, das Mark gerade geräumt hat.
+      imFach.current[key as RefSlotKey] = null
       setSceneRefs(prev => ({ ...prev, [key as RefSlotKey]: null }))
     }
   }
@@ -1020,9 +1066,9 @@ export default function SceneBuilderPage() {
       outfit:    config.refs?.outfit ?? null,
       location:  config.refs?.location ?? null,
     })
-    if (config.character_id) loadRefImages_forSlot('character', config.character_id)
-    if (config.outfit_id) loadRefImages_forSlot('outfit', config.outfit_id)
-    if (config.location_id) loadRefImages_forSlot('location', config.location_id)
+    if (config.character_id) refBilderHolen('character', config.character_id)
+    if (config.outfit_id) refBilderHolen('outfit', config.outfit_id)
+    if (config.location_id) refBilderHolen('location', config.location_id)
     toast.success('Preset angewendet')
   }
 

@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { ANALYSE_PROMPT, ANALYSE_ANGABEN } from '@/lib/analyse-prompts'
+import { analyseTypBestimmen } from '@/lib/bildtyp'
 
 // Die System-Prompts stehen in @/lib/analyse-prompts — nicht mehr hier.
 // Grund: Seit dem 03.09.2026 laeuft dieselbe Analyse wahlweise ueber Marks
@@ -88,14 +89,26 @@ export async function POST(req: NextRequest) {
 
     if (imageBase64) {
       imageData = imageBase64
-      imageMime = mediaType ?? 'image/jpeg'
+      // DIE ACHTE ROUTE. Sieben wurden am 04.09.2026 umgestellt, diese wurde
+      // uebersehen — und ausgerechnet sie bedient Quick Capture und den
+      // Rueckfallweg der Erweiterung. Hier stand `mediaType ?? 'image/jpeg'`,
+      // und ein leeres `file.type` (bei geteilten Bildern vom Handy der
+      // Normalfall) ging als leerer Typ hinaus.
+      const befund = analyseTypBestimmen(imageBase64, mediaType)
+      if (!befund.ok) {
+        return NextResponse.json({ error: befund.grund }, { status: 415, headers: CORS_HEADERS })
+      }
+      imageMime = befund.typ
     } else if (imageUrl) {
       const res = await fetch(imageUrl)
       if (!res.ok) throw new Error('Image fetch failed')
       const buf = await res.arrayBuffer()
       imageData = Buffer.from(buf).toString('base64')
-      const ct = res.headers.get('content-type') ?? 'image/jpeg'
-      imageMime = ct.split(';')[0].trim()
+      const befundUrl = analyseTypBestimmen(imageData, res.headers.get('content-type'))
+      if (!befundUrl.ok) {
+        return NextResponse.json({ error: befundUrl.grund }, { status: 415, headers: CORS_HEADERS })
+      }
+      imageMime = befundUrl.typ
     } else {
       return NextResponse.json({ error: 'No image provided' }, { status: 400, headers: CORS_HEADERS })
     }

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       // Mark am 04.09.2026 beim Prompt aus einem Outfit-Foto.
       const befund = analyseTypBestimmen(body.imageBase64, body.mediaType)
       if (!befund.ok) {
-        return NextResponse.json({ error: befund.grund }, { status: 415 })
+        return NextResponse.json({ error: befund.grund }, { status: 415, headers: CORS_HEADERS })
       }
       imageMime = befund.typ
     } else if (body.imageUrl) {
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       // fehlendes Bild eine HTML-Seite mit Status 200.
       const befundUrl = analyseTypBestimmen(imageData, mime)
       if (!befundUrl.ok) {
-        return NextResponse.json({ error: befundUrl.grund }, { status: 415 })
+        return NextResponse.json({ error: befundUrl.grund }, { status: 415, headers: CORS_HEADERS })
       }
       imageMime = befundUrl.typ
     } else {
