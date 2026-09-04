@@ -46,6 +46,7 @@ import {
   type VariantInput,
   type InitialSlot,
 } from '@/hooks/use-characters'
+import { passtZurSuche } from '@/lib/bausteine'
 
 export default function CharactersPage() {
   const { characters, loading, createCharacterWithSlots, updateCharacter, deleteCharacter, patchCharacterCover } = useCharacters()
@@ -81,9 +82,10 @@ export default function CharactersPage() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  const filtered = characters.filter(c =>
-    !search.trim() || c.name.toLowerCase().includes(search.toLowerCase())
-  )
+  // PROJ-46: wortweise und über Name, Beschreibung und Schlagworte — dieselbe
+  // Funktion wie im Übernehmen-Dialog und im Scene Builder. Charaktere haben
+  // keine Kategoriespalte, deshalb hier nur die Suche und keine Chips.
+  const filtered = characters.filter(c => passtZurSuche(c, search))
 
   async function handleCharSave(input: CharacterInput, slots: InitialSlot[]): Promise<boolean | Character | null> {
     if (editingCharacter) return updateCharacter(editingCharacter.id, input)

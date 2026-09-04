@@ -1,6 +1,6 @@
 # PROJ-46: Bausteine finden statt scrollen
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-09-03
 
 ## Warum
@@ -117,3 +117,50 @@ entsteht, sollte dorthin nachgezogen werden — als eigener Schritt, damit diese
 hier klein und prüfbar bleibt.
 
 > **Nachtrag 03.09.2026:** Die `short_description`-Alias-Regel galt den Archetyp-Tabellen. Die sind mit PROJ-52 entfallen; der Alias-Weg in `auswahlSpalten` bleibt bestehen, hat aber derzeit keinen Nutzer.
+
+## Nachgezogen am 04.09.2026 — Punkte 1–3 jetzt überall
+
+Am 03.09. waren Suche und Kategorie-Chips nur im Übernehmen-Dialog gebaut. Die
+Schlusszeile „Noch nicht nachgezogen: Scene Builder und die Baustein-Seiten"
+ist damit erledigt.
+
+**Dringlicher geworden:** Durch PROJ-53 stehen im Outfit-Fach des Scene
+Builders 36 Einträge statt 17, bei Locations 46 mit 31 Stadien in einer
+Kategorie. Ein Prüfdurchgang hatte das eigens gemeldet.
+
+**Geteilt statt sechsmal kopiert:**
+- `chipListe(alle, gesucht)` in `bausteine.ts` — rein und testbar, trägt die
+  Regel „Auswahl aus ALLEN, Zahl aus den GESUCHTEN". Ohne sie verschwände ein
+  Chip beim Tippen und ließe sich nicht mehr abwählen.
+- `use-baustein-filter.ts` — nur der Zustand und das Zurücksetzen beim
+  Bereichswechsel.
+- `baustein-filter.tsx` — Suchfeld und Chips, an drei Stellen im Einsatz.
+
+**Der eigentliche Fehler im Scene Builder war ein anderer als vermutet:** Die
+Abfragen holten `select('*')`, die Felder waren also da — verloren gingen sie
+erst beim Mappen auf die Kacheln, die nur `id`, `name` und `imageUrl` trugen.
+Die Suche konnte deshalb gar nichts anderes als den Namen sehen.
+
+**Eine Quelle für die Beschriftung.** `kategorieLabel(wert, labels?)` nimmt
+jetzt optional die gepflegte Liste des Bereichs; `OUTFIT_KATEGORIE_LABELS`
+wird aus `OUTFIT_KATEGORIEN` **abgeleitet**, nicht danebengetippt. Damit heißt
+`komplett` überall „Komplett-Look" statt in drei Schreibweisen.
+
+**Bewusst nicht angefasst:** die Kategoriespalten auf den Seiten `outfits`,
+`locations`, `pose-actions` und `visual-assets`. Die können mehr als Chips
+(Emoji, Kategorien anlegen und löschen, `defaultCategory` fürs Formular, bei
+Locations die Verwaltung aus PROJ-34) — sie durch Chips zu ersetzen wäre ein
+Umbau, kein Nachziehen.
+
+**Gegenproben:** drei Wächter absichtlich gebrochen (Chip-Auswahl aus den
+gesuchten statt allen; gepflegte Beschriftung ignoriert; Zurücksetzen beim
+Bereichswechsel abgeschaltet) — 3, 1 und 1 Test rot, alle zurückgedreht.
+484 Tests grün.
+
+**Offen bleiben die Punkte 4 und 5** der Spezifikation: „zuletzt benutzt
+zuerst" (braucht eine eigene Spalte, `updated_at` taugt nachweislich nicht)
+und die semantische Suche. Beide erst, wenn 1–3 im Gebrauch sind.
+
+**Noch nicht im Browser gesehen:** Die Chipzeile im Scene Builder sitzt in
+einer schmaleren Spalte als im Dialog. Sie bricht um und ist in der Höhe
+gedeckelt — geprüft an der Auszeichnung, nicht am Bildschirm.

@@ -20,6 +20,7 @@ import {
 } from '@/hooks/use-visual-assets'
 import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
+import { passtZurSuche } from '@/lib/bausteine'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -114,7 +115,9 @@ export default function VisualAssetsPage() {
     assets.filter(a =>
       a.asset_type === active.type &&
       a.category   === active.category &&
-      (!search.trim() || a.name.toLowerCase().includes(search.toLowerCase()))
+      // PROJ-46: wortweise und über Name, Beschreibung, Kategorie und
+      // Schlagworte.
+      passtZurSuche(a, search)
     ), [assets, active, search])
 
   const selectedAsset = selectedAssetId ? assets.find(a => a.id === selectedAssetId) ?? null : null

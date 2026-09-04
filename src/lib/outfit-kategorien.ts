@@ -68,3 +68,19 @@ export const KATEGORIE_EN: Record<OutfitKategorie, string> = {
   kopfbedeckungen: 'hat / headwear',
   sonstiges:       'garment',
 }
+
+/**
+ * Dieselben Beschriftungen als Nachschlagetabelle.
+ *
+ * WARUM: Bis PROJ-46 stand „komplett" an drei Stellen in drei Schreibweisen —
+ * roh im Scene Builder, „Komplett" im Übernehmen-Dialog (dort leitet
+ * `kategorieLabel()` den Text aus dem technischen Schlüssel ab) und
+ * „Komplett-Look" auf der Outfit-Seite. Ein unabhängiger Prüfdurchgang hat das
+ * am 03.09.2026 als Befund gemeldet.
+ *
+ * Die Tabelle wird HIER aus `OUTFIT_KATEGORIEN` abgeleitet und nicht daneben
+ * getippt: eine zweite Liste wäre genau die zweite Quelle, aus der die drei
+ * Schreibweisen überhaupt erst entstanden sind.
+ */
+export const OUTFIT_KATEGORIE_LABELS: Record<string, string> =
+  Object.fromEntries(OUTFIT_KATEGORIEN.map(k => [k.key, k.label]))

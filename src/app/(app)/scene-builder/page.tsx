@@ -10,7 +10,7 @@ import { useCharacters } from '@/hooks/use-characters'
 import { useOutfits } from '@/hooks/use-outfits'
 import { useLocations } from '@/hooks/use-locations'
 import { usePoseActions } from '@/hooks/use-pose-actions'
-import { useVisualAssets } from '@/hooks/use-visual-assets'
+import { useVisualAssets, CAMERA_CATEGORIES } from '@/hooks/use-visual-assets'
 import { useLookGrading } from '@/hooks/use-look-grading'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -28,7 +28,9 @@ import { QueueButton } from '@/components/scene-builder/queue-button'
 import type { Referenz, ReferenzRolle } from '@/lib/image-generation'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
-import { kategorieEintrag } from '@/lib/outfit-kategorien'
+import { kategorieEintrag, OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategorien'
+import { BausteinFilter } from '@/components/baustein-filter'
+import { useBausteinFilter } from '@/hooks/use-baustein-filter'
 import { buildPrompt, type Scene, type SceneRefs } from '@/lib/szene-prompt'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -69,6 +71,14 @@ const SLOTS: { key: SlotKey; label: string; emoji: string; tab: TabKey }[] = [
 ]
 
 const REF_SLOTS: RefSlotKey[] = ['character', 'outfit', 'location']
+
+/**
+ * Die Beschriftungen der Kamera-Kategorien für die Chips — aus derselben
+ * Liste, aus der auch die Kamera-Seite sie nimmt. Sonst hiesse „nah" hier
+ * „Nah" und dort „Nahaufnahme".
+ */
+const KAMERA_LABELS: Record<string, string> =
+  Object.fromEntries(CAMERA_CATEGORIES.map(c => [c.key, c.label]))
 
 // ── Load reference images from Supabase ───────────────────────────────────────
 
@@ -626,14 +636,47 @@ export default function SceneBuilderPage() {
 
   // ── Left panel content per tab ─────────────────────────────────────────────
 
-  const leftContent = useMemo(() => {
+  /**
+   * Die Kacheln des aktuellen Reiters — UNGEFILTERT.
+   *
+   * Gefiltert wird eine Stufe später (`useBausteinFilter`). Wichtig ist, dass
+   * hier `description`, `category` und `tags` MITKOMMEN: Ohne sie sucht
+   * `passtZurSuche` nur über den Namen, und genau das war der Befund von
+   * PROJ-46. Nachgemessen am 04.09.2026 an den Hooks — alle Listen-Abfragen
+   * holen `select('*')`, die Felder sind also da:
+   *
+   *   characters      description, tags               — keine Kategorie
+   *   outfits         description, category, tags
+   *   locations       description, category, tags
+   *   pose_actions    description, category, tags
+   *   visual_assets   description, category, tags     — Mimik hat nur „alle"
+   *   look/grading    description, tags               — keine Kategorie
+   */
+  const leftContent = useMemo((): {
+    loading: boolean
+    einzahl: string
+    labels?: Record<string, string>
+    items: Array<{
+      id: string; name: string; imageUrl: string | null
+      description?: string | null; category?: string | null; tags?: string[] | null
+      hinweis?: string | null
+      isSelected: boolean; onSelect: () => void
+    }>
+  } => {
     switch (activeTab) {
       case 'charaktere': return {
-        loading: loadingChars,
-        items: characters.map(c => ({ id: c.id, name: c.name, imageUrl: c.cover_image_url, isSelected: scene.character?.id === c.id, onSelect: () => setSlot('character', c) }))
+        loading: loadingChars, einzahl: 'Charakter',
+        items: characters.map(c => ({
+          id: c.id, name: c.name, imageUrl: c.cover_image_url,
+          description: c.description, tags: c.tags,
+          isSelected: scene.character?.id === c.id, onSelect: () => setSlot('character', c),
+        }))
       }
       case 'outfits': return {
-        loading: loadingOutfits,
+        loading: loadingOutfits, einzahl: 'Outfit',
+        // Eine Quelle für die Beschriftung: „komplett" heißt überall
+        // „Komplett-Look" — auf dem Chip wie auf der Kachel.
+        labels: OUTFIT_KATEGORIE_LABELS,
         // Komplett-Looks zuerst, dann die Einzelteile: Das Fach heisst
         // „Outfit", und der ganze Look ist der Normalfall. Innerhalb der
         // beiden Gruppen bleibt die Reihenfolge des Hooks (nach Namen).
@@ -641,38 +684,81 @@ export default function SceneBuilderPage() {
           .sort((a, b) => Number(b.category === 'komplett') - Number(a.category === 'komplett'))
           .map(o => ({
             id: o.id, name: o.name, imageUrl: o.cover_image_url,
+            description: o.description, category: o.category, tags: o.tags,
             hinweis: kategorieEintrag(o.category)?.label ?? null,
             isSelected: scene.outfit?.id === o.id,
             onSelect: () => setSlot('outfit', o),
           }))
       }
       case 'locations': return {
-        loading: loadingLocs,
-        items: locations.map(l => ({ id: l.id, name: l.name, imageUrl: l.cover_image_url, isSelected: scene.location?.id === l.id, onSelect: () => setSlot('location', l) }))
+        loading: loadingLocs, einzahl: 'Location',
+        items: locations.map(l => ({
+          id: l.id, name: l.name, imageUrl: l.cover_image_url,
+          description: l.description, category: l.category, tags: l.tags,
+          isSelected: scene.location?.id === l.id, onSelect: () => setSlot('location', l),
+        }))
       }
       case 'posen': return {
-        loading: loadingPoses,
-        items: poseActions.map(p => ({ id: p.id, name: p.name, imageUrl: p.cover_image_url, isSelected: scene.pose?.id === p.id, onSelect: () => setSlot('pose', p) }))
+        loading: loadingPoses, einzahl: 'Pose',
+        items: poseActions.map(p => ({
+          id: p.id, name: p.name, imageUrl: p.cover_image_url,
+          description: p.description, category: p.category, tags: p.tags,
+          isSelected: scene.pose?.id === p.id, onSelect: () => setSlot('pose', p),
+        }))
       }
       case 'ausdruck': return {
-        loading: loadingVisual,
-        items: expressions.map(e => ({ id: e.id, name: e.name, imageUrl: e.cover_image_url, isSelected: scene.expression?.id === e.id, onSelect: () => setSlot('expression', e) }))
+        loading: loadingVisual, einzahl: 'Mimik',
+        // Alle Mimik-Einträge liegen in der Kategorie „alle" — `chipListe`
+        // blendet die Zeile deshalb von selbst aus. Das Feld wird trotzdem
+        // mitgegeben, damit die Suche es sieht.
+        items: expressions.map(e => ({
+          id: e.id, name: e.name, imageUrl: e.cover_image_url,
+          description: e.description, category: e.category, tags: e.tags,
+          isSelected: scene.expression?.id === e.id, onSelect: () => setSlot('expression', e),
+        }))
       }
       case 'kamera': return {
-        loading: loadingVisual,
-        items: cameras.map(c => ({ id: c.id, name: c.name, imageUrl: c.cover_image_url, isSelected: scene.camera?.id === c.id, onSelect: () => setSlot('camera', c) }))
+        loading: loadingVisual, einzahl: 'Kamera-Asset',
+        labels: KAMERA_LABELS,
+        items: cameras.map(c => ({
+          id: c.id, name: c.name, imageUrl: c.cover_image_url,
+          description: c.description, category: c.category, tags: c.tags,
+          isSelected: scene.camera?.id === c.id, onSelect: () => setSlot('camera', c),
+        }))
       }
       case 'stil': return {
-        loading: loadingLookGrading,
-        items: styles.map(s => ({ id: s.id, name: s.name, imageUrl: s.cover_image_url, isSelected: scene.style?.id === s.id, onSelect: () => setSlot('style', s) }))
+        loading: loadingLookGrading, einzahl: 'Stil',
+        items: styles.map(s => ({
+          id: s.id, name: s.name, imageUrl: s.cover_image_url,
+          description: s.description, tags: s.tags,
+          isSelected: scene.style?.id === s.id, onSelect: () => setSlot('style', s),
+        }))
       }
       case 'grading': return {
-        loading: loadingLookGrading,
-        items: gradings.map(g => ({ id: g.id, name: g.name, imageUrl: g.cover_image_url, isSelected: scene.grading?.id === g.id, onSelect: () => setSlot('grading', g) }))
+        loading: loadingLookGrading, einzahl: 'Grading',
+        items: gradings.map(g => ({
+          id: g.id, name: g.name, imageUrl: g.cover_image_url,
+          description: g.description, tags: g.tags,
+          isSelected: scene.grading?.id === g.id, onSelect: () => setSlot('grading', g),
+        }))
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, characters, outfits, locations, poseActions, expressions, cameras, styles, gradings, scene, loadingChars, loadingOutfits, loadingLocs, loadingPoses, loadingVisual, loadingLookGrading])
+
+  /**
+   * Suchfeld und Kategorie-Chips über der Auswahlspalte (PROJ-46).
+   *
+   * Bis hierher zeigte die Spalte je Reiter eine reine Kachelliste. Seit der
+   * Zusammenlegung von Fashion und Outfits (PROJ-53) liegen dort 36 Einträge
+   * statt 17, bei den Locations 46 — davon 31 Stadien in EINER Kategorie. Das
+   * ist genau das Scrollen, von dem Mark am 03.09.2026 gesprochen hat, nur an
+   * der zweiten Stelle.
+   *
+   * `activeTab` als Bereich: Beim Reiterwechsel fallen Suche und Kategorie
+   * zurück — „natur" gilt bei den Posen nicht.
+   */
+  const filter = useBausteinFilter(leftContent.items, activeTab)
 
   const currentTab = TABS.find(t => t.key === activeTab)!
 
@@ -705,6 +791,24 @@ export default function SceneBuilderPage() {
           ))}
         </div>
 
+        {/* Suchen & filtern — steht FEST über der Rollflaeche und rollt nicht
+            mit weg: Wer bei Eintrag 30 merkt, dass er sucht, soll nicht erst
+            wieder nach oben scrollen muessen. */}
+        {!leftContent.loading && leftContent.items.length > 0 && (
+          <div className="border-b shrink-0 px-2 py-1.5">
+            <BausteinFilter
+              suche={filter.suche}
+              onSuche={filter.setSuche}
+              kategorie={filter.kategorie}
+              onKategorie={filter.setKategorie}
+              chips={filter.chips}
+              platzhalter={`${leftContent.einzahl} suchen …`}
+              labels={leftContent.labels}
+              kompakt
+            />
+          </div>
+        )}
+
         {/* Asset list */}
         <div className="flex-1 overflow-hidden relative">
           <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-2" style={{ right: '-17px' }}>
@@ -719,9 +823,25 @@ export default function SceneBuilderPage() {
                 <span className="text-3xl opacity-20">{currentTab.emoji}</span>
                 <p className="text-[10px] text-muted-foreground/60">Noch keine {currentTab.label}</p>
               </div>
+            ) : filter.gefiltert.length === 0 ? (
+              /* Leer wegen des Filters, nicht wegen fehlender Eintraege — die
+                 beiden Faelle duerfen nicht denselben Satz zeigen, sonst sucht
+                 man den Fehler bei den Daten statt im Suchfeld. */
+              <div className="flex flex-col items-center justify-center min-h-40 gap-2 text-center px-3">
+                <span className="text-3xl opacity-20">🔍</span>
+                <p className="text-[10px] text-muted-foreground/60">
+                  Kein Treffer unter {leftContent.items.length} {currentTab.label}
+                </p>
+                <button
+                  onClick={() => { filter.setSuche(''); filter.setKategorie(null) }}
+                  className="text-[10px] text-orange-400 hover:text-orange-300 underline underline-offset-2"
+                >
+                  Filter aufheben
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-3 gap-1.5">
-                {leftContent.items.map(item => (
+                {filter.gefiltert.map(item => (
                   <AssetThumb
                     key={item.id}
                     name={item.name}
@@ -729,7 +849,7 @@ export default function SceneBuilderPage() {
                     emoji={currentTab.emoji}
                     isSelected={item.isSelected}
                     onClick={item.onSelect}
-                    hinweis={'hinweis' in item ? (item as { hinweis?: string | null }).hinweis : null}
+                    hinweis={item.hinweis ?? null}
                   />
                 ))}
               </div>

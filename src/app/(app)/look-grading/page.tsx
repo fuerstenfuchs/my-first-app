@@ -14,6 +14,7 @@ import {
 import { LookGradingForm } from '@/components/look-grading/look-grading-form'
 import { useLookGrading, type LookGradingItem, type LookGradingType, type LookGradingInput } from '@/hooks/use-look-grading'
 import { cn } from '@/lib/utils'
+import { passtZurSuche } from '@/lib/bausteine'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -89,7 +90,9 @@ export default function LookGradingPage() {
   const label = activeType === 'style' ? 'Stil' : 'Grading'
 
   const filteredItems = useMemo(() =>
-    items.filter(i => !search.trim() || i.name.toLowerCase().includes(search.toLowerCase())),
+    // PROJ-46: wortweise und über Name und Schlagworte. Stile und Gradings
+    // haben keine Kategorie — `LookGradingItem` führt keine.
+    items.filter(i => passtZurSuche(i, search)),
     [items, search]
   )
 

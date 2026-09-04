@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
-  passtZurSuche, kategorien, kategorieLabel, auswahlSpalten, baustein,
+  passtZurSuche, kategorien, kategorieLabel, chipListe, auswahlSpalten, baustein,
   pruefeBildgroesse,
   type SuchbarerEintrag,
 } from './bausteine'
+import { OUTFIT_KATEGORIE_LABELS } from './outfit-kategorien'
 
 /**
  * Prüfsteine aus Marks echten Daten (Stand 03.09.2026).
@@ -184,5 +185,83 @@ describe('pruefeBildgroesse', () => {
 
   it('prüft Prompts nicht — der Eimer hat kein Limit in der Tabelle', () => {
     expect(pruefeBildgroesse(90 * MB, baustein('prompts'))).toBeNull()
+  })
+})
+
+/**
+ * PROJ-46, zweiter Schritt: dieselbe Suche und dieselben Chips auch im Scene
+ * Builder und auf den Baustein-Seiten.
+ */
+describe('chipListe', () => {
+  const alle: SuchbarerEintrag[] = [
+    { name: 'Borussia-Park', category: 'stadien_deutschland' },
+    { name: 'Signal Iduna Park', category: 'stadien_deutschland' },
+    { name: 'Allianz Arena', category: 'stadien_deutschland' },
+    { name: 'Wald im Nebel', category: 'natur' },
+    { name: 'Bergsee', category: 'natur' },
+  ]
+
+  it('nimmt die AUSWAHL aus allen und die ZAHL aus den gesuchten', () => {
+    const gesucht = alle.filter(e => passtZurSuche(e, 'park'))
+    expect(chipListe(alle, gesucht)).toEqual([
+      { wert: 'stadien_deutschland', anzahl: 2 },
+      { wert: 'natur', anzahl: 0 },
+    ])
+  })
+
+  /**
+   * Der Kern der Sache. Käme die Auswahl aus den gesuchten Einträgen, wäre
+   * „natur" beim Tippen von „park" verschwunden — und wer die Kategorie vorher
+   * angeklickt hatte, könnte sie nicht mehr abwählen: Die Liste bliebe leer,
+   * ohne dass irgendetwas sagt warum.
+   */
+  it('behält einen Chip mit null Treffern, sonst ließe er sich nicht abwählen', () => {
+    const gesucht = alle.filter(e => passtZurSuche(e, 'park'))
+    expect(chipListe(alle, gesucht).map(k => k.wert)).toContain('natur')
+  })
+
+  it('zeigt gar keine Chips, wenn es nur eine Kategorie gibt', () => {
+    // Genau der Fall der Mimik im Scene Builder: alles liegt in „alle".
+    const eine: SuchbarerEintrag[] = [
+      { name: 'Lächeln', category: 'alle' },
+      { name: 'Ernst', category: 'alle' },
+    ]
+    expect(chipListe(eine, eine)).toEqual([])
+  })
+
+  it('zeigt gar keine Chips, wo es keine Kategorie gibt', () => {
+    const ohne: SuchbarerEintrag[] = [{ name: 'Anna' }, { name: 'Ben' }]
+    expect(chipListe(ohne, ohne)).toEqual([])
+  })
+
+  it('behält die Reihenfolge aus `kategorien` — häufigste zuerst', () => {
+    expect(chipListe(alle, []).map(k => k.wert))
+      .toEqual(['stadien_deutschland', 'natur'])
+  })
+})
+
+describe('kategorieLabel mit gepflegter Liste', () => {
+  /**
+   * Der Prüfbefund vom 03.09.2026: Dieselbe Outfit-Kategorie stand in der App
+   * in drei Schreibweisen — roh, „Komplett" und „Komplett-Look". Die Ableitung
+   * aus dem Schlüssel kann das nicht wissen; die Liste des Bereichs schon.
+   */
+  it('nimmt die Beschriftung des Bereichs, wo es eine gibt', () => {
+    expect(kategorieLabel('komplett', OUTFIT_KATEGORIE_LABELS)).toBe('Komplett-Look')
+  })
+
+  it('fällt ohne Liste auf die Ableitung zurück', () => {
+    expect(kategorieLabel('komplett')).toBe('Komplett')
+  })
+
+  it('lässt einen Wert, der in der Liste fehlt, ableiten', () => {
+    // Marks eigene Kategorien (PROJ-34) stehen in keiner festen Liste.
+    expect(kategorieLabel('stadien_deutschland', OUTFIT_KATEGORIE_LABELS))
+      .toBe('Stadien Deutschland')
+  })
+
+  it('gibt dem Outfit-Baustein die Liste mit — sonst wirkt sie nirgends', () => {
+    expect(baustein('outfits').kategorieLabels?.komplett).toBe('Komplett-Look')
+    expect(baustein('locations').kategorieLabels).toBeUndefined()
   })
 })

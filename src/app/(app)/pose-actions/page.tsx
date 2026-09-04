@@ -32,6 +32,7 @@ import {
 } from '@/hooks/use-pose-actions'
 import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
+import { passtZurSuche } from '@/lib/bausteine'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -147,7 +148,10 @@ export default function PoseActionsPage() {
   const filteredPoseActions = useMemo(() =>
     poseActions.filter(pa =>
       pa.category === selectedCategory &&
-      (!search.trim() || pa.name.toLowerCase().includes(search.toLowerCase()))
+      // PROJ-46: wortweise und über Name, Beschreibung, Kategorie und
+      // Schlagworte. Der Prüfstein „sitzend arme" stammt aus genau diesem
+      // Bestand — Marks Posen heißen beschreibende Sätze.
+      passtZurSuche(pa, search)
     ), [poseActions, selectedCategory, search])
 
   async function handlePoseActionSave(input: PoseActionInput, coverFile?: File | null) {

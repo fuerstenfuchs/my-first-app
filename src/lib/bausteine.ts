@@ -1,6 +1,7 @@
 import {
   Users, Shirt, MapPin, Drama, FileText, type LucideIcon,
 } from 'lucide-react'
+import { OUTFIT_KATEGORIE_LABELS } from './outfit-kategorien'
 
 /**
  * Die Bausteine als Daten — wohin ein fertiges Bild übernommen werden kann.
@@ -84,6 +85,15 @@ export type Baustein = {
   zusatz?: Record<string, unknown>
   /** Welche Zusatzspalten es gibt — siehe {@link SuchFelder}. */
   suchFelder: SuchFelder
+  /**
+   * Feste Beschriftungen der Kategoriewerte, wo es eine gepflegte Liste gibt.
+   *
+   * Fehlt der Eintrag, leitet {@link kategorieLabel} den Text aus dem
+   * technischen Schlüssel ab — das reicht überall dort, wo der Schlüssel schon
+   * das Wort ist („natur" → „Natur"). Bei den Outfits reicht es NICHT:
+   * „komplett" heißt in der Oberfläche „Komplett-Look".
+   */
+  kategorieLabels?: Record<string, string>
   /** Wohin in der App, um das Ergebnis anzusehen. */
   href: string
 }
@@ -160,6 +170,7 @@ export const BAUSTEINE: Baustein[] = [
     bildTabelle: 'outfit_images', bildFk: 'variant_id',
     bucket: 'outfit-images', hatStoragePath: true,
     suchFelder: { beschreibung: 'description', kategorie: 'category', schlagworte: 'tags' },
+    kategorieLabels: OUTFIT_KATEGORIE_LABELS,
     href: '/outfits',
   },
   {
@@ -358,7 +369,15 @@ const LESBARE_KATEGORIE: Record<string, string> = {
  * In der Datenbank steht „stadien_deutschland" — auf dem Knopf steht „Stadien
  * Deutschland". Die Werte selbst bleiben unangetastet; das ist reine Anzeige.
  */
-export function kategorieLabel(wert: string): string {
+export function kategorieLabel(
+  wert: string,
+  labels?: Record<string, string>,
+): string {
+  // Die gepflegte Liste des Bereichs schlägt die Ableitung: „komplett" heißt
+  // „Komplett-Look", nicht „Komplett". Wer keine Liste hat, bekommt weiter die
+  // Ableitung — Marks eigene Kategorien (PROJ-34) stehen in keiner Liste.
+  const ausListe = labels?.[wert]
+  if (ausListe) return ausListe
   const fest = LESBARE_KATEGORIE[wert]
   if (fest) return fest
   return wert
@@ -366,4 +385,38 @@ export function kategorieLabel(wert: string): string {
     .filter(Boolean)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
+}
+
+/**
+ * Die Kategorie-Chips über einer Liste: welche es gibt, und wie viele davon
+ * die aktuelle Suche gerade übrig lässt.
+ *
+ * ZWEI LISTEN, ABSICHTLICH. Die AUSWAHL der Chips kommt aus `alle`, die ZAHL
+ * daneben aus `gesucht`. Käme beides aus `gesucht`, verschwände ein Chip beim
+ * Tippen — und mit ihm die Möglichkeit, eine gesetzte Kategorie wieder
+ * abzuwählen: Die Liste wäre dann dauerhaft leer und der einzige Ausweg wäre,
+ * die Suche zu löschen, ohne dass irgendetwas das verrät. Nebenbei springen so
+ * auch keine Knöpfe unter dem Finger weg. Eine Null ist erlaubt, der Knopf
+ * bleibt.
+ *
+ * WENIGER ALS ZWEI KATEGORIEN HEISST KEINE CHIPS. Ein einzelner Chip filtert
+ * nichts und kostet nur Platz — im Scene Builder trifft das die Mimik-Kacheln,
+ * die alle in der Kategorie „alle" liegen.
+ */
+export function chipListe(
+  alle: SuchbarerEintrag[],
+  gesucht: SuchbarerEintrag[],
+): Array<{ wert: string; anzahl: number }> {
+  const vorhanden = kategorien(alle)
+  if (vorhanden.length < 2) return []
+  const trefferJeKategorie = new Map<string, number>()
+  for (const e of gesucht) {
+    const wert = e.category?.trim()
+    if (!wert) continue
+    trefferJeKategorie.set(wert, (trefferJeKategorie.get(wert) ?? 0) + 1)
+  }
+  return vorhanden.map(k => ({
+    wert: k.wert,
+    anzahl: trefferJeKategorie.get(k.wert) ?? 0,
+  }))
 }

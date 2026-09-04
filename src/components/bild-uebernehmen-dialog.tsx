@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { ImageOff, Search, Loader2, Check } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { ImageOff, Loader2, Check } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
-  BAUSTEINE, baustein, passtZurSuche, kategorien, kategorieLabel,
+  BAUSTEINE, baustein, kategorieLabel,
   type BausteinSchluessel,
 } from '@/lib/bausteine'
+import { BausteinFilter } from '@/components/baustein-filter'
+import { useBausteinFilter } from '@/hooks/use-baustein-filter'
 import { useBildUebernehmen, type Eintrag, type Variante } from '@/hooks/use-bild-uebernehmen'
 import { cn } from '@/lib/utils'
 
@@ -44,14 +45,18 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
   const [art, setArt] = useState<BausteinSchluessel>('charaktere')
   const [eintraege, setEintraege] = useState<Eintrag[]>([])
   const [laedt, setLaedt] = useState(false)
-  const [suche, setSuche] = useState('')
-  /** Die angeklickte Kategorie — null heißt „alle". */
-  const [kategorie, setKategorie] = useState<string | null>(null)
   const [gewaehlt, setGewaehlt] = useState<Eintrag | null>(null)
   const [varianten, setVarianten] = useState<Variante[]>([])
   const [variantId, setVariantId] = useState<string | null>(null)
 
   const b = baustein(art)
+
+  // Suche und Kategorie liegen im gemeinsamen Hook — dieselbe Mechanik wie in
+  // der Auswahlspalte des Scene Builders. `art` als Bereich: Die Kategorien
+  // eines Bausteins gelten nicht beim nächsten. Bliebe „natur" beim Wechsel zu
+  // den Posen stehen, wäre die Liste leer und niemand wüsste warum.
+  const { suche, setSuche, kategorie, setKategorie, gefiltert, chips } =
+    useBausteinFilter(eintraege, art)
 
   // Beim Öffnen und bei jedem Wechsel der Art neu laden.
   useEffect(() => {
@@ -61,10 +66,6 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
     setGewaehlt(null)
     setVarianten([])
     setVariantId(null)
-    // Die Kategorien eines Bausteins gelten nicht beim nächsten. Bliebe „natur"
-    // beim Wechsel zu den Posen stehen, wäre die Liste leer und niemand wüsste
-    // warum.
-    setKategorie(null)
     void eintraegeLaden(b).then(liste => {
       if (!abgebrochen) { setEintraege(liste); setLaedt(false) }
     })
@@ -85,34 +86,6 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
     })
     return () => { abgebrochen = true }
   }, [gewaehlt, b, variantenLaden])
-
-  // Erst die Wörter, dann die Kategorie — beides greift zusammen.
-  const gesucht = useMemo(
-    () => eintraege.filter(e => passtZurSuche(e, suche)),
-    [eintraege, suche],
-  )
-  const gefiltert = useMemo(
-    () => (kategorie ? gesucht.filter(e => e.category === kategorie) : gesucht),
-    [gesucht, kategorie],
-  )
-
-  /**
-   * Die Chips über der Liste.
-   *
-   * Die LISTE kommt aus allen Einträgen, die ANZAHL aus den gerade gesuchten.
-   * Absichtlich so: Verschwände ein Chip beim Tippen, ließe sich eine gesetzte
-   * Kategorie nicht mehr abwählen — und die Knöpfe würden unter dem Finger
-   * wegspringen. Die Zahl darf null werden, der Knopf bleibt.
-   */
-  const chips = useMemo(() => {
-    if (!b.suchFelder.kategorie) return []
-    const alle = kategorien(eintraege)
-    if (alle.length < 2) return []
-    return alle.map(k => ({
-      wert: k.wert,
-      anzahl: gesucht.filter(e => e.category === k.wert).length,
-    }))
-  }, [b, eintraege, gesucht])
 
   const bestaetigen = useCallback(async () => {
     if (!bild || !gewaehlt) return
@@ -165,60 +138,15 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
           })}
         </div>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={suche}
-            onChange={e => setSuche(e.target.value)}
-            placeholder={`${b.einzahl} suchen …`}
-            className="h-8 pl-8 text-xs"
-          />
-        </div>
-
-        {/*
-          Kategorien als Chips — nur, wo es sie gibt und wo mehr als eine
-          vorkommt. Ein einzelner Chip filtert nichts und kostet nur Platz.
-
-          Mark am 03.09.2026 nachgemessen: Von 46 Locations sind 31 Stadien und
-          zehn Natur. Wer eine Naturkulisse sucht, blättert bisher an allen 31
-          Stadien vorbei. Die Zahl steht deshalb neben dem Namen — man soll
-          sehen, was hinter einem Knopf steckt, BEVOR man ihn drückt.
-
-          Der Dialog ist schmal: `flex-wrap` und eine eigene Rollfläche mit
-          Höhenlimit, damit viele Kategorien ihn nicht auseinanderziehen.
-
-          `shrink-0` ist hier NICHT schmückendes Beiwerk. Ohne das war die Zeile
-          im Browser 5 Punkte hoch, obwohl ihr Inhalt 23 braucht — von den
-          Chips blieb ein Streifen übrig (am 03.09.2026 nachgemessen). Ein
-          Flex-Kind schrumpft nämlich unter seinen Inhalt, wenn das Geschwister
-          daneben Platz will, und das Bildraster will immer Platz. `max-h-16`
-          war unschuldig: Die Höhe scheiterte nicht an der Obergrenze, sondern
-          am Zusammenquetschen.
-        */}
-        {chips.length > 0 && (
-          <div className="flex max-h-16 shrink-0 flex-wrap gap-1 overflow-y-auto">
-            {chips.map(k => {
-              const aktiv = kategorie === k.wert
-              return (
-                <button
-                  key={k.wert}
-                  onClick={() => setKategorie(aktiv ? null : k.wert)}
-                  aria-pressed={aktiv}
-                  title={aktiv ? 'Filter aufheben' : `Nur ${kategorieLabel(k.wert)} zeigen`}
-                  className={cn(
-                    'shrink-0 rounded-full border px-2 py-0.5 text-[11px] transition',
-                    aktiv
-                      ? 'border-primary bg-primary/10 font-medium text-primary'
-                      : 'border-border/60 text-muted-foreground hover:border-border hover:text-foreground',
-                  )}
-                >
-                  {kategorieLabel(k.wert)}
-                  <span className="ml-1 tabular-nums opacity-60">{k.anzahl}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
+        <BausteinFilter
+          suche={suche}
+          onSuche={setSuche}
+          kategorie={kategorie}
+          onKategorie={setKategorie}
+          chips={chips}
+          platzhalter={`${b.einzahl} suchen …`}
+          labels={b.kategorieLabels}
+        />
 
         {/* Die Galerie */}
         <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border/50 p-2">
@@ -233,9 +161,9 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
               {eintraege.length === 0
                 ? `Noch keine ${b.label} angelegt.`
                 : kategorie && suche.trim()
-                  ? `Kein Treffer für „${suche}" in ${kategorieLabel(kategorie)}.`
+                  ? `Kein Treffer für „${suche}" in ${kategorieLabel(kategorie, b.kategorieLabels)}.`
                   : kategorie
-                    ? `Nichts in ${kategorieLabel(kategorie)}.`
+                    ? `Nichts in ${kategorieLabel(kategorie, b.kategorieLabels)}.`
                     : `Kein Treffer für „${suche}".`}
             </p>
           ) : (

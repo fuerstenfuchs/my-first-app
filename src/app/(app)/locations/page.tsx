@@ -39,6 +39,7 @@ import {
 import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { useCappedImageSrc } from '@/hooks/use-capped-image-src'
+import { passtZurSuche } from '@/lib/bausteine'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -229,7 +230,10 @@ export default function LocationsPage() {
   const filteredLocations = useMemo(() =>
     locations.filter(l =>
       l.category === selectedCategory &&
-      (!search.trim() || l.name.toLowerCase().includes(search.toLowerCase()))
+      // PROJ-46: wortweise und über Name, Beschreibung, Kategorie und
+      // Schlagworte. Die Kategorie steht hier weiter als eigene Spalte links —
+      // sie ist schon da und zeigt mehr als eine Chipzeile.
+      passtZurSuche(l, search)
     ), [locations, selectedCategory, search])
 
   async function handleLocationSave(input: LocationInput, coverFile?: File | null) {

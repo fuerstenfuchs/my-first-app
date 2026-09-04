@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Check, ImageOff, Search, ArrowLeft } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Check, ImageOff, ArrowLeft } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { BausteinFilter } from '@/components/baustein-filter'
+import { useBausteinFilter } from '@/hooks/use-baustein-filter'
+import { kategorieLabel } from '@/lib/bausteine'
+import { OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategorien'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import { ROLLEN_LABEL, type ReferenzRolle } from '@/lib/image-generation'
 import { cn } from '@/lib/utils'
@@ -16,6 +19,13 @@ export type PickbaresAsset = {
   name: string
   cover_image_url?: string | null
   category?: string | null
+  /**
+   * Beschreibung und Schlagworte, damit die Suche mehr sieht als den Namen
+   * (PROJ-46). Optional, weil nicht jede Bibliothek beides führt — die
+   * Aufrufer geben ohnehin die vollen Zeilen ihrer Hooks weiter.
+   */
+  description?: string | null
+  tags?: string[] | null
 }
 
 interface AssetPickerDialogProps {
@@ -44,7 +54,23 @@ export function AssetPickerDialog({
   const [bilder, setBilder] = useState<RefImage[]>([])
   const [laedt, setLaedt] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
-  const [suche, setSuche] = useState('')
+
+  /**
+   * Suche und Kategorie-Chips wie im Übernehmen-Dialog und im Scene Builder
+   * (PROJ-46). Vorher suchte dieses Feld als zusammenhängende Zeichenkette und
+   * nur über Name und Kategorie — „sitzend arme" fand nichts.
+   *
+   * `rolle` als Bereich: Wechselt der Dialog von Locations auf Outfits, fallen
+   * Suche und Kategorie zurück; „natur" gibt es bei Outfits nicht.
+   */
+  const filter = useBausteinFilter(assets, rolle)
+
+  /**
+   * Die Beschriftungen der Kategorie — EINE Quelle. Bis PROJ-46 stand hier der
+   * rohe Datenbankwert („komplett"), während dieselbe Kategorie auf der
+   * Outfit-Seite „Komplett-Look" hieß und im Übernehmen-Dialog „Komplett".
+   */
+  const kategorieLabels = rolle === 'outfit' ? OUTFIT_KATEGORIE_LABELS : undefined
 
   const tabelle = rolle === 'character' ? 'character_variants'
     : rolle === 'outfit' ? 'outfit_variants' : 'location_variants'
@@ -64,15 +90,10 @@ export function AssetPickerDialog({
 
   // Beim Öffnen zurück auf Schritt 1
   useEffect(() => {
-    if (isOpen) { setGewaehlt(null); setBilder([]); setSuche(''); setFehler(null) }
+    if (isOpen) { setGewaehlt(null); setBilder([]); setFehler(null) }
   }, [isOpen])
 
-  const gefiltert = useMemo(() => {
-    if (!suche.trim()) return assets
-    const s = suche.toLowerCase()
-    return assets.filter(a =>
-      a.name.toLowerCase().includes(s) || (a.category ?? '').toLowerCase().includes(s))
-  }, [assets, suche])
+  const gefiltert = filter.gefiltert
 
   function assetWaehlen(a: PickbaresAsset) {
     setGewaehlt(a)
@@ -111,14 +132,19 @@ export function AssetPickerDialog({
         {/* Schritt 1: das Asset */}
         {!gewaehlt && (
           <>
+            {/* Erst ab neun Einträgen: Bei einer Handvoll ist die Galerie
+                schneller als jedes Suchfeld — das war die Lehre aus dem ersten
+                Entwurf und gilt weiter. */}
             {assets.length > 8 && (
-              <div className="relative shrink-0">
-                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={suche}
-                  onChange={e => setSuche(e.target.value)}
-                  placeholder="Nach Name oder Kategorie einschränken (optional)"
-                  className="h-8 pl-7 text-xs"
+              <div className="shrink-0">
+                <BausteinFilter
+                  suche={filter.suche}
+                  onSuche={filter.setSuche}
+                  kategorie={filter.kategorie}
+                  onKategorie={filter.setKategorie}
+                  chips={filter.chips}
+                  platzhalter={`${ROLLEN_LABEL[rolle]} suchen (optional)`}
+                  labels={kategorieLabels}
                 />
               </div>
             )}
@@ -150,7 +176,9 @@ export function AssetPickerDialog({
                   <div className="p-1.5">
                     <p className="truncate text-[11px] font-medium leading-tight">{a.name}</p>
                     {a.category && (
-                      <p className="truncate text-[9px] text-muted-foreground">{a.category}</p>
+                      <p className="truncate text-[9px] text-muted-foreground">
+                        {kategorieLabel(a.category, kategorieLabels)}
+                      </p>
                     )}
                   </div>
                 </button>
