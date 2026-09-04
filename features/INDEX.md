@@ -91,4 +91,6 @@
 
 | PROJ-57 | Stillstand des Arbeiters sichtbar machen | In Review | [PROJ-57](PROJ-57-arbeiter-stillstand-melden.md) | 2026-09-04 |
 
-## Next Available ID: PROJ-58
+| PROJ-58 | Bescheid sagen, wenn ein Bild fertig ist | In Review | [PROJ-58](PROJ-58-fertig-melden.md) | 2026-09-04 |
+
+## Next Available ID: PROJ-59

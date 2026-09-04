@@ -121,3 +121,27 @@ describe('Ereignisname stimmt an beiden Enden überein', () => {
     expect(readSource('src/app/(app)/page.tsx')).toContain('quick-capture:saved')
   })
 })
+
+/**
+ * Derselbe Waechter fuer die Fertig-Meldung (PROJ-58).
+ *
+ * Die Gefahr ist woertlich dieselbe wie bei Quick Capture: Haken und Logik sind
+ * gebaut und mit Tests abgedeckt, aber wenn sie niemand einbindet, passiert
+ * nichts — und zwar lautlos. Mark merkte am 04.09.2026 monatelang nicht, dass
+ * es ueberhaupt keine Meldung gab, weil „keine Meldung" genauso aussieht wie
+ * „noch nicht fertig".
+ *
+ * UND ER MUSS IM LAYOUT LIEGEN: Die Seiten, auf denen Bilder gestartet werden,
+ * fragen den Stand nicht ab. Ein Waechter auf `/queue` haette nur dem geholfen,
+ * der ohnehin schon hinschaut.
+ */
+describe('AppLayout — die Fertig-Meldung ist eingebunden', () => {
+  it('ruft useFertigWache auf (sonst meldet nichts, dass ein Bild fertig ist)', () => {
+    expect(layoutSource).toContain('useFertigWache')
+    expect(layoutSource).toMatch(/useFertigWache\(\)/)
+  })
+
+  it('fuehrt den Haken auch wirklich ein', () => {
+    expect(layoutSource).toMatch(/import\s*\{[^}]*useFertigWache[^}]*\}\s*from\s*'@\/hooks\/use-fertig-wache'/)
+  })
+})

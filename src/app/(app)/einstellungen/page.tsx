@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, Download, Loader2, PlugZap, Settings, Smartphone, Sparkles, Upload, XCircle } from 'lucide-react'
+import { Bell, CheckCircle2, Download, Loader2, PlugZap, Settings, Smartphone, Sparkles, Upload, Volume2, XCircle } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import {
+  MELDUNG_SCHLUESSEL, TON_SCHLUESSEL,
+  schalterLesen, schalterSchreiben, meldungErlaubnisHolen,
+} from '@/hooks/use-fertig-wache'
 import { toast } from 'sonner'
 import { usePrompts } from '@/hooks/use-prompts'
 import { usePwaInstall } from '@/components/pwa-install-banner'
@@ -61,6 +66,52 @@ export default function EinstellungenPage() {
   // Die Werte kommen aus localStorage, also erst NACH dem ersten Rendern:
   // Auf dem Server gibt es kein localStorage, und wer hier direkt mit dem
   // gespeicherten Wert startete, bekaeme eine Hydrations-Warnung geschenkt.
+  // ——— Meldung, wenn ein Bild fertig ist (PROJ-58) ———
+  // Wie beim Proxy erst nach dem ersten Rendern aus dem localStorage lesen —
+  // auf dem Server gibt es keinen, und ein direkter Startwert brächte eine
+  // Hydrations-Warnung.
+  const [meldungAn, setMeldungAn] = useState(false)
+  const [tonAn, setTonAn] = useState(false)
+  const [meldungVerboten, setMeldungVerboten] = useState(false)
+
+  useEffect(() => {
+    setMeldungAn(schalterLesen(MELDUNG_SCHLUESSEL))
+    setTonAn(schalterLesen(TON_SCHLUESSEL))
+    setMeldungVerboten(typeof Notification !== 'undefined' && Notification.permission === 'denied')
+  }, [])
+
+  /**
+   * Die Erlaubnis wird HIER erfragt, aus dem Klick heraus — Browser lehnen die
+   * Frage ab, wenn sie nicht aus einer Benutzerhandlung kommt. Deshalb steht
+   * sie am Schalter und nicht im Wächter.
+   */
+  async function meldungUmschalten(an: boolean) {
+    if (!an) {
+      setMeldungAn(false)
+      schalterSchreiben(MELDUNG_SCHLUESSEL, false)
+      return
+    }
+    const antwort = await meldungErlaubnisHolen()
+    if (antwort === 'granted') {
+      setMeldungAn(true)
+      schalterSchreiben(MELDUNG_SCHLUESSEL, true)
+      toast.success('Benachrichtigungen sind an')
+      return
+    }
+    setMeldungAn(false)
+    setMeldungVerboten(antwort === 'denied')
+    toast.error(antwort === 'nicht-unterstuetzt'
+      ? 'Dieser Browser kann keine Benachrichtigungen anzeigen.'
+      : 'Der Browser hat die Erlaubnis verweigert — in den Website-Einstellungen freigeben.')
+  }
+
+  function tonUmschalten(an: boolean) {
+    setTonAn(an)
+    if (!schalterSchreiben(TON_SCHLUESSEL, an)) {
+      toast.error('Einstellung konnte nicht gespeichert werden — im privaten Fenster ist der lokale Speicher gesperrt.')
+    }
+  }
+
   const [proxyUrl, setProxyUrl] = useState(PROXY_VORGABE_URL)
   const [proxyToken, setProxyToken] = useState('')
   const [proxyModell, setProxyModell] = useState<string>(PROXY_VORGABE_MODELL)
@@ -240,6 +291,68 @@ export default function EinstellungenPage() {
               <Separator />
             </>
           )}
+
+          {/*
+            PROJ-58 — Mark am 04.09.2026: „bekomme ich leider nirgendwo eine
+            Meldung, dass das Bild fertig ist." Reiter-Titel und Einblendung
+            sind immer an, weil sie niemanden stoeren. Die beiden hier stoeren
+            und werden deshalb ausdruecklich freigeschaltet.
+          */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Wenn ein Bild fertig ist</CardTitle>
+              <CardDescription>
+                Der Reitertitel zeigt immer an, wie viele Bilder fertig geworden sind, während du
+                woanders warst — dafür ist nichts einzustellen. Zusätzlich:
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <Label htmlFor="meldung-schalter" className="flex items-center gap-2 text-sm font-medium">
+                    <Bell className="h-4 w-4" />
+                    Benachrichtigung vom Betriebssystem
+                  </Label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Erreicht dich auch, wenn das Fenster klein ist oder im Hintergrund liegt.
+                    Der Browser fragt einmal um Erlaubnis.
+                  </p>
+                  {meldungVerboten && (
+                    <p className="mt-1 text-xs text-amber-500">
+                      Der Browser hat sie für diese Seite gesperrt — das lässt sich nur in seinen
+                      eigenen Website-Einstellungen wieder freigeben.
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  id="meldung-schalter"
+                  checked={meldungAn}
+                  onCheckedChange={an => { void meldungUmschalten(an) }}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <Label htmlFor="ton-schalter" className="flex items-center gap-2 text-sm font-medium">
+                    <Volume2 className="h-4 w-4" />
+                    Kurzer Ton
+                  </Label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ein zweitöniges Pling. Nur hörbar, solange die Seite offen ist.
+                  </p>
+                </div>
+                <Switch
+                  id="ton-schalter"
+                  checked={tonAn}
+                  onCheckedChange={tonUmschalten}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
 
           <Card>
             <CardHeader>
