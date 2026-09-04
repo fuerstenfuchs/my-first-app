@@ -28,6 +28,7 @@ import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialo
 import { QueueButton } from '@/components/scene-builder/queue-button'
 import type { Referenz, ReferenzRolle } from '@/lib/image-generation'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
+import { nachNutzen, standardReferenz } from '@/lib/referenz-auswahl'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
 import { kategorieEintrag, OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategorien'
 import { BausteinFilter } from '@/components/baustein-filter'
@@ -339,34 +340,64 @@ function RefPicker({
     )
   }
 
+  /*
+    GROESSER UND MIT NAMEN (04.09.2026).
+
+    Vorher: 32x32 Pixel, unbeschriftet. Mark: „Ich muss da immer ewig suchen
+    und scrollen auf dem Miniscreen, was das Referenzbild ist. Das ist kaum zu
+    sehen. So klein ist das Bild."
+
+    „Groesser" allein haette nur das halbe Problem geloest: Selbst gross genug
+    wuesste man nicht, WELCHES das Referenzsheet ist, solange man es am
+    Bildinhalt erraten muss. Jedes Bild gehoert zu einer benannten Variante,
+    und der Name stand schon im `label` — er wurde nur nie angezeigt.
+    Jetzt 64px statt 32, der Name darunter, und das Referenzsheet steht vorn
+    (`nachNutzen`) und ist vorgewaehlt (`standardReferenz`).
+  */
+  const sortiert = nachNutzen(images)
+
   return (
-    <div className="scrollbar-hide flex gap-1.5 overflow-x-auto py-1">
-      {/* „Kein Bild" */}
+    <div className="ohne-rollbalken flex gap-2 overflow-x-auto py-1">
+      {/* „Kein Bild" — nimmt dann das Titelbild des Bausteins. */}
       <button
         onClick={() => onSelect(null)}
-        title="Kein Referenzbild"
+        title="Kein eigenes Referenzbild — es gilt das Titelbild"
         className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded border text-[11px] transition-colors',
+          'flex h-[72px] w-[72px] shrink-0 flex-col items-center justify-center gap-0.5 rounded border text-[11px] transition-colors',
           selectedUrl === null
             ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] text-[var(--sb-or-t)]'
             : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)]',
         )}
       >
-        ✕
+        <span className="text-sm">✕</span>
+        <span className="leading-none">Titelbild</span>
       </button>
-      {images.map((img, i) => (
+      {sortiert.map((img, i) => (
         <button
           key={i}
           onClick={() => onSelect(img)}
           title={img.label}
-          className={cn(
-            'h-8 w-8 shrink-0 overflow-hidden border-2 transition-all',
-            selectedUrl === img.url
-              ? 'border-[var(--sb-or)] shadow-[0_1px_3px_rgba(190,90,20,0.3)]'
-              : 'border-[var(--sb-rule)] hover:border-[var(--sb-ink3)]',
-          )}
+          className="group shrink-0"
         >
-          <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
+          <div className={cn(
+            'h-[72px] w-[72px] overflow-hidden rounded border-2 transition-all',
+            selectedUrl === img.url
+              ? 'border-[var(--sb-or)] shadow-[0_1px_4px_rgba(190,90,20,0.35)]'
+              : 'border-[var(--sb-rule)] group-hover:border-[var(--sb-ink3)]',
+          )}>
+            <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
+          </div>
+          <span className={cn(
+            // Etwas breiter als die Kachel und in den Zwischenraum hinein:
+            // „Referenzsheet" passt bei 72px sonst nicht und wurde zu
+            // „Referenzsh…" — ausgerechnet der Name, auf den es ankommt.
+            'mx-[-6px] mt-0.5 block w-[84px] truncate text-center text-[11px] leading-tight',
+            selectedUrl === img.url
+              ? 'font-semibold text-[var(--sb-or-t)]'
+              : 'text-[var(--sb-ink3)]',
+          )}>
+            {img.label}
+          </span>
         </button>
       ))}
     </div>
@@ -658,6 +689,23 @@ export default function SceneBuilderPage() {
     const imgs = await loadRefImages(table, fk, assetId)
     setRefImagesMap(prev => ({ ...prev, [assetId]: imgs }))
     setRefLoadingMap(prev => ({ ...prev, [assetId]: false }))
+
+    /*
+      DAS REFERENZSHEET VON SELBST NEHMEN (Marks Bitte vom 04.09.2026).
+
+      Nur, wenn es wirklich eines gibt — `standardReferenz` gibt sonst `null`
+      zurueck. Das ist wichtig: Ohne Auswahl nimmt der Scene Builder das
+      TITELBILD des Bausteins, und das ist ein bewusst gewaehltes Bild.
+      Irgendein erstes Bild aus der Liste stattdessen vorzuwaehlen waere
+      schlechter — und es ginge in eine bezahlte Erzeugung.
+
+      Und nur, solange Mark noch nichts eigenes gewaehlt hat: Das Laden kann
+      spaeter zurueckkommen als sein Klick.
+    */
+    const vorschlag = standardReferenz(imgs)
+    if (vorschlag) {
+      setSceneRefs(prev => (prev[slotKey] ? prev : { ...prev, [slotKey]: vorschlag }))
+    }
   }, [refImagesMap])
 
   function setSlot(key: SlotKey, value: Scene[SlotKey]) {
