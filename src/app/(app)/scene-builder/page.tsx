@@ -1142,6 +1142,25 @@ export default function SceneBuilderPage() {
                     </Chip>
                   ))}
                 </div>
+
+                {/*
+                  DAS WETTER STEHT HIER, NICHT MEHR ZUGEKLAPPT (Mark, 04.09.2026:
+                  „das Wetter sollte unter den Szenentyp, da ist noch Platz").
+                  Die Karte trug nur zwei Knoepfe und liess darunter eine hohe
+                  Leerflaeche stehen, waehrend das Wetter eine Zeile tiefer
+                  zugeklappt war. Drinnen gibt es kein Wetter — dann bleibt die
+                  Karte so klein wie vorher.
+                */}
+                {scene.scene_type === 'outdoor' && (
+                  <div className="mt-3">
+                    <ChipGroup
+                      label="Wetter"
+                      options={WEATHERS}
+                      selected={scene.weather}
+                      onSelect={v => setCondition('weather', v)}
+                    />
+                  </div>
+                )}
               </Karte>
 
               <Karte titel="Szenenbedingungen" farbe="cy">
@@ -1239,82 +1258,56 @@ export default function SceneBuilderPage() {
                 nicht „nicht gesetzt". Kein Wert geht dabei verloren; jede
                 Gruppe ist mit einem Klick wieder offen.
               */}
-              <Karte titel="Zugeklappt">
-                <Fold
-                  label="Kamerawinkel"
-                  wert={optionLabel(CAMERA_ANGLES, scene.camera_angle)}
-                  offen={!!aufgeklappt.winkel}
-                  onToggle={() => klappe('winkel')}
-                >
-                  {CAMERA_ANGLES.map(o => (
-                    <Chip
-                      key={o.key}
-                      aktiv={scene.camera_angle === o.key}
-                      onClick={() => setCameraSetting('camera_angle', scene.camera_angle === o.key ? null : o.key)}
-                    >
-                      <span aria-hidden="true">{o.emoji}</span>
-                      <span>{o.label}</span>
-                    </Chip>
-                  ))}
-                </Fold>
+              {/*
+                ZUGEKLAPPT, ABER NICHT VERSTECKT. Jede Zeile nennt ihren
+                aktuellen Wert — zugeklappt heisst „selten gebraucht", nicht
+                „nicht gesetzt". Kein Wert geht verloren; ein Klick oeffnet.
 
-                {scene.scene_type === 'outdoor' ? (
+                DRAUSSEN GIBT ES HIER NICHTS MEHR. Der Kamerawinkel ist am
+                04.09.2026 auf Marks Wunsch ganz herausgefallen („den haben wir
+                ja sonst doppelt — den gibt's ja oben auch schon mal", gemeint
+                ist der Baustein Kamera-Asset, der die Kamerafuehrung mitbringt),
+                und das Wetter steht jetzt in der Szenentyp-Karte. Uebrig
+                bleiben nur die beiden Licht-Gruppen, und die gelten drinnen.
+              */}
+              {scene.scene_type !== 'outdoor' && (
+                <Karte titel="Zugeklappt">
                   <Fold
-                    label="Wetter"
-                    wert={optionLabel(WEATHERS, scene.weather)}
-                    offen={!!aufgeklappt.wetter}
-                    onToggle={() => klappe('wetter')}
+                    label="Lichtstil"
+                    wert={optionLabel(LIGHT_STYLES, scene.light_style)}
+                    offen={!!aufgeklappt.lichtstil}
+                    onToggle={() => klappe('lichtstil')}
                   >
-                    {WEATHERS.map(o => (
+                    {LIGHT_STYLES.map(o => (
                       <Chip
                         key={o.key}
-                        aktiv={scene.weather === o.key}
-                        onClick={() => setCondition('weather', scene.weather === o.key ? null : o.key)}
+                        aktiv={scene.light_style === o.key}
+                        onClick={() => setCondition('light_style', scene.light_style === o.key ? null : o.key)}
                       >
                         <span aria-hidden="true">{o.emoji}</span>
                         <span>{o.label}</span>
                       </Chip>
                     ))}
                   </Fold>
-                ) : (
-                  <>
-                    <Fold
-                      label="Lichtstil"
-                      wert={optionLabel(LIGHT_STYLES, scene.light_style)}
-                      offen={!!aufgeklappt.lichtstil}
-                      onToggle={() => klappe('lichtstil')}
-                    >
-                      {LIGHT_STYLES.map(o => (
-                        <Chip
-                          key={o.key}
-                          aktiv={scene.light_style === o.key}
-                          onClick={() => setCondition('light_style', scene.light_style === o.key ? null : o.key)}
-                        >
-                          <span aria-hidden="true">{o.emoji}</span>
-                          <span>{o.label}</span>
-                        </Chip>
-                      ))}
-                    </Fold>
-                    <Fold
-                      label="Lichtmodifier"
-                      wert={optionLabels(LIGHT_MODIFIERS, scene.light_modifiers)}
-                      offen={!!aufgeklappt.lichtmod}
-                      onToggle={() => klappe('lichtmod')}
-                    >
-                      {LIGHT_MODIFIERS.map(o => (
-                        <Chip
-                          key={o.key}
-                          aktiv={scene.light_modifiers.includes(o.key)}
-                          onClick={() => toggleLightModifier(o.key)}
-                        >
-                          <span aria-hidden="true">{o.emoji}</span>
-                          <span>{o.label}</span>
-                        </Chip>
-                      ))}
-                    </Fold>
-                  </>
-                )}
-              </Karte>
+                  <Fold
+                    label="Lichtmodifier"
+                    wert={optionLabels(LIGHT_MODIFIERS, scene.light_modifiers)}
+                    offen={!!aufgeklappt.lichtmod}
+                    onToggle={() => klappe('lichtmod')}
+                  >
+                    {LIGHT_MODIFIERS.map(o => (
+                      <Chip
+                        key={o.key}
+                        aktiv={scene.light_modifiers.includes(o.key)}
+                        onClick={() => toggleLightModifier(o.key)}
+                      >
+                        <span aria-hidden="true">{o.emoji}</span>
+                        <span>{o.label}</span>
+                      </Chip>
+                    ))}
+                  </Fold>
+                </Karte>
+              )}
             </div>
 
           </div>
