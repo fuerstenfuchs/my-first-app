@@ -42,6 +42,9 @@ import { buildPrompt, type Scene, type SceneRefs } from '@/lib/szene-prompt'
   spaeteres Ausrollen aussieht, steht oben in `papier.css`.
 */
 import './papier.css'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -316,6 +319,99 @@ function AssetThumb({
 }
 
 // ── Referenz-Auswahl innerhalb eines Feldes ──────────────────────────────────
+
+/**
+ * Das Referenzbild gleich bei der Auswahl wählen. (PROJ-59)
+ *
+ * Mark am 04.09.2026: „Wenn ich zum Beispiel bei Charakter auf einen Charakter
+ * drücke, dann geht das auf. Also nicht oben in dem Bausteinekasten […] Und es
+ * gibt mehrere Fotos, was ja fast immer der Fall ist. Dann geht groß alles auf.
+ * Ich wähl ja ein Foto, und das geht wieder zu und es wird übernommen, fertig."
+ *
+ * WARUM DAS ETWAS ANDERES IST ALS DER VORSCHLAG, DEN ER VERWORFEN HAT: Beim
+ * Entwurf „Studio-Konsole" sollte sich die Auswahl AM STECKPLATZ öffnen — also
+ * oben im Bausteinekasten, wo wenig Platz ist. Marks Einwand damals: „dann
+ * leidet die Übersichtlichkeit […] dann wär alles zu klein dargestellt, die
+ * Fotos." Der hier öffnet sich AN DER STELLE DER AUSWAHL und nimmt das ganze
+ * Fenster. Genau der Platz, der dort fehlte.
+ *
+ * Er erspart einen zweiten Arbeitsgang: Vorher wählte man erst den Charakter
+ * und suchte danach in einer schmalen Leiste das Referenzbild. Jetzt ist es
+ * eine Entscheidung.
+ */
+function RefWahlDialog({
+  offen, name, bilder, gewaehlt, onWaehlen, onSchliessen,
+}: {
+  offen: boolean
+  name: string
+  bilder: RefImage[]
+  gewaehlt: string | null
+  onWaehlen: (img: RefImage | null) => void
+  onSchliessen: () => void
+}) {
+  const sortiert = nachNutzen(bilder)
+
+  return (
+    <Dialog open={offen} onOpenChange={o => { if (!o) onSchliessen() }}>
+      <DialogContent className="sb-papier max-w-5xl">
+        <DialogHeader>
+          <DialogTitle className="text-lg">Referenzbild für {name}</DialogTitle>
+          <DialogDescription className="text-[13px]">
+            Ein Klick wählt das Bild und schließt das Fenster. Es geht als Vorlage an das
+            Bildmodell — das Referenzsheet zeigt Kopf, Körper und Ausdruck zusammen und ist
+            deshalb meist die beste Wahl.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/*
+          `object-contain` und viel Höhe: Ein Referenzsheet ist breit, mehrere
+          Ansichten nebeneinander. Zugeschnitten bliebe der mittlere Streifen —
+          genau das, was am wenigsten aussagt.
+        */}
+        <div className="grid max-h-[62vh] gap-3 overflow-y-auto pr-1"
+             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+          {sortiert.map((img, i) => (
+            <button
+              key={i}
+              onClick={() => onWaehlen(img)}
+              className={cn(
+                'flex flex-col items-center gap-2 rounded-lg border-2 p-2 transition-all',
+                gewaehlt === img.url
+                  ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)]'
+                  : 'border-[var(--sb-rule)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-pap2)]',
+              )}
+            >
+              <img
+                src={img.url}
+                alt={img.label}
+                className="h-52 w-full rounded bg-[var(--sb-pap2)] object-contain"
+              />
+              <span className={cn(
+                'text-[13px] font-semibold',
+                gewaehlt === img.url ? 'text-[var(--sb-or-t)]' : 'text-[var(--sb-ink2)]',
+              )}>
+                {img.label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--sb-rule)] pt-3">
+          <p className="text-[12px] text-[var(--sb-ink3)]">
+            Später änderbar — die Leiste am Baustein zeigt dieselben Bilder.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => onWaehlen(null)}
+            className="text-[13px]"
+          >
+            Titelbild nehmen
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 function RefPicker({
   images, selectedUrl, onSelect, loading,
@@ -648,6 +744,8 @@ export default function SceneBuilderPage() {
 
   // Reference images loaded from DB per asset (keyed by asset ID)
   const [refImagesMap, setRefImagesMap] = useState<Record<string, RefImage[]>>({})
+  /** Welcher Baustein wartet gerade auf die Wahl seines Referenzbildes (PROJ-59). */
+  const [refWahl, setRefWahl] = useState<{ slot: RefSlotKey; assetId: string; name: string } | null>(null)
   const [refLoadingMap, setRefLoadingMap] = useState<Record<string, boolean>>({})
 
   // Selected reference image per ref slot
@@ -720,8 +818,13 @@ export default function SceneBuilderPage() {
   const loadRefImages_forSlot = useCallback(async (
     slotKey: RefSlotKey,
     assetId: string,
-  ) => {
-    if (refImagesMap[assetId] !== undefined) return // already loaded
+  ): Promise<RefImage[]> => {
+    // GIBT DIE BILDER ZURUECK statt nur den Zustand zu setzen: `setSlot` muss
+    // wissen, wie viele es sind, um zu entscheiden, ob sich der Wahl-Dialog
+    // lohnt (PROJ-59). Aus dem Zustand lesen ginge nicht — der ist im selben
+    // Durchlauf noch der alte.
+    const schonDa = refImagesMap[assetId]
+    if (schonDa !== undefined) return schonDa
     setRefLoadingMap(prev => ({ ...prev, [assetId]: true }))
     const table = slotKey === 'character' ? 'character_variants'
       : slotKey === 'outfit' ? 'outfit_variants' : 'location_variants'
@@ -747,6 +850,7 @@ export default function SceneBuilderPage() {
     if (vorschlag) {
       setSceneRefs(prev => (prev[slotKey] ? prev : { ...prev, [slotKey]: vorschlag }))
     }
+    return imgs
   }, [refImagesMap])
 
   function setSlot(key: SlotKey, value: Scene[SlotKey]) {
@@ -758,7 +862,25 @@ export default function SceneBuilderPage() {
       const asset = value as { id: string }
       // Reset selected ref when changing asset
       setSceneRefs(prev => ({ ...prev, [slotKey]: null }))
-      loadRefImages_forSlot(slotKey, asset.id)
+
+      /*
+        ERST LADEN, DANN ERST OEFFNEN (PROJ-59).
+
+        Nicht sofort mit einem Ladekringel aufmachen: Bei einem Baustein mit
+        nur einem Bild ginge das Fenster auf und sofort wieder zu. Ein Fenster,
+        das aufblitzt, ist schlimmer als eines, das eine halbe Sekunde spaeter
+        kommt.
+
+        Ab ZWEI Bildern lohnt sich die Wahl. Bei einem gibt es nichts zu
+        entscheiden — `standardReferenz` hat es ohnehin schon gesetzt, falls es
+        ein Referenzsheet ist.
+      */
+      void (async () => {
+        const imgs = await loadRefImages_forSlot(slotKey, asset.id)
+        if (imgs.length >= 2) {
+          setRefWahl({ slot: slotKey, assetId: asset.id, name: (value as { name?: string }).name ?? '' })
+        }
+      })()
     }
   }
 
@@ -1584,6 +1706,26 @@ export default function SceneBuilderPage() {
           <span className="ml-auto tabular-nums">BOGEN {belegt} / {SLOTS.length}</span>
         </div>
       </div>
+
+      {/*
+        Der Wahl-Dialog fuer Referenzbilder (PROJ-59). Er haengt hier unten bei
+        den anderen Dialogen, nicht beim Baustein: Er gehoert zur Seite, nicht
+        zu einem einzelnen Steckplatz — geoeffnet wird er von `setSlot`, also
+        aus der linken Auswahlspalte heraus.
+      */}
+      {refWahl && (
+        <RefWahlDialog
+          offen
+          name={refWahl.name}
+          bilder={refImagesMap[refWahl.assetId] ?? []}
+          gewaehlt={sceneRefs[refWahl.slot]?.url ?? null}
+          onWaehlen={img => {
+            setSceneRefs(prev => ({ ...prev, [refWahl.slot]: img }))
+            setRefWahl(null)
+          }}
+          onSchliessen={() => setRefWahl(null)}
+        />
+      )}
 
       <ScenePresetDialog
         open={presetsOpen}
