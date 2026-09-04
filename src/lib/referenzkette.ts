@@ -256,7 +256,12 @@ export function koerperMerkmaleText(auswahl: KoerperAuswahl): string | null {
     .filter((z): z is string => Boolean(z))
   if (zeilen.length === 0) return null
   return [
-    'ADDITIONAL BODY CHARACTERISTICS — apply these specifically, on top of whatever the reference images show:',
+    // Die Vorrangregel steht IM BLOCK, nicht daneben: `kettenPrompt` haengt
+    // danach die Referenzansage an, und die endet mit „folge im Zweifel den
+    // Referenzbildern und ignoriere widersprechende Worte" — das hob diese
+    // Zeilen bis zum 04.09.2026 wieder auf. Mark setzt sie aber gerade dann,
+    // wenn das Foto sie NICHT zeigt.
+    'ADDITIONAL BODY CHARACTERISTICS — these OVERRIDE the reference images. Where a reference image shows the body differently, follow these lines instead:',
     ...zeilen.map(z => `- ${z}`),
   ].join('\n')
 }

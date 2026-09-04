@@ -59,9 +59,13 @@ const SHEET_TYPES: { id: SheetType; label: string; icon: string; description: st
 
 // ── Fixed prompts ────────────────────────────────────────────────────────────
 
-export const KOPF_PROMPT = `Using @image1-3 as the reference character, create a professional facial features reference sheet.
+export const KOPF_PROMPT = `Using the reference images of this person, create a professional facial features reference sheet.
 
-Preserve exact facial structure and appearance. Do not modify or reinterpret any facial feature.
+OUTPUT FRAME: one single VERY WIDE panoramic landscape image, roughly 3:1 — much wider than it is tall — so that all five panels fit side by side in ONE single row. Do not output a square or a portrait image.
+
+Preserve exactly, without any interpretation: facial structure and proportions, skin tone, eye colour, hair colour, hairline and hairstyle, and the apparent age of this person.
+
+Keep the skin as it is in the reference — visible pores, fine lines, freckles, moles, scars and any asymmetry of the face. Do not smooth the skin, do not make the face more symmetrical, do not make the person look younger or slimmer.
 
 The sheet contains exactly five panels, arranged in a single horizontal row — nothing above or below, no second row, no grid:
 - Front-facing headshot
@@ -74,23 +78,21 @@ CRITICAL RULE: each of these five views appears exactly ONCE. Do not repeat the 
 
 Use neutral facial expressions throughout.
 
-Style requirements:
-- Photorealistic
-- Studio lighting
-- Clean white background
-- Ultra-sharp details
-- High-resolution facial close-ups
-- Consistent lighting in every image
-- No makeup changes
-- No accessories
-- No artistic filters
-- No beauty retouching
-- No background distractions
+Style: photorealistic studio photography, clean white background, sharp focus, no filters or stylisation, no accessories.
 
-The goal is to create a detailed facial reference sheet that accurately documents every important facial feature for future image generation consistency.`
+- No text anywhere on the sheet: no labels, no captions, no view names, no numbers, no watermark, no logo
+- The panels sit directly next to each other on one continuous white background — no frames, no borders, no drop shadows, no rounded corners
+
+LIGHTING — flat and shadow-free:
+- Even, diffuse light from the front, no directional key light
+- NO cast shadow on the background behind the head
+- No rim light, no vignetting
+- Identical lighting in every panel`
 
 function ausdrueckePrompt(gender: Gender): string {
-  return `Using @image1 as the reference character, create a professional expression reference sheet.
+  return `Using the reference image of this person, create a professional expression reference sheet.
+
+OUTPUT FRAME: one single VERY WIDE panoramic landscape image, roughly 3:1 — much wider than it is tall — so that all five panels fit side by side in ONE single row. Do not output a square or a portrait image.
 
 Preserve exact facial structure, facial features, skin tone, hairstyle, hair color, eye color, and overall appearance. Do not modify or reinterpret the character in any way.
 
@@ -112,19 +114,27 @@ Style requirements:
 - Consistent studio lighting
 - Sharp focus
 - High detail
-- Symmetrical layout
+- Panels of equal width, evenly spaced, all heads on the same baseline and at the same scale
 - Natural expressions
 - No exaggerated emotions
 - No artistic effects
 - No accessories
-- No distracting elements
 
-The goal is to create a detailed expression reference sheet that helps maintain consistency when generating future lifestyle, fitness, and influencer images.`
+- No text anywhere on the sheet: no labels, no captions, no view names, no numbers, no watermark, no logo
+- The panels sit directly next to each other on one continuous white background — no frames, no borders, no drop shadows, no rounded corners
+
+LIGHTING — flat and shadow-free:
+- Even, diffuse light from the front, no directional key light
+- NO cast shadow on the background behind the head
+- No rim light, no vignetting
+- Identical lighting in every panel`
 }
 
-export const KOERPER_PROMPT = `Using @image1-3 as the reference character, create a professional full-body character reference sheet.
+export const KOERPER_PROMPT = `Using the reference images of this person, create a professional full-body character reference sheet.
 
-Preserve exact facial features, body proportions, skin tone, hairstyle, hair color, and overall appearance. Do not redesign, alter, or reinterpret the character in any way.
+OUTPUT FRAME: one single WIDE LANDSCAPE image, roughly 2:1 — twice as wide as it is tall — so that all four standing figures fit side by side in ONE single row at full height. Do not output a square or a portrait image.
+
+Preserve exactly: facial features, body proportions, skin tone, hairstyle and hair colour. Do not redesign or reinterpret the person. The CLOTHING is the one deliberate exception — it is replaced by the neutral outfit described below.
 
 The sheet contains exactly four panels, arranged in a single horizontal row — nothing above or below, no second row, no grid:
 - Full-body front view
@@ -133,6 +143,8 @@ The sheet contains exactly four panels, arranged in a single horizontal row — 
 - Full-body back view
 
 CRITICAL RULE: each of these four views appears exactly ONCE. Do not repeat the sequence, do not duplicate the row, do not add a second set of the same views anywhere on the sheet.
+
+Take the head angle for each panel from the matching view in the head reference sheet: front view with the front head, 3/4 left with the 3/4 left head, left profile with the left profile head.
 
 Use the exact same outfit, hairstyle, and styling in every view.
 
@@ -145,15 +157,15 @@ Style requirements:
 - Professional even lighting
 - Sharp focus
 - High detail
-- Symmetrical layout
-- Consistent scale across all views
+- Panels of equal width, evenly spaced, all figures on the same baseline and at the same scale
 - No artistic effects
 - No dramatic posing
 - No props
 - No background elements
 - Character centered in each frame
 
-The goal is to create a clear full-body reference sheet that can be used to maintain consistency across future image generations.
+- No text anywhere on the sheet: no labels, no captions, no view names, no numbers, no watermark, no logo
+- The panels sit directly next to each other on one continuous white background — no frames, no borders, no drop shadows, no rounded corners
 
 CLOTHING — neutral, but the body must stay readable:
 - Plain, unpatterned, close-fitting garments in a single neutral tone (light grey or off-white)
@@ -181,7 +193,9 @@ LIGHTING — flat and shadow-free:
  * widersprüchliche Vorlagen desselben Gesichts — es mischt sie. Genau einmal
  * groß, sonst gar nicht: Dann weiß es, welches Gesicht gemeint ist.
  */
-export const REFERENZSHEET_PROMPT = `Using @image1 and @image2 as the reference character, create ONE single combined reference sheet.
+export const REFERENZSHEET_PROMPT = `Using the reference images of this person, create ONE single combined reference sheet.
+
+OUTPUT FRAME: one single WIDE 16:9 LANDSCAPE image. Do not output a square or a portrait image.
 
 The sheet contains exactly three panels side by side, left to right:
 
@@ -204,7 +218,7 @@ PANEL 3 (rightmost):
 
 CRITICAL RULE: the face appears exactly ONCE, in panel 1. Panels 2 and 3 must not show it. Do not add any extra small head shots, insets or thumbnails anywhere on the sheet.
 
-Preserve exact facial features, body proportions, skin tone, hairstyle, hair colour and overall appearance from the references. Do not redesign or reinterpret the character.
+Preserve exactly: facial features, body proportions, skin tone, hairstyle and hair colour. Do not redesign or reinterpret the person. The CLOTHING is the one deliberate exception — it is replaced by the neutral outfit described below.
 
 CLOTHING — neutral, but the body must stay readable:
 - Plain, unpatterned, close-fitting garments in a single neutral tone (light grey or off-white)
@@ -226,7 +240,9 @@ Style requirements:
 
 The goal is one single sheet that covers face, front and back in a form that can be handed to an image model as the only character reference.`
 
-const GESICHTSDETAILS_PROMPT = `Using @image1-3 as the reference character, create a professional details reference sheet.
+const GESICHTSDETAILS_PROMPT = `Using the reference images of this person, create a professional details reference sheet.
+
+OUTPUT FRAME: one single VERY WIDE panoramic landscape image, roughly 3:1 — much wider than it is tall — so that all five panels fit side by side in ONE single row. Do not output a square or a portrait image.
 
 Preserve exact appearance and facial structure. Do not redesign, alter, or reinterpret any feature.
 
@@ -251,10 +267,18 @@ Style requirements:
 - High-resolution close-ups
 - No artistic effects
 - No accessories
-- No beauty retouching
 - No distracting elements
 
-The goal is to create a highly detailed appearance reference sheet that accurately documents the most important facial characteristics of the woman for maximum consistency in future image generations.`
+Keep the skin as it is in the reference — visible pores, fine lines, freckles and moles. Do not smooth or retouch.
+
+- No text anywhere on the sheet: no labels, no captions, no view names, no numbers, no watermark, no logo
+- The panels sit directly next to each other on one continuous white background — no frames, no borders, no drop shadows, no rounded corners
+
+LIGHTING — flat and shadow-free:
+- Even, diffuse light from the front, no directional key light
+- NO cast shadow on the background behind the head
+- No rim light, no vignetting
+- Identical lighting in every panel`
 
 function getPrompt(type: SheetType, gender: Gender): string {
   if (type === 'kopf') return KOPF_PROMPT
@@ -461,9 +485,18 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
         titel={`${character.name} — Sheet`}
         vorauswahlCharakter={character}
         // Sheets beschreiben ausdrücklich einen neutralen Hintergrund —
-        // eine Location würde dem Prompt widersprechen. Outfit dagegen ist hier
-        // gewollt.
-        rollen={['character', 'outfit']}
+        // eine Location würde dem Prompt widersprechen.
+        //
+        // OUTFIT NUR BEI DEN KOPF-NAHEN BLÄTTERN: Körper-Sheet und
+        // Referenzsheet verlangen im Prompt ausdrücklich neutrale, ungemusterte
+        // Kleidung ohne Logos. Hängt man dort ein Outfit an, schreibt
+        // `promptFuerAuftrag` „Image 2 = OUTFIT — take only the garments, their
+        // cut, fabric and colour" darunter — zwei direkt gegenläufige
+        // Kleidungsanweisungen im selben Prompt. Bei Kopf, Ausdrücken und
+        // Gesichtsdetails stimmt es dagegen: dort darf der Kragen mitkommen.
+        rollen={selected === 'koerper' || selected === 'referenzsheet'
+          ? ['character']
+          : ['character', 'outfit']}
       />}
     </Dialog>
   )

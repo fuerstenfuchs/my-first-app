@@ -32,7 +32,7 @@ const KERN = `ABSOLUTE RULES:
 - NO PERSON. No human body, no face, no hands, no arms, no legs, no skin.
 - NO HANGER, no clothes rail, no dress form, no mannequin, no torso stand, no visible support of any kind. Nothing holds the garment up.
 - Photorealistic product photography. Colour, fabric, pattern, cut and proportions exactly as in the reference — do not restyle, recolour or redesign anything.
-- No added text, no labels, no logos, no watermarks, no props.`
+- Do not ADD any text, label, logo, watermark or prop that is not already part of the garment itself. Printing, embroidery or a logo that the garment carries in the reference stays exactly where it is, at the same size and colour.`
 
 /** Gilt für die Blätter, die das ganze Kleidungsstück zeigen — NICHT für Makros. */
 const EINZELBILD = `HOW THE GARMENT IS SHOWN ("ghost mannequin"):
@@ -41,9 +41,13 @@ const EINZELBILD = `HOW THE GARMENT IS SHOWN ("ghost mannequin"):
 - Even, diffuse light from the front. NO cast shadows on the background, no shadow pooling beneath the garment.
 - Straight-on view, camera at the vertical centre of the garment, no perspective distortion, symmetrical.
 
-IF THE REFERENCE SHOWS A COMPLETE LOOK of several pieces (for example top, trousers and shoes), show ALL of them together in their worn arrangement — top above bottom, shoes below — as one coherent outfit. Do not drop pieces and do not merge them into a single garment.`
+IF THE REFERENCE SHOWS A COMPLETE LOOK of several pieces (for example top, trousers and shoes), show ALL of them together in their worn arrangement — top above bottom, shoes below — as one coherent outfit. Do not drop pieces and do not merge them into a single garment.
+
+IF THE REFERENCE SHOWS ONLY ONE PIECE (for example only a top), show ONLY that one piece. Do not invent trousers, a skirt, shoes or accessories to complete the look. What is not in the reference is not in the image.`
 
 export const OUTFIT_VORNE_PROMPT = `Using the reference image, create a clean product shot of THIS garment seen from the FRONT.
+
+OUTPUT FRAME: one single VERTICAL PORTRAIT image, roughly 3:4.
 
 ${KERN}
 
@@ -56,7 +60,9 @@ FRAMING — it must FILL the frame:
 
 This is ONE single image — not a sheet, not a grid, not a collage.`
 
-export const OUTFIT_RUECKSEITE_PROMPT = `Using the reference images, create a clean product shot of THE SAME garment seen from the BACK.
+export const OUTFIT_RUECKSEITE_PROMPT = `Using the reference image, create a clean product shot of THE SAME garment seen from the BACK.
+
+OUTPUT FRAME: one single VERTICAL PORTRAIT image, roughly 3:4.
 
 The reference shows the front of this exact piece. Keep colour, fabric, pattern, cut and proportions identical — you are turning the same garment around, not inventing a new one.
 
@@ -72,7 +78,9 @@ FRAMING — it must FILL the frame:
 
 This is ONE single image — not a sheet, not a grid, not a collage.`
 
-export const OUTFIT_DETAILS_PROMPT = `Using the reference images, create a detail sheet of THE SAME garment.
+export const OUTFIT_DETAILS_PROMPT = `Using the reference image, create a detail sheet of THE SAME garment.
+
+OUTPUT FRAME: one single SQUARE 1:1 image.
 
 The sheet contains exactly four panels in a 2x2 grid — nothing more, no second grid, no repetition:
 - The fabric surface and its texture, close up
@@ -89,6 +97,8 @@ FOR THESE CLOSE-UPS the ghost-mannequin and background rules do not apply: a mac
 ${KERN}`
 
 export const OUTFIT_REFERENZSHEET_PROMPT = `Using the reference images, create ONE single combined reference sheet of THIS garment.
+
+OUTPUT FRAME: one single WIDE 16:9 LANDSCAPE image. Do not output a square or a portrait image.
 
 The sheet contains exactly three panels side by side, left to right:
 
