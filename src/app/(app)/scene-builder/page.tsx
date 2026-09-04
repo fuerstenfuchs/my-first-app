@@ -357,13 +357,33 @@ function RefPicker({
   const sortiert = nachNutzen(images)
 
   return (
-    <div className="ohne-rollbalken flex gap-2 overflow-x-auto py-1">
+    <div
+      /*
+        HIER STAND `ohne-rollbalken` — UND DAS WAR EIN FEHLER (04.09.2026).
+
+        Vorher trug die Leiste `scrollbar-hide`. Diese Klasse ist in diesem
+        Projekt NIE DEFINIERT worden (es gibt `.no-scrollbar`), sie tat also
+        gar nichts — und Mark hatte einen ganz normalen Rollbalken, den er
+        ziehen konnte. Als ich beim Rand-Fehler alles auf `ohne-rollbalken`
+        umgestellt habe, habe ich ihm genau den weggenommen: „Allerdings kann
+        ich jetzt nicht mehr nach rechts scrollen."
+
+        Der Rollbalken bleibt also sichtbar — `papier.css` gibt ihm ohnehin ein
+        passendes Aussehen. Dazu das Mausrad: In einer waagerechten Leiste
+        muesste man sonst die Umschalttaste halten, und das weiss niemand.
+      */
+      onWheel={e => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+        e.currentTarget.scrollLeft += e.deltaY
+      }}
+      className="flex gap-2 overflow-x-auto pb-1.5 pt-1"
+    >
       {/* „Kein Bild" — nimmt dann das Titelbild des Bausteins. */}
       <button
         onClick={() => onSelect(null)}
         title="Kein eigenes Referenzbild — es gilt das Titelbild"
         className={cn(
-          'flex h-[72px] w-[72px] shrink-0 flex-col items-center justify-center gap-0.5 rounded border text-[11px] transition-colors',
+          'flex h-[88px] w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded border text-[12px] transition-colors',
           selectedUrl === null
             ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] text-[var(--sb-or-t)]'
             : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)]',
@@ -380,7 +400,7 @@ function RefPicker({
           className="group shrink-0"
         >
           <div className={cn(
-            'h-[72px] w-[72px] overflow-hidden rounded border-2 transition-all',
+            'h-[88px] w-[88px] overflow-hidden rounded border-2 transition-all',
             selectedUrl === img.url
               ? 'border-[var(--sb-or)] shadow-[0_1px_4px_rgba(190,90,20,0.35)]'
               : 'border-[var(--sb-rule)] group-hover:border-[var(--sb-ink3)]',
@@ -391,7 +411,7 @@ function RefPicker({
             // Etwas breiter als die Kachel und in den Zwischenraum hinein:
             // „Referenzsheet" passt bei 72px sonst nicht und wurde zu
             // „Referenzsh…" — ausgerechnet der Name, auf den es ankommt.
-            'mx-[-6px] mt-0.5 block w-[84px] truncate text-center text-[11px] leading-tight',
+            'mx-[-6px] mt-1 block w-[100px] truncate text-center text-[12px] leading-tight',
             selectedUrl === img.url
               ? 'font-semibold text-[var(--sb-or-t)]'
               : 'text-[var(--sb-ink3)]',
