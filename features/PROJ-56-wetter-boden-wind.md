@@ -1,6 +1,6 @@
 # PROJ-56: Wetter, Boden und Wind trennen
 
-## Status: In Review
+## Status: Approved (von Mark im Betrieb bestätigt)
 **Created:** 2026-09-04
 
 ## Warum
@@ -85,3 +85,17 @@ gerade auch drinnen wirken.
 - Keine Wetterlogik, die Kombinationen verbietet. „Schneedecke bei 30 Grad"
   ist Marks Entscheidung, nicht meine; das Werkzeug soll nicht klüger sein
   wollen als er.
+
+## Im Betrieb bestätigt (04.09.2026)
+
+Mark: „Hab jetzt mal was angegeben. Und zwar Sommer, Schneefall und Laub auf
+dem Boden. Hat gut funktioniert."
+
+Ein gut gewählter Fall, und er trifft genau den Kern: **Sommer + Schneefall +
+Laub ist bewusst widersprüchlich** — und vorher schlicht nicht formulierbar.
+„Schnee" brachte zwangsweise die Schneedecke mit, und Laub am Boden gab es
+als Auswahl gar nicht.
+
+Er bestätigt damit auch die Entscheidung aus „Ausdrücklich NICHT": keine
+Wetterlogik, die Kombinationen verbietet. Hätte das Werkzeug widersprüchliche
+Angaben abgefangen, wäre genau dieses Bild unmöglich gewesen.
