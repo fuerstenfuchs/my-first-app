@@ -160,3 +160,35 @@ export const ASPECT_RATIOS: { key: AspectRatioKey; label: string; emoji: string;
   { key: 'classic_4_3',     label: 'Klassisch (4:3)',    emoji: '🖼️', prompt: 'classic 4:3 composition' },
   { key: 'classic_3_4',     label: 'Klassisch hoch (3:4)', emoji: '🖼', prompt: 'classic vertical 3:4 composition' },
 ]
+
+// ── Beschriftungen ableiten, niemals abtippen ────────────────────────────────
+
+/**
+ * Die Beschriftung eines Options-Schlüssels — aus DERSELBEN Liste, aus der auch
+ * die Chips gezeichnet werden.
+ *
+ * WARUM ALS FUNKTION UND NICHT ALS ZWEITE LISTE: Für die Kamera-Kategorien gab
+ * es das schon einmal handgetippt, und dort hieß derselbe Eintrag an der einen
+ * Stelle „nah" und an der anderen „Nahaufnahme". Seit PROJ-55 zeigen die
+ * zugeklappten Gruppen im Scene Builder ihren aktuellen Wert im Kopf an
+ * („Kamerawinkel — Eye Level"). Eine zweite Liste dafür liefe genauso
+ * auseinander, nur unsichtbarer: Sie stünde nur auf dem zugeklappten Kopf,
+ * also genau dort, wo man den Chip daneben nicht zum Vergleich sieht.
+ */
+export function optionLabel<T extends string>(
+  options: readonly { key: T; label: string }[],
+  key: T | null | undefined,
+): string | null {
+  if (!key) return null
+  return options.find(o => o.key === key)?.label ?? null
+}
+
+/** Dasselbe für Mehrfachauswahl (Lichtmodifier) — leere Auswahl gibt `null`. */
+export function optionLabels<T extends string>(
+  options: readonly { key: T; label: string }[],
+  keys: readonly T[] | null | undefined,
+): string | null {
+  if (!keys || keys.length === 0) return null
+  const texte = keys.map(k => optionLabel(options, k)).filter(Boolean) as string[]
+  return texte.length > 0 ? texte.join(', ') : null
+}

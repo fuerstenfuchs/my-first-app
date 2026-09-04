@@ -205,9 +205,9 @@ export function ReiheButton({
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-orange-500/25 bg-background/40 p-2.5">
+    <div className="space-y-2.5 border border-[var(--sb-or)] bg-[var(--sb-or-l)] p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold text-foreground/80">🎞️ Einstellungsreihe</span>
+        <span className="text-[13px] font-bold uppercase tracking-[0.19em] text-[var(--sb-or-t)]">Einstellungsreihe</span>
         <button
           type="button"
           onClick={() => setGewaehlt(REIHE_VORBELEGUNG)}
@@ -220,14 +220,14 @@ export function ReiheButton({
             bezahlten Erzeugungen stimmen.
           */
           disabled={laeuft}
-          className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground disabled:opacity-40 disabled:hover:text-muted-foreground/50"
+          className="text-[13px] text-[var(--sb-or-t)] underline underline-offset-2 hover:text-[var(--sb-or)] disabled:opacity-40"
         >
           Vorschlag
         </button>
       </div>
 
       {/* Reihenfolge wie im Schnitt: weit → nah. Nicht die Klickreihenfolge. */}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         {REIHEN_ORDNUNG.map(key => {
           const opt = SHOT_TYPES.find(s => s.key === key)!
           const an = gewaehlt.includes(key)
@@ -243,11 +243,11 @@ export function ReiheButton({
               disabled={laeuft}
               title={istAktuelle ? 'Aktuelle Einstellung der Szene' : undefined}
               className={cn(
-                'flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40',
+                'flex items-center gap-1.5 rounded-[3px] border px-2 py-1 text-[13px] transition-colors disabled:opacity-40',
                 an
-                  ? 'border-orange-500/50 bg-orange-500/15 text-orange-300'
-                  : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground',
-                istAktuelle && 'ring-1 ring-inset ring-emerald-500/60',
+                  ? 'border-[var(--sb-or)] bg-[var(--sb-or)] font-bold text-white'
+                  : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink2)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink)]',
+                istAktuelle && 'ring-2 ring-inset ring-emerald-700',
               )}
             >
               <span>{opt.emoji}</span>
@@ -265,15 +265,15 @@ export function ReiheButton({
       <Button
         onClick={handleReihe}
         disabled={gesperrt}
-        className="h-8 w-full text-[11px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40"
+        className="h-10 w-full text-sm font-bold bg-[var(--sb-or)] text-white hover:bg-[var(--sb-or-t)] disabled:opacity-40"
       >
         {laeuft
-          ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Einstellung {Math.min(fortschritt + 1, anzahl)} von {anzahl}…</>
-          : <><Film className="mr-1.5 h-3 w-3" />Reihe erzeugen — {reihenAnsage(anzahl)}</>}
+          ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Einstellung {Math.min(fortschritt + 1, anzahl)} von {anzahl}…</>
+          : <><Film className="mr-1.5 h-4 w-4" />Reihe erzeugen — {reihenAnsage(anzahl)}</>}
       </Button>
 
-      <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground/70">
-        <Info className="mt-px h-2.5 w-2.5 shrink-0" />
+      <p className="flex items-start gap-1.5 text-[13px] leading-snug text-[#5c3c1c]">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           {anzahl === 0
             ? 'Mindestens eine Einstellungsgröße wählen.'
@@ -289,7 +289,7 @@ export function ReiheButton({
         erwartet 15 Bilder und bekommt 5. Ein Bild je Einstellung ist richtig —
         also wird nicht das Verhalten geändert, sondern gesagt, was gilt.
       */}
-      <p className="text-[9px] leading-snug text-muted-foreground/50">
+      <p className="text-[13px] leading-snug text-[#6d5334]">
         Die Durchläufe-Auswahl oben gilt nur für den Auftragsknopf. Die Reihe
         erzeugt immer genau ein Bild je Einstellung.
       </p>
@@ -301,7 +301,7 @@ export function ReiheButton({
         dasselbe Bild zahlen.
       */}
       {aktuelleInReihe && (
-        <p className="text-[9px] leading-snug text-emerald-500/70">
+        <p className="text-[13px] leading-snug text-emerald-800">
           Grün umrandet ist die Einstellung der Szene — sie steckt auch in dieser
           Reihe. Der Auftragsknopf oben erzeugt dann dasselbe Bild ein zweites Mal.
         </p>

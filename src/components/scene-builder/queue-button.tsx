@@ -124,27 +124,32 @@ export function QueueButton({
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-border/60 bg-muted/20 p-2.5">
+    /*
+      Die Farbwerte `--sb-*` kommen aus `scene-builder/papier.css` und gelten
+      nur innerhalb von `.sb-papier`. Dieser Kasten wird ausschliesslich dort
+      gezeichnet (einziger Aufrufer: die Scene-Builder-Seite).
+    */
+    <div className="space-y-2.5 border border-[var(--sb-rule)] bg-[var(--sb-card)] p-3 shadow-[0_1px_3px_rgba(60,48,25,0.09)]">
       <div className="flex items-center gap-2">
         <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
-          <SelectTrigger className="h-7 flex-1 text-[11px]" aria-label="Modell">
+          <SelectTrigger className="h-9 flex-1 text-sm" aria-label="Modell">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="sb-papier">
             {auswahl.map(m => (
-              <SelectItem key={m.id} value={m.id} className="text-xs">{m.label}</SelectItem>
+              <SelectItem key={m.id} value={m.id} className="text-sm">{m.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         {inKlassen && (
           <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>
-            <SelectTrigger className="h-7 w-[5.5rem] text-[11px]" aria-label="Größenklasse">
+            <SelectTrigger className="h-9 w-[6.75rem] text-sm" aria-label="Größenklasse">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="sb-papier">
               {KLASSEN.map(k => (
-                <SelectItem key={k.id} value={k.id} className="text-xs">
+                <SelectItem key={k.id} value={k.id} className="text-sm">
                   {k.label} · {k.note}
                 </SelectItem>
               ))}
@@ -156,12 +161,12 @@ export function QueueButton({
           value={String(durchlaeufe)}
           onValueChange={v => setDurchlaeufe(Number(v) as Durchlaeufe)}
         >
-          <SelectTrigger className="h-7 w-[4.5rem] text-[11px]" aria-label="Durchläufe">
+          <SelectTrigger className="h-9 w-[5.75rem] text-sm" aria-label="Durchläufe">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="sb-papier">
             {DURCHLAEUFE.map(n => (
-              <SelectItem key={n} value={String(n)} className="text-xs">
+              <SelectItem key={n} value={String(n)} className="text-sm">
                 {n}× Bild
               </SelectItem>
             ))}
@@ -172,11 +177,11 @@ export function QueueButton({
       <Button
         onClick={handleQueue}
         disabled={!prompt || laeuft}
-        className="h-8 w-full text-[11px] bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40"
+        className="h-11 w-full text-[15px] font-bold bg-emerald-700 hover:bg-emerald-800 text-white disabled:opacity-40"
       >
         {laeuft
-          ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Wird eingereiht…</>
-          : <><Send className="mr-1.5 h-3 w-3" />Zur Warteschlange</>}
+          ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Wird eingereiht…</>
+          : <><Send className="mr-1.5 h-4 w-4" />Zur Warteschlange</>}
       </Button>
 
       {/*
@@ -185,32 +190,32 @@ export function QueueButton({
         die Person aus dem Outfit-Bild.
       */}
       {rollen.length >= 1 && (
-        <p className="rounded border border-dashed border-amber-700/40 bg-amber-950/10 px-1.5 py-1 text-[9px] leading-snug text-muted-foreground">
-          <span className="font-semibold text-amber-500/80">Bei Widerspruch gewinnt das Bild.</span>{' '}
+        <p className="border border-dashed border-amber-600/60 bg-amber-50 px-2 py-1.5 text-[13px] leading-snug text-[var(--sb-ink2)]">
+          <span className="font-bold text-amber-800">Bei Widerspruch gewinnt das Bild.</span>{' '}
           Beschreibt der Prompt die Person, die Kleidung oder den Ort anders als das
           Referenzbild, folgt das Modell dem Bild — Szene, Licht und Kamera weiter dem Text.
         </p>
       )}
 
       {rollen.length >= 1 && (
-        <div className="rounded border border-dashed border-border/60 px-1.5 py-1">
-          <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+        <div className="border border-dashed border-[var(--sb-rule)] px-2 py-1.5">
+          <p className="mb-1 text-[13px] font-bold uppercase tracking-[0.15em] text-[var(--sb-ink3)]">
             Zuordnung für das Modell
           </p>
           <ol className="space-y-px">
             {rollen.map((rolle, i) => (
-              <li key={i} className="font-mono text-[10px] leading-snug text-muted-foreground/70">
+              <li key={i} className="font-mono text-[13px] leading-snug text-[var(--sb-ink2)]">
                 Bild {i + 1} → {ROLLEN_LABEL[rolle]}
-                {rolle === 'outfit' && <span className="text-muted-foreground/50"> (nur Kleidung)</span>}
-                {rolle === 'character' && <span className="text-muted-foreground/50"> (Gesicht &amp; Person)</span>}
+                {rolle === 'outfit' && <span className="text-[var(--sb-ink3)]"> (nur Kleidung)</span>}
+                {rolle === 'character' && <span className="text-[var(--sb-ink3)]"> (Gesicht &amp; Person)</span>}
               </li>
             ))}
           </ol>
         </div>
       )}
 
-      <p className="flex items-start gap-1 text-[10px] leading-snug text-muted-foreground/70">
-        <Info className="mt-px h-2.5 w-2.5 shrink-0" />
+      <p className="flex items-start gap-1.5 text-[13px] leading-snug text-[var(--sb-ink2)]">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           {mitReferenz ? (
             <>Mit Referenzbildern bestimmt das Modell die Größe selbst.</>
@@ -245,10 +250,10 @@ export function QueueButton({
           ein anderer Text als der, für den bezahlt wird. */}
       {(rollenBlock || ansage) && (
         <details className="group">
-          <summary className="cursor-pointer list-none text-[10px] text-muted-foreground/60 hover:text-muted-foreground">
+          <summary className="cursor-pointer list-none text-[13px] text-[var(--sb-ink3)] hover:text-[var(--sb-ink)]">
             + Zusätze im Prompt ansehen
           </summary>
-          <pre className="mt-1 whitespace-pre-wrap break-words rounded border border-dashed border-border/60 px-1.5 py-1 font-mono text-[9px] leading-snug text-muted-foreground/60">
+          <pre className="mt-1.5 whitespace-pre-wrap break-words border border-dashed border-[var(--sb-rule)] bg-[var(--sb-pap2)] px-2 py-1.5 font-mono text-[13px] leading-snug text-[var(--sb-ink2)]">
             {[rollenBlock, ansage].filter(Boolean).join('\n\n')}
           </pre>
         </details>

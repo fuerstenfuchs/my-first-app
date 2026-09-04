@@ -85,4 +85,6 @@
 | PROJ-53 | Fashion in Outfits zusammenlegen (Kategorie am Eintrag) | In Review | [PROJ-53](PROJ-53-fashion-in-outfits.md) | 2026-09-03 |
 | PROJ-54 | Outfit-Referenzkette (vorne, hinten, Details, Kombi) | In Review | [PROJ-54](PROJ-54-outfit-referenzkette.md) | 2026-09-03 |
 
-## Next Available ID: PROJ-55
+| PROJ-55 | Scene Builder neu gestalten (helles Papier, Karten, Bausteine oben) | In Review | [PROJ-55](PROJ-55-scene-builder-neugestaltung.md) | 2026-09-04 |
+
+## Next Available ID: PROJ-56

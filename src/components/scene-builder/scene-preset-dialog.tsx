@@ -4,6 +4,19 @@ import { useState, useRef, useMemo } from 'react'
 import {
   Plus, X, Lock, Copy, Download, Upload, Trash2, Sparkles, Check,
 } from 'lucide-react'
+/*
+ * DIE DREI DIALOGE TRAGEN `sb-papier` SELBST (PROJ-55).
+ *
+ * Sie haengen ueber ein Portal am <body>, nicht im Seitenbaum — der
+ * Geltungsbereich `.sb-papier` aus `scene-builder/papier.css` erreicht sie von
+ * dort aus nicht. Ohne diese Klasse waeren sie die einzigen dunklen Flaechen
+ * ueber einer hellen Seite, und ausgerechnet der Preset-Dialog wird oft
+ * geoeffnet. Derselbe Griff steht in `queue-button.tsx` fuer die Select-Listen.
+ *
+ * Der Dialog benutzt fast durchgehend Tokens (`bg-card`, `border-border`,
+ * `text-muted-foreground`) — deshalb genuegt die eine Klasse. Nur zwei
+ * Bernsteintoene waren auf helle Schrift ausgelegt und muessten dunkler.
+ */
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -169,7 +182,7 @@ export function ScenePresetDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={v => !v && handleClose()}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 gap-0">
+        <DialogContent className="sb-papier max-w-4xl h-[80vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-4 py-3 border-b shrink-0 flex-row items-center gap-2 space-y-0">
             <DialogTitle className="flex-1 text-base">📁 Presets</DialogTitle>
             <Button size="sm" variant="outline" onClick={() => importRef.current?.click()}>
@@ -289,9 +302,9 @@ export function ScenePresetDialog({
 
       {/* ── Save form (nested dialog) ── */}
       <Dialog open={saveOpen} onOpenChange={v => !v && setSaveOpen(false)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sb-papier max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-400" />Preset speichern</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-600" />Preset speichern</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveSubmit} className="space-y-4 mt-1">
             <div className="space-y-1.5">
@@ -309,7 +322,7 @@ export function ScenePresetDialog({
                   <button key={cat} type="button" onClick={() => setCategory(cat)}
                     className={cn(
                       'px-2.5 py-1 rounded-lg border text-xs transition-colors',
-                      category === cat ? 'bg-amber-500/15 border-amber-500/50 text-amber-300' : 'border-border/50 text-muted-foreground hover:border-border'
+                      category === cat ? 'bg-amber-500/15 border-amber-500/60 text-amber-700' : 'border-border/50 text-muted-foreground hover:border-border'
                     )}>
                     {cat}
                   </button>
@@ -345,7 +358,7 @@ export function ScenePresetDialog({
       </Dialog>
 
       <AlertDialog open={!!deleteId} onOpenChange={v => !v && setDeleteId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sb-papier">
           <AlertDialogHeader>
             <AlertDialogTitle>Preset löschen?</AlertDialogTitle>
             <AlertDialogDescription>Das Preset wird unwiderruflich gelöscht.</AlertDialogDescription>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { Copy, Sparkles, X, Plus, Loader2, ImageOff } from 'lucide-react'
+import { Copy, Sparkles, X, Plus, Loader2, ImageOff, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,6 @@ import { useLocations } from '@/hooks/use-locations'
 import { usePoseActions } from '@/hooks/use-pose-actions'
 import { useVisualAssets, CAMERA_CATEGORIES } from '@/hooks/use-visual-assets'
 import { useLookGrading } from '@/hooks/use-look-grading'
-import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import {
   type SceneType, type TimeOfDayKey, type SeasonKey, type WeatherKey,
@@ -21,6 +20,7 @@ import {
   SCENE_TYPES, OUTDOOR_ONLY_TIMES, TIME_OF_DAY, SEASONS, WEATHERS,
   LIGHT_SOURCES, LIGHT_STYLES, LIGHT_MODIFIERS, STUDIO_BACKGROUNDS,
   SHOT_TYPES, CAMERA_ANGLES, LENSES, DEPTH_OF_FIELDS, ASPECT_RATIOS,
+  optionLabel, optionLabels,
 } from '@/lib/scene-builder-options'
 import { useScenePresets } from '@/hooks/use-scene-presets'
 import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialog'
@@ -32,6 +32,14 @@ import { kategorieEintrag, OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategori
 import { BausteinFilter } from '@/components/baustein-filter'
 import { useBausteinFilter } from '@/hooks/use-baustein-filter'
 import { buildPrompt, type Scene, type SceneRefs } from '@/lib/szene-prompt'
+
+/*
+  Die Papier-Anmutung (PROJ-55) steckt vollstaendig in dieser einen Datei
+  daneben — und gilt nur innerhalb von `.sb-papier`. Keine andere Seite wird
+  davon beruehrt, auch `globals.css` nicht. Warum das so ist und wie ein
+  spaeteres Ausrollen aussieht, steht oben in `papier.css`.
+*/
+import './papier.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -59,15 +67,20 @@ const TABS: { key: TabKey; label: string; emoji: string }[] = [
 type SlotKey = keyof Pick<Scene, 'character' | 'outfit' | 'location' | 'pose' | 'expression' | 'camera' | 'style' | 'grading'>
 type RefSlotKey = keyof SceneRefs
 
-const SLOTS: { key: SlotKey; label: string; emoji: string; tab: TabKey }[] = [
-  { key: 'character', label: 'Charakter', emoji: '👤', tab: 'charaktere' },
-  { key: 'outfit',    label: 'Outfit',    emoji: '👗', tab: 'outfits'    },
-  { key: 'location',  label: 'Location',  emoji: '📍', tab: 'locations'  },
-  { key: 'pose',      label: 'Pose',      emoji: '🎭', tab: 'posen'      },
-  { key: 'expression',label: 'Mimik',     emoji: '😊', tab: 'ausdruck'   },
-  { key: 'camera',    label: 'Kamera-Asset', emoji: '📷', tab: 'kamera' },
-  { key: 'style',     label: 'Stil',       emoji: '🎥', tab: 'stil'    },
-  { key: 'grading',   label: 'Grading',    emoji: '🎨', tab: 'grading' },
+/**
+ * `code` ist die Randnummer auf dem Bausteinbogen („01 — CHR"). Sie steht
+ * ABSICHTLICH hier neben dem Feld und nicht in einer zweiten Liste: Kommt
+ * jemals ein neunter Baustein dazu, wandert die Nummer mit ihm mit.
+ */
+const SLOTS: { key: SlotKey; label: string; emoji: string; tab: TabKey; code: string }[] = [
+  { key: 'character', label: 'Charakter', emoji: '👤', tab: 'charaktere', code: 'CHR' },
+  { key: 'outfit',    label: 'Outfit',    emoji: '👗', tab: 'outfits',    code: 'OUT' },
+  { key: 'location',  label: 'Location',  emoji: '📍', tab: 'locations',  code: 'LOC' },
+  { key: 'pose',      label: 'Pose',      emoji: '🎭', tab: 'posen',      code: 'POS' },
+  { key: 'expression',label: 'Mimik',     emoji: '😊', tab: 'ausdruck',   code: 'MIM' },
+  { key: 'camera',    label: 'Kamera-Asset', emoji: '📷', tab: 'kamera',  code: 'KAM' },
+  { key: 'style',     label: 'Stil',       emoji: '🎥', tab: 'stil',      code: 'STL' },
+  { key: 'grading',   label: 'Grading',    emoji: '🎨', tab: 'grading',   code: 'GRD' },
 ]
 
 const REF_SLOTS: RefSlotKey[] = ['character', 'outfit', 'location']
@@ -80,10 +93,169 @@ const REF_SLOTS: RefSlotKey[] = ['character', 'outfit', 'location']
 const KAMERA_LABELS: Record<string, string> =
   Object.fromEntries(CAMERA_CATEGORIES.map(c => [c.key, c.label]))
 
-// ── Load reference images from Supabase ───────────────────────────────────────
+// ── Druckgrafische Kleinteile ────────────────────────────────────────────────
 
+/** Passkreuz. Reine Zierde — deshalb `aria-hidden`. */
+function Passkreuz() {
+  return <span className="sb-reg" aria-hidden="true"><i /></span>
+}
 
-// ── Small asset thumbnail card (left panel) ───────────────────────────────────
+/** Perforationsleiste unter dem Bausteinbogen. */
+function Perforation() {
+  return (
+    <div className="sb-sprock mt-2 pt-1.5" aria-hidden="true">
+      {Array.from({ length: 40 }).map((_, i) => <i key={i} />)}
+    </div>
+  )
+}
+
+/** Die Doppellinie — Grenze zwischen Druckgrafik (oben) und Karten (unten). */
+function Doppellinie() {
+  return <div className="sb-dbl my-4" aria-hidden="true" />
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Ein Auswahlknopf. ORANGE HEISST „AUSGEWÄHLT" — in dieser App überall, und
+ * deshalb trägt kein Typenschild Orange.
+ */
+function Chip({
+  aktiv, onClick, children, title, gedaempft = false, disabled = false,
+}: {
+  aktiv: boolean; onClick: () => void; children: React.ReactNode
+  title?: string; gedaempft?: boolean; disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={aktiv}
+      disabled={disabled}
+      className={cn(
+        'flex items-center gap-1.5 rounded-[3px] border px-[11px] py-[7px] text-sm transition-colors',
+        aktiv
+          ? 'border-[var(--sb-or)] bg-[var(--sb-or)] font-bold text-white'
+          : gedaempft
+            ? 'border-[var(--sb-rule)] bg-[#faf8f2] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink2)]'
+            : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink2)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink)]',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** Eine Zeile in einer Einstellungskarte: Beschriftung links, Chips rechts. */
+function ChipZeile({ label, breit = false, children }: {
+  label: string; breit?: boolean; children: React.ReactNode
+}) {
+  return (
+    <div className="mb-[9px] flex items-start gap-[9px] last:mb-0">
+      <div className={cn(
+        'flex-none pt-2 text-sm text-[var(--sb-ink2)]',
+        breit ? 'w-[118px]' : 'w-[102px]',
+      )}>
+        {label}
+      </div>
+      <div className="flex flex-wrap gap-[7px]">{children}</div>
+    </div>
+  )
+}
+
+function ChipGroup<T extends string>({
+  label, options, selected, onSelect, breit, gedaempft,
+}: {
+  label: string
+  options: readonly { key: T; label: string; emoji: string }[]
+  selected: T | null
+  onSelect: (key: T | null) => void
+  breit?: boolean
+  gedaempft?: boolean
+}) {
+  return (
+    <ChipZeile label={label} breit={breit}>
+      {options.map(opt => (
+        <Chip
+          key={opt.key}
+          aktiv={selected === opt.key}
+          gedaempft={gedaempft}
+          onClick={() => onSelect(selected === opt.key ? null : opt.key)}
+        >
+          <span aria-hidden="true">{opt.emoji}</span>
+          <span>{opt.label}</span>
+        </Chip>
+      ))}
+    </ChipZeile>
+  )
+}
+
+// ── Karte mit Typenschild ─────────────────────────────────────────────────────
+
+type Kennfarbe = 'gr' | 'cy' | 'am' | 'or' | 'neutral'
+
+/**
+ * Eine Einstellungsgruppe als aufgelegte Karte.
+ *
+ * „Studio-Hintergrund" und „Zugeklappt" bekommen KEINE Kennfarbe: Das sind
+ * keine Einstellungskategorien wie die vier anderen, und fünf bis sechs
+ * Kennfarben nebeneinander wären wieder das, was Mark beanstandet hat —
+ * alles gleich laut.
+ */
+function Karte({ titel, farbe = 'neutral', dim = false, children }: {
+  titel: string; farbe?: Kennfarbe; dim?: boolean; children: React.ReactNode
+}) {
+  return (
+    <div className={cn('sb-mod px-[14px] pb-[13px] pt-3', dim && 'sb-mod-dim')}>
+      <div className={cn('sb-plate mb-[11px]', farbe !== 'neutral' && `sb-k-${farbe}`)}>
+        {titel}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Eine zugeklappte Gruppe: Beschriftung, der AKTUELLE WERT in Orange, Pfeil.
+ *
+ * Der Wert wird nicht abgetippt, sondern über `optionLabel` aus derselben
+ * Liste geholt, aus der die Chips darunter gezeichnet werden.
+ */
+function Fold({ label, wert, offen, onToggle, children }: {
+  label: string; wert: string | null; offen: boolean; onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mb-[9px] border border-[var(--sb-rule2)] bg-[var(--sb-card)] shadow-[0_1px_2px_rgba(60,48,25,0.05)] last:mb-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={offen}
+        className="flex w-full items-center gap-2.5 px-[13px] py-2.5 text-left"
+      >
+        <span className="flex-1 text-sm text-[var(--sb-ink2)]">{label}</span>
+        <span className={cn(
+          'text-[14.5px] font-bold',
+          wert ? 'text-[var(--sb-or)]' : 'text-[var(--sb-ink3)] font-normal',
+        )}>
+          {wert ?? 'nicht gesetzt'}
+        </span>
+        <ChevronDown
+          className={cn('h-4 w-4 shrink-0 text-[var(--sb-ink3)] transition-transform', offen && 'rotate-180')}
+          aria-hidden="true"
+        />
+      </button>
+      {offen && (
+        <div className="border-t border-dotted border-[var(--sb-rule)] px-[13px] py-2.5">
+          <div className="flex flex-wrap gap-[7px]">{children}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Kachel in der Auswahlspalte ───────────────────────────────────────────────
 
 function AssetThumb({
   name, imageUrl, emoji, isSelected, onClick, hinweis = null,
@@ -104,39 +276,44 @@ function AssetThumb({
     <button
       onClick={onClick}
       className={cn(
-        'relative rounded-lg overflow-hidden border-2 transition-all text-left group w-full',
+        'group w-full overflow-hidden bg-[var(--sb-card)] text-left transition-all',
         isSelected
-          ? 'border-orange-500 ring-1 ring-orange-500/30'
-          : 'border-border/40 hover:border-orange-500/40'
+          ? 'border-2 border-[var(--sb-or)] p-1 shadow-[0_2px_5px_rgba(190,90,20,0.18)]'
+          : 'border border-[var(--sb-rule)] p-[5px] shadow-[0_1px_2px_rgba(60,48,25,0.07)] hover:border-[var(--sb-ink3)]',
       )}
     >
-      <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
+      <div className="relative aspect-[3/4] overflow-hidden bg-[var(--sb-pap2)]">
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+          <img src={imageUrl} alt={name} className="h-full w-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl text-muted-foreground/20">
+          <div className="flex h-full w-full items-center justify-center text-3xl opacity-25">
             {emoji}
           </div>
         )}
         {isSelected && (
-          <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-            <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
-              <span className="text-white text-[10px] font-bold">✓</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-primary/15">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sb-or)]">
+              <span className="text-xs font-bold text-white">✓</span>
             </div>
           </div>
         )}
       </div>
-      <div className="px-1.5 py-1">
-        <p className="text-[10px] font-medium leading-tight truncate">{name}</p>
+      <div className="px-0.5 pb-0.5 pt-2">
+        <p className={cn(
+          'truncate text-sm leading-tight',
+          isSelected ? 'font-bold text-[var(--sb-ink)]' : 'text-[var(--sb-ink2)]',
+        )}>
+          {name}
+        </p>
         {hinweis && (
-          <p className="text-[9px] leading-tight truncate text-muted-foreground/70">{hinweis}</p>
+          <p className="truncate text-[13px] leading-tight text-[var(--sb-ink3)]">{hinweis}</p>
         )}
       </div>
     </button>
   )
 }
 
-// ── Reference picker strip (inside SceneSlot) ─────────────────────────────────
+// ── Referenz-Auswahl innerhalb eines Feldes ──────────────────────────────────
 
 function RefPicker({
   images, selectedUrl, onSelect, loading,
@@ -145,33 +322,33 @@ function RefPicker({
 }) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-1.5 gap-1">
-        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/40" />
-        <span className="text-[9px] text-muted-foreground/40">Lade Bilder…</span>
+      <div className="flex items-center justify-center gap-1.5 py-1.5">
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--sb-ink3)]" />
+        <span className="text-[13px] text-[var(--sb-ink3)]">Lade Bilder…</span>
       </div>
     )
   }
 
   if (images.length === 0) {
     return (
-      <div className="flex items-center justify-center py-1.5 gap-1">
-        <ImageOff className="h-3 w-3 text-muted-foreground/20" />
-        <span className="text-[9px] text-muted-foreground/30">Keine Bilder</span>
+      <div className="flex items-center justify-center gap-1.5 py-1.5">
+        <ImageOff className="h-3.5 w-3.5 text-[var(--sb-ink3)]" />
+        <span className="text-[13px] text-[var(--sb-ink3)]">Keine Bilder</span>
       </div>
     )
   }
 
   return (
-    <div className="flex gap-1 overflow-x-auto px-1 py-1 scrollbar-hide">
-      {/* "Kein Bild" option */}
+    <div className="scrollbar-hide flex gap-1.5 overflow-x-auto py-1">
+      {/* „Kein Bild" */}
       <button
         onClick={() => onSelect(null)}
         title="Kein Referenzbild"
         className={cn(
-          'shrink-0 w-7 h-7 rounded border flex items-center justify-center text-[8px] transition-colors',
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded border text-[11px] transition-colors',
           selectedUrl === null
-            ? 'border-orange-500 bg-orange-500/15 text-orange-300'
-            : 'border-border/30 text-muted-foreground/30 hover:border-border/60'
+            ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] text-[var(--sb-or-t)]'
+            : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)]',
         )}
       >
         ✕
@@ -182,22 +359,29 @@ function RefPicker({
           onClick={() => onSelect(img)}
           title={img.label}
           className={cn(
-            'shrink-0 w-7 h-7 rounded overflow-hidden border-2 transition-all',
+            'h-8 w-8 shrink-0 overflow-hidden border-2 transition-all',
             selectedUrl === img.url
-              ? 'border-orange-500 ring-1 ring-orange-500/30'
-              : 'border-border/30 hover:border-orange-400/60'
+              ? 'border-[var(--sb-or)] shadow-[0_1px_3px_rgba(190,90,20,0.3)]'
+              : 'border-[var(--sb-rule)] hover:border-[var(--sb-ink3)]',
           )}
         >
-          <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+          <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
         </button>
       ))}
     </div>
   )
 }
 
-// ── Scene slot card (middle canvas) ──────────────────────────────────────────
+// ── Ein Feld auf dem Bausteinbogen ───────────────────────────────────────────
 
-function SceneSlot({
+/**
+ * Ersetzt die frühere hochformatige `SceneSlot`-Karte.
+ *
+ * KEIN AUFKLAPPEN DER AUSWAHL HIER — von Mark verworfen. Ein Klick auf ein
+ * leeres Feld schaltet die linke Spalte auf den passenden Reiter; gewählt wird
+ * weiterhin dort, an Gesichtern und Stoffen.
+ */
+function SzenenFeld({
   slot, asset, refImages, refLoading, selectedRef, onSelectRef, onClear, onSelect,
 }: {
   slot: typeof SLOTS[number]
@@ -212,134 +396,67 @@ function SceneSlot({
   const hasRefPicker = Boolean(onSelectRef)
   const displayImage = (hasRefPicker && selectedRef?.url) ? selectedRef.url : asset?.cover_image_url
 
-  return (
-    <div className={cn(
-      'relative rounded-xl border-2 overflow-hidden transition-all',
-      asset ? 'border-orange-500/60' : 'border-border/30 border-dashed'
-    )}>
-      {asset ? (
-        <>
-          <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
-            {displayImage ? (
-              <img src={displayImage} alt={asset.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-4xl text-muted-foreground/20">
-                {slot.emoji}
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5">
-              <p className="text-[9px] font-medium text-white/60 uppercase tracking-wider">{slot.label}</p>
-              <p className="text-xs font-semibold text-white leading-tight truncate">{asset.name}</p>
-              {hasRefPicker && selectedRef && (
-                <p className="text-[8px] text-orange-300/80 truncate">{selectedRef.label}</p>
-              )}
-            </div>
-          </div>
+  if (!asset) {
+    return (
+      <button
+        onClick={onSelect}
+        className="sb-leer flex h-full w-full flex-1 items-center gap-[11px] border border-[var(--sb-rule)] p-[9px] text-left transition-colors hover:border-[var(--sb-or)]"
+      >
+        <span className="flex h-[54px] w-[54px] flex-none items-center justify-center border border-dashed border-[var(--sb-rule)] bg-white text-2xl text-[var(--sb-ink3)]">
+          <Plus className="h-5 w-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[13px] uppercase tracking-[0.1em] text-[var(--sb-ink3)]">{slot.label}</span>
+          <span className="mt-0.5 block text-[15.5px] font-medium text-[var(--sb-ink3)]">wählen</span>
+        </span>
+      </button>
+    )
+  }
 
-          {/* Reference picker strip for character/outfit/location */}
-          {hasRefPicker && onSelectRef && (
-            <div className="bg-black/20 border-t border-border/20">
-              <p className="text-[8px] text-muted-foreground/40 px-1 pt-0.5 uppercase tracking-wider">Referenz</p>
-              <RefPicker
-                images={refImages ?? []}
-                selectedUrl={selectedRef?.url ?? null}
-                onSelect={onSelectRef}
-                loading={refLoading ?? false}
-              />
-            </div>
+  return (
+    <div className="relative flex-1 border-2 border-[var(--sb-or)] bg-white p-2">
+      <div className="flex items-center gap-[11px]">
+        <div className="h-[54px] w-[54px] flex-none overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
+          {displayImage ? (
+            <img src={displayImage} alt={asset.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-2xl opacity-40">{slot.emoji}</div>
           )}
+        </div>
+        <div className="min-w-0 pr-5">
+          <p className="text-[13px] uppercase tracking-[0.1em] text-[var(--sb-ink3)]">{slot.label}</p>
+          <p className="mt-0.5 truncate text-[15.5px] font-bold text-[var(--sb-ink)]">{asset.name}</p>
+          {hasRefPicker && selectedRef && (
+            <p className="truncate text-[13px] text-[var(--sb-or-t)]">{selectedRef.label}</p>
+          )}
+        </div>
+      </div>
 
-          <button
-            onClick={onClear}
-            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/70 hover:bg-red-600/80 flex items-center justify-center z-10"
-          >
-            <X className="h-3 w-3 text-white" />
-          </button>
-        </>
-      ) : (
-        <button
-          onClick={onSelect}
-          className="w-full aspect-[3/4] flex flex-col items-center justify-center gap-2 text-muted-foreground/30 hover:text-orange-400/60 transition-colors"
-        >
-          <span className="text-3xl">{slot.emoji}</span>
-          <span className="text-[10px] font-medium">{slot.label}</span>
-          <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center">
-            <Plus className="h-3 w-3" />
-          </div>
-        </button>
+      {hasRefPicker && onSelectRef && (
+        <div className="mt-2 border-t border-dotted border-[var(--sb-rule)] pt-1">
+          <p className="text-[13px] uppercase tracking-[0.1em] text-[var(--sb-ink3)]">Referenz</p>
+          <RefPicker
+            images={refImages ?? []}
+            selectedUrl={selectedRef?.url ?? null}
+            onSelect={onSelectRef}
+            loading={refLoading ?? false}
+          />
+        </div>
       )}
+
+      <button
+        onClick={onClear}
+        title={`${slot.label} entfernen`}
+        aria-label={`${slot.label} entfernen`}
+        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--sb-rule)] bg-white text-[var(--sb-ink3)] transition-colors hover:border-[var(--sb-k-or)] hover:text-[var(--sb-k-or)]"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
 
-// ── Chip selector (Tageszeit / Jahreszeit / Wetter) ───────────────────────────
-
-function ChipGroup<T extends string>({
-  label, options, selected, onSelect,
-}: {
-  label: string
-  options: { key: T; label: string; emoji: string }[]
-  selected: T | null
-  onSelect: (key: T | null) => void
-}) {
-  return (
-    <div>
-      <span className="text-[10px] font-medium text-muted-foreground/60">{label}</span>
-      <div className="flex flex-wrap gap-1.5 mt-1">
-        {options.map(opt => (
-          <button
-            key={opt.key}
-            onClick={() => onSelect(selected === opt.key ? null : opt.key)}
-            className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-medium transition-colors',
-              selected === opt.key
-                ? 'bg-orange-500/15 border-orange-500/50 text-orange-300'
-                : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground'
-            )}
-          >
-            <span>{opt.emoji}</span>
-            <span>{opt.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function MultiChipGroup<T extends string>({
-  label, options, selected, onToggle,
-}: {
-  label: string
-  options: { key: T; label: string; emoji: string }[]
-  selected: T[]
-  onToggle: (key: T) => void
-}) {
-  return (
-    <div>
-      <span className="text-[10px] font-medium text-muted-foreground/60">{label}</span>
-      <div className="flex flex-wrap gap-1.5 mt-1">
-        {options.map(opt => (
-          <button
-            key={opt.key}
-            onClick={() => onToggle(opt.key)}
-            className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-medium transition-colors',
-              selected.includes(opt.key)
-                ? 'bg-orange-500/15 border-orange-500/50 text-orange-300'
-                : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground'
-            )}
-          >
-            <span>{opt.emoji}</span>
-            <span>{opt.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Reference export card (right panel) ───────────────────────────────────────
+// ── Referenz-Export (rechte Spalte) ──────────────────────────────────────────
 
 function RefExportCard({ label, emoji, asset, refImage }: {
   label: string; emoji: string
@@ -353,22 +470,66 @@ function RefExportCard({ label, emoji, asset, refImage }: {
 
   return (
     <div className="flex items-start gap-2.5">
-      <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted/30 shrink-0 border border-border/40">
+      <div className="h-14 w-14 shrink-0 overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
         {imageUrl ? (
-          <img src={imageUrl} alt={asset.name} className="w-full h-full object-cover" />
+          <img src={imageUrl} alt={asset.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-lg">{emoji}</div>
+          <div className="flex h-full w-full items-center justify-center text-lg">{emoji}</div>
         )}
       </div>
       <div className="min-w-0 py-0.5">
-        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">{label}</p>
-        <p className="text-xs font-semibold truncate">{asset.name}</p>
+        <p className="text-[13px] uppercase tracking-[0.15em] text-[var(--sb-ink3)]">{label}</p>
+        <p className="truncate text-sm font-bold text-[var(--sb-ink)]">{asset.name}</p>
         {sublabel ? (
-          <p className="text-[10px] text-orange-400/70 truncate">{sublabel}</p>
+          <p className="truncate text-[13px] text-[var(--sb-or-t)]">{sublabel}</p>
         ) : (
-          <p className="text-[10px] text-muted-foreground/30 truncate">Titelbild</p>
+          <p className="truncate text-[13px] text-[var(--sb-ink3)]">Titelbild</p>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Kleiner Eintrag rechts für Pose/Mimik/Kamera/Stil/Grading. */
+function NebenAsset({ label, emoji, asset }: {
+  label: string; emoji: string
+  asset: { name: string; cover_image_url?: string | null } | null
+}) {
+  if (!asset) return null
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)] text-base">
+        {asset.cover_image_url
+          ? <img src={asset.cover_image_url} alt={asset.name} className="h-full w-full object-cover" />
+          : emoji}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[13px] uppercase tracking-[0.15em] text-[var(--sb-ink3)]">{label}</p>
+        <p className="truncate text-sm font-medium text-[var(--sb-ink)]">{asset.name}</p>
+      </div>
+    </div>
+  )
+}
+
+/** Ein Merkmal in der Szenen-Übersicht rechts. */
+function Marke({ children, betont = false }: { children: React.ReactNode; betont?: boolean }) {
+  return (
+    <span className={cn(
+      'border bg-[var(--sb-card)] px-2.5 py-1.5 text-[13.5px]',
+      betont
+        ? 'border-[var(--sb-or)] font-bold text-[var(--sb-or-t)]'
+        : 'border-[var(--sb-rule)] text-[var(--sb-ink2)]',
+    )}>
+      {children}
+    </span>
+  )
+}
+
+/** Überschrift eines Feldes in der rechten Spalte. */
+function Feldname({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-[7px] text-[13px] uppercase tracking-[0.15em] text-[var(--sb-ink3)]">
+      {children}
     </div>
   )
 }
@@ -401,6 +562,16 @@ export default function SceneBuilderPage() {
     style: null, grading: null, background: null,
   })
 
+  /**
+   * Welche der selten gebrauchten Gruppen gerade aufgeklappt ist.
+   *
+   * REINE ANZEIGE. Nichts davon geht in den Prompt, in ein Preset oder in einen
+   * Auftrag — zugeklappt heisst nicht „nicht gesetzt". Der aktuelle Wert steht
+   * deshalb im Kopf der Zeile, damit man ihn auch zugeklappt sieht.
+   */
+  const [aufgeklappt, setAufgeklappt] = useState<Record<string, boolean>>({})
+  const klappe = (id: string) => setAufgeklappt(prev => ({ ...prev, [id]: !prev[id] }))
+
   // Reference images loaded from DB per asset (keyed by asset ID)
   const [refImagesMap, setRefImagesMap] = useState<Record<string, RefImage[]>>({})
   const [refLoadingMap, setRefLoadingMap] = useState<Record<string, boolean>>({})
@@ -424,6 +595,9 @@ export default function SceneBuilderPage() {
   const hasAnyCameraSetting = Boolean(
     scene.shot_type || scene.camera_angle || scene.lens || scene.depth_of_field || scene.aspect_ratio
   )
+
+  /** „x von 8 belegt" — die Zahl im Kopf des Bausteinbogens. */
+  const belegt = SLOTS.filter(s => scene[s.key]).length
 
   // Indoor and Outdoor use mutually exclusive lighting parameters — switching scene type
   // clears whichever set no longer applies, so e.g. "Indoor + Gewitter" can never occur.
@@ -762,31 +936,35 @@ export default function SceneBuilderPage() {
 
   const currentTab = TABS.find(t => t.key === activeTab)!
 
-  return (
-    <div className="flex h-svh min-w-0 overflow-hidden">
+  // Die Tageszeiten, die drinnen keinen Sinn ergeben, fallen dort weg.
+  const tageszeiten = scene.scene_type === 'indoor'
+    ? TIME_OF_DAY.filter(t => !OUTDOOR_ONLY_TIMES.includes(t.key))
+    : TIME_OF_DAY
 
-      {/* ── Col 1: Asset Selection ── */}
-      <div className="w-[26rem] shrink-0 flex flex-col border-r border-border">
-        <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
+  return (
+    <div className="sb-papier flex h-svh min-w-0 overflow-hidden">
+
+      {/* ── Spalte 1: Auswahl — bleibt der Ort der Auswahl ── */}
+      <div className="sb-kante-r flex w-[26rem] shrink-0 flex-col bg-[var(--sb-pap2)]">
+        <header className="flex shrink-0 items-center gap-2 border-b border-[var(--sb-rule)] px-3.5 py-3.5">
           <SidebarTrigger />
-          <span className="text-sm font-semibold">Scene Builder</span>
+          <span className="text-base font-bold tracking-[0.06em]">Scene Builder</span>
         </header>
 
-        {/* Tabs */}
-        <div className="border-b shrink-0 px-2 py-1.5 grid grid-cols-4 gap-1">
+        {/* Reiter */}
+        <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-[var(--sb-rule2)] px-3.5 py-3">
           {TABS.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg text-[10px] font-medium transition-colors',
+                'rounded-[4px] border px-2.5 py-1.5 text-sm transition-colors',
                 activeTab === tab.key
-                  ? 'bg-orange-500/15 text-orange-300'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                  ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] font-bold text-[var(--sb-or-t)]'
+                  : 'border-transparent text-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)]',
               )}
             >
-              <span className="text-base leading-none">{tab.emoji}</span>
-              <span className="truncate w-full text-center leading-tight">{tab.label}</span>
+              {tab.label}
             </button>
           ))}
         </div>
@@ -795,7 +973,7 @@ export default function SceneBuilderPage() {
             mit weg: Wer bei Eintrag 30 merkt, dass er sucht, soll nicht erst
             wieder nach oben scrollen muessen. */}
         {!leftContent.loading && leftContent.items.length > 0 && (
-          <div className="border-b shrink-0 px-2 py-1.5">
+          <div className="sb-filter shrink-0 border-b border-[var(--sb-rule2)] px-3.5 py-2.5">
             <BausteinFilter
               suche={filter.suche}
               onSuche={filter.setSuche}
@@ -804,43 +982,51 @@ export default function SceneBuilderPage() {
               chips={filter.chips}
               platzhalter={`${leftContent.einzahl} suchen …`}
               labels={leftContent.labels}
-              kompakt
             />
           </div>
         )}
 
-        {/* Asset list */}
-        <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-2" style={{ right: '-17px' }}>
+        {/* Kachelliste */}
+        <div className="relative flex-1 overflow-hidden">
+          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-3.5" style={{ right: '-17px' }}>
+            <div className="mb-2.5 flex items-center gap-2.5 pr-4">
+              <b className="text-[13px] uppercase tracking-[0.15em] text-[var(--sb-ink2)]">{currentTab.label}</b>
+              <div
+                className="sb-punktlinie h-px flex-1"
+                aria-hidden="true"
+              />
+              <span className="text-[13px] tabular-nums text-[var(--sb-ink3)]">{filter.gefiltert.length}</span>
+            </div>
+
             {leftContent.loading ? (
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-[3/4] rounded-lg" />
+                  <Skeleton key={i} className="aspect-[3/4]" />
                 ))}
               </div>
             ) : leftContent.items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-40 gap-2 text-center">
-                <span className="text-3xl opacity-20">{currentTab.emoji}</span>
-                <p className="text-[10px] text-muted-foreground/60">Noch keine {currentTab.label}</p>
+              <div className="flex min-h-40 flex-col items-center justify-center gap-2 text-center">
+                <span className="text-3xl opacity-25">{currentTab.emoji}</span>
+                <p className="text-sm text-[var(--sb-ink3)]">Noch keine {currentTab.label}</p>
               </div>
             ) : filter.gefiltert.length === 0 ? (
               /* Leer wegen des Filters, nicht wegen fehlender Eintraege — die
                  beiden Faelle duerfen nicht denselben Satz zeigen, sonst sucht
                  man den Fehler bei den Daten statt im Suchfeld. */
-              <div className="flex flex-col items-center justify-center min-h-40 gap-2 text-center px-3">
-                <span className="text-3xl opacity-20">🔍</span>
-                <p className="text-[10px] text-muted-foreground/60">
+              <div className="flex min-h-40 flex-col items-center justify-center gap-2 px-3 text-center">
+                <span className="text-3xl opacity-25">🔍</span>
+                <p className="text-sm text-[var(--sb-ink3)]">
                   Kein Treffer unter {leftContent.items.length} {currentTab.label}
                 </p>
                 <button
                   onClick={() => { filter.setSuche(''); filter.setKategorie(null) }}
-                  className="text-[10px] text-orange-400 hover:text-orange-300 underline underline-offset-2"
+                  className="text-sm font-medium text-[var(--sb-or-t)] underline underline-offset-2 hover:text-[var(--sb-or)]"
                 >
                   Filter aufheben
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-3">
                 {filter.gefiltert.map(item => (
                   <AssetThumb
                     key={item.id}
@@ -858,145 +1044,298 @@ export default function SceneBuilderPage() {
         </div>
       </div>
 
-      {/* ── Col 2: Scene Canvas ── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
-          <span className="font-semibold text-sm">🎬 Szene</span>
-          <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={() => setPresetsOpen(true)}>
-            📁 Presets
+      {/* ── Spalte 2: der Bogen ── */}
+      <div className="sb-blatt flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="relative flex h-[58px] shrink-0 items-center gap-3.5 border-b border-[var(--sb-rule)] px-6">
+          <Passkreuz />
+          <h1 className="text-[19px] font-bold uppercase tracking-[0.22em]">Szene</h1>
+          <span className="text-[13px] tracking-[0.14em] text-[var(--sb-ink3)]">
+            SZENENBOGEN · {SLOTS.length} FELDER
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto h-9 border-[var(--sb-rule)] bg-[var(--sb-card)] text-sm text-[var(--sb-ink2)] hover:bg-[var(--sb-pap2)] hover:text-[var(--sb-ink)]"
+            onClick={() => setPresetsOpen(true)}
+          >
+            Presets
           </Button>
           {hasAnyAsset && (
-            <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={clearAll}>
-              <X className="mr-1 h-3 w-3" />Leeren
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 border-[var(--sb-rule)] bg-[var(--sb-card)] text-sm text-[var(--sb-ink2)] hover:bg-[var(--sb-pap2)] hover:text-[var(--sb-ink)]"
+              onClick={clearAll}
+            >
+              <X className="mr-1.5 h-3.5 w-3.5" />Leeren
             </Button>
           )}
+          <Passkreuz />
+          <div className="pointer-events-none absolute inset-x-0 bottom-[3px] h-px bg-[var(--sb-rule2)]" aria-hidden="true" />
         </header>
 
-        <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-4" style={{ right: '-17px' }}>
+        <div className="relative flex-1 overflow-hidden">
+          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden px-6 py-[18px]" style={{ right: '-17px' }}>
 
-            {/* Szenentyp */}
-            <div className="max-w-2xl mx-auto mb-4">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                🌍 Szenentyp
+            {/* ══ Bausteine — ganz oben, weil man erst weiss WER im Bild ist ══ */}
+            <div className="mb-2.5 flex items-center gap-3">
+              <h2 className="text-[13.5px] font-bold uppercase tracking-[0.22em]">Bausteine</h2>
+              <div className="sb-sech-rule flex-1" aria-hidden="true" />
+              <span className="text-[13px] tabular-nums tracking-[0.1em] text-[var(--sb-ink3)]">
+                {belegt} VON {SLOTS.length} BELEGT
               </span>
-              <div className="flex gap-2 mt-1.5">
-                {SCENE_TYPES.map(t => (
-                  <button
-                    key={t.key}
-                    onClick={() => setSceneType(t.key)}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                      scene.scene_type === t.key
-                        ? 'bg-orange-500/15 border-orange-500/50 text-orange-300'
-                        : 'border-border/40 text-muted-foreground hover:border-border hover:text-foreground'
-                    )}
-                  >
-                    <span className={cn(
-                      'w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0',
-                      scene.scene_type === t.key ? 'border-orange-400' : 'border-current'
-                    )}>
-                      {scene.scene_type === t.key && <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />}
-                    </span>
-                    <span>{t.emoji}</span>
-                    <span>{t.label}</span>
-                  </button>
-                ))}
+            </div>
+
+            <div className="sb-strip px-2.5 pb-[7px] pt-2.5">
+              {/*
+                RANDNUMMER UND FELD STEHEN IN DERSELBEN ZELLE — nicht in zwei
+                getrennten Rastern uebereinander. Zwei Raster stimmen nur so
+                lange ueberein, wie beide gleich viele Spalten haben; sobald
+                die Spalte schmal wird und das Raster auf zwei Spalten
+                umbricht, stuende „03 — LOC" ueber dem Charakterfeld.
+              */}
+              <div className="grid grid-cols-2 gap-[11px] min-[1200px]:grid-cols-4">
+                {SLOTS.map((slot, i) => {
+                  const assetId = (scene[slot.key] as { id: string } | null)?.id
+                  const hasRef = REF_SLOTS.includes(slot.key as RefSlotKey)
+                  return (
+                    <div key={slot.key} className="flex h-full flex-col">
+                      <div className="mb-[5px] flex items-baseline gap-2 text-[13px] tabular-nums tracking-[0.14em] text-[var(--sb-ink3)]">
+                        <span>{String(i + 1).padStart(2, '0')} — {slot.code}</span>
+                        {scene[slot.key] && (
+                          <span className="ml-auto font-bold tracking-[0.14em] text-[var(--sb-or)]">GEWÄHLT</span>
+                        )}
+                      </div>
+                      <SzenenFeld
+                        slot={slot}
+                        asset={scene[slot.key] as { name: string; cover_image_url?: string | null } | null}
+                        refImages={hasRef && assetId ? (refImagesMap[assetId] ?? []) : undefined}
+                        refLoading={hasRef && assetId ? (refLoadingMap[assetId] ?? false) : undefined}
+                        selectedRef={hasRef ? sceneRefs[slot.key as RefSlotKey] : undefined}
+                        onSelectRef={hasRef ? (img) => setSceneRefs(prev => ({ ...prev, [slot.key]: img })) : undefined}
+                        onClear={() => clearSlot(slot.key)}
+                        onSelect={() => setActiveTab(slot.tab)}
+                      />
+                    </div>
+                  )
+                })}
               </div>
-            </div>
-
-            {/* Szenenbedingungen */}
-            <div className="max-w-2xl mx-auto mb-4 space-y-2.5">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                🌤 Szenenbedingungen
-              </span>
-              <ChipGroup
-                label="🌅 Tageszeit"
-                options={scene.scene_type === 'indoor' ? TIME_OF_DAY.filter(t => !OUTDOOR_ONLY_TIMES.includes(t.key)) : TIME_OF_DAY}
-                selected={scene.time_of_day}
-                onSelect={v => setCondition('time_of_day', v)}
-              />
-              {scene.scene_type === 'outdoor' ? (
-                <>
-                  <ChipGroup label="🍂 Jahreszeit" options={SEASONS} selected={scene.season} onSelect={v => setCondition('season', v)} />
-                  <ChipGroup label="🌧 Wetter" options={WEATHERS} selected={scene.weather} onSelect={v => setCondition('weather', v)} />
-                </>
-              ) : (
-                <>
-                  <ChipGroup label="💡 Lichtquelle" options={LIGHT_SOURCES} selected={scene.light_source} onSelect={v => setCondition('light_source', v)} />
-                  <ChipGroup label="🎨 Lichtstil" options={LIGHT_STYLES} selected={scene.light_style} onSelect={v => setCondition('light_style', v)} />
-                  <MultiChipGroup label="➕ Lichtmodifier" options={LIGHT_MODIFIERS} selected={scene.light_modifiers} onToggle={toggleLightModifier} />
-                </>
-              )}
-            </div>
-
-            {/* Kamera-Einstellungen */}
-            <div className="max-w-2xl mx-auto mb-4 space-y-2.5">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                📷 Kamera-Einstellungen
-              </span>
-              <ChipGroup label="🖼️ Bildausschnitt" options={SHOT_TYPES} selected={scene.shot_type} onSelect={v => setCameraSetting('shot_type', v)} />
-              <ChipGroup label="📐 Kamerawinkel" options={CAMERA_ANGLES} selected={scene.camera_angle} onSelect={v => setCameraSetting('camera_angle', v)} />
-              <ChipGroup label="🔭 Objektiv" options={LENSES} selected={scene.lens} onSelect={v => setCameraSetting('lens', v)} />
-              <ChipGroup label="🎯 Tiefenschärfe" options={DEPTH_OF_FIELDS} selected={scene.depth_of_field} onSelect={v => setCameraSetting('depth_of_field', v)} />
-              <ChipGroup label="🖥️ Bildorientierung" options={ASPECT_RATIOS} selected={scene.aspect_ratio} onSelect={v => setCameraSetting('aspect_ratio', v)} />
-            </div>
-
-            {/* Studio-Hintergrund — nur relevant, solange keine Location gewählt ist */}
-            {!scene.location && (
-              <div className="max-w-2xl mx-auto mb-4 space-y-2.5">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  🖼️ Studio-Hintergrund
-                </span>
-                <p className="text-[10px] text-muted-foreground/40 -mt-1">
-                  Wird ignoriert, sobald unten eine Location gewählt wird.
-                </p>
-                <ChipGroup label="🎨 Hintergrundfarbe" options={STUDIO_BACKGROUNDS} selected={scene.background} onSelect={setBackground} />
-              </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto">
-              {SLOTS.map(slot => {
-                const assetId = (scene[slot.key] as { id: string } | null)?.id
-                const hasRef = REF_SLOTS.includes(slot.key as RefSlotKey)
-                return (
-                  <div key={slot.key} className="group">
-                    <SceneSlot
-                      slot={slot}
-                      asset={scene[slot.key] as { name: string; cover_image_url?: string | null } | null}
-                      refImages={hasRef && assetId ? (refImagesMap[assetId] ?? []) : undefined}
-                      refLoading={hasRef && assetId ? (refLoadingMap[assetId] ?? false) : undefined}
-                      selectedRef={hasRef ? sceneRefs[slot.key as RefSlotKey] : undefined}
-                      onSelectRef={hasRef ? (img) => setSceneRefs(prev => ({ ...prev, [slot.key]: img })) : undefined}
-                      onClear={() => clearSlot(slot.key)}
-                      onSelect={() => setActiveTab(slot.tab)}
-                    />
-                  </div>
-                )
-              })}
+              <Perforation />
             </div>
 
             {!hasAnyAsset && (
-              <p className="text-center text-xs text-muted-foreground/40 mt-8">
-                Asset links auswählen → erscheint in der Szene
+              <p className="mt-2.5 text-[13px] text-[var(--sb-ink3)]">
+                Links auswählen — der Baustein erscheint hier im Feld.
               </p>
             )}
+
+            {/* Ab hier: weiche Karten. Alles Druckgrafische bleibt oberhalb. */}
+            <Doppellinie />
+
+            <div className="mb-3.5 grid grid-cols-1 items-start gap-3.5 min-[1450px]:grid-cols-[0.62fr_1fr]">
+              <Karte titel="Szenentyp" farbe="gr">
+                <div className="flex flex-wrap gap-[7px]">
+                  {SCENE_TYPES.map(t => (
+                    <Chip key={t.key} aktiv={scene.scene_type === t.key} onClick={() => setSceneType(t.key)}>
+                      <span aria-hidden="true">{t.emoji}</span>
+                      <span>{t.label}</span>
+                    </Chip>
+                  ))}
+                </div>
+              </Karte>
+
+              <Karte titel="Szenenbedingungen" farbe="cy">
+                <ChipGroup
+                  label="Tageszeit"
+                  options={tageszeiten}
+                  selected={scene.time_of_day}
+                  onSelect={v => setCondition('time_of_day', v)}
+                />
+                {scene.scene_type === 'outdoor' ? (
+                  <ChipGroup
+                    label="Jahreszeit"
+                    options={SEASONS}
+                    selected={scene.season}
+                    onSelect={v => setCondition('season', v)}
+                  />
+                ) : (
+                  <ChipGroup
+                    label="Lichtquelle"
+                    options={LIGHT_SOURCES}
+                    selected={scene.light_source}
+                    onSelect={v => setCondition('light_source', v)}
+                  />
+                )}
+              </Karte>
+            </div>
+
+            <div className="mb-3.5 grid grid-cols-1 items-start gap-3.5 min-[1450px]:grid-cols-[1fr_0.72fr]">
+              <Karte titel="Kamera-Einstellungen" farbe="am">
+                <ChipGroup
+                  label="Bildausschnitt"
+                  options={SHOT_TYPES}
+                  selected={scene.shot_type}
+                  onSelect={v => setCameraSetting('shot_type', v)}
+                />
+                {/*
+                  135 mm BLEIBT IN DER REIHE. Im Entwurf fehlte es nur, damit
+                  die Zeile im Bild nicht umbricht — das war eine Notloesung
+                  fuers Bild, kein Vorschlag. Der Umbruch ist stattdessen
+                  erlaubt: `flex-wrap` in `ChipZeile`.
+                */}
+                <ChipGroup
+                  label="Objektiv"
+                  options={LENSES}
+                  selected={scene.lens}
+                  onSelect={v => setCameraSetting('lens', v)}
+                />
+              </Karte>
+
+              <Karte titel="Bild & Schärfe" farbe="or">
+                <ChipGroup
+                  label="Tiefenschärfe"
+                  options={DEPTH_OF_FIELDS}
+                  selected={scene.depth_of_field}
+                  onSelect={v => setCameraSetting('depth_of_field', v)}
+                />
+                <ChipGroup
+                  label="Bildorientierung"
+                  breit
+                  options={ASPECT_RATIOS}
+                  selected={scene.aspect_ratio}
+                  onSelect={v => setCameraSetting('aspect_ratio', v)}
+                />
+              </Karte>
+            </div>
+
+            {/*
+              Sitzt oben eine Location im Baustein, faellt die Karte
+              „Studio-Hintergrund" weg — dann bekommt „Zugeklappt" die ganze
+              Zeile. Sonst stuende die Karte auf 56 % Breite mit einer leeren
+              Spalte daneben.
+            */}
+            <div className={cn(
+              'grid grid-cols-1 items-start gap-3.5',
+              !scene.location && 'min-[1450px]:grid-cols-[1fr_0.78fr]',
+            )}>
+              {/* Studio-Hintergrund — nur relevant, solange keine Location gewählt ist */}
+              {!scene.location && (
+                <Karte titel="Studio-Hintergrund" dim>
+                  <ChipGroup
+                    label="Grundton"
+                    options={STUDIO_BACKGROUNDS}
+                    selected={scene.background}
+                    onSelect={setBackground}
+                    gedaempft
+                  />
+                  <p className="mt-2.5 text-[13px] leading-relaxed text-[var(--sb-ink3)]">
+                    Wird ignoriert, sobald oben eine <b className="font-semibold text-[var(--sb-ink2)]">Location</b> im
+                    Baustein sitzt.
+                  </p>
+                </Karte>
+              )}
+
+              {/*
+                ZUGEKLAPPT, ABER NICHT VERSTECKT. Jede Zeile nennt ihren
+                aktuellen Wert in Orange — zugeklappt heisst „selten gebraucht",
+                nicht „nicht gesetzt". Kein Wert geht dabei verloren; jede
+                Gruppe ist mit einem Klick wieder offen.
+              */}
+              <Karte titel="Zugeklappt">
+                <Fold
+                  label="Kamerawinkel"
+                  wert={optionLabel(CAMERA_ANGLES, scene.camera_angle)}
+                  offen={!!aufgeklappt.winkel}
+                  onToggle={() => klappe('winkel')}
+                >
+                  {CAMERA_ANGLES.map(o => (
+                    <Chip
+                      key={o.key}
+                      aktiv={scene.camera_angle === o.key}
+                      onClick={() => setCameraSetting('camera_angle', scene.camera_angle === o.key ? null : o.key)}
+                    >
+                      <span aria-hidden="true">{o.emoji}</span>
+                      <span>{o.label}</span>
+                    </Chip>
+                  ))}
+                </Fold>
+
+                {scene.scene_type === 'outdoor' ? (
+                  <Fold
+                    label="Wetter"
+                    wert={optionLabel(WEATHERS, scene.weather)}
+                    offen={!!aufgeklappt.wetter}
+                    onToggle={() => klappe('wetter')}
+                  >
+                    {WEATHERS.map(o => (
+                      <Chip
+                        key={o.key}
+                        aktiv={scene.weather === o.key}
+                        onClick={() => setCondition('weather', scene.weather === o.key ? null : o.key)}
+                      >
+                        <span aria-hidden="true">{o.emoji}</span>
+                        <span>{o.label}</span>
+                      </Chip>
+                    ))}
+                  </Fold>
+                ) : (
+                  <>
+                    <Fold
+                      label="Lichtstil"
+                      wert={optionLabel(LIGHT_STYLES, scene.light_style)}
+                      offen={!!aufgeklappt.lichtstil}
+                      onToggle={() => klappe('lichtstil')}
+                    >
+                      {LIGHT_STYLES.map(o => (
+                        <Chip
+                          key={o.key}
+                          aktiv={scene.light_style === o.key}
+                          onClick={() => setCondition('light_style', scene.light_style === o.key ? null : o.key)}
+                        >
+                          <span aria-hidden="true">{o.emoji}</span>
+                          <span>{o.label}</span>
+                        </Chip>
+                      ))}
+                    </Fold>
+                    <Fold
+                      label="Lichtmodifier"
+                      wert={optionLabels(LIGHT_MODIFIERS, scene.light_modifiers)}
+                      offen={!!aufgeklappt.lichtmod}
+                      onToggle={() => klappe('lichtmod')}
+                    >
+                      {LIGHT_MODIFIERS.map(o => (
+                        <Chip
+                          key={o.key}
+                          aktiv={scene.light_modifiers.includes(o.key)}
+                          onClick={() => toggleLightModifier(o.key)}
+                        >
+                          <span aria-hidden="true">{o.emoji}</span>
+                          <span>{o.label}</span>
+                        </Chip>
+                      ))}
+                    </Fold>
+                  </>
+                )}
+              </Karte>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {/* ── Col 3: Prompt & References ── */}
-      <div className="w-80 shrink-0 border-l border-border flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-3 py-2.5 flex items-center gap-2">
-          <span className="text-sm font-semibold flex-1">Prompt & Referenzen</span>
+      {/* ── Spalte 3: Prompt & Referenzen ── */}
+      <div className="sb-kante-l flex w-[25rem] shrink-0 flex-col overflow-hidden bg-[var(--sb-pap2)]">
+        <header className="flex h-[58px] shrink-0 items-center gap-2.5 border-b border-[var(--sb-rule)] px-4">
+          <Passkreuz />
+          <span className="flex-1 text-base font-bold tracking-[0.06em]">Prompt &amp; Referenzen</span>
           <Button size="sm" onClick={handleCopy} disabled={!prompt}
-            className="h-7 text-[11px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 shrink-0">
-            <Copy className="mr-1 h-3 w-3" />Kopieren
+            className="h-9 shrink-0 bg-[var(--sb-or)] text-sm font-bold text-white hover:bg-[var(--sb-or-t)] disabled:opacity-40">
+            <Copy className="mr-1.5 h-3.5 w-3.5" />Kopieren
           </Button>
         </header>
 
-        <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden p-3 space-y-4" style={{ right: '-17px' }}>
+        <div className="relative flex-1 overflow-hidden">
+          <div className="absolute inset-y-0 left-0 space-y-4 overflow-y-auto overflow-x-hidden p-4" style={{ right: '-17px' }}>
 
             {/* Bildgenerierung (PROJ-37) — der Prompt bleibt unverändert, er wird nur weitergereicht */}
             <QueueButton
@@ -1011,110 +1350,78 @@ export default function SceneBuilderPage() {
               }
             />
 
-            {/* Szenentyp + Bedingungen badges */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="flex items-center gap-1 text-xs font-medium text-orange-300">
-                <span>🌍</span>
-                <span>{SCENE_TYPES.find(t => t.key === scene.scene_type)?.label}</span>
-              </span>
-              {hasAnyCondition && (
-                <>
-                  {scene.time_of_day && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {TIME_OF_DAY.find(t => t.key === scene.time_of_day)?.emoji} {TIME_OF_DAY.find(t => t.key === scene.time_of_day)?.label}
-                    </span>
-                  )}
-                  {scene.scene_type === 'outdoor' && scene.season && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {SEASONS.find(s => s.key === scene.season)?.emoji} {SEASONS.find(s => s.key === scene.season)?.label}
-                    </span>
-                  )}
-                  {scene.scene_type === 'outdoor' && scene.weather && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {WEATHERS.find(w => w.key === scene.weather)?.emoji} {WEATHERS.find(w => w.key === scene.weather)?.label}
-                    </span>
-                  )}
-                  {scene.scene_type === 'indoor' && scene.light_source && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {LIGHT_SOURCES.find(s => s.key === scene.light_source)?.emoji} {LIGHT_SOURCES.find(s => s.key === scene.light_source)?.label}
-                    </span>
-                  )}
-                  {scene.scene_type === 'indoor' && scene.light_style && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {LIGHT_STYLES.find(s => s.key === scene.light_style)?.emoji} {LIGHT_STYLES.find(s => s.key === scene.light_style)?.label}
-                    </span>
-                  )}
-                  {scene.scene_type === 'indoor' && scene.light_modifiers.map(m => (
-                    <span key={m} className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {LIGHT_MODIFIERS.find(x => x.key === m)?.emoji} {LIGHT_MODIFIERS.find(x => x.key === m)?.label}
-                    </span>
-                  ))}
-                </>
-              )}
-              {hasAnyCameraSetting && (
-                <>
-                  {scene.shot_type && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {SHOT_TYPES.find(s => s.key === scene.shot_type)?.emoji} {SHOT_TYPES.find(s => s.key === scene.shot_type)?.label}
-                    </span>
-                  )}
-                  {scene.camera_angle && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {CAMERA_ANGLES.find(a => a.key === scene.camera_angle)?.emoji} {CAMERA_ANGLES.find(a => a.key === scene.camera_angle)?.label}
-                    </span>
-                  )}
-                  {scene.lens && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {LENSES.find(l => l.key === scene.lens)?.emoji} {LENSES.find(l => l.key === scene.lens)?.label}
-                    </span>
-                  )}
-                  {scene.depth_of_field && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {DEPTH_OF_FIELDS.find(d => d.key === scene.depth_of_field)?.emoji} {DEPTH_OF_FIELDS.find(d => d.key === scene.depth_of_field)?.label}
-                    </span>
-                  )}
-                  {scene.aspect_ratio && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      {ASPECT_RATIOS.find(r => r.key === scene.aspect_ratio)?.emoji} {ASPECT_RATIOS.find(r => r.key === scene.aspect_ratio)?.label}
-                    </span>
-                  )}
-                </>
-              )}
-              {!scene.location && scene.background && (
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                  {STUDIO_BACKGROUNDS.find(b => b.key === scene.background)?.emoji} {STUDIO_BACKGROUNDS.find(b => b.key === scene.background)?.label}
-                </span>
-              )}
+            {/* Szenentyp + Bedingungen als Marken */}
+            <div>
+              <Feldname>Szene</Feldname>
+              <div className="flex flex-wrap items-center gap-[7px]">
+                <Marke betont>
+                  {SCENE_TYPES.find(t => t.key === scene.scene_type)?.label}
+                </Marke>
+                {hasAnyCondition && (
+                  <>
+                    {scene.time_of_day && (
+                      <Marke>{optionLabel(TIME_OF_DAY, scene.time_of_day)}</Marke>
+                    )}
+                    {scene.scene_type === 'outdoor' && scene.season && (
+                      <Marke>{optionLabel(SEASONS, scene.season)}</Marke>
+                    )}
+                    {scene.scene_type === 'outdoor' && scene.weather && (
+                      <Marke>{optionLabel(WEATHERS, scene.weather)}</Marke>
+                    )}
+                    {scene.scene_type === 'indoor' && scene.light_source && (
+                      <Marke>{optionLabel(LIGHT_SOURCES, scene.light_source)}</Marke>
+                    )}
+                    {scene.scene_type === 'indoor' && scene.light_style && (
+                      <Marke>{optionLabel(LIGHT_STYLES, scene.light_style)}</Marke>
+                    )}
+                    {scene.scene_type === 'indoor' && scene.light_modifiers.map(m => (
+                      <Marke key={m}>{optionLabel(LIGHT_MODIFIERS, m)}</Marke>
+                    ))}
+                  </>
+                )}
+                {hasAnyCameraSetting && (
+                  <>
+                    {scene.shot_type && <Marke>{optionLabel(SHOT_TYPES, scene.shot_type)}</Marke>}
+                    {scene.camera_angle && <Marke>{optionLabel(CAMERA_ANGLES, scene.camera_angle)}</Marke>}
+                    {scene.lens && <Marke>{optionLabel(LENSES, scene.lens)}</Marke>}
+                    {scene.depth_of_field && <Marke>{optionLabel(DEPTH_OF_FIELDS, scene.depth_of_field)}</Marke>}
+                    {scene.aspect_ratio && <Marke>{optionLabel(ASPECT_RATIOS, scene.aspect_ratio)}</Marke>}
+                  </>
+                )}
+                {!scene.location && scene.background && (
+                  <Marke>{optionLabel(STUDIO_BACKGROUNDS, scene.background)}</Marke>
+                )}
+              </div>
             </div>
 
-            {/* Prompt section */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-orange-400" />
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Prompt</span>
-              </div>
+            {/* Prompt */}
+            <div>
+              <Feldname>
+                <span className="inline-flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-[var(--sb-or)]" aria-hidden="true" />
+                  Prompt
+                </span>
+              </Feldname>
 
               {prompt ? (
-                <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
-                  <pre className="text-xs text-foreground/90 whitespace-pre-wrap font-sans leading-relaxed">{prompt}</pre>
+                <div className="border border-[var(--sb-rule)] bg-[var(--sb-card)] p-4">
+                  <pre className="whitespace-pre-wrap font-sans text-[14.5px] leading-[1.62] text-[var(--sb-ink2)]">{prompt}</pre>
                 </div>
               ) : (
-                <div className="rounded-xl border border-border/20 border-dashed p-6 flex flex-col items-center gap-2 text-center">
-                  <span className="text-3xl opacity-20">✨</span>
-                  <p className="text-[11px] text-muted-foreground/50">
-                    Füge Assets zur Szene hinzu — der Prompt wird automatisch erzeugt.
+                <div className="flex flex-col items-center gap-2 border border-dashed border-[var(--sb-rule)] p-6 text-center">
+                  <span className="text-3xl opacity-25">✨</span>
+                  <p className="text-sm text-[var(--sb-ink3)]">
+                    Füge Bausteine zur Szene hinzu — der Prompt wird automatisch erzeugt.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Referenz-Export section */}
+            {/* Referenz-Export */}
             {(scene.character || scene.outfit || scene.location) && (
-              <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Referenz-Export
-                </span>
-                <p className="text-[10px] text-muted-foreground/40 -mt-1">
+              <div>
+                <Feldname>Referenz-Export</Feldname>
+                <p className="-mt-1 mb-2.5 text-[13px] text-[var(--sb-ink3)]">
                   Diese Bilder werden als Referenz übergeben.
                 </p>
                 <div className="space-y-2.5">
@@ -1125,83 +1432,26 @@ export default function SceneBuilderPage() {
               </div>
             )}
 
-            {/* Other assets (pose/expression/camera/style/grading) */}
+            {/* Pose / Mimik / Kamera / Stil / Grading */}
             {(scene.pose || scene.expression || scene.camera || scene.style || scene.grading) && (
-              <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Stil & Komposition
-                </span>
-                <div className="space-y-2">
-                  {scene.pose && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted/30 shrink-0 border border-border/40 flex items-center justify-center text-sm">
-                        {scene.pose.cover_image_url
-                          ? <img src={scene.pose.cover_image_url} alt={scene.pose.name} className="w-full h-full object-cover" />
-                          : '🎭'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Pose</p>
-                        <p className="text-xs font-medium truncate">{scene.pose.name}</p>
-                      </div>
-                    </div>
-                  )}
-                  {scene.expression && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted/30 shrink-0 border border-border/40 flex items-center justify-center text-sm">
-                        {scene.expression.cover_image_url
-                          ? <img src={scene.expression.cover_image_url} alt={scene.expression.name} className="w-full h-full object-cover" />
-                          : '😊'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Mimik</p>
-                        <p className="text-xs font-medium truncate">{scene.expression.name}</p>
-                      </div>
-                    </div>
-                  )}
-                  {scene.camera && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted/30 shrink-0 border border-border/40 flex items-center justify-center text-sm">
-                        {scene.camera.cover_image_url
-                          ? <img src={scene.camera.cover_image_url} alt={scene.camera.name} className="w-full h-full object-cover" />
-                          : '📷'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Kamera-Asset</p>
-                        <p className="text-xs font-medium truncate">{scene.camera.name}</p>
-                      </div>
-                    </div>
-                  )}
-                  {scene.style && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted/30 shrink-0 border border-border/40 flex items-center justify-center text-sm">
-                        {scene.style.cover_image_url
-                          ? <img src={scene.style.cover_image_url} alt={scene.style.name} className="w-full h-full object-cover" />
-                          : '🎥'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Stil</p>
-                        <p className="text-xs font-medium truncate">{scene.style.name}</p>
-                      </div>
-                    </div>
-                  )}
-                  {scene.grading && (
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted/30 shrink-0 border border-border/40 flex items-center justify-center text-sm">
-                        {scene.grading.cover_image_url
-                          ? <img src={scene.grading.cover_image_url} alt={scene.grading.name} className="w-full h-full object-cover" />
-                          : '🎨'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Grading</p>
-                        <p className="text-xs font-medium truncate">{scene.grading.name}</p>
-                      </div>
-                    </div>
-                  )}
+              <div>
+                <Feldname>Stil &amp; Komposition</Feldname>
+                <div className="space-y-2.5">
+                  <NebenAsset label="Pose"         emoji="🎭" asset={scene.pose} />
+                  <NebenAsset label="Mimik"        emoji="😊" asset={scene.expression} />
+                  <NebenAsset label="Kamera-Asset" emoji="📷" asset={scene.camera} />
+                  <NebenAsset label="Stil"         emoji="🎥" asset={scene.style} />
+                  <NebenAsset label="Grading"      emoji="🎨" asset={scene.grading} />
                 </div>
               </div>
             )}
 
           </div>
+        </div>
+
+        <div className="flex shrink-0 items-center border-t border-[var(--sb-rule2)] px-4 py-3 text-[13px] tracking-[0.16em] text-[var(--sb-ink3)]">
+          <span>PROMPT TRÉSOR</span>
+          <span className="ml-auto tabular-nums">BOGEN {belegt} / {SLOTS.length}</span>
         </div>
       </div>
 

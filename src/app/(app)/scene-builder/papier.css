@@ -1,0 +1,242 @@
+/*
+  Scene Builder — helles Papier (PROJ-55)
+  ══════════════════════════════════════════════════════════════════════════════
+
+  REICHWEITE: NUR DIESE SEITE. Mark hat das am 04.09.2026 ausdrücklich so
+  entschieden — der Rest der App bleibt dunkel, bis er den Scene Builder im
+  Betrieb gesehen hat.
+
+  Deshalb steht hier kein globales Thema, sondern EIN Geltungsbereich: die
+  Klasse `.sb-papier`. Alles darin sieht andere Werte für dieselben Namen, die
+  shadcn/Tailwind ohnehin benutzt (`--background`, `--foreground`, `--border`,
+  `--primary` …). Damit werden `bg-card`, `text-muted-foreground`,
+  `border-border` und die fertigen Bausteine (Input, Select, Button) von selbst
+  hell, ohne dass im Markup ein einziger Farbwert steht.
+
+  WARUM DAS AUCH BEI DUNKLEM THEMA HELL BLEIBT: `next-themes` setzt `.dark` auf
+  <html>. Diese Regeln hier stehen auf einem NACHFAHREN. Geerbte
+  CSS-Eigenschaften nimmt ein Element immer vom nächstgelegenen Vorfahren, der
+  sie setzt — und das ist `.sb-papier`, nicht <html>. Der Schalter oben rechts
+  kann diese Seite also nicht dunkel machen.
+
+  SPÄTERES AUSROLLEN: Wenn Mark den Rest nachziehen will, wandert der Block
+  unten (Zeile „── Tokens ──") nach `globals.css` in `:root`. Im Markup ist
+  dafür nichts zu ändern.
+*/
+
+.sb-papier {
+  /* ── Tokens: dieselben Namen wie in globals.css, andere Werte ─────────── */
+  --background: 42 46% 93%;        /* #f5f0e4 — Papier */
+  --foreground: 48 10% 10%;        /* #1b1a16 — Tinte */
+  --card: 43 100% 99%;             /* #fffdf8 — aufgelegte Karte */
+  --card-foreground: 48 10% 10%;
+  --popover: 43 100% 99%;
+  --popover-foreground: 48 10% 10%;
+  --primary: 24 86% 46%;           /* #dc6210 — Orange gehoert der AUSWAHL */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 44 52% 96%;         /* #faf7ef */
+  --secondary-foreground: 42 10% 27%;
+  --muted: 44 52% 96%;
+  --muted-foreground: 42 8% 46%;   /* #807a6c */
+  --accent: 43 29% 83%;            /* #e0d9c7 */
+  --accent-foreground: 48 10% 10%;
+  --destructive: 7 59% 41%;        /* #a8392b */
+  --destructive-foreground: 0 0% 100%;
+  --border: 43 22% 75%;            /* #cec6b2 */
+  --input: 43 22% 75%;
+  --ring: 24 86% 46%;
+
+  /* ── Papier-eigene Werte fuer die Druckgrafik ─────────────────────────── */
+  --sb-pap:   #f5f0e4;
+  --sb-pap2:  #faf7ef;
+  --sb-card:  #fffdf8;
+  --sb-ink:   #1b1a16;
+  --sb-ink2:  #4b473e;
+  --sb-ink3:  #807a6c;
+  --sb-rule:  #cec6b2;
+  --sb-rule2: #e0d9c7;
+  --sb-or:    #dc6210;
+  --sb-or-l:  #fae2cd;
+  --sb-or-t:  #a04704;
+
+  /*
+    Vier Kennfarben. „Bild & Schaerfe" war zuerst orange und ist bewusst
+    rostrot: Orange heisst in dieser App „ausgewaehlt". Ein oranges Typenschild
+    neben orangen Chips liest sich als aktiver Zustand.
+  */
+  --sb-k-gr: #2f7d4a; --sb-kb-gr: #e6f0e6; --sb-kt-gr: #245c37;
+  --sb-k-cy: #0e6f92; --sb-kb-cy: #e2eef3; --sb-kt-cy: #0b5570;
+  --sb-k-am: #b07d05; --sb-kb-am: #f4ecd8; --sb-kt-am: #7d5804;
+  --sb-k-or: #a8392b; --sb-kb-or: #f6e6e2; --sb-kt-or: #7d2a20;
+  --sb-k-off: #a9a294;
+
+  color: var(--sb-ink);
+  background-color: var(--sb-pap);
+}
+
+/*
+  Die Papierflaeche selbst: feines Punktraster wie ein Naturpapier.
+  Der Farbwert ist absichtlich sehr schwach (5 %) — sichtbar erst, wenn man
+  hinschaut, und nie als Muster.
+*/
+.sb-blatt {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(90, 72, 40, 0.05) 1px, transparent 0);
+  background-size: 7px 7px;
+}
+
+/*
+  DIE DOPPELLINIE IST KEINE ZIERDE, SONDERN EINE GRENZE.
+
+  Oberhalb liegt scharfe Druckgrafik (Passkreuze, Randnummern, Perforation),
+  unterhalb weiche aufgelegte Karten. Zwei Linienarten, die sich nicht mischen
+  duerfen — vermischt kippt der Bildschirm ins Unruhige. Wer hier etwas
+  einfuegt, muss wissen, auf welcher Seite es steht.
+*/
+.sb-dbl {
+  height: 4px;
+  border-top: 1px solid var(--sb-ink);
+  border-bottom: 1px solid var(--sb-rule);
+}
+
+/* Die Linie in einer Abschnittsueberschrift — dieselbe Sprache, schmaler. */
+.sb-sech-rule {
+  height: 4px;
+  border-top: 1px solid var(--sb-ink);
+  border-bottom: 1px solid var(--sb-rule);
+}
+
+/* Passkreuz — die Marke, an der ein Druckbogen ausgerichtet wird. */
+.sb-reg {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.sb-reg::before,
+.sb-reg::after {
+  content: "";
+  position: absolute;
+  background: var(--sb-or);
+}
+.sb-reg::before { left: 7px; top: 0; width: 1px; height: 15px; }
+.sb-reg::after  { top: 7px; left: 0; height: 1px; width: 15px; }
+.sb-reg > i {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--sb-or);
+  border-radius: 50%;
+}
+
+/* Perforationsleiste am unteren Rand des Bausteinbogens. */
+.sb-sprock {
+  display: flex;
+  gap: 9px;
+  overflow: hidden;
+  border-top: 1px dotted var(--sb-rule);
+}
+.sb-sprock > i {
+  width: 15px;
+  height: 8px;
+  flex: none;
+  border: 1px solid var(--sb-rule2);
+  border-radius: 2px;
+  background: #fff;
+}
+
+/*
+  Ein leeres Feld: schraffiert wie eine unbelichtete Stelle auf dem
+  Kontaktbogen. Das ist der Unterschied zwischen „noch nichts gewaehlt" und
+  „hier ist nichts vorgesehen".
+*/
+.sb-leer {
+  background-image:
+    repeating-linear-gradient(45deg, #f8f5ed 0 7px, #efeade 7px 14px);
+}
+
+/*
+  Typenschild einer Einstellungskarte.
+
+  DER RAHMEN DARF NICHT MITREDEN: Auf Papier ist ein kraeftiger Rahmen sofort
+  ein Formularfeld. Die Kante traegt die Kategorie (5 px), der Rest ist eine
+  aufgehellte Tonflaeche derselben Farbe plus farbige Schrift — sonst ist die
+  Kategorie nur ein Strich, den man ueberliest.
+*/
+.sb-plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--sb-kb, var(--sb-pap2));
+  border: 1px solid var(--sb-rule2);
+  border-left: 5px solid var(--sb-kf, var(--sb-k-off));
+  padding: 5px 11px 5px 10px;
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--sb-kt, var(--sb-ink2));
+}
+
+/* Die vier Kennfarben als Aufsatz — im Markup steht nur der Name. */
+.sb-k-gr { --sb-kf: var(--sb-k-gr); --sb-kb: var(--sb-kb-gr); --sb-kt: var(--sb-kt-gr); }
+.sb-k-cy { --sb-kf: var(--sb-k-cy); --sb-kb: var(--sb-kb-cy); --sb-kt: var(--sb-kt-cy); }
+.sb-k-am { --sb-kf: var(--sb-k-am); --sb-kb: var(--sb-kb-am); --sb-kt: var(--sb-kt-am); }
+.sb-k-or { --sb-kf: var(--sb-k-or); --sb-kb: var(--sb-kb-or); --sb-kt: var(--sb-kt-or); }
+
+/* Die aufgelegte Karte. Schatten 1/3 px bei 9 % — ein Blatt, kein Kasten. */
+.sb-mod {
+  background: var(--sb-card);
+  border: 1px solid var(--sb-rule);
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(60, 48, 25, 0.09);
+}
+/* „Gilt gerade nicht" — flacher, ohne Schatten, statt ausgegraut. */
+.sb-mod-dim {
+  background: #f4f0e6;
+  box-shadow: none;
+}
+
+/* Der Bausteinbogen selbst. */
+.sb-strip {
+  background: var(--sb-card);
+  border: 1px solid var(--sb-rule);
+  box-shadow: 0 1px 3px rgba(60, 48, 25, 0.08);
+}
+
+/* Trennkante zwischen den Spalten — doppelt, wie eine Bogenkante. */
+.sb-kante-r { border-right: 1px double var(--sb-rule); }
+.sb-kante-l { border-left: 1px double var(--sb-rule); }
+
+/*
+  Die Rollbalken der drei Spalten sind seit jeher mit `right: -17px`
+  weggeschoben. Das bleibt in PROJ-55 unangetastet (eigener Befund), aber auf
+  hellem Grund faellt eine fehlende Anzeige mehr auf — deshalb wenigstens ein
+  schmaler, farblich passender Balken dort, wo er doch sichtbar wird.
+*/
+.sb-papier ::-webkit-scrollbar { width: 9px; height: 9px; }
+.sb-papier ::-webkit-scrollbar-track { background: transparent; }
+.sb-papier ::-webkit-scrollbar-thumb {
+  background: var(--sb-rule);
+  border-radius: 5px;
+}
+.sb-papier ::-webkit-scrollbar-thumb:hover { background: var(--sb-ink3); }
+
+/* Gepunktete Fuellinie in der Spaltenueberschrift. */
+.sb-punktlinie {
+  background-image:
+    repeating-linear-gradient(90deg, var(--sb-rule) 0 2px, transparent 2px 6px);
+}
+
+/*
+  `BausteinFilter` (Suchfeld + Kategorie-Chips) wird von mehreren Seiten
+  benutzt und wird deshalb NICHT angefasst — PROJ-55 aendert nur diese eine
+  Seite. Ihre 11–12 px liegen unter der Untergrenze von 13 px, die Mark
+  ausdruecklich gefordert hat („Alles ist sehr kleingeschrieben"). Hochgesetzt
+  wird darum von aussen, im Geltungsbereich dieser Seite.
+*/
+.sb-filter input { font-size: 14px; height: 34px; }
+.sb-filter button { font-size: 13px; }
+.sb-filter input { background: var(--sb-card); }

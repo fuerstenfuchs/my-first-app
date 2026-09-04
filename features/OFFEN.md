@@ -71,6 +71,48 @@ steht es zuerst.
   Supabase irgendwann eine Speichergrenze des Kontos meldet, ist das der
   erste Blick.
 
+## Marks Einwand gegen PROJ-44 (04.09.2026) — die Achse ist falsch gewählt
+
+Mark, nachdem er die fertige Einstellungsreihe gesehen hat:
+
+> „Nur bringt mir das überhaupt nix. Wenn ich alles gleich lasse und das Ganze
+> nur einmal von Nahem habe und einmal von der Ferne — das macht jetzt keinen
+> Reiz aus. Sinnvoll wäre vielleicht, wenn man mehrere Presets hat, dass man
+> sagt, man will jetzt mit einer bestimmten Person fünf verschiedene Fotos
+> haben und nutzt dafür das und das Preset. […] Also die Technik kannst du
+> schon so lassen. Aber für das, was jetzt genutzt ist, ist es sinnlos."
+
+**Er hat recht, und der Fehler ist meiner.** Die Spezifikation stand seit dem
+03.09.2026 auf „Einstellungsgrößen", und niemand — ich nicht, Nova nicht,
+Critic nicht — hat gefragt, ob das die Achse ist, die für Mark einen
+Unterschied macht. Geprüft wurde, ob die Reihe *tut, was sie verspricht*.
+Nicht, ob das Versprechen etwas wert ist. Critic hat sogar die Dramaturgie
+angemerkt (Jump Cuts, 30-Grad-Regel) — das war derselbe Befund von der
+technischen Seite, und ich habe ihn als Randnotiz behandelt statt als das,
+was er war.
+
+**Der Mechanismus bleibt richtig und bleibt bestehen:** N Aufträge, alles
+gepinnt bis auf eine Achse, gemeinsame `reihe_id`, einzeln wiederholbar, Zahl
+vor dem Klick. Falsch ist nur, dass die Achse fest auf `shot_type` verdrahtet
+ist.
+
+**Vorgeschlagen (PROJ-55): die Achse wird wählbar.** „Reihe über …"
+— Presets (Marks Idee, die stärkste), Posen, Locations, Outfits, Mimik, und
+Einstellungsgrößen als das, was sie wirklich ist: eine von mehreren
+Möglichkeiten, gut zum Finden des richtigen Bildausschnitts.
+
+Die eine Entscheidung, die dabei zu treffen ist: Ein Preset trägt in
+`ScenePresetConfig` AUCH `character_id`, `outfit_id` und `location_id`. Wenn
+Mark „eine Person, fünf Presets" will, muss der Charakter aus der aktuellen
+Szene gewinnen und das Preset den Rest liefern. Vorschlag: Charakter bleibt
+immer gepinnt, alles Übrige kommt aus dem Preset, soweit es das setzt — und
+Mark kann je Baustein sehen und umschalten, was gepinnt bleibt.
+
+**Lehre fürs nächste Mal:** Bei einem Feature, das Mark noch nie in der Hand
+hatte, gehört die Frage „wofür genau setzt du das ein?" VOR den Bau, nicht
+hinterher. Ein Prüflauf misst Bauart gegen Spezifikation — er kann eine
+Spezifikation nicht widerlegen.
+
 ## Offen aus der PROJ-44-Prüfung (04.09.2026)
 
 Der BLOCKER (`CAMERA_COMBO_OVERRIDES` verwarf Kamerawinkel, Tiefenschärfe und
