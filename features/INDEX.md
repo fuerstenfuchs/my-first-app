@@ -97,4 +97,6 @@
 
 | PROJ-60 | Seitenleiste in Glas auf warmem Stein | In Review | [PROJ-60](PROJ-60-seitenleiste-glas.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-61
+| PROJ-61 | Gepresste Tasten im Scene Builder (rund statt eckig) | In Review | [PROJ-61](PROJ-61-gepresste-tasten.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-62

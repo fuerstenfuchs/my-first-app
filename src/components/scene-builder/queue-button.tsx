@@ -121,7 +121,7 @@ export function QueueButton({
       nur innerhalb von `.sb-papier`. Dieser Kasten wird ausschliesslich dort
       gezeichnet (einziger Aufrufer: die Scene-Builder-Seite).
     */
-    <div className="space-y-2.5 border border-[var(--sb-rule)] bg-[var(--sb-card)] p-3 shadow-[0_1px_3px_rgba(60,48,25,0.09)]">
+    <div className="space-y-2.5 rounded-[14px] border border-[var(--sb-rule)] bg-[var(--sb-card)] p-3 shadow-[0_1px_3px_rgba(60,48,25,0.09)]">
       <div className="flex items-center gap-2">
         <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
           <SelectTrigger className="h-9 flex-1 text-sm" aria-label="Modell">
@@ -169,7 +169,7 @@ export function QueueButton({
       <Button
         onClick={handleQueue}
         disabled={!prompt || laeuft}
-        className="h-11 w-full text-[15px] font-bold bg-emerald-700 hover:bg-emerald-800 text-white disabled:opacity-40"
+        className="h-11 w-full rounded-full bg-emerald-700 text-[15px] font-bold text-white shadow-[0_2px_0_#065f46,0_4px_7px_rgba(6,78,59,0.30)] hover:bg-emerald-800 active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(6,78,59,0.3)] disabled:opacity-40"
       >
         {laeuft
           ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Wird eingereiht…</>

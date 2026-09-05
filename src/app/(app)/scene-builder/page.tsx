@@ -138,14 +138,14 @@ function Chip({
       title={title}
       aria-pressed={aktiv}
       disabled={disabled}
-      className={cn(
-        'flex items-center gap-1.5 rounded-[3px] border px-[11px] py-[7px] text-sm transition-colors',
-        aktiv
-          ? 'border-[var(--sb-or)] bg-[var(--sb-or-t)] font-bold text-white'
-          : gedaempft
-            ? 'border-[var(--sb-rule)] bg-[#faf8f2] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink2)]'
-            : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink2)] hover:border-[var(--sb-ink3)] hover:text-[var(--sb-ink)]',
-      )}
+      /*
+        Die ganze Gestalt steht in `papier.css` unter `.sb-taste` (PROJ-61) —
+        mit den Begruendungen zu Kontrast, Sockel und Zeigerfarbe. Hier bleiben
+        nur die beiden Schalter, die vom Zustand abhaengen.
+      */
+      className="sb-taste"
+      data-an={aktiv ? 'ja' : 'nein'}
+      data-gedaempft={gedaempft ? 'ja' : 'nein'}
     >
       {children}
     </button>
@@ -232,7 +232,7 @@ function Fold({ label, wert, offen, onToggle, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="mb-[9px] border border-[var(--sb-rule2)] bg-[var(--sb-card)] shadow-[0_1px_2px_rgba(60,48,25,0.05)] last:mb-0">
+    <div className="mb-[9px] overflow-hidden rounded-[12px] border border-[var(--sb-rule2)] bg-[var(--sb-card)] shadow-[0_1px_2px_rgba(60,48,25,0.05)] last:mb-0">
       <button
         type="button"
         onClick={onToggle}
@@ -281,7 +281,7 @@ function AssetThumb({
     <button
       onClick={onClick}
       className={cn(
-        'group w-full overflow-hidden bg-[var(--sb-card)] text-left transition-all',
+        'group w-full overflow-hidden rounded-[12px] bg-[var(--sb-card)] text-left transition-all',
         isSelected
           ? 'border-2 border-[var(--sb-or)] p-1 shadow-[0_2px_5px_rgba(190,90,20,0.18)]'
           : 'border border-[var(--sb-rule)] p-[5px] shadow-[0_1px_2px_rgba(60,48,25,0.07)] hover:border-[var(--sb-ink3)]',
@@ -375,7 +375,7 @@ function RefWahlDialog({
               key={i}
               onClick={() => onWaehlen(img)}
               className={cn(
-                'flex flex-col items-center gap-2 rounded-lg border-2 p-2 transition-all',
+                'flex flex-col items-center gap-2 rounded-[12px] border-2 p-2 transition-all',
                 gewaehlt === img.url
                   ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)]'
                   : 'border-[var(--sb-rule)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-pap2)]',
@@ -384,7 +384,7 @@ function RefWahlDialog({
               <img
                 src={img.url}
                 alt={img.label}
-                className="h-52 w-full rounded bg-[var(--sb-pap2)] object-contain"
+                className="h-52 w-full rounded-[10px] bg-[var(--sb-pap2)] object-contain"
               />
               <span className={cn(
                 'text-[13px] font-semibold',
@@ -479,7 +479,7 @@ function RefPicker({
         onClick={() => onSelect(null)}
         title="Kein eigenes Referenzbild — es gilt das Titelbild"
         className={cn(
-          'flex h-24 w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded border text-[12px] transition-colors',
+          'flex h-24 w-[86px] shrink-0 flex-col items-center justify-center gap-1 rounded-[12px] border text-[12px] transition-colors',
           selectedUrl === null
             ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] text-[var(--sb-or-t)]'
             : 'border-[var(--sb-rule)] bg-[var(--sb-card)] text-[var(--sb-ink3)] hover:border-[var(--sb-ink3)]',
@@ -518,7 +518,7 @@ function RefPicker({
             src={img.url}
             alt={img.label}
             className={cn(
-              'h-24 w-auto max-w-[210px] rounded border-2 bg-[var(--sb-pap2)] object-contain transition-all',
+              'h-24 w-auto max-w-[210px] rounded-[10px] border-2 bg-[var(--sb-pap2)] object-contain transition-all',
               selectedUrl === img.url
                 ? 'border-[var(--sb-or)] shadow-[0_1px_4px_rgba(190,90,20,0.35)]'
                 : 'border-[var(--sb-rule)] group-hover:border-[var(--sb-ink3)]',
@@ -569,9 +569,9 @@ function SzenenFeld({
     return (
       <button
         onClick={onSelect}
-        className="sb-leer flex h-full w-full flex-1 items-center gap-[11px] border border-[var(--sb-rule)] p-[9px] text-left transition-colors hover:border-[var(--sb-or)]"
+        className="sb-leer flex h-full w-full flex-1 items-center gap-[11px] rounded-[12px] border border-[var(--sb-rule)] p-[9px] text-left transition-colors hover:border-[var(--sb-or)]"
       >
-        <span className="flex h-[54px] w-[54px] flex-none items-center justify-center border border-dashed border-[var(--sb-rule)] bg-white text-2xl text-[var(--sb-ink3)]">
+        <span className="flex h-[54px] w-[54px] flex-none items-center justify-center rounded-[10px] border border-dashed border-[var(--sb-rule)] bg-white text-2xl text-[var(--sb-ink3)]">
           <Plus className="h-5 w-5" />
         </span>
         <span className="min-w-0">
@@ -1222,7 +1222,7 @@ export default function SceneBuilderPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'rounded-[4px] border px-2.5 py-1.5 text-sm transition-colors',
+                'rounded-full border px-3 py-1.5 text-sm transition-colors',
                 activeTab === tab.key
                   ? 'border-[var(--sb-or)] bg-[var(--sb-or-l)] font-bold text-[var(--sb-or-t)]'
                   : 'border-transparent text-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)]',
@@ -1319,7 +1319,7 @@ export default function SceneBuilderPage() {
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto h-9 border-[var(--sb-rule)] bg-[var(--sb-card)] text-sm text-[var(--sb-ink2)] hover:bg-[var(--sb-pap2)] hover:text-[var(--sb-ink)]"
+            className="ml-auto h-9 text-sm rounded-full border-[#a49879] bg-[var(--sb-card)] text-[var(--sb-ink2)] shadow-[0_2px_0_rgba(150,132,96,0.55),0_3px_5px_rgba(60,48,25,0.12)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(60,48,25,0.14)]"
             onClick={() => setPresetsOpen(true)}
           >
             Presets
@@ -1328,7 +1328,7 @@ export default function SceneBuilderPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-9 border-[var(--sb-rule)] bg-[var(--sb-card)] text-sm text-[var(--sb-ink2)] hover:bg-[var(--sb-pap2)] hover:text-[var(--sb-ink)]"
+              className="h-9 text-sm rounded-full border-[#a49879] bg-[var(--sb-card)] text-[var(--sb-ink2)] shadow-[0_2px_0_rgba(150,132,96,0.55),0_3px_5px_rgba(60,48,25,0.12)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(60,48,25,0.14)]"
               onClick={clearAll}
             >
               <X className="mr-1.5 h-3.5 w-3.5" />Leeren
@@ -1627,7 +1627,7 @@ export default function SceneBuilderPage() {
           <Passkreuz />
           <span className="flex-1 text-base font-bold tracking-[0.06em]">Prompt &amp; Referenzen</span>
           <Button size="sm" onClick={handleCopy} disabled={!prompt}
-            className="h-9 shrink-0 bg-[var(--sb-or-t)] text-sm font-bold text-white hover:bg-[var(--sb-or-t)] disabled:opacity-40">
+            className="h-9 shrink-0 rounded-full bg-[var(--sb-or-t)] text-sm font-bold text-white shadow-[0_2px_0_#6d2f03,0_4px_7px_rgba(120,52,3,0.32)] hover:bg-[#8d3e04] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(120,52,3,0.3)] disabled:opacity-40">
             <Copy className="mr-1.5 h-3.5 w-3.5" />Kopieren
           </Button>
         </header>
@@ -1705,7 +1705,7 @@ export default function SceneBuilderPage() {
                   <pre className="whitespace-pre-wrap font-sans text-[14.5px] leading-[1.62] text-[var(--sb-ink2)]">{prompt}</pre>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 border border-dashed border-[var(--sb-rule)] p-6 text-center">
+                <div className="flex flex-col items-center gap-2 rounded-[14px] border border-dashed border-[var(--sb-rule)] p-6 text-center">
                   <span className="text-3xl opacity-25">✨</span>
                   <p className="text-sm text-[var(--sb-ink3)]">
                     Füge Bausteine zur Szene hinzu — der Prompt wird automatisch erzeugt.

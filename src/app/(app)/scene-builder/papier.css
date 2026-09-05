@@ -175,7 +175,17 @@
   aufgehellte Tonflaeche derselben Farbe plus farbige Schrift — sonst ist die
   Kategorie nur ein Strich, den man ueberliest.
 */
+/*
+  DAS TYPENSCHILD WIRD RECHTS MITGERUNDET, LINKS NICHT.
+
+  Es sitzt elf Pixel über den Tasten, in derselben Karte. Bliebe es ein
+  Schroffrechteck, hinge ein vollrunder Knopf unter einer harten Ecke — zwei
+  unvereinbare Formen auf Fingerbreite. Links bleibt es scharf, weil dort die
+  5px-Farbkante steht: Die ist das Kennzeichen der Karte, und eine gerundete
+  Farbkante verliert genau die Schärfe, die sie als Registerreiter lesbar macht.
+*/
 .sb-plate {
+  border-radius: 0 9px 9px 0;
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -196,11 +206,20 @@
 .sb-k-am { --sb-kf: var(--sb-k-am); --sb-kb: var(--sb-kb-am); --sb-kt: var(--sb-kt-am); }
 .sb-k-or { --sb-kf: var(--sb-k-or); --sb-kb: var(--sb-kb-or); --sb-kt: var(--sb-kt-or); }
 
-/* Die aufgelegte Karte. Schatten 1/3 px bei 9 % — ein Blatt, kein Kasten. */
+/*
+  Die aufgelegte Karte. Schatten 1/3 px bei 9 % — ein Blatt, kein Kasten.
+
+  RUNDUNG VON 3 AUF 14 PIXEL (PROJ-61). Mark am 05.09.2026: „Vielleicht weißt
+  Du es noch nicht, aber ich steh auf abgerundete Kästen und Buttons." Drei
+  Pixel sieht niemand — die Karte las sich als Kasten, nicht als aufgelegtes
+  Blatt. Die Rundung sitzt auf der WEICHEN Seite der Doppellinie und
+  widerspricht der Druckgrafik darüber deshalb nicht; sie macht die Grenze
+  zwischen beiden zum ersten Mal wirklich sichtbar.
+*/
 .sb-mod {
   background: var(--sb-card);
   border: 1px solid var(--sb-rule);
-  border-radius: 3px;
+  border-radius: 14px;
   box-shadow: 0 1px 3px rgba(60, 48, 25, 0.09);
 }
 /* „Gilt gerade nicht" — flacher, ohne Schatten, statt ausgegraut. */
@@ -213,6 +232,7 @@
 .sb-strip {
   background: var(--sb-card);
   border: 1px solid var(--sb-rule);
+  border-radius: 14px;
   box-shadow: 0 1px 3px rgba(60, 48, 25, 0.08);
 }
 
@@ -290,3 +310,141 @@
 .sb-papier .text-\[11px\] { font-size:13px; }
 .sb-papier .text-xs { font-size:13.5px; }
 .sb-papier [class*="text-muted-foreground/"] { color:var(--sb-ink3); }
+
+
+/* ══ DIE GEPRESSTE TASTE (PROJ-61) ═════════════════════════════════════════
+
+  Mark am 05.09.2026, nachdem ihm die neue Seitenleiste gefallen hat: „Denkst
+  Du, wir können die Buttons im Scene Builder auch ähnlich schön machen? […]
+  sie mir doch noch sehr generisch aus und einfach. Vielleicht weißt Du es noch
+  nicht, aber ich steh auf abgerundete Kästen und Buttons."
+
+  Nachgemessen, woran es lag: 3 Pixel Rundung, ein Haarstrich als Rand, sonst
+  nichts. Das sind die Zutaten eines Formularfelds, nicht die eines Knopfes.
+
+  Aus vier vorgelegten Richtungen hat er „Gepresstes Papier" gewählt: vollrund,
+  Lichtkante oben, Sockel darunter, sinkt beim Drücken ein. Dieselbe Sprache wie
+  die Seitenleiste in Glas — nur in Papier übersetzt.
+
+  ES PASST ZUR DRUCKGRAFIK, statt sie zu brechen: Die Doppellinie weiter oben in
+  dieser Datei trennt ausdrücklich scharfe Druckgrafik (oben) von weichen
+  aufgelegten Karten (unten). Die Tasten leben unten. Bisher war auch die weiche
+  Seite hart — die Grenze trennte nichts. Jetzt tut sie es.
+
+  UND SIE BESEITIGT EINEN BESTEHENDEN BRUCH: Die Filter-Knöpfe in der linken
+  Spalte (`components/baustein-filter.tsx:95`) sind schon heute `rounded-full`.
+  Die Seite mischte also bereits vollrunde und fast eckige Knöpfe.
+*/
+
+.sb-taste {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  /*
+    12px statt der 14, mit denen der Entwurf gezeichnet war: Eine Pille ist bei
+    gleichem Innenabstand breiter als ein Rechteck, und die Wetterzeile brach
+    dadurch eine Zeile mehr um. Am gerenderten Bogen nachgemessen, nicht
+    geschätzt — Platz ist auf dieser Seite knapp, das war Marks erste
+    Beschwerde überhaupt.
+  */
+  padding: 7px 12px;
+  font-size: 14px;
+  /*
+    KONTUR #a49879 STATT --sb-rule (PROJ-61, aus der Prüfung).
+    `--sb-rule` (#cec6b2) hebt sich nur 1,67-fach vom Kartengrund ab; für ein
+    BEDIENELEMENT verlangt WCAG 1.4.11 das Dreifache. #a49879 bringt 3,1 — die
+    Taste ist damit als Taste erkennbar, auch für schwache Augen. `--sb-rule`
+    selbst bleibt unangetastet: Es trägt die feinen Linien des Bogens, und die
+    sollen fein bleiben.
+  */
+  border: 1px solid #a49879;
+  color: var(--sb-ink2);
+  background: linear-gradient(180deg, #fffefb, #f6f1e6);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 2px 0 rgba(150, 132, 96, 0.55),
+    0 3px 5px rgba(60, 48, 25, 0.12);
+  transition:
+    transform 0.14s cubic-bezier(.22, .8, .3, 1),
+    box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+/*
+  DER ZEIGER BLEIBT NEUTRAL — ORANGE HEISST „AUSGEWÄHLT".
+  Ein oranger Rand beim bloßen Darüberfahren hieße in dieser App etwas anderes:
+  Die Reiter oben markieren ihren gewählten Zustand mit genau diesen zwei
+  Merkmalen (oranger Rand, oranger Schriftton). Neutral ist außerdem KRÄFTIGER
+  — #6b6558 bringt 5,69 gegen den Kartengrund, ein oranger Rand nur 3,56.
+*/
+.sb-taste:hover,
+.sb-taste:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--sb-ink3);
+  color: var(--sb-ink);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 3px 0 rgba(140, 122, 86, 0.6),
+    0 6px 9px rgba(60, 48, 25, 0.15);
+}
+
+/*
+  AUSGEWÄHLT. Der Verlauf ist ABSICHTLICH so dunkel (#bc5208 → #8d3e04).
+  Der erste Entwurf war #e8761f → #c8560c und sah wärmer aus — weiße Schrift
+  darauf kam oben aber nur auf 2,98:1, gefordert sind 4,5:1. Das ist genau die
+  blasse Schrift, wegen der Mark diese Seite überhaupt neu bekommen hat, nur in
+  Weiß statt in Grau und deshalb schwerer als „blass" zu erkennen. Der hellste
+  Punkt liegt jetzt bei 4,83:1. Wer hier aufhellt, muss nachrechnen.
+*/
+.sb-taste[data-an='ja'] {
+  border-color: #8d3e04;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(180deg, #bc5208, #8d3e04);
+  box-shadow:
+    0 1px 0 rgba(255, 225, 200, 0.45) inset,
+    0 2px 0 #6d2f03,
+    0 4px 7px rgba(120, 52, 3, 0.32);
+}
+
+/*
+  Der zweite Selektor ist nicht doppelt gemoppelt: `:active` und `[data-an]`
+  wiegen gleich viel, und ohne ihn bekäme ausgerechnet die AUSGEWÄHLTE Taste
+  beim Drücken keine Rückmeldung — die, die man zum Abwählen anfasst. Derselbe
+  Fehler wie in der Seitenleiste, dort schon einmal gefunden.
+*/
+.sb-taste:active,
+.sb-taste[data-an='ja']:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 0 0 rgba(150, 132, 96, 0.5),
+    0 1px 3px rgba(60, 48, 25, 0.14);
+}
+
+/* „Gilt gerade nicht": flacher, ohne Sockel — dieselbe Sprache wie .sb-mod-dim. */
+.sb-taste[data-gedaempft='ja'] {
+  background: #faf8f2;
+  color: var(--sb-ink3);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.sb-taste:disabled { cursor: not-allowed; opacity: 0.55; }
+.sb-taste:disabled:hover { transform: none; border-color: #a49879; color: var(--sb-ink2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-taste { transition: border-color 0.18s ease, color 0.18s ease; }
+  .sb-taste:hover, .sb-taste:focus-visible,
+  .sb-taste:active, .sb-taste[data-an='ja']:active { transform: none; }
+}
+
+/*
+  HIER STAND `.sb-taste-voll`.
+
+  Der satte Knopf sollte auch die shadcn-Knöpfe tragen — das war ein Fehler:
+  shadcn bringt eigene Klassen mit demselben Gewicht mit (`rounded-md`,
+  `bg-primary`). Wer beides mischt, überlässt das Ergebnis der Ladereihenfolge
+  der Stilblätter. Die drei Knöpfe in den Kopfzeilen werden deshalb rein über
+  Tailwind gestaltet, direkt an der Stelle. Dieselbe Falle wie in der
+  Seitenleiste, wo `.leiste-stein` gegen `fixed` stand.
+*/
