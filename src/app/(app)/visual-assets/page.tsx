@@ -4,6 +4,13 @@ import { useState, useMemo, useRef } from 'react'
 import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -35,10 +42,10 @@ function AssetCard({
     <button
       onClick={onClick}
       className={cn(
-        'relative rounded-xl overflow-hidden border-2 transition-all text-left group bg-card/60',
+        'lt-platte relative overflow-hidden border-2 transition-all text-left group',
         isSelected
-          ? 'border-sky-500 ring-2 ring-sky-500/20 shadow-lg shadow-sky-500/10'
-          : 'border-border/40 hover:border-sky-500/40'
+          ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10'
+          : 'border-border/40 hover:border-primary/40'
       )}
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
@@ -203,13 +210,13 @@ export default function VisualAssetsPage() {
   }
 
   return (
-    <div className="flex h-svh min-w-0 overflow-hidden">
+    <div className="lt flex h-svh min-w-0 overflow-hidden">
 
       {/* ── Col 1: Category nav ── */}
       <div className="w-48 shrink-0 flex flex-col border-r border-border overflow-y-auto">
-        <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
+        <header className="lt-kopf shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
-          <span className="text-sm font-semibold flex-1 truncate">Kamera, Licht & Mimik</span>
+          <span className="flex-1 truncate text-[17px] font-bold">Kamera, Licht & Mimik</span>
         </header>
 
         <nav className="flex-1 p-2 space-y-3">
@@ -218,7 +225,7 @@ export default function VisualAssetsPage() {
             <div className="flex items-center justify-between px-2 mb-1">
               <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">📷 Kamera</span>
               <button onClick={() => openForm('camera')} title="Neuer Kamera-Shot"
-                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/60 hover:text-sky-400 hover:bg-sky-500/10 transition-colors">
+                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors">
                 <Plus className="h-3 w-3" />
               </button>
             </div>
@@ -231,14 +238,14 @@ export default function VisualAssetsPage() {
                     onClick={() => { setActive({ type: 'camera', category: cat.key }); setSelectedAssetId(null); setSearch('') }}
                     className={cn(
                       'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
-                      isActive ? 'bg-sky-500/10 text-sky-300 font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                      isActive ? 'bg-primary/10 text-[#ffb066] font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                     )}
                   >
                     <span className="text-base leading-none shrink-0">{cat.emoji}</span>
                     <span className="flex-1 truncate text-xs">{cat.label}</span>
                     {count > 0 && (
                       <span className={cn('text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
-                        isActive ? 'bg-sky-500/20 text-sky-300' : 'bg-muted text-muted-foreground')}>
+                        isActive ? 'bg-primary/20 text-[#ffb066]' : 'bg-muted text-muted-foreground')}>
                         {count}
                       </span>
                     )}
@@ -256,7 +263,7 @@ export default function VisualAssetsPage() {
             <div className="flex items-center justify-between px-2 mb-1">
               <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">💡 Licht</span>
               <button onClick={() => openForm('lighting')} title="Neuer Licht-Stil"
-                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/60 hover:text-sky-400 hover:bg-sky-500/10 transition-colors">
+                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors">
                 <Plus className="h-3 w-3" />
               </button>
             </div>
@@ -269,14 +276,14 @@ export default function VisualAssetsPage() {
                     onClick={() => { setActive({ type: 'lighting', category: cat.key }); setSelectedAssetId(null); setSearch('') }}
                     className={cn(
                       'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
-                      isActive ? 'bg-sky-500/10 text-sky-300 font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                      isActive ? 'bg-primary/10 text-[#ffb066] font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                     )}
                   >
                     <span className="text-base leading-none shrink-0">{cat.emoji}</span>
                     <span className="flex-1 truncate text-xs">{cat.label}</span>
                     {count > 0 && (
                       <span className={cn('text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
-                        isActive ? 'bg-sky-500/20 text-sky-300' : 'bg-muted text-muted-foreground')}>
+                        isActive ? 'bg-primary/20 text-[#ffb066]' : 'bg-muted text-muted-foreground')}>
                         {count}
                       </span>
                     )}
@@ -294,7 +301,7 @@ export default function VisualAssetsPage() {
             <div className="flex items-center justify-between px-2 mb-1">
               <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">😊 Mimik</span>
               <button onClick={() => openForm('expression')} title="Neuer Gesichtsausdruck"
-                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/60 hover:text-sky-400 hover:bg-sky-500/10 transition-colors">
+                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors">
                 <Plus className="h-3 w-3" />
               </button>
             </div>
@@ -306,14 +313,14 @@ export default function VisualAssetsPage() {
                     onClick={() => { setActive({ type: 'expression', category: 'alle' }); setSelectedAssetId(null); setSearch('') }}
                     className={cn(
                       'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
-                      isActive ? 'bg-sky-500/10 text-sky-300 font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                      isActive ? 'bg-primary/10 text-[#ffb066] font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                     )}
                   >
                     <span className="text-base leading-none shrink-0">😊</span>
                     <span className="flex-1 truncate text-xs">Alle Ausdrücke</span>
                     {expressionCount > 0 && (
                       <span className={cn('text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
-                        isActive ? 'bg-sky-500/20 text-sky-300' : 'bg-muted text-muted-foreground')}>
+                        isActive ? 'bg-primary/20 text-[#ffb066]' : 'bg-muted text-muted-foreground')}>
                         {expressionCount}
                       </span>
                     )}
@@ -327,21 +334,21 @@ export default function VisualAssetsPage() {
 
       {/* ── Col 2: Gallery ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
+        <header className="lt-kopf shrink-0 px-4 py-3 flex items-center gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="font-semibold text-sm">{currentCategory.emoji} {currentCategory.label}</span>
+            <span className="text-[17px] font-bold">{currentCategory.emoji} {currentCategory.label}</span>
             <span className="text-xs text-muted-foreground/60">({filteredAssets.length})</span>
           </div>
           <div className="flex-1 min-w-0 relative max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Suchen…" className="pl-8 h-8 text-sm" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Suchen…" className="lt-feld h-10 border-0 pl-9 text-[15px]" />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          <Button size="sm" className="shrink-0 ml-auto bg-sky-600 hover:bg-sky-500"
+          <Button size="sm" className="shrink-0 ml-auto bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => openForm(active.type)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             {active.type === 'camera' ? 'Neuer Shot' : active.type === 'lighting' ? 'Neues Licht' : 'Neuer Ausdruck'}
@@ -402,9 +409,9 @@ export default function VisualAssetsPage() {
             </div>
           ) : (
             <>
-              <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
+              <div className="shrink-0 border-b border-[rgba(150,185,220,0.12)] px-3 py-2.5 flex items-center gap-1.5">
                 <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{selectedAsset.name}</h3>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
                   onClick={() => { setEditingAsset(selectedAsset); setFormType(selectedAsset.asset_type); setFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -412,7 +419,7 @@ export default function VisualAssetsPage() {
                   onClick={() => setDeleteAssetId(selectedAsset.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
                   onClick={() => setSelectedAssetId(null)}>
                   <X className="h-4 w-4" />
                 </Button>
@@ -430,7 +437,7 @@ export default function VisualAssetsPage() {
                           <button
                             onClick={handleAnalyze}
                             disabled={aiAnalyzing}
-                            className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-sky-600/90 hover:bg-sky-500 disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
+                            className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/90 hover:bg-primary disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
                           >
                             {aiAnalyzing
                               ? <span className="w-2.5 h-2.5 rounded-full border border-white border-t-transparent animate-spin" />
@@ -448,7 +455,7 @@ export default function VisualAssetsPage() {
                     ) : (
                       <button
                         onClick={() => coverUploadRef.current?.click()}
-                        className="w-full h-40 flex flex-col items-center justify-center gap-2 text-muted-foreground/40 hover:text-sky-400 transition-colors"
+                        className="w-full h-40 flex flex-col items-center justify-center gap-2 text-muted-foreground/40 hover:text-primary transition-colors"
                       >
                         <span className="text-5xl">{currentCategory.emoji}</span>
                         <span className="text-xs flex items-center gap-1"><Upload className="h-3 w-3" />Bild hochladen</span>
@@ -468,8 +475,8 @@ export default function VisualAssetsPage() {
 
                   {/* AI suggestion card */}
                   {aiSuggestion && (
-                    <div className="mx-3 my-2 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
-                      <div className="flex items-center gap-1.5 text-sky-400">
+                    <div className="mx-3 my-2 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-primary">
                         <Sparkles className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">KI-Vorschlag</span>
                         <button onClick={() => setAiSuggestion(null)} className="ml-auto text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
@@ -500,7 +507,7 @@ export default function VisualAssetsPage() {
                         )}
                       </div>
                       <div className="flex gap-2 pt-1">
-                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-sky-600 hover:bg-sky-500" onClick={handleApplySuggestion}>
+                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleApplySuggestion}>
                           <Check className="mr-1 h-3 w-3" />Übernehmen
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiSuggestion(null)}>
@@ -523,7 +530,7 @@ export default function VisualAssetsPage() {
                     )}
                     {selectedAsset.source_url && (
                       <a href={selectedAsset.source_url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-sky-400 transition-colors">
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
                         <ExternalLink className="h-3 w-3" />
                         {selectedAsset.source_title || (() => { try { return new URL(selectedAsset.source_url).hostname.replace('www.','') } catch { return selectedAsset.source_url } })()}
                       </a>
@@ -537,7 +544,7 @@ export default function VisualAssetsPage() {
                     )}
                     {selectedAsset.cover_image_url && (
                       <button onClick={() => coverUploadRef.current?.click()}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-sky-400 transition-colors mt-1">
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-primary transition-colors mt-1">
                         <Upload className="h-3 w-3" />Bild ersetzen
                       </button>
                     )}

@@ -100,7 +100,7 @@ export function VisualAssetForm({ open, onClose, asset, assetType, defaultCatego
                     className={cn(
                       'flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs transition-colors text-left',
                       category === cat.key
-                        ? 'bg-sky-500/15 border-sky-500/50 text-sky-300'
+                        ? 'bg-primary/15 border-primary/50 text-[#ffb066]'
                         : 'border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
                     )}
                   >
@@ -177,7 +177,7 @@ export function VisualAssetForm({ open, onClose, asset, assetType, defaultCatego
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-full h-20 rounded-xl border-2 border-dashed border-border/40 hover:border-sky-500/40 text-xs text-muted-foreground hover:text-sky-400 transition-colors flex items-center justify-center"
+                className="w-full h-20 rounded-xl border-2 border-dashed border-border/40 hover:border-primary/40 text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center"
               >
                 Bild auswählen
               </button>
@@ -200,7 +200,7 @@ export function VisualAssetForm({ open, onClose, asset, assetType, defaultCatego
 
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={onClose}>Abbrechen</Button>
-            <Button type="submit" disabled={saving || !name.trim()} className="bg-sky-600 hover:bg-sky-500">
+            <Button type="submit" disabled={saving || !name.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? 'Speichern…' : isEdit ? 'Aktualisieren' : 'Erstellen'}
             </Button>
           </div>

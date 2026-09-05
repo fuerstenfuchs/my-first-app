@@ -8,6 +8,13 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -72,7 +79,7 @@ function OutfitCard({
     <button
       onClick={onClick}
       className={cn(
-        'relative rounded-xl overflow-hidden border-2 transition-all text-left group bg-card/60',
+        'lt-platte relative overflow-hidden border-2 transition-all text-left group',
         isSelected
           ? 'border-orange-500 ring-2 ring-orange-500/20 shadow-lg shadow-orange-500/10'
           : 'border-border/40 hover:border-orange-500/40'
@@ -349,15 +356,15 @@ export default function OutfitsPage() {
   }
 
   return (
-    <div className="flex h-svh min-w-0 overflow-hidden">
+    <div className="lt flex h-svh min-w-0 overflow-hidden">
 
       {/* ── Spalte 1: Kategorien ─────────────────────────────────────── */}
       <div className="w-48 shrink-0 flex flex-col border-r border-border">
-        <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
+        <header className="lt-kopf shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
-          <span className="text-sm font-semibold flex-1 truncate">Outfits</span>
+          <span className="flex-1 truncate text-[17px] font-bold">Outfits</span>
           <Button
-            size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+            size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
             onClick={() => { setEditingOutfit(null); setOutfitFormOpen(true) }}
             title="Neuer Eintrag"
           >
@@ -424,12 +431,12 @@ export default function OutfitsPage() {
 
       {/* ── Spalte 2: Galerie ────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
+        <header className="lt-kopf shrink-0 px-4 py-3 flex items-center gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="font-semibold text-sm">
+            <span className="text-[17px] font-bold">
               {aktuelleKat ? `${aktuelleKat.emoji} ${aktuelleKat.label}` : '🗂️ Alle'}
             </span>
-            <span className="text-xs text-muted-foreground/60">({filtered.length})</span>
+            <span className="text-[14px] text-muted-foreground">({filtered.length})</span>
           </div>
           <div className="flex-1 min-w-0 relative max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -437,7 +444,7 @@ export default function OutfitsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Suchen…"
-              className="pl-8 h-8 text-sm"
+              className="lt-feld h-10 border-0 pl-9 text-[15px]"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -524,7 +531,7 @@ export default function OutfitsPage() {
             </div>
           ) : outfit ? (
             <>
-              <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
+              <div className="shrink-0 border-b border-[rgba(150,185,220,0.12)] px-3 py-2.5 flex items-center gap-1.5">
                 <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{outfit.name}</h3>
                 {/* Sheet-Erzeugen für Kleidungsstücke — hängt an der Kategorie
                     und ist genau der Grund, warum es die Kategorien gibt. Ein
@@ -558,13 +565,13 @@ export default function OutfitsPage() {
                   <Link2 className="h-3 w-3" />
                   Referenzkette
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingOutfit(outfit); setOutfitFormOpen(true) }}>
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setEditingOutfit(outfit); setOutfitFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive hover:text-destructive" onClick={() => setDeleteOutfitId(outfit.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setSelectedId(null); setSelectedVariantId(null) }}>
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setSelectedId(null); setSelectedVariantId(null) }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>

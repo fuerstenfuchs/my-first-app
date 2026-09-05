@@ -10,6 +10,13 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@d
 import { CSS } from '@dnd-kit/utilities'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -58,10 +65,10 @@ function LocationCard({
     <button
       onClick={onClick}
       className={cn(
-        'relative rounded-xl overflow-hidden border-2 transition-all text-left group bg-card/60',
+        'lt-platte relative overflow-hidden border-2 transition-all text-left group',
         isSelected
-          ? 'border-teal-500 ring-2 ring-teal-500/20 shadow-lg shadow-teal-500/10'
-          : 'border-border/40 hover:border-teal-500/40'
+          ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10'
+          : 'border-border/40 hover:border-primary/40'
       )}
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
@@ -102,7 +109,7 @@ function LocationCard({
       <div className="px-2 py-2">
         <p className="text-xs font-medium leading-tight truncate">{location.name}</p>
         {location.location_type ? (
-          <p className="text-[10px] text-teal-500/80 truncate mt-0.5">
+          <p className="text-[10px] text-primary/80 truncate mt-0.5">
             {LOCATION_TYPES.find(t => t.key === location.location_type)?.emoji}{' '}
             {LOCATION_TYPES.find(t => t.key === location.location_type)?.label}
           </p>
@@ -344,14 +351,14 @@ export default function LocationsPage() {
   const detailOpen       = !!selectedLocationId
 
   return (
-    <div className="flex h-svh min-w-0 overflow-hidden">
+    <div className="lt flex h-svh min-w-0 overflow-hidden">
 
       {/* ── Col 1: Category nav ── */}
       <div className="w-48 shrink-0 flex flex-col border-r border-border">
-        <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
+        <header className="lt-kopf shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
-          <span className="text-sm font-semibold flex-1 truncate">Locations</span>
-          <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+          <span className="flex-1 truncate text-[17px] font-bold">Locations</span>
+          <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
             onClick={() => { setEditingLocation(null); setFormOpen(true) }} title="Neue Location">
             <Plus className="h-4 w-4" />
           </Button>
@@ -368,7 +375,7 @@ export default function LocationsPage() {
                   className={cn(
                     'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
                     isActive
-                      ? 'bg-teal-500/10 text-teal-300 font-medium'
+                      ? 'bg-primary/10 text-[#ffb066] font-medium'
                       : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                   )}
                 >
@@ -378,7 +385,7 @@ export default function LocationsPage() {
                     <span className={cn(
                       'text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
                       isActive
-                        ? 'bg-teal-500/20 text-teal-300'
+                        ? 'bg-primary/20 text-[#ffb066]'
                         : 'bg-muted text-muted-foreground'
                     )}>
                       {count}
@@ -409,9 +416,9 @@ export default function LocationsPage() {
 
       {/* ── Col 2: Gallery ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
+        <header className="lt-kopf shrink-0 px-4 py-3 flex items-center gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="font-semibold text-sm">{currentCategory.emoji} {currentCategory.label}</span>
+            <span className="text-[17px] font-bold">{currentCategory.emoji} {currentCategory.label}</span>
             <span className="text-xs text-muted-foreground/60">({filteredLocations.length})</span>
           </div>
           <div className="flex-1 min-w-0 relative max-w-xs">
@@ -420,7 +427,7 @@ export default function LocationsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Suchen…"
-              className="pl-8 h-8 text-sm"
+              className="lt-feld h-10 border-0 pl-9 text-[15px]"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -499,20 +506,20 @@ export default function LocationsPage() {
           ) : location ? (
             <>
               {/* Detail header */}
-              <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
+              <div className="shrink-0 border-b border-[rgba(150,185,220,0.12)] px-3 py-2.5 flex items-center gap-1.5">
                 <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{location.name}</h3>
-                <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] border-teal-500/40 text-teal-300 hover:bg-teal-500/10 hover:text-teal-200 shrink-0"
+                <Button size="sm" variant="outline" className="h-7 gap-1 text-[11px] border-primary/40 text-[#ffb066] hover:bg-primary/10 hover:text-[#ffd0a8] shrink-0"
                   onClick={() => setSheetDialogOpen(true)}>
                   <Sparkles className="h-3 w-3" />
                   Sheet
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingLocation(location); setFormOpen(true) }}>
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setEditingLocation(location); setFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive hover:text-destructive" onClick={() => setDeleteLocationId(location.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setSelectedLocationId(null); setSelectedVariantId(null) }}>
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setSelectedLocationId(null); setSelectedVariantId(null) }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -529,7 +536,7 @@ export default function LocationsPage() {
                         <button
                           onClick={handleAnalyzeLocation}
                           disabled={aiAnalyzing}
-                          className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-teal-600/90 hover:bg-teal-500 disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
+                          className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/90 hover:bg-primary disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
                         >
                           {aiAnalyzing
                             ? <span className="w-2.5 h-2.5 rounded-full border border-white border-t-transparent animate-spin" />
@@ -562,8 +569,8 @@ export default function LocationsPage() {
 
                   {/* AI suggestion card */}
                   {aiSuggestion && (
-                    <div ref={suggestionRef} className="mx-3 my-2 rounded-xl border border-teal-500/30 bg-teal-500/5 p-3 space-y-2">
-                      <div className="flex items-center gap-1.5 text-teal-400">
+                    <div ref={suggestionRef} className="mx-3 my-2 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-primary">
                         <Sparkles className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">KI-Vorschlag</span>
                         <button onClick={() => setAiSuggestion(null)} className="ml-auto text-muted-foreground hover:text-foreground">
@@ -601,7 +608,7 @@ export default function LocationsPage() {
                         )}
                       </div>
                       <div className="flex gap-2 pt-1">
-                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-teal-600 hover:bg-teal-500"
+                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                           disabled={!applyFields.name && !applyFields.category && !applyFields.tags && !applyFields.description}
                           onClick={handleApplySuggestion}>
                           <Check className="mr-1 h-3 w-3" />Übernehmen
@@ -620,7 +627,7 @@ export default function LocationsPage() {
                       {location.location_type && (() => {
                         const lt = LOCATION_TYPES.find(t => t.key === location.location_type)
                         return lt ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 font-medium">
+                          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-medium">
                             <span>{lt.emoji}</span>
                             <span>{lt.label}</span>
                           </span>
@@ -632,7 +639,7 @@ export default function LocationsPage() {
                     )}
                     {location.source_url && (
                       <a href={location.source_url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-teal-400 transition-colors">
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
                         <ExternalLink className="h-3 w-3" />
                         {location.source_title || (() => { try { return new URL(location.source_url).hostname.replace('www.','') } catch { return location.source_url } })()}
                       </a>
@@ -730,7 +737,7 @@ export default function LocationsPage() {
                         </summary>
                         <div className="flex gap-2 mt-2">
                           <input type="url" placeholder="https://…"
-                            className="flex-1 h-8 px-2 text-xs rounded-md border border-border bg-muted/20 focus:outline-none focus:border-teal-500"
+                            className="flex-1 h-8 px-2 text-xs rounded-md border border-border bg-muted/20 focus:outline-none focus:border-primary"
                             onKeyDown={e => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) { addImageUrl(selectedVariant.id, v); (e.target as HTMLInputElement).value = '' } } }} />
                           <Button size="sm" variant="outline" className="h-8 text-xs shrink-0"
                             onClick={e => { const input = e.currentTarget.previousElementSibling as HTMLInputElement; const v = input?.value?.trim(); if (v) { addImageUrl(selectedVariant.id, v); input.value = '' } }}>

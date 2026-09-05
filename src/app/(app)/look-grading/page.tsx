@@ -3,6 +3,13 @@
 import { useState, useMemo, useRef } from 'react'
 import { Plus, Search, X, Pencil, Trash2, Lock, Upload } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -28,10 +35,10 @@ function LookGradingCard({
     <button
       onClick={onClick}
       className={cn(
-        'relative rounded-xl overflow-hidden border-2 transition-all text-left group bg-card/60',
+        'lt-platte relative overflow-hidden border-2 transition-all text-left group',
         isSelected
-          ? 'border-fuchsia-500 ring-2 ring-fuchsia-500/20 shadow-lg shadow-fuchsia-500/10'
-          : 'border-border/40 hover:border-fuchsia-500/40'
+          ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10'
+          : 'border-border/40 hover:border-primary/40'
       )}
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
@@ -125,13 +132,13 @@ export default function LookGradingPage() {
   }
 
   return (
-    <div className="flex h-svh min-w-0 overflow-hidden">
+    <div className="lt flex h-svh min-w-0 overflow-hidden">
 
       {/* ── Col 1: Type nav ── */}
       <div className="w-48 shrink-0 flex flex-col border-r border-border overflow-y-auto">
-        <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
+        <header className="lt-kopf shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
-          <span className="text-sm font-semibold flex-1 truncate">Look & Grading</span>
+          <span className="flex-1 truncate text-[17px] font-bold">Look & Grading</span>
         </header>
 
         <nav className="flex-1 p-2 space-y-1">
@@ -139,13 +146,13 @@ export default function LookGradingPage() {
             onClick={() => { setActiveType('style'); setSelectedItemId(null); setSearch('') }}
             className={cn(
               'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-              activeType === 'style' ? 'bg-fuchsia-500/10 text-fuchsia-300 font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+              activeType === 'style' ? 'bg-primary/10 text-[#ffb066] font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
             )}
           >
             <span className="text-base leading-none shrink-0">🎥</span>
             <span className="flex-1 truncate text-xs">Stil</span>
             <span className={cn('text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
-              activeType === 'style' ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-muted text-muted-foreground')}>
+              activeType === 'style' ? 'bg-primary/20 text-[#ffb066]' : 'bg-muted text-muted-foreground')}>
               {styles.length}
             </span>
           </button>
@@ -153,13 +160,13 @@ export default function LookGradingPage() {
             onClick={() => { setActiveType('grading'); setSelectedItemId(null); setSearch('') }}
             className={cn(
               'w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-              activeType === 'grading' ? 'bg-fuchsia-500/10 text-fuchsia-300 font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+              activeType === 'grading' ? 'bg-primary/10 text-[#ffb066] font-medium' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
             )}
           >
             <span className="text-base leading-none shrink-0">🎨</span>
             <span className="flex-1 truncate text-xs">Grading</span>
             <span className={cn('text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
-              activeType === 'grading' ? 'bg-fuchsia-500/20 text-fuchsia-300' : 'bg-muted text-muted-foreground')}>
+              activeType === 'grading' ? 'bg-primary/20 text-[#ffb066]' : 'bg-muted text-muted-foreground')}>
               {gradings.length}
             </span>
           </button>
@@ -168,21 +175,21 @@ export default function LookGradingPage() {
 
       {/* ── Col 2: Gallery ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
+        <header className="lt-kopf shrink-0 px-4 py-3 flex items-center gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="font-semibold text-sm">{emoji} {label}</span>
+            <span className="text-[17px] font-bold">{emoji} {label}</span>
             <span className="text-xs text-muted-foreground/60">({filteredItems.length})</span>
           </div>
           <div className="flex-1 min-w-0 relative max-w-xs">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Suchen…" className="pl-8 h-8 text-sm" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Suchen…" className="lt-feld h-10 border-0 pl-9 text-[15px]" />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          <Button size="sm" className="shrink-0 ml-auto bg-fuchsia-600 hover:bg-fuchsia-500" onClick={openForm}>
+          <Button size="sm" className="shrink-0 ml-auto bg-primary text-primary-foreground hover:bg-primary/90" onClick={openForm}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             {activeType === 'style' ? 'Neuer Stil' : 'Neues Grading'}
           </Button>
@@ -226,11 +233,11 @@ export default function LookGradingPage() {
       {/* ── Col 3: Detail panel ── */}
       {detailOpen && selectedItem && (
         <div className="w-[400px] shrink-0 border-l border-border flex flex-col overflow-hidden">
-          <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
+          <div className="shrink-0 border-b border-[rgba(150,185,220,0.12)] px-3 py-2.5 flex items-center gap-1.5">
             <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{selectedItem.name}</h3>
             {!selectedItem.isStandard && (
               <>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
                   onClick={() => { setEditingItem(selectedItem); setFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -240,7 +247,7 @@ export default function LookGradingPage() {
                 </Button>
               </>
             )}
-            <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+            <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
               onClick={() => setSelectedItemId(null)}>
               <X className="h-4 w-4" />
             </Button>
@@ -263,7 +270,7 @@ export default function LookGradingPage() {
                 ) : (
                   <button
                     onClick={() => coverUploadRef.current?.click()}
-                    className="w-full h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground/40 hover:text-fuchsia-400 transition-colors"
+                    className="w-full h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground/40 hover:text-primary transition-colors"
                   >
                     <span className="text-4xl">{emoji}</span>
                     <span className="text-xs flex items-center gap-1"><Upload className="h-3 w-3" />Beispielbild hinzufügen</span>

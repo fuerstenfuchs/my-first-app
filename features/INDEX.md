@@ -109,4 +109,6 @@
 
 | PROJ-66 | Charakterseite auf dem beleuchteten Tisch (Violett raus) | In Review | [PROJ-66](PROJ-66-charakterseite.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-67
+| PROJ-67 | Alle übrigen Seiten auf dem beleuchteten Tisch (4 Kennfarben raus) | In Review | [PROJ-67](PROJ-67-alle-seiten.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-68

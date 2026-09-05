@@ -3,6 +3,13 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { Bell, CheckCircle2, Download, Loader2, PlugZap, Settings, Smartphone, Sparkles, Upload, Volume2, XCircle } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -250,8 +257,8 @@ export default function EinstellungenPage() {
   }
 
   return (
-    <div className="flex flex-col h-svh">
-      <header className="border-b shrink-0">
+    <div className="lt flex flex-col h-svh">
+      <header className="lt-kopf shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
           <Settings className="h-5 w-5 text-muted-foreground" />

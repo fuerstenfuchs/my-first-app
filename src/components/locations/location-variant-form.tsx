@@ -96,7 +96,7 @@ export function LocationVariantForm({ open, onClose, variant, defaultName, onSav
               <div
                 className={cn(
                   'rounded-lg border-2 border-dashed transition-colors p-3 cursor-pointer',
-                  isDragOver ? 'border-teal-500 bg-teal-500/10' : 'border-white/10 hover:border-white/20',
+                  isDragOver ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-white/20',
                 )}
                 onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
                 onDragLeave={() => setIsDragOver(false)}

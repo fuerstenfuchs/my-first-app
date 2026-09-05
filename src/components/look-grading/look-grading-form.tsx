@@ -108,8 +108,8 @@ export function LookGradingForm({ open, onClose, type, item, onSave }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4 mt-1">
           {/* AI assistant */}
           {!isEdit && (
-            <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-3 space-y-2">
-              <Label className="flex items-center gap-1.5 text-fuchsia-300">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+              <Label className="flex items-center gap-1.5 text-[#ffb066]">
                 <Sparkles className="h-3.5 w-3.5" />
                 Mit KI erzeugen
               </Label>
@@ -121,7 +121,7 @@ export function LookGradingForm({ open, onClose, type, item, onSave }: Props) {
                   placeholder={type === 'style' ? 'z.B. Netflix Drama, Herr der Ringe Epic' : 'z.B. 80er VHS, Pastell Traum'}
                   className="h-8 text-sm"
                 />
-                <Button type="button" size="sm" className="h-8 shrink-0 bg-fuchsia-600 hover:bg-fuchsia-500"
+                <Button type="button" size="sm" className="h-8 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={handleGenerate} disabled={aiLoading || !aiInput.trim()}>
                   {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Erzeugen'}
                 </Button>
@@ -217,7 +217,7 @@ export function LookGradingForm({ open, onClose, type, item, onSave }: Props) {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-full h-20 rounded-xl border-2 border-dashed border-border/40 hover:border-fuchsia-500/40 text-xs text-muted-foreground hover:text-fuchsia-400 transition-colors flex items-center justify-center"
+                className="w-full h-20 rounded-xl border-2 border-dashed border-border/40 hover:border-primary/40 text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center"
               >
                 Bild auswählen
               </button>
@@ -228,7 +228,7 @@ export function LookGradingForm({ open, onClose, type, item, onSave }: Props) {
 
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={onClose}>Abbrechen</Button>
-            <Button type="submit" disabled={saving || !name.trim() || !prompt.trim()} className="bg-fuchsia-600 hover:bg-fuchsia-500">
+            <Button type="submit" disabled={saving || !name.trim() || !prompt.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? 'Speichern…' : isEdit ? 'Aktualisieren' : 'Erstellen'}
             </Button>
           </div>

@@ -151,7 +151,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-3">
             <DialogTitle className="flex items-center gap-2 text-base">
-              <MapPin className="h-4 w-4 text-teal-400 shrink-0" />
+              <MapPin className="h-4 w-4 text-primary shrink-0" />
               Location importieren
             </DialogTitle>
             <div className="flex items-center gap-1.5 ml-auto">
@@ -160,8 +160,8 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                 return (
                   <div key={s} className={cn(
                     'w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center transition-colors',
-                    step > n ? 'bg-teal-500 text-white' :
-                    step === n ? 'bg-teal-500 text-white ring-2 ring-teal-500/30' :
+                    step > n ? 'bg-primary text-white' :
+                    step === n ? 'bg-primary text-white ring-2 ring-primary/30' :
                     'bg-muted text-muted-foreground'
                   )}>
                     {step > n ? <Check className="h-3 w-3" /> : s}
@@ -172,9 +172,9 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
           </div>
           {/* Step labels */}
           <div className="flex text-[10px] text-muted-foreground/60 gap-1 mt-1 ml-auto pr-0.5">
-            <span className={cn('w-6 text-center', step === 1 && 'text-teal-400')}>Name</span>
-            <span className={cn('w-6 text-center', step === 2 && 'text-teal-400')}>Bilder</span>
-            <span className={cn('w-6 text-center', step === 3 && 'text-teal-400')}>Fertig</span>
+            <span className={cn('w-6 text-center', step === 1 && 'text-primary')}>Name</span>
+            <span className={cn('w-6 text-center', step === 2 && 'text-primary')}>Bilder</span>
+            <span className={cn('w-6 text-center', step === 3 && 'text-primary')}>Fertig</span>
           </div>
         </DialogHeader>
 
@@ -200,7 +200,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                 <Button
                   onClick={handleSearch}
                   disabled={!name.trim()}
-                  className="h-11 px-5 bg-teal-600 hover:bg-teal-500 shrink-0"
+                  className="h-11 px-5 bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
                 >
                   <Search className="h-4 w-4 mr-2" />Suchen
                 </Button>
@@ -210,7 +210,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                   <button
                     key={ex}
                     onClick={() => setName(ex)}
-                    className="text-xs px-3 py-1 rounded-full border border-teal-500/30 text-teal-400/80 hover:bg-teal-500/10 hover:text-teal-300 transition-colors"
+                    className="text-xs px-3 py-1 rounded-full border border-primary/30 text-primary/80 hover:bg-primary/10 hover:text-[#ffb066] transition-colors"
                   >
                     {ex}
                   </button>
@@ -242,7 +242,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
               {!searching && results.length > 0 && (
                 <button
                   onClick={toggleAll}
-                  className="text-[11px] text-teal-400 hover:text-teal-300 shrink-0 transition-colors"
+                  className="text-[11px] text-primary hover:text-[#ffb066] shrink-0 transition-colors"
                 >
                   {selectedUrls.size === results.length ? 'Alle abwählen' : 'Alle auswählen'}
                 </button>
@@ -251,7 +251,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                 size="sm"
                 onClick={() => setStep(3)}
                 disabled={selectedUrls.size === 0}
-                className="shrink-0 bg-teal-600 hover:bg-teal-500 h-8"
+                className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-8"
               >
                 Weiter →
               </Button>
@@ -261,7 +261,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
             <div className="flex-1 overflow-y-auto p-4">
               {searching ? (
                 <div className="flex flex-col items-center justify-center h-56 gap-4 text-muted-foreground">
-                  <Loader2 className="h-9 w-9 animate-spin text-teal-400" />
+                  <Loader2 className="h-9 w-9 animate-spin text-primary" />
                   <p className="text-sm">Suche Bilder für „{name}"…</p>
                 </div>
               ) : searchError ? (
@@ -288,19 +288,19 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                         className={cn(
                           'relative rounded-lg overflow-hidden border-2 transition-all group text-left',
                           selected
-                            ? 'border-teal-500 shadow-[0_0_0_2px_rgba(20,184,166,0.25)]'
-                            : 'border-transparent hover:border-teal-500/40'
+                            ? 'border-primary shadow-[0_0_0_2px_rgba(20,184,166,0.25)]'
+                            : 'border-transparent hover:border-primary/40'
                         )}
                       >
                         <ImageThumbnail thumbnailUrl={img.thumbnailUrl} fallbackUrl={img.url} alt={img.title} />
                         {/* Dark overlay on hover */}
                         <div className={cn(
                           'absolute inset-0 transition-opacity pointer-events-none',
-                          selected ? 'bg-teal-500/15' : 'bg-black/0 group-hover:bg-black/10'
+                          selected ? 'bg-primary/15' : 'bg-black/0 group-hover:bg-black/10'
                         )} />
                         {/* Checkmark */}
                         {selected && (
-                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center shadow">
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow">
                             <Check className="h-3 w-3 text-white" />
                           </div>
                         )}
@@ -369,8 +369,8 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                     className={cn(
                       'flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors',
                       category === cat.key
-                        ? 'bg-teal-500/10 border-teal-500/50 text-teal-300 font-medium'
-                        : 'border-border/60 text-muted-foreground hover:border-teal-500/30 hover:text-foreground'
+                        ? 'bg-primary/10 border-primary/50 text-[#ffb066] font-medium'
+                        : 'border-border/60 text-muted-foreground hover:border-primary/30 hover:text-foreground'
                     )}
                   >
                     <span className="text-base leading-none">{cat.emoji}</span>
@@ -393,7 +393,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
                 'h-10',
                 created
                   ? 'bg-emerald-600 hover:bg-emerald-600'
-                  : 'bg-teal-600 hover:bg-teal-500'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
               )}
             >
               {created ? (

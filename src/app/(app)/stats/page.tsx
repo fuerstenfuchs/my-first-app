@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { BarChart2, Copy, Hash, Layers, TrendingUp } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -33,8 +40,8 @@ export default function StatsPage() {
   const maxCount = topTen[0]?.usage_count ?? 1
 
   return (
-    <div className="flex flex-col h-svh">
-      <header className="border-b shrink-0">
+    <div className="lt flex flex-col h-svh">
+      <header className="lt-kopf shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
           <BarChart2 className="h-5 w-5 text-muted-foreground" />

@@ -92,7 +92,7 @@ export function LocationForm({ open, onClose, location, defaultCategory, categor
                   className={cn(
                     'flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs transition-colors text-left',
                     category === cat.key
-                      ? 'bg-teal-500/15 border-teal-500/50 text-teal-300'
+                      ? 'bg-primary/15 border-primary/50 text-[#ffb066]'
                       : 'border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
                   )}
                 >
@@ -158,7 +158,7 @@ export function LocationForm({ open, onClose, location, defaultCategory, categor
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="w-full h-20 rounded-xl border-2 border-dashed border-border/40 hover:border-teal-500/40 text-xs text-muted-foreground hover:text-teal-400 transition-colors flex items-center justify-center"
+                  className="w-full h-20 rounded-xl border-2 border-dashed border-border/40 hover:border-primary/40 text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center"
                 >
                   Bild auswählen
                 </button>

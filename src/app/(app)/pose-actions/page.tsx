@@ -9,6 +9,13 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stuenden im Markup und taeten
+  nichts. Genau das ist bei der Charakterseite am 05.09.2026 passiert: Die
+  Seite blieb schwarz, obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -51,10 +58,10 @@ function PoseActionCard({
     <button
       onClick={onClick}
       className={cn(
-        'relative rounded-xl overflow-hidden border-2 transition-all text-left group bg-card/60',
+        'lt-platte relative overflow-hidden border-2 transition-all text-left group',
         isSelected
-          ? 'border-purple-500 ring-2 ring-purple-500/20 shadow-lg shadow-purple-500/10'
-          : 'border-border/40 hover:border-purple-500/40'
+          ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10'
+          : 'border-border/40 hover:border-primary/40'
       )}
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
@@ -245,14 +252,14 @@ export default function PoseActionsPage() {
   const detailOpen       = !!selectedPoseActionId
 
   return (
-    <div className="flex h-svh min-w-0 overflow-hidden">
+    <div className="lt flex h-svh min-w-0 overflow-hidden">
 
       {/* ── Col 1: Category nav ── */}
       <div className="w-48 shrink-0 flex flex-col border-r border-border">
-        <header className="border-b shrink-0 px-3 py-3 flex items-center gap-2">
+        <header className="lt-kopf shrink-0 px-3 py-3 flex items-center gap-2">
           <SidebarTrigger />
-          <span className="text-sm font-semibold flex-1 truncate">Posen & Aktionen</span>
-          <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+          <span className="flex-1 truncate text-[17px] font-bold">Posen & Aktionen</span>
+          <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0"
             onClick={() => { setEditingPoseAction(null); setFormOpen(true) }} title="Neue Pose/Aktion">
             <Plus className="h-4 w-4" />
           </Button>
@@ -269,7 +276,7 @@ export default function PoseActionsPage() {
                 className={cn(
                   'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left',
                   isActive
-                    ? 'bg-purple-500/10 text-purple-300 font-medium'
+                    ? 'bg-primary/10 text-[#ffb066] font-medium'
                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                 )}
               >
@@ -279,7 +286,7 @@ export default function PoseActionsPage() {
                   <span className={cn(
                     'text-[11px] tabular-nums shrink-0 px-1.5 py-0.5 rounded-full font-medium',
                     isActive
-                      ? 'bg-purple-500/20 text-purple-300'
+                      ? 'bg-primary/20 text-[#ffb066]'
                       : 'bg-muted text-muted-foreground'
                   )}>
                     {count}
@@ -293,9 +300,9 @@ export default function PoseActionsPage() {
 
       {/* ── Col 2: Gallery ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <header className="border-b shrink-0 px-4 py-2.5 flex items-center gap-3">
+        <header className="lt-kopf shrink-0 px-4 py-3 flex items-center gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="font-semibold text-sm">{currentCategory.emoji} {currentCategory.label}</span>
+            <span className="text-[17px] font-bold">{currentCategory.emoji} {currentCategory.label}</span>
             <span className="text-xs text-muted-foreground/60">({filteredPoseActions.length})</span>
           </div>
           <div className="flex-1 min-w-0 relative max-w-xs">
@@ -304,7 +311,7 @@ export default function PoseActionsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Suchen…"
-              className="pl-8 h-8 text-sm"
+              className="lt-feld h-10 border-0 pl-9 text-[15px]"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -377,15 +384,15 @@ export default function PoseActionsPage() {
           ) : poseAction ? (
             <>
               {/* Detail header */}
-              <div className="border-b shrink-0 px-3 py-2.5 flex items-center gap-1.5">
+              <div className="shrink-0 border-b border-[rgba(150,185,220,0.12)] px-3 py-2.5 flex items-center gap-1.5">
                 <h3 className="text-sm font-semibold flex-1 truncate min-w-0">{poseAction.name}</h3>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingPoseAction(poseAction); setFormOpen(true) }}>
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setEditingPoseAction(poseAction); setFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive hover:text-destructive" onClick={() => setDeletePoseActionId(poseAction.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setSelectedPoseActionId(null); setSelectedVariantId(null) }}>
+                <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setSelectedPoseActionId(null); setSelectedVariantId(null) }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -402,7 +409,7 @@ export default function PoseActionsPage() {
                         <button
                           onClick={handleAnalyzePose}
                           disabled={aiAnalyzing}
-                          className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-600/90 hover:bg-purple-500 disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
+                          className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/90 hover:bg-primary disabled:opacity-60 text-white text-[10px] font-medium transition-colors shadow"
                         >
                           {aiAnalyzing
                             ? <span className="w-2.5 h-2.5 rounded-full border border-white border-t-transparent animate-spin" />
@@ -425,8 +432,8 @@ export default function PoseActionsPage() {
 
                   {/* AI suggestion card */}
                   {aiSuggestion && (
-                    <div className="mx-3 my-2 rounded-xl border border-purple-500/30 bg-purple-500/5 p-3 space-y-2">
-                      <div className="flex items-center gap-1.5 text-purple-400">
+                    <div className="mx-3 my-2 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-primary">
                         <Sparkles className="h-3 w-3" />
                         <span className="text-[11px] font-semibold">KI-Vorschlag</span>
                         <button onClick={() => setAiSuggestion(null)} className="ml-auto text-muted-foreground hover:text-foreground">
@@ -459,7 +466,7 @@ export default function PoseActionsPage() {
                         )}
                       </div>
                       <div className="flex gap-2 pt-1">
-                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-purple-600 hover:bg-purple-500" onClick={handleApplySuggestion}>
+                        <Button size="sm" className="h-7 text-[11px] flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleApplySuggestion}>
                           <Check className="mr-1 h-3 w-3" />Übernehmen
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiSuggestion(null)}>
@@ -479,7 +486,7 @@ export default function PoseActionsPage() {
                     )}
                     {poseAction.source_url && (
                       <a href={poseAction.source_url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-purple-400 transition-colors">
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
                         <ExternalLink className="h-3 w-3" />
                         {poseAction.source_title || (() => { try { return new URL(poseAction.source_url).hostname.replace('www.','') } catch { return poseAction.source_url } })()}
                       </a>
@@ -562,7 +569,7 @@ export default function PoseActionsPage() {
                               {selectedVariant.images.map((img, idx) => (
                                 <button key={img.id} onClick={() => setGalleryImageIndex(idx)}
                                   className={cn('relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all group/thumb',
-                                    idx === safeIdx ? 'border-purple-500 ring-1 ring-purple-500/30' : 'border-transparent opacity-60 hover:opacity-100')}>
+                                    idx === safeIdx ? 'border-primary ring-1 ring-primary/30' : 'border-transparent opacity-60 hover:opacity-100')}>
                                   <img src={img.url} alt="" className="w-full h-full object-cover" />
                                   <div onClick={e => { e.stopPropagation(); deleteImage(selectedVariant.id, img.id, img.storage_path) }}
                                     className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
@@ -571,7 +578,7 @@ export default function PoseActionsPage() {
                                 </button>
                               ))}
                               <button onClick={() => variantUploadRef.current?.click()}
-                                className="shrink-0 w-14 h-14 rounded-lg border-2 border-dashed border-border/40 hover:border-purple-500/50 flex items-center justify-center text-muted-foreground/40 hover:text-purple-400 transition-colors">
+                                className="shrink-0 w-14 h-14 rounded-lg border-2 border-dashed border-border/40 hover:border-primary/50 flex items-center justify-center text-muted-foreground/40 hover:text-primary transition-colors">
                                 <Plus className="h-4 w-4" />
                               </button>
                             </div>
@@ -616,7 +623,7 @@ export default function PoseActionsPage() {
                         </summary>
                         <div className="flex gap-2 mt-2">
                           <input type="url" placeholder="https://…"
-                            className="flex-1 h-8 px-2 text-xs rounded-md border border-border bg-muted/20 focus:outline-none focus:border-purple-500"
+                            className="flex-1 h-8 px-2 text-xs rounded-md border border-border bg-muted/20 focus:outline-none focus:border-primary"
                             onKeyDown={e => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v) { addImageUrl(selectedVariant.id, v); (e.target as HTMLInputElement).value = '' } } }} />
                           <Button size="sm" variant="outline" className="h-8 text-xs shrink-0"
                             onClick={e => { const input = e.currentTarget.previousElementSibling as HTMLInputElement; const v = input?.value?.trim(); if (v) { addImageUrl(selectedVariant.id, v); input.value = '' } }}>
