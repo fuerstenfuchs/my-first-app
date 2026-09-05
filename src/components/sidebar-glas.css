@@ -259,6 +259,62 @@
 }
 
 
+/* ── Die Marke ────────────────────────────────────────────────────────────── */
+
+/*
+  DAS LOGO SASS IN EINEM SCHWARZEN KASTEN — AUF DER HELLSTEN STELLE DES STEINS.
+
+  Mark am 05.09.2026: „Das Logo sieht natürlich ganz schlecht aus so. Bitte auch
+  als Glas machen und den schwarzen Hintergrund entfernen natürlich."
+
+  Nachgemessen: `public/logo.png` hat zwar einen Alphakanal, aber der ist überall
+  255 — das Schwarz ist ins Bild eingebrannt (Ecken 4/7/8), nicht durchsichtig.
+  Es ließ sich also nicht einfach „durchscheinen" lassen.
+
+  ERSTER VERSUCH, VERWORFEN: `mix-blend-mode: screen` auf das Bild. Am Bildschirm
+  nachgemessen — der schwarze Kasten blieb sichtbar. Der Grund: `backdrop-filter`
+  am Glasrahmen macht daraus eine eigene Malebene, und das Bild darin verrechnet
+  sich nicht mehr mit der Glasfläche, die man sieht. Eine Eigenschaft, die im
+  Prüffenster als „screen" gemeldet wird und trotzdem nicht das tut, was man
+  erwartet — das war nur am gerenderten Bild zu erkennen, nicht am Quelltext.
+
+  WAS STATTDESSEN GILT: Das Logo wurde einmalig wirklich freigestellt, nach
+  `public/logo-leiste.png`. Nicht nach einer Helligkeitsschwelle — die hätte den
+  weichen Schein ringsum abgeschnitten und den alten Kasten als dunklen Hof
+  stehen lassen. Stattdessen zurückgerechnet, wie das Bild über Schwarz montiert
+  wurde: Deckkraft = hellster Kanal, Farbe geteilt durch die Deckkraft. Über
+  Schwarz ergibt das exakt wieder das Original, über dem Stein einen weichen
+  Schein. 172.134 von 209.920 Bildpunkten sind seitdem durchsichtig.
+
+  `logo.png` BLEIBT UNANGETASTET: Es ist auch Lesezeichensymbol, App-Symbol und
+  steht auf der Anmeldeseite. Ein freigestelltes Logo als Favicon wäre auf
+  hellen Browserleisten kaum noch zu sehen. Deshalb eine zweite Datei.
+
+  PREIS, den man wissen muss: Auch das Schwarz INNERHALB des Logos ist weg —
+  der dunkle Kreis hinter dem „P" zeigt jetzt Stein. Auf dem dunklen Grund
+  fällt das nicht auf; auf hellem Grund würde es das. Wer den Stein je gegen
+  etwas Helles tauscht, muss hier noch einmal hinsehen.
+*/
+.glas-marke {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-top-color: rgba(255,255,255,0.30);
+  /*
+    Flacherer Sockel als bei den Kacheln (2px/4px statt 3px/6px), und kein
+    Hub, kein Einsinken: Die Marke ist kein Knopf. Sie soll aus demselben
+    Material sein, aber nicht so aussehen, als könnte man sie drücken.
+  */
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.10) inset,
+    0 2px 0 rgba(120,74,32,0.50),
+    0 4px 0 rgba(74,44,18,0.40),
+    0 10px 20px rgba(0,0,0,0.40);
+}
+
 /*
   DER REST DER LEISTE DARF NICHT GRÜN BLEIBEN.
 

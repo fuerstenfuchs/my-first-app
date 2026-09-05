@@ -333,11 +333,13 @@ export function AppSidebar() {
         des ersten Versuchs waren ihm zu klein.
       */}
       <SidebarHeader className="p-3 pb-1">
-        <img
-          src="/logo.png"
-          alt="Prompt Trésor"
-          className="mx-auto max-h-48 w-auto object-contain"
-        />
+        <div className="glas-marke rounded-xl px-3 py-2">
+          <img
+            src="/logo-leiste.png"
+            alt="Prompt Trésor"
+            className="mx-auto max-h-44 w-auto object-contain"
+          />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>

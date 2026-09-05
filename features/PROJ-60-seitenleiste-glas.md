@@ -131,6 +131,51 @@ Zeiger auf einer anderen Kachel steht.
 - Handy-Schublade: Hintergrundbild, Schriftart und Kachelzahl im Browser
   ausgelesen.
 
+## Nachtrag: das Logo (05.09.2026)
+
+Mark: „Das Logo sieht natürlich ganz schlecht aus so. Bitte auch als Glas machen
+und den schwarzen Hintergrund entfernen natürlich."
+
+Er hatte recht, und zwar doppelt: Der schwarze Kasten saß ausgerechnet auf der
+hellsten, wärmsten Stelle des Steins und deckte sie ab.
+
+**Der schwarze Grund war eingebrannt.** `public/logo.png` hat zwar einen
+Alphakanal, aber der ist überall 255 — die Ecken messen 4/7/8. Durchscheinen
+lassen ging also nicht.
+
+**Erster Versuch, verworfen:** `mix-blend-mode: screen`. Im Prüffenster meldet
+der Browser brav „screen" — am gerenderten Bild blieb der schwarze Kasten
+trotzdem stehen. Grund: Das `backdrop-filter` am Glasrahmen macht daraus eine
+eigene Malebene, in der sich das Bild nicht mehr mit der sichtbaren Glasfläche
+verrechnet. Das war **nur am Bildschirmfoto** zu erkennen, nicht am Quelltext —
+ein Beleg dafür, warum eine ausgelesene Eigenschaft noch kein Ergebnis ist.
+
+**Was gilt:** Das Logo wurde einmalig wirklich freigestellt, nach
+`public/logo-leiste.png`. Nicht nach einer Helligkeitsschwelle — die hätte den
+weichen Schein ringsum abgeschnitten und den alten Kasten als dunklen Hof stehen
+lassen. Stattdessen zurückgerechnet, wie das Bild über Schwarz montiert wurde:
+Deckkraft = hellster Kanal, Farbe geteilt durch die Deckkraft. Über Schwarz
+ergibt das exakt wieder das Original, über dem Stein einen weichen Schein.
+172.134 von 209.920 Bildpunkten sind seitdem durchsichtig.
+
+Danach der Beschnitt: Der sichtbare Teil war nur 321×238 von 512×410 — gut ein
+Drittel der Fläche. Der Rest war Luft, und die Glasplatte sah dadurch halb leer
+aus. Zugeschnitten auf 349×266 mit 14px Sicherheitsrand, damit der Schein nicht
+angeschnitten wird.
+
+`logo.png` bleibt unangetastet: Es ist auch Lesezeichensymbol, App-Symbol und
+steht auf der Anmeldeseite. Ein freigestelltes Logo als Favicon wäre auf hellen
+Browserleisten kaum noch zu sehen.
+
+**Die Fassung** ist dasselbe Glas wie bei den Kacheln, aber mit flacherem Sockel
+(2px/4px statt 3px/6px) und ohne Hub und Einsinken: Die Marke ist kein Knopf.
+Sie soll aus demselben Material sein, ohne auszusehen, als könnte man sie
+drücken.
+
+**Preis, den man kennen muss:** Auch das Schwarz INNERHALB des Logos ist weg —
+der dunkle Kreis hinter dem „P" zeigt jetzt Glas. Auf dem dunklen Stein fällt
+das nicht auf; auf hellem Grund würde es das.
+
 ## Was Critic gefunden hat — und was daraus wurde
 
 Critic hat die Umgestaltung nach dem ersten Ausliefern geprüft. Zwei Funde
