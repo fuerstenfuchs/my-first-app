@@ -13,6 +13,9 @@ import { PromptModal } from '@/components/prompts/prompt-modal'
 import { PromptDetailPanel } from '@/components/prompts/prompt-detail-panel'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
 import { TagFilterBar } from '@/components/prompts/tag-filter-bar'
+import { ThemenUebersicht } from '@/components/prompts/themen-uebersicht'
+import { useThemen } from '@/hooks/use-themen'
+import '../(app)/bildstudio/lichttisch.css'
 import { AddToCollectionDialog } from '@/components/collections/add-to-collection-dialog'
 import { toast } from 'sonner'
 import { usePrompts, type Prompt, type PromptInput } from '@/hooks/use-prompts'
@@ -40,6 +43,15 @@ export default function PromptsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
+  /*
+    WELCHES THEMA GERADE OFFEN IST (PROJ-63).
+
+    `null` heisst: die Uebersicht mit Regalen und Themenkarten. Sobald gesucht
+    oder gefiltert wird, tritt sie zurueck — wer sucht, will Treffer sehen und
+    keine Rubriken.
+  */
+  const [themaId, setThemaId] = useState<string | null>(null)
+  const { themen, umbenennen, zusammenlegen } = useThemen()
   const [modalOpen, setModalOpen] = useState(false)
   const [modalPrompt, setModalPrompt] = useState<Prompt | null>(null)
   const [modalMode, setModalMode] = useState<ModalMode>('create')
@@ -64,9 +76,10 @@ export default function PromptsPage() {
         prompt.tags.some(t => t.toLowerCase().includes(query))
       const matchesTag = !activeTag || prompt.tags.includes(activeTag)
       const matchesFavorite = !favoritesOnly || prompt.is_favorite
-      return matchesSearch && matchesTag && matchesFavorite
+      const matchesThema = !themaId || prompt.thema_id === themaId
+      return matchesSearch && matchesTag && matchesFavorite && matchesThema
     })
-  }, [prompts, searchQuery, activeTag, favoritesOnly])
+  }, [prompts, searchQuery, activeTag, favoritesOnly, themaId])
 
   // Lookup map for prompts within tag/favorites scope (excludes keyword filter)
   // Used to resolve semantic IDs that may not match the keyword but are contextually relevant
@@ -99,8 +112,16 @@ export default function PromptsPage() {
   }, [filteredPrompts, tagFilteredById, semanticIds, isEnhanced])
 
   const hasActiveFilter = searchQuery.trim() !== '' || activeTag !== null || favoritesOnly
+  /*
+    WANN DIE UEBERSICHT ERSCHEINT (PROJ-63): nur im Ruhezustand. Wer sucht oder
+    filtert, will Treffer sehen und keine Rubriken — und wer ein Thema geoeffnet
+    hat, ist schon eine Ebene tiefer.
+  */
+  const zeigeUebersicht = !hasActiveFilter && themaId === null
+  const offenesThema = themen.find(t => t.id === themaId) ?? null
 
   function resetFilters() {
+    setThemaId(null)
     setSearchQuery('')
     setActiveTag(null)
     setFavoritesOnly(false)
@@ -258,7 +279,14 @@ export default function PromptsPage() {
       <header className="border-b shrink-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <SidebarTrigger />
+          {offenesThema ? (
+          <button onClick={() => setThemaId(null)}
+                  className="shrink-0 text-lg font-semibold hover:text-primary">
+            ← {offenesThema.name}
+          </button>
+        ) : (
           <h1 className="text-lg font-semibold shrink-0">Alle Prompts</h1>
+        )}
           {!loading && (
             <span className="text-sm text-muted-foreground shrink-0">
               ({hasActiveFilter
@@ -347,7 +375,14 @@ export default function PromptsPage() {
       </header>
 
       <div className="flex-1 overflow-hidden relative">
-      <main className="absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-20px' }}>
+      {/*
+        `lt` NUR HIER, nicht an der Seitenwurzel: Die Regel `.lt > *` setzt
+        `position: relative` auf jedes direkte Kind — an der Wurzel haette das
+        die Detailspalte aus ihrer festen Lage geholt. Hier sind die Kinder
+        gewoehnliche Kaesten, und die Tischplatte liegt genau unter dem, was
+        Bilder zeigt.
+      */}
+      <main className="lt absolute inset-y-0 left-0 overflow-y-auto overflow-x-hidden" style={{ right: '-20px' }}>
         {loading ? (
           <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -381,6 +416,15 @@ export default function PromptsPage() {
             </div>
             <Button variant="outline" onClick={resetFilters}>Filter zurücksetzen</Button>
           </div>
+        ) : zeigeUebersicht && themen.length > 0 ? (
+          <ThemenUebersicht
+            prompts={prompts}
+            themen={themen}
+            onThema={setThemaId}
+            onPrompt={p => setDetailPromptId(id => id === p.id ? null : p.id)}
+            onUmbenennen={umbenennen}
+            onZusammenlegen={zusammenlegen}
+          />
         ) : viewMode === 'grid' ? (
           <motion.div
             key="grid"

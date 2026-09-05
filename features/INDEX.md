@@ -101,4 +101,6 @@
 
 | PROJ-62 | Der Lichttisch (schräges Licht, sichtbare Fenster, lesbare Schrift) | In Review | [PROJ-62](PROJ-62-lichttisch.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-63
+| PROJ-63 | Themen statt Endlosraster (KI ordnet einmal, Vitrine, zwei Regale) | In Review | [PROJ-63](PROJ-63-themen.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-64

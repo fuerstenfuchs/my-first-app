@@ -33,6 +33,8 @@ export interface Prompt {
   is_favorite: boolean
   source_url: string | null
   source_type: string | null
+  /** Das Thema, in dem dieser Prompt liegt (PROJ-63). Genau eines oder keines. */
+  thema_id: string | null
   created_at: string
   updated_at: string
   preview_media: PreviewMediaItem[]
