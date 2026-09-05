@@ -111,17 +111,27 @@ export default function QueuePage() {
   })
 
   return (
-    <div className="flex h-svh flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
+    /*
+      DIE WARTESCHLANGE AUF DEM BELEUCHTETEN TISCH (PROJ-65).
+
+      Mark am 05.09.2026: „Als Nächstes können wir noch die Warteschlange in
+      unserem neuen Design machen, also mit dem Blau und Licht und so weiter."
+
+      `lt` steht hier AN DER WURZEL, und das ist geprueft: Kein direktes Kind
+      ist `absolute` oder `fixed`. Auf der Prompt-Seite war das anders — dort
+      hat genau dieser Griff den rollenden Bereich zerlegt.
+    */
+    <div className="lt flex h-svh flex-col overflow-hidden">
+      <header className="lt-kopf flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         <SidebarTrigger />
-        <h1 className="flex-1 text-sm font-semibold">
+        <h1 className="lt-titel flex-1">
           Warteschlange
           {jobs.length > 0 && (
-            <span className="ml-1.5 font-normal text-muted-foreground">({jobs.length})</span>
+            <span className="ml-1.5 text-[15px] font-normal text-muted-foreground">({jobs.length})</span>
           )}
         </h1>
         {wartend > 0 && (
-          <span className="text-[11px] text-muted-foreground">{wartend} offen</span>
+          <span className="text-[13px] text-muted-foreground">{wartend} offen</span>
         )}
 
         {/*
@@ -131,7 +141,7 @@ export default function QueuePage() {
         {arbeiter.zustand !== 'unbekannt' && (
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium',
+              'inline-flex min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium leading-snug',
               lage.art === 'alarm'
                 ? 'bg-red-500/20 text-red-300'
                 : arbeiter.zustand === 'laeuft'
@@ -145,7 +155,7 @@ export default function QueuePage() {
             }
           >
             <span className={cn(
-              'h-1.5 w-1.5 rounded-full',
+              'h-2 w-2 shrink-0 rounded-full',
               lage.art === 'alarm' ? 'bg-red-400 animate-pulse'
                 : arbeiter.zustand === 'laeuft' ? 'bg-emerald-400' : 'bg-amber-400',
             )} />
@@ -175,7 +185,7 @@ export default function QueuePage() {
         <div
           role={lage.art === 'alarm' ? 'alert' : 'status'}
           className={cn(
-            'mx-4 mt-3 shrink-0 rounded-lg border px-4 py-3',
+            'mx-4 mt-3 shrink-0 rounded-[14px] border px-4 py-3.5',
             lage.art === 'alarm'
               ? 'border-red-500/40 bg-red-500/10'
               : 'border-amber-500/35 bg-amber-500/5',
@@ -191,7 +201,7 @@ export default function QueuePage() {
             {lage.text}
           </p>
           {lage.befehl && (
-            <code className="mt-2 inline-block rounded bg-background/60 px-2 py-1 text-[12px] text-foreground/80">
+            <code className="mt-2.5 inline-block rounded-[10px] bg-black/40 px-3 py-1.5 text-[13px] text-foreground/90">
               {lage.befehl}
             </code>
           )}
@@ -202,22 +212,23 @@ export default function QueuePage() {
         {loading ? (
           <div className="space-y-2">
             {[0, 1, 2].map(i => (
-              <div key={i} className="h-20 animate-pulse rounded-lg bg-muted/30" />
+              <div key={i} className="h-24 animate-pulse rounded-[14px] bg-muted/20" />
             ))}
           </div>
         ) : ladefehler ? (
           <div className="mx-auto mt-16 max-w-md text-center">
             <ImageOff className="mx-auto h-10 w-10 text-destructive/50" />
-            <p className="mt-4 text-sm font-medium">Aufträge konnten nicht geladen werden</p>
+            <p className="mt-4 text-[16px] font-bold">Aufträge konnten nicht geladen werden</p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{ladefehler}</p>
-            <Button size="sm" className="mt-4" onClick={() => void laden()}>
+            <Button className="lt-haupt mt-5 h-11 px-6 text-[15px] font-bold hover:bg-transparent"
+                    onClick={() => void laden()}>
               Erneut versuchen
             </Button>
           </div>
         ) : jobs.length === 0 ? (
           <div className="mx-auto mt-16 max-w-md text-center">
             <ImageOff className="mx-auto h-10 w-10 text-muted-foreground/30" />
-            <p className="mt-4 text-sm font-medium">Noch keine Aufträge</p>
+            <p className="mt-4 text-[16px] font-bold">Noch keine Aufträge</p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
               Stelle im Scene Builder eine Szene zusammen und klicke dort auf
               „Zur Warteschlange". Der Arbeiter auf dem PC holt den Auftrag ab
@@ -228,7 +239,7 @@ export default function QueuePage() {
                 </span></>
               )}
             </p>
-            <Button asChild size="sm" className="mt-4">
+            <Button asChild className="lt-haupt mt-5 h-11 px-6 text-[15px] font-bold hover:bg-transparent">
               <Link href="/scene-builder">Zum Scene Builder</Link>
             </Button>
           </div>
@@ -241,7 +252,10 @@ export default function QueuePage() {
               // dem Zwischenspeicher — sonst sieht man das alte Ergebnis.
               const bilder = job.result_paths.map(p => `${ergebnisUrl(p)}?v=${job.attempts}`)
               return (
-                <div key={job.id} className="overflow-hidden rounded-lg border border-border/60 bg-card">
+                /* Eine Platte auf dem Tisch: Lichtkante oben, Schatten darunter.
+                   Kein `lt-kachel`, weil die Karte kein Knopf ist — sie hebt
+                   sich beim Zeigen nicht an, sie klappt nur auf. */
+                <div key={job.id} className="lt-platte overflow-hidden">
                   <div className="flex items-start gap-3 p-3">
                     <button
                       onClick={() => umschalten(job.id)}
@@ -337,7 +351,7 @@ export default function QueuePage() {
                   )}
 
                   {aufgeklappt && (
-                    <div className="space-y-3 border-t border-border/40 bg-muted/10 px-3 py-3 text-xs">
+                    <div className="space-y-3 border-t border-[rgba(150,185,220,0.14)] px-4 py-3.5 text-xs">
                       <div>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                           Vollständiger Prompt
@@ -359,7 +373,7 @@ export default function QueuePage() {
                                 <div key={url} className="w-14">
                                   <button
                                     onClick={() => setLightbox({ urls: job.reference_urls, start: i })}
-                                    className="h-14 w-14 overflow-hidden rounded border border-border/40"
+                                    className="h-14 w-14 overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)]"
                                     aria-label={`Referenz ${i + 1}${rolle ? `, ${ROLLEN_LABEL[rolle]}` : ''}`}
                                   >
                                     <img src={url} alt={`Referenz ${i + 1}`} loading="lazy"

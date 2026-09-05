@@ -103,4 +103,8 @@
 
 | PROJ-63 | Themen statt Endlosraster (KI ordnet einmal, Vitrine, zwei Regale) | In Review | [PROJ-63](PROJ-63-themen.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-64
+| PROJ-64 | Regale ohne Rollbalken (Mausrad und Pfeile stattdessen) | In Review | — | 2026-09-05 |
+
+| PROJ-65 | Warteschlange auf dem beleuchteten Tisch | In Review | [PROJ-65](PROJ-65-warteschlange.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-66
