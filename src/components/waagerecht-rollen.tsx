@@ -68,28 +68,43 @@ export function WaagerechtRollen({
   /**
    * Das Mausrad rollt waagerecht — aber nur, solange es hier noch weitergeht.
    *
-   * Ohne diese Bedingung bliebe die Seite am Ende der Reihe stehen: Wir hätten
-   * das Ereignis abgefangen und nichts damit getan. Am Anfang und am Ende
-   * gehört das Rad wieder der Seite.
+   * WARUM DAS EIN ECHTER LAUSCHER SEIN MUSS UND KEIN `onWheel`:
+   *
+   * React hängt seine Rad-Lauscher am Wurzelknoten auf, und zwar **passiv**.
+   * Ein passiver Lauscher darf `preventDefault()` gar nicht ausführen — der
+   * Aufruf ist dort wirkungslos. Genau das ist am 05.09.2026 passiert: Die
+   * Reihe rollte waagerecht UND die Seite gleichzeitig nach unten. Marks
+   * Worte: „Jetzt scrollt es beides gleichzeitig zur Seite und nach unten."
+   *
+   * Mit `addEventListener(..., { passive: false })` greift das Abfangen.
+   *
+   * Am Anfang und am Ende der Reihe fangen wir NICHT ab — dann gehört das Rad
+   * wieder der Seite, sonst bliebe sie an einem Regal hängen.
    */
-  function amRad(e: React.WheelEvent<HTMLDivElement>) {
+  useEffect(() => {
     const b = bahn.current
     if (!b) return
-    // Wer schon waagerecht rollt (Trackpad, Neigerad), braucht uns nicht.
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
-    const kannLinks = e.deltaY < 0 && b.scrollLeft > 0
-    const kannRechts = e.deltaY > 0 && b.scrollLeft + b.clientWidth < b.scrollWidth - 1
-    if (!kannLinks && !kannRechts) return
-    e.preventDefault()
-    b.scrollLeft += e.deltaY
-  }
+    function amRad(e: WheelEvent) {
+      const bahnJetzt = bahn.current
+      if (!bahnJetzt) return
+      // Wer schon waagerecht rollt (Trackpad, Neigerad), braucht uns nicht.
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+      const kannLinks = e.deltaY < 0 && bahnJetzt.scrollLeft > 0
+      const kannRechts = e.deltaY > 0
+        && bahnJetzt.scrollLeft + bahnJetzt.clientWidth < bahnJetzt.scrollWidth - 1
+      if (!kannLinks && !kannRechts) return
+      e.preventDefault()
+      bahnJetzt.scrollLeft += e.deltaY
+    }
+    b.addEventListener('wheel', amRad, { passive: false })
+    return () => b.removeEventListener('wheel', amRad)
+  }, [])
 
   return (
     <div className="group/rollen relative">
       <div
         ref={bahn}
         onScroll={messen}
-        onWheel={amRad}
         className={cn('ohne-rollbalken flex gap-3 overflow-x-auto', className)}
       >
         {children}
