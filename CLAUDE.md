@@ -85,3 +85,19 @@ Commits: `feat(PROJ-X): beschreibung`
 ## Feature-Übersicht
 
 @features/INDEX.md
+
+
+## Oberflächen: Marks Handschrift gilt hier auch
+
+Bevor an dieser Stelle etwas gebaut wird, das Mark ansieht oder bedient —
+Seite, App, Werkzeug, Dialog —, gilt `~/.claude/fuchs-memory/DESIGN.md`.
+**Vor dem ersten Entwurf lesen, nicht danach.**
+
+Dort steht, wie ihm etwas vorgelegt wird (Mockups, vier bis fünf Richtungen,
+anfassbar statt Standbild), wie es auszusehen hat (rund, Material, ein Akzent,
+warm) und die Messlatte, an der er zurückgibt: nichts unter 13px, Text 4,5:1,
+Kanten von Bedienelementen 3:1.
+
+Dieser Verweis steht hier, weil Mark am 05.09.2026 ausdrücklich gefragt hat, ob
+das Wissen in ALLEN Ordnern liegt. Der Inhalt steht nur an einer Stelle — hier
+steht nur der Weg dorthin, damit er nicht auseinanderläuft.
