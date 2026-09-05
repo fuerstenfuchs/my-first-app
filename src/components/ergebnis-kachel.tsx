@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Download, Loader2, Maximize2, FolderInput, Check, Wand2, Trash2 } from 'lucide-react'
+import { Vorschaubild } from '@/components/vorschaubild'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -101,8 +102,11 @@ export function ErgebnisKachel({
   return (
     <div className="lt-kachel group relative aspect-square overflow-hidden">
       <button onClick={onAnsehen} className="h-full w-full" aria-label={`Ergebnis ${index + 1} ansehen`}>
-        <img
-          src={url} alt={`Ergebnis ${index + 1}`} loading="lazy"
+        {/* Die kleine Vorschau: Im Lichttisch liegen bis zu hundert Kacheln
+            nebeneinander, und die Originale sind im Schnitt 3 MB gross. Das
+            grosse Bild kommt erst im Lichtkasten. */}
+        <Vorschaubild
+          src={url} alt={`Ergebnis ${index + 1}`}
           className="h-full w-full object-cover transition group-hover:scale-[1.03]"
         />
       </button>

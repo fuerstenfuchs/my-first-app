@@ -111,4 +111,6 @@
 
 | PROJ-67 | Alle übrigen Seiten auf dem beleuchteten Tisch (4 Kennfarben raus) | In Review | [PROJ-67](PROJ-67-alle-seiten.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-68
+| PROJ-68 | Vorschaubilder statt Originale (1709 MB PNG gemessen) | In Review | [PROJ-68](PROJ-68-vorschaubilder.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-69

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Vorschaubild } from '@/components/vorschaubild'
 import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, ImageUp, Video, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -185,11 +186,14 @@ export function PromptCardGrid({
           {showGradient ? (
             <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
           ) : (
-            <img
+            /* Die kleine Vorschau: Das Raster zeigt bis zu achtzig Kacheln,
+               die Originale sind im Schnitt 3 MB gross. Das grosse Bild kommt
+               beim Klick im Lichtkasten. */
+            <Vorschaubild
               src={prompt.cover_image_url!}
               alt=""
               className="absolute inset-0 w-full h-full object-contain bg-black/60 cursor-zoom-in"
-              onError={() => setImgError(true)}
+              onFehler={() => setImgError(true)}
               onClick={e => { e.stopPropagation(); setLightboxOpen(true) }}
             />
           )}

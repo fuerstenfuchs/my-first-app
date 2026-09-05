@@ -14,6 +14,7 @@ import type { Prompt } from '@/hooks/use-prompts'
 import type { Thema } from '@/hooks/use-themen'
 import { cn } from '@/lib/utils'
 import { WaagerechtRollen } from '@/components/waagerecht-rollen'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die Übersicht der Prompt-Datenbank (PROJ-63).
@@ -40,11 +41,10 @@ type Props = {
 /** Ein Bildfeld — mit dem Prompt-Titel als Rückfall, wenn kein Bild da ist. */
 function Feld({ p, className }: { p?: Prompt; className?: string }) {
   if (p?.cover_image_url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={p.cover_image_url} alt={p.title} loading="lazy"
-           className={cn('h-full w-full object-cover', className)} />
-    )
+    // Die kleine Vorschau statt des Originals — hier liegen achtzig Kacheln
+    // nebeneinander, und die Originale sind im Schnitt 3 MB gross.
+    return <Vorschaubild src={p.cover_image_url} alt={p.title}
+                         className={cn('h-full w-full object-cover', className)} />
   }
   // Fünf der 80 Prompts haben kein Bild. Ein leeres graues Feld sähe nach
   // Fehler aus; der Titel sagt wenigstens, was fehlt.

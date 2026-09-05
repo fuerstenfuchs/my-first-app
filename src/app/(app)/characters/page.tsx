@@ -15,6 +15,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Vorschaubild } from '@/components/vorschaubild'
 /*
   Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
   `lt-haupt` auf dieser Seite gar nicht — sie stehen dann im Markup und tun
@@ -220,7 +221,7 @@ export default function CharactersPage() {
                     >
                       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)] bg-black/25">
                         {char.cover_image_url ? (
-                          <img src={char.cover_image_url} alt="" className="w-full h-full object-cover" />
+                          <Vorschaubild src={char.cover_image_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <User className="h-5 w-5 text-muted-foreground/50" />
@@ -280,7 +281,7 @@ export default function CharactersPage() {
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted border border-border/50">
                   {character.cover_image_url ? (
-                    <img src={character.cover_image_url} alt="" className="w-full h-full object-cover" />
+                    <Vorschaubild src={character.cover_image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <User className="h-8 w-8 text-muted-foreground/40" />
