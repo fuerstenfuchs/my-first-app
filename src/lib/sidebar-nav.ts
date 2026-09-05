@@ -132,8 +132,11 @@ export const PRODUKTION: NavEintrag[] = [
   `src/components/sidebar-glas.css`, und ist für alle dieselbe. Farbe markiert
   nur noch, wo man gerade ist; unterschieden werden die Kacheln vom Symbol.
 
-  `farben` bleibt am Eintrag stehen: Der Farbwert wird weiterhin für das Symbol
-  gebraucht, und wer die Leiste später wieder bunter will, findet die
-  ursprünglichen Werte hier statt in der Versionsgeschichte.
+  `farben` wird seitdem NIRGENDS mehr gelesen — nachgemessen über das ganze
+  `src/`, es kommt nur noch in dieser Datei vor; die Symbolfarbe steht jetzt
+  direkt im Markup (`app-sidebar.tsx`, `text-orange-300` bzw. `text-white/80`).
+  Es bleibt als Archiv stehen: Wer die Leiste später wieder bunter will, findet
+  die ursprünglichen acht Werte hier statt in der Versionsgeschichte. Wer sie
+  nicht braucht, kann den Block gefahrlos löschen.
 */
 

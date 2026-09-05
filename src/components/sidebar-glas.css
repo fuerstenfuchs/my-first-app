@@ -33,9 +33,10 @@
 
   `<Sidebar className="…">` reicht die Klasse an den äußeren Rahmen weiter. Das
   Panel darin trägt aber `bg-sidebar` — eine deckende Fläche, die den Stein
-  übermalt hätte. Deshalb gilt die Regel für das innere `[data-sidebar]` und
-  hebt dessen Farbe auf. Nachgemessen in `components/ui/sidebar.tsx:259-262`,
-  nicht angenommen; die shadcn-Datei selbst bleibt unangetastet.
+  übermalt hätte. Deshalb gilt die Regel für das innere `[data-sidebar]`; sie
+  wiegt schwerer als die eine Klasse von `bg-sidebar` und ersetzt sie dadurch
+  ganz. Nachgemessen in `components/ui/sidebar.tsx:259-262`, nicht angenommen;
+  die shadcn-Datei selbst bleibt unangetastet.
 */
 
 /*
@@ -52,12 +53,32 @@
   shadcn-Datei. Es gibt in dieser App nur eine Leiste; die Regel kann keine
   zweite treffen.
 */
-.leiste-stein > [data-sidebar='sidebar'] { background: transparent; }
+/*
+  UND `position` GEHÖRT NUR AN DAS EINE VON BEIDEN.
+
+  Critic hat das am 05.09.2026 gefunden, bevor Mark darüber gestolpert ist:
+  Die Schublade am Telefon ist bereits `fixed` (`components/ui/sheet.tsx:34`),
+  und `[data-sidebar][data-mobile]` (zwei Merkmale) hätte ein `position:
+  relative` daran vorbeigeschoben. Die Leiste wäre aus der Überlagerung heraus
+  ans Ende der Seite gerutscht — dunkler Bildschirm, Leiste weg, hinter der
+  Abdunkelung nicht erreichbar. Auf dem Telefon praktisch unbedienbar.
+
+  Gebraucht wird `position` ohnehin nur beim festen Panel: Das ist ein
+  gewöhnlicher Kasten, und ohne Bezugspunkt hätten die beiden Belagsebenen
+  darunter nichts, woran sie sich ausrichten. Die Schublade ist schon
+  positioniert und braucht nichts.
+
+  Der äußere Rahmen (`.leiste-stein`) bekommt gar keinen Stein mehr: Das innere
+  Panel liegt mit `h-full w-full` vollständig darüber, das Bild wäre zweimal
+  gemalt und einmal davon nie zu sehen gewesen. Schlimmer noch — ein `position:
+  relative` dort hätte gegen dessen eigenes `fixed` gestanden, bei gleichem
+  Gewicht, sodass allein die Ladereihenfolge der Stilblätter entschieden hätte,
+  ob die Leiste beim Scrollen stehen bleibt oder mitwandert.
+*/
+.leiste-stein > [data-sidebar='sidebar'] { position: relative; }
 
 .leiste-stein > [data-sidebar='sidebar'],
-[data-sidebar='sidebar'][data-mobile='true'],
-.leiste-stein {
-  position: relative;
+[data-sidebar='sidebar'][data-mobile='true'] {
   isolation: isolate;
   /*
     STRECKEN, NICHT ZUSCHNEIDEN (`100% 100%` statt `cover`). Bei einem formlosen
@@ -138,9 +159,20 @@
 }
 .glas-kachel > * { position: relative; z-index: 2; }
 
-.glas-kachel:hover { transform: translateY(-2px); }
-.glas-kachel:hover::after { opacity: 1; }
-.glas-kachel:hover {
+/*
+  ALLES HIER GILT AUCH FÜR DIE TASTATUR (`:focus-visible`).
+
+  Vorher gab es den gestalteten Rückweg nur für die Maus: Wer mit der
+  Tabulatortaste durch die Leiste geht, bekam einen dünnen Systemring auf einer
+  runden Glaskachel statt der warmen Kante. Kein Verstoß — der Ring war nie
+  abgeschaltet —, aber zwei verschiedene Sprachen für dieselbe Aussage.
+*/
+.glas-kachel:hover,
+.glas-kachel:focus-visible { transform: translateY(-2px); }
+.glas-kachel:hover::after,
+.glas-kachel:focus-visible::after { opacity: 1; }
+.glas-kachel:hover,
+.glas-kachel:focus-visible {
   border-color: rgba(255,160,80,0.50);
   border-top-color: rgba(255,205,150,0.85);
   box-shadow:
@@ -157,16 +189,8 @@
   Einbau. Die Regel schlägt Tailwinds `text-white/80` am Symbol, weil sie eine
   Klasse und einen Typ nennt statt nur einer Klasse.
 */
-.glas-kachel:hover svg { color: #ffb066; }
-
-.glas-kachel:active {
-  transform: translateY(4px);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.08) inset,
-    0 1px 0 rgba(120,74,32,0.50),
-    0 2px 0 rgba(74,44,18,0.40),
-    0 4px 10px rgba(0,0,0,0.40);
-}
+.glas-kachel:hover svg,
+.glas-kachel:focus-visible svg { color: #ffb066; }
 
 /*
   DIE AKTIVE KACHEL BRAUCHT ZWEI MERKMALE, NICHT EINS.
@@ -200,11 +224,67 @@
 }
 
 /*
+  DAS EINSINKEN STEHT ABSICHTLICH HIER UNTEN, NACH DER AKTIV-REGEL.
+
+  Es stand vorher darüber — und `:active` (Klasse + Pseudoklasse) wiegt genau
+  so viel wie `[data-aktiv='ja']` (Klasse + Merkmal). Bei Gleichstand gewinnt
+  die spätere Regel. Auf der Kachel, auf der Mark GERADE STEHT — also der, die
+  er am häufigsten anklickt —, kam der Einsink-Schatten deshalb nie an: Die
+  Kachel rutschte 4px nach unten, während ihr Sockel in voller Höhe stehen
+  blieb. Sie löste sich vom Sockel ab, statt hineinzusinken. Genau der Effekt,
+  den Mark aus dem 21st.dev-Knopf ausgesucht hat, war dort kaputt.
+
+  Der zweite Selektor ist kein Beiwerk: Ohne ihn verlöre `:active` gegen den
+  Aktiv-Zustand weiterhin, egal an welcher Stelle er steht.
+*/
+.glas-kachel:active,
+.glas-kachel[data-aktiv='ja']:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 1px 0 rgba(120,74,32,0.50),
+    0 2px 0 rgba(74,44,18,0.40),
+    0 4px 10px rgba(0,0,0,0.40);
+}
+
+/*
   Wer schnelle Bewegungen abgeschaltet hat, bekommt keine.
   Die Lichtkante und die Farben bleiben — sie sind Information, keine Bewegung.
 */
 @media (prefers-reduced-motion: reduce) {
   .glas-kachel { transition: border-color 0.22s ease; }
-  .glas-kachel:hover, .glas-kachel:active { transform: none; }
+  .glas-kachel:hover, .glas-kachel:focus-visible,
+  .glas-kachel:active, .glas-kachel[data-aktiv='ja']:active { transform: none; }
   .glas-kachel::after { transition: none; }
+}
+
+
+/*
+  DER REST DER LEISTE DARF NICHT GRÜN BLEIBEN.
+
+  Umgestellt sind die zehn Kacheln. Sammlungen und die Fußzeile (Statistiken,
+  Einstellungen, Abmelden) benutzen weiter die shadcn-Knöpfe — und deren
+  Hover-Farbe `--sidebar-accent` ist in dieser App `hsl(120 10% 10%)`, der
+  Fokusring `--sidebar-ring` sogar `hsl(142 60% 42%)`: beides GRÜN.
+
+  Damit hätte Mark oben eine Leiste mit einem einzigen warmen Akzent und
+  darunter, beim Zeigen auf „Einstellungen", einen grüngrauen Block auf warmem
+  Stein bekommen. Das ist dieselbe Buntheit, die oben entfernt wurde — nur
+  nach unten gerutscht. Critic hat es gefunden, bevor Mark es sehen musste.
+
+  Die Werte werden nur INNERHALB der Leiste umgesetzt, nicht global: Grün ist
+  weiterhin die Farbe der App, sie ist nur nicht die Farbe dieser Leiste.
+*/
+.leiste-stein,
+[data-sidebar='sidebar'][data-mobile='true'] {
+  /*
+    Der Anteil hinter dem Schrägstrich ist Absicht: `hsl(var(--sidebar-accent))`
+    hat keinen eigenen Platz für Durchsichtigkeit, aber die Angabe darf ihn
+    mitbringen. So wird aus dem gemalten Block ein warmer Hauch, durch den der
+    Stein weiter sichtbar bleibt — sonst hätte man unten wieder Flächen statt
+    Glas.
+  */
+  --sidebar-accent: 24 45% 26% / 55%;
+  --sidebar-accent-foreground: 30 40% 94%;
+  --sidebar-ring: 25 85% 55%;          /* Marks Orange statt Grün */
 }

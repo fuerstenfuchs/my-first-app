@@ -131,6 +131,50 @@ Zeiger auf einer anderen Kachel steht.
 - Handy-Schublade: Hintergrundbild, Schriftart und Kachelzahl im Browser
   ausgelesen.
 
+## Was Critic gefunden hat — und was daraus wurde
+
+Critic hat die Umgestaltung nach dem ersten Ausliefern geprüft. Zwei Funde
+waren echte Fehler, die Mark sonst getroffen hätten:
+
+**Die Leiste wäre auf dem Handy unbedienbar gewesen.** Die zweite Anschrift für
+die Schublade brachte `position: relative` mit — und die Schublade ist bereits
+`fixed` (`ui/sheet.tsx:34`). Zwei Merkmale wiegen schwerer als eines, also hätte
+`relative` gewonnen: Die dunkle Überblendung hätte sich über den Bildschirm
+gelegt, die Leiste selbst wäre ans Seitenende gerutscht und hinter der
+Überblendung nicht mehr erreichbar gewesen. Im Browser nachgestellt und
+gemessen: mit der alten Zeile `relative`, ohne sie `fixed`. `position` steht
+jetzt nur noch am festen Panel, das es wirklich braucht.
+
+**Auf der aktiven Kachel sank nichts ein.** `:active` und `[data-aktiv='ja']`
+wiegen gleich viel; bei Gleichstand gewinnt die spätere Regel, und das war die
+aktive. Auf der Kachel, auf der man gerade steht — also der, die man am
+häufigsten anklickt —, rutschte die Kachel 4px nach unten, während der Sockel
+in voller Höhe stehen blieb: Sie löste sich vom Sockel ab, statt hineinzusinken.
+Genau der Effekt, den Mark aus dem 21st.dev-Knopf ausgesucht hat.
+
+Weiter nachgezogen:
+
+| Fund | Was geändert wurde |
+|---|---|
+| Der äußere Rahmen malte den Stein ein zweites Mal, unsichtbar unter dem inneren Panel | `.leiste-stein` aus der Steinregel entfernt |
+| Sammlungen und Fußzeile hatten weiter **grüne** Hover- und Fokusfarben auf warmem Stein | `--sidebar-accent` und `--sidebar-ring` nur innerhalb der Leiste auf warme Werte gesetzt |
+| Kein gestalteter Zustand für die Tastatur | `:focus-visible` bekommt dieselbe warme Kante wie der Zeiger |
+| `pointermove` rechnete beim Wischen auf dem Handy mit, obwohl es dort nichts zu sehen gibt | nur Maus, und nicht bei abgeschalteter Bewegung |
+| Bei jeder Zeigerbewegung wurde die Kachel neu vermessen | einmal beim Betreten, neu nur nach einem Rollvorgang |
+| Der Sockel der oberen Kachelreihe verschwand unter der unteren | Abstand im Raster von 6px auf 10px |
+| Der Kommentar behauptete, `farben` werde noch gebraucht | richtiggestellt: wird nirgends gelesen, bleibt als Archiv |
+
+Nicht geändert, mit Begründung:
+
+- **Kurznamen „Kamera" und „Look"** verstecken, dass Mimik und Grading darunter
+  liegen. Marks ausdrückliche Ansage: „Ein Wort reicht immer."
+- **`backdrop-filter` auf zehn Kacheln** könnte auf schwacher Hardware kosten.
+  Das `isolation: isolate` am Panel begrenzt den Aufwand bereits auf den Stein
+  statt auf die ganze Seite. Ohne Messung auf Marks Gerät wäre eine Änderung
+  Raten — wenn es ruckelt, ist sein Auge das Instrument, nicht meine Schätzung.
+- **`theme-color` ist noch Grün** (`layout.tsx:24`). Das rahmt auf dem Handy die
+  ganze App ein, nicht die Leiste — außerhalb dieses Auftrags.
+
 ## Nicht angefasst
 
 Funktion, Reihenfolge, Ziele der Kacheln, Sammlungen, Fußzeile, die

@@ -275,10 +275,51 @@ export function AppSidebar() {
    * Er wird als CSS-Variable auf das Element geschrieben, nicht als React-
    * Zustand: Bei Mausbewegung würde ein `setState` die ganze Leiste bei jedem
    * Pixel neu zeichnen. So fasst der Browser nur zwei Zahlen an.
+   *
+   * DREI EINSCHRÄNKUNGEN, ALLE DREI AUS DEM GLEICHEN GRUND — es soll nichts
+   * rechnen, was niemand sieht (gefunden von Critic am 05.09.2026):
+   *
+   * 1. NUR MAUS. Beim Wischen über das Telefon feuert `pointermove` für den
+   *    Finger, der auf einer Kachel liegt — ausgerechnet während des Rollens,
+   *    wo am wenigsten Luft ist. Sichtbar wird der Schein aber nur bei `:hover`,
+   *    und Hover gibt es dort nicht. Der Aufwand wäre reiner Verlust.
+   * 2. NICHT BEI ABGESCHALTETER BEWEGUNG. Ein Licht, das der Maus hinterher-
+   *    läuft, ist genau die Art Bewegung, die jemand abgestellt hat. Das CSS
+   *    nimmt schon Hub und Einsinken zurück; hier fehlte die Entsprechung.
+   * 3. EINMAL MESSEN STATT BEI JEDEM PIXEL. `getBoundingClientRect` zwingt den
+   *    Browser, das Layout sofort durchzurechnen; direkt danach wurde derselbe
+   *    Kasten wieder beschrieben. Bei 120 Hz also 120-mal je Sekunde hin und
+   *    her. Das Rechteck ändert sich zwischen zwei Bewegungen nicht — außer
+   *    beim Rollen, und genau das fängt die Prüfung unten ab.
    */
+  const rahmen = useRef<DOMRect | null>(null)
+  const ruhig = useRef(false)
+
+  useEffect(() => {
+    const m = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const merken = () => { ruhig.current = m.matches }
+    merken()
+    m.addEventListener('change', merken)
+    return () => m.removeEventListener('change', merken)
+  }, [])
+
+  function scheinBeginnen(e: React.PointerEvent<HTMLElement>) {
+    if (e.pointerType !== 'mouse' || ruhig.current) { rahmen.current = null; return }
+    rahmen.current = e.currentTarget.getBoundingClientRect()
+  }
+
   function scheinFolgen(e: React.PointerEvent<HTMLElement>) {
+    let r = rahmen.current
+    if (!r) return
     const el = e.currentTarget
-    const r = el.getBoundingClientRect()
+    const x = e.clientX - r.left
+    const y = e.clientY - r.top
+    // Nach einem Rollvorgang steht die Kachel woanders; dann — und nur dann —
+    // wird neu gemessen. Erkennbar daran, dass der Zeiger rechnerisch
+    // ausserhalb der gemerkten Kachel liegt, obwohl er auf ihr steht.
+    if (x < 0 || y < 0 || x > r.width || y > r.height) {
+      r = rahmen.current = el.getBoundingClientRect()
+    }
     el.style.setProperty('--mx', `${e.clientX - r.left}px`)
     el.style.setProperty('--my', `${e.clientY - r.top}px`)
   }
@@ -309,12 +350,13 @@ export function AppSidebar() {
         <SidebarGroup className="py-1">
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem className="px-2 py-1">
+              <SidebarMenuItem className="px-2 py-1.5">
             <a
               href={PROMPTS.href}
               aria-current={pathname === '/' ? 'page' : undefined}
               className="glas-kachel flex w-full items-center rounded-xl"
               data-aktiv={pathname === '/' ? 'ja' : 'nein'}
+              onPointerEnter={scheinBeginnen}
               onPointerMove={scheinFolgen}
             >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center">
@@ -336,12 +378,13 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {PRODUKTION.map(e => (
-                <SidebarMenuItem key={e.href} className="px-2 py-1">
+                <SidebarMenuItem key={e.href} className="px-2 py-1.5">
                   <a
                     href={e.href}
                     aria-current={pathname.startsWith(e.href) ? 'page' : undefined}
                     className="glas-kachel flex w-full items-center rounded-xl"
                     data-aktiv={pathname.startsWith(e.href) ? 'ja' : 'nein'}
+                    onPointerEnter={scheinBeginnen}
                     onPointerMove={scheinFolgen}
                   >
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center">
@@ -363,7 +406,14 @@ export function AppSidebar() {
         <SidebarGroup className="py-1">
           <SidebarGroupLabel>Bausteine</SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
-            <div className="grid grid-cols-2 gap-1.5">
+            {/*
+              Der Abstand ist groesser als er aussehen muesste (PROJ-60): Der
+              Sockel unter jeder Kachel ist 3px + 6px hoch und wird beim Zeigen
+              noch tiefer. Bei 6px Luft haette die untere Kachelreihe den Sockel
+              der oberen ueberdeckt — ausgerechnet dort, wo sechs Kacheln
+              beieinander stehen, waere die Tiefe verschwunden.
+            */}
+            <div className="grid grid-cols-2 gap-2.5">
               {BAUSTEINE.map((e, i) => {
                 // Bis PROJ-52 zaehlten hier auch die drei Archetyp-Seiten mit.
                 // Es gibt sie nicht mehr; je Bereich bleibt eine Adresse.
@@ -382,6 +432,7 @@ export function AppSidebar() {
                       letzteAllein && 'col-span-2 flex-row gap-2',
                     )}
                     data-aktiv={aktiv ? 'ja' : 'nein'}
+                    onPointerEnter={scheinBeginnen}
                     onPointerMove={scheinFolgen}
                   >
                     <e.icon className={cn('shrink-0', letzteAllein ? 'h-5 w-5' : 'h-4 w-4',
