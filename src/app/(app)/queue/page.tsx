@@ -14,6 +14,17 @@ import {
 import { ImageLightbox } from '@/components/image-lightbox'
 import { BildUebernehmenDialog } from '@/components/bild-uebernehmen-dialog'
 import { ErgebnisKachel } from '@/components/ergebnis-kachel'
+/*
+  DIE KACHEL WIRD VON ZWEI SEITEN BENUTZT (PROJ-62).
+
+  `ergebnis-kachel.tsx` traegt seit dem Umbau `lt-kachel`, `lt-mini` und
+  `lt-menue`. Das Stilblatt dazu hing aber nur am Lichttisch — hier waere die
+  Kachel ohne Rahmen, Rundung und Schatten gewesen, und schlimmer: je nachdem,
+  ob man von dort herkommt oder die Seite frisch laedt, verschieden. Deshalb
+  gehoert es auch hierher. Die Klassen wirken eigenstaendig, sie brauchen das
+  umgebende `.lt` nicht.
+*/
+import '../bildstudio/lichttisch.css'
 import { useImageJobs, ergebnisUrl, type ImageJob } from '@/hooks/use-image-jobs'
 import { STATUS_TEXT, STATUS_FARBE, ROLLEN_LABEL, type JobStatus } from '@/lib/image-generation'
 import { preis, VERFAHREN_NAME, kostetGeld } from '@/lib/upscaling'

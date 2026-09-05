@@ -306,10 +306,10 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
           if (tiefe.current === 0) setUeberzogen(false)
         }}
         onDrop={abwerfen}
-        className={cn(
-          'lt-ablage p-3 transition-colors',
-          ueberzogen && 'border-primary bg-primary/10',
-        )}
+        /* Der Ziehzustand steht in `lichttisch.css`, nicht hier: Tailwind-Klassen
+           wiegen dort genau so viel wie `.lt-ablage` und verloren gegen sie. */
+        className="lt-ablage p-3"
+        data-ueber={ueberzogen ? 'ja' : 'nein'}
       >
         {bilder.length > 0 && (
           <div className="mb-2 grid grid-cols-4 gap-1.5">

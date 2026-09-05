@@ -120,6 +120,65 @@ und 60.
 abgenommen wurde, muss beim Einbau eine feste Größe bekommen. Sonst gilt die
 Abnahme für eine Breite, die es in der App nie gibt.
 
+## Was die Prüfung der gebauten Fassung ergab
+
+Ein Blocker und vier schwere Funde, alle behoben:
+
+**1. Der Ziehzustand war unsichtbar — lautlos.**
+`ueberzogen && 'border-primary bg-primary/10'` stand als Tailwind-Klassen am
+Element. Die wiegen genau so viel wie `.lt-ablage`, und dieses Stilblatt wird
+später geladen — die Kurzformen `border` und `background` gewannen. Beim Ziehen
+eines Bildes änderte sich also **nichts am Bild**, obwohl der Zustand im
+Seitenaufbau stand. Der einzige Rückmeldeweg für „hier darf abgeworfen werden"
+war tot. Steht jetzt als `[data-ueber='ja']` dort, wo die Gestalt steht — und
+die gestrichelte Kontur ist von dem Knopf auf die Abwurffläche zurückgewandert,
+wo sie hingehört.
+
+**2. Marks Orange kommt zurück — mit dunkler Schrift.**
+Ich hatte sein Orange abgedunkelt, damit *weiße* Schrift 4,5:1 schafft. Das ging
+im Ruhezustand auf (4,60) — aber beim Zeigen hebt `brightness(1.07)` den
+hellsten Punkt auf **4,09**, der Knopf fiel also genau dann durch, wenn man ihn
+anfasst. Und der Preis war hoch: aus seinem Orange war Rostbraun geworden.
+Mit **dunkler Schrift auf seinem eigenen Orange** sind es 5,05 bis 7,75 und nach
+dem Aufhellen immer noch 6,91. Sein Bild bleibt, der Wert stimmt in jedem
+Zustand. Den Tausch hatte ich beim ersten Mal schlicht nicht gesehen.
+
+**3. Drei Fokuszustände fehlten oder waren zu schwach.**
+Der aktive Filter verlor seinen Tastaturfokus an die später stehende
+Aktiv-Regel (übrig blieb ein Pixel Versatz — und „Alle" ist der erste Tabstopp
+der Seite). Der Fokusring der Bildkacheln wurde vom eigenen `overflow-hidden`
+weggeschnitten, die Hauptaktion jeder Kachel hatte also gar keine Markierung.
+Und der Ring des Prompt-Fensters war mit 1,19:1 **schwächer als der, den er
+ersetzt hatte**.
+
+**4. Kanten und Beschriftungen waren gegen die dunkle Platte gewählt.**
+Unter einem Lichtstreifen kam die Hinweiszeile auf 3,67:1 und die
+Bildunterschrift auf 3,74:1 — beide unter der Schwelle, und ausgerechnet dort,
+wo das Licht am schönsten ist. Der Grund ist ein Verlauf: Es gibt keinen einen
+Hintergrundwert. Die vier Werte sind jetzt gegen die **hellste** Stelle gewählt.
+
+**5. Die Kachel wird von zwei Seiten benutzt.**
+`ergebnis-kachel.tsx` trägt seit dem Umbau `lt-kachel`; das Stilblatt hing aber
+nur am Lichttisch. In der Warteschlange war die Kachel dadurch ohne Rahmen,
+Rundung und Schatten — und je nachdem, ob man von dort herkam oder frisch lud,
+verschieden. Das Stilblatt ist jetzt auch dort eingebunden. Die Zeile „Nicht
+angefasst: die Warteschlange" in der ersten Fassung dieser Spezifikation war
+falsch.
+
+**6. Die größte Bewegung der Seite war von `prefers-reduced-motion` nicht
+erfasst:** Jedes Bild im Raster wächst beim Überfahren — bei dreißig sichtbaren
+Kacheln mehr Bewegung als alles andere zusammen.
+
+## Offen, weil es Marks Entscheidung ist
+
+**Der Prompt-Assistent ist weiterhin zugeklappt.** Sein Satz „man sieht das
+Fenster gar nicht" war dort wörtlich wahr: Das Feld existiert im Seitenaufbau
+erst nach einem Klick. Er hat jetzt eine eigene Platte mit Namen und Pfeil, ist
+also **auffindbar** — aber das Fenster selbst erscheint weiterhin erst beim
+Öffnen. Ob es von Anfang an offen stehen soll, ist eine Richtungsfrage: Die
+Spalte ist schmal, und zu viel verbrauchte Höhe war hier schon einmal ein
+berechtigter Einwand von ihm.
+
 ## Geprüft
 
 - `npx tsc --noEmit` — keine neuen Fehler.

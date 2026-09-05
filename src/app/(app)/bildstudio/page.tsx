@@ -142,7 +142,7 @@ export default function BildstudioPage() {
         <SidebarTrigger />
         <h1 className="lt-titel">
           Lichttisch{' '}
-          <span className="font-normal text-muted-foreground">({alleBilder.length})</span>
+          <span className="text-[15px] font-normal text-muted-foreground">({alleBilder.length})</span>
         </h1>
 
         {/*
@@ -266,7 +266,11 @@ export default function BildstudioPage() {
                   onVergroessern={(pfad, stufe, verfahren) =>
                     void vergroessern(b.job, pfad, stufe, verfahren)}
                 />
-                <p className="truncate px-0.5 text-[13px] leading-tight text-muted-foreground">
+                {/* `title`, weil die groessere Schrift frueher abschneidet und
+                    diese Zeile das Zeichen traegt, das vor dem Loeschen der
+                    falschen Fassung schuetzt. */}
+                <p className="truncate px-0.5 text-[13px] leading-tight text-muted-foreground"
+                   title={beschriftung(b.job)}>
                   {beschriftung(b.job)}
                 </p>
               </div>
