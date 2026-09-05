@@ -95,4 +95,6 @@
 
 | PROJ-59 | Referenzbild gleich bei der Auswahl wählen | In Review | [PROJ-59](PROJ-59-referenzbild-bei-der-auswahl.md) | 2026-09-04 |
 
-## Next Available ID: PROJ-60
+| PROJ-60 | Seitenleiste in Glas auf warmem Stein | In Review | [PROJ-60](PROJ-60-seitenleiste-glas.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-61

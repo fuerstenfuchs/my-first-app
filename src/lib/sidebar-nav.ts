@@ -80,12 +80,12 @@ export const BAUSTEINE: NavEintrag[] = [
       '0 0 18px rgba(147,51,234,0.2), 0 0 18px rgba(126,34,206,0.15)', 'text-purple-400'),
   },
   {
-    href: '/visual-assets', label: 'Kamera, Licht & Mimik', kurz: 'Kamera & Licht', icon: Camera,
+    href: '/visual-assets', label: 'Kamera, Licht & Mimik', kurz: 'Kamera', icon: Camera,
     farben: f(['#061318', '#061116'], ['#38bdf8', '#0284c7'], ['#0ea5e9', '#0369a1'],
       '0 0 18px rgba(14,165,233,0.2), 0 0 18px rgba(3,105,161,0.15)', 'text-sky-400'),
   },
   {
-    href: '/look-grading', label: 'Look & Grading', kurz: 'Look & Grading', icon: Palette,
+    href: '/look-grading', label: 'Look & Grading', kurz: 'Look', icon: Palette,
     farben: f(['#1a0617', '#170614'], ['#f0abfc', '#d946ef'], ['#c026d3', '#a21caf'],
       '0 0 18px rgba(192,38,211,0.2), 0 0 18px rgba(162,28,175,0.15)', 'text-fuchsia-400'),
   },
@@ -121,13 +121,19 @@ export const PRODUKTION: NavEintrag[] = [
 ]
 
 /** Der Farbaufbau einer Kachel — eine Stelle für alle. */
-export function kachelStil(farben: NavFarben, aktiv: boolean): React.CSSProperties {
-  const rand = aktiv ? farben.aktiv : farben.ruhe
-  return {
-    background:
-      `linear-gradient(${farben.grund[0]}, ${farben.grund[1]}) padding-box, ` +
-      `linear-gradient(135deg, ${rand[0]} 0%, ${rand[1]} 100%) border-box`,
-    border: '2px solid transparent',
-    boxShadow: farben.schein,
-  }
-}
+/*
+  HIER STAND `kachelStil` (bis 05.09.2026).
+
+  Sie baute je Kachel einen eigenen Farbverlauf als Rand — acht verschiedene
+  Neonfarben auf 256 Pixel Breite. Mark: „Es kann natürlich auch nicht zu bunt
+  werden, wie es bisher ist."
+
+  Die Gestalt der Kacheln steht jetzt an EINER Stelle, in
+  `src/components/sidebar-glas.css`, und ist für alle dieselbe. Farbe markiert
+  nur noch, wo man gerade ist; unterschieden werden die Kacheln vom Symbol.
+
+  `farben` bleibt am Eintrag stehen: Der Farbwert wird weiterhin für das Symbol
+  gebraucht, und wer die Leiste später wieder bunter will, findet die
+  ursprünglichen Werte hier statt in der Versionsgeschichte.
+*/
+

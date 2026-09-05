@@ -1,0 +1,210 @@
+/*
+  Die Seitenleiste in Glas auf warmem Stein (PROJ-60)
+  ════════════════════════════════════════════════════════════════════════════
+
+  Mark am 05.09.2026: „Was ich möchte, ist ein schönes Liquid Glass Design, vor
+  allem die Buttons. Und ein schönes Hintergrundbild für die Seitenleiste. Es
+  kann natürlich auch nicht zu bunt werden, wie es bisher ist."
+
+  WAS VORHER WAR: Jede Kachel hatte ihre EIGENE Neonfarbe als Verlaufsrand plus
+  farbigen Schein — Violett, Orange, Türkis, Purpur, Blau, Magenta. Acht Farben
+  auf 256 Pixel Breite. Genau das meinte er mit „zu bunt".
+
+  DIE EIGENTLICHE ENTSCHEIDUNG IST NICHT DAS GLAS, SONDERN DIE FARBE: Es gibt
+  jetzt EINEN Akzent — Marks Orange —, und der markiert ausschließlich, wo man
+  gerade ist. Unterschieden werden die Kacheln vom Symbol, nicht von der Farbe.
+  Das ist der Weg von „bunt" zu „edel"; das Glas ist die Zugabe.
+
+  Der Grund ist über Marks Proxy erzeugt (gpt-image-2), Richtung „Warmer Stein",
+  aus drei zur Auswahl gestellten.
+
+  ER WURDE NACHTRÄGLICH AUFGEHELLT (+55 % Helligkeit, +35 % Sättigung), und das
+  war kein Geschmack, sondern eine Messung: Im Mockup lag der hellste Teil des
+  Steins ganz oben und war frei; in der echten Leiste sitzt dort die Logokarte
+  und deckt ihn ab. Der sichtbare Rest kam auf einen Mittelwert von 13/14/11 —
+  also schwarz, und nicht einmal warm. Jetzt sind es 32/27/20, R über G über B:
+  sichtbar und warm. Wer das Bild neu erzeugt, muss diesen Schritt wiederholen.
+*/
+
+/* ── Der Grund ────────────────────────────────────────────────────────────── */
+
+/*
+  DER STEIN MUSS AUF DAS INNERE ELEMENT.
+
+  `<Sidebar className="…">` reicht die Klasse an den äußeren Rahmen weiter. Das
+  Panel darin trägt aber `bg-sidebar` — eine deckende Fläche, die den Stein
+  übermalt hätte. Deshalb gilt die Regel für das innere `[data-sidebar]` und
+  hebt dessen Farbe auf. Nachgemessen in `components/ui/sidebar.tsx:259-262`,
+  nicht angenommen; die shadcn-Datei selbst bleibt unangetastet.
+*/
+
+/*
+  UND AUF DEM HANDY ÜBER EINEN ZWEITEN WEG.
+
+  Am Telefon ist die Leiste kein festes Panel, sondern eine eingeblendete
+  Schublade (`Sheet`) — und `<Sidebar className="…">` erreicht sie NICHT: die
+  Klasse geht dort an `Sheet`, während die sichtbare Fläche `SheetContent` ist
+  und ihre Klassen fest eingebaut hat (`components/ui/sidebar.tsx:201-217`).
+  Ohne diese zweite Anschrift bliebe die Handy-Leiste flach schwarz, während
+  die Kacheln schon aus Glas wären — Glas ohne etwas dahinter.
+
+  Darum die Anschrift über `[data-mobile]` statt eines Eingriffs in die
+  shadcn-Datei. Es gibt in dieser App nur eine Leiste; die Regel kann keine
+  zweite treffen.
+*/
+.leiste-stein > [data-sidebar='sidebar'] { background: transparent; }
+
+.leiste-stein > [data-sidebar='sidebar'],
+[data-sidebar='sidebar'][data-mobile='true'],
+.leiste-stein {
+  position: relative;
+  isolation: isolate;
+  /*
+    STRECKEN, NICHT ZUSCHNEIDEN (`100% 100%` statt `cover`). Bei einem formlosen
+    Verlauf sieht das niemand — `cover` schnitte bei einem hohen Fenster
+    ausgerechnet den dunkelsten unteren Teil weg, und genau den will man behalten.
+  */
+  background: url('/leiste-grund.jpg') 0 0 / 100% 100% no-repeat, #14100c;
+}
+
+/*
+  KÖRNUNG IST VORAUSSETZUNG, NICHT ZIERDE.
+
+  `backdrop-filter` zeigt nur, was hinter dem Element VARIIERT. Über einer
+  112px breiten Kachel ändert sich ein glatter Verlauf um zwei bis vier
+  Grauwerte — weichgezeichnet ergibt das eine völlig gleichmäßige Fläche, und
+  das Glas verschwindet. Der Stein bringt Korn mit, aber das Bild wird von 384
+  auf 256 Pixel gequetscht und verliert es dabei. Diese Ebene bringt es zurück
+  und verhindert nebenbei Streifen im Verlauf.
+*/
+.leiste-stein > [data-sidebar='sidebar']::after,
+[data-sidebar='sidebar'][data-mobile='true']::after {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  pointer-events: none; opacity: 0.032;
+  background-image:
+    repeating-conic-gradient(from 0deg at 13% 27%, #fff 0 0.6deg, transparent 0.6deg 3deg),
+    repeating-conic-gradient(from 45deg at 71% 63%, #fff 0 0.5deg, transparent 0.5deg 2.4deg);
+  background-size: 7px 7px, 5px 5px;
+}
+
+/* Sockel: nach unten abdunkeln, damit die letzten Zeilen sicher lesbar bleiben. */
+.leiste-stein > [data-sidebar='sidebar']::before,
+[data-sidebar='sidebar'][data-mobile='true']::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(transparent 58%, rgba(0, 0, 0, 0.30));
+}
+
+.leiste-stein > [data-sidebar='sidebar'] > *,
+[data-sidebar='sidebar'][data-mobile='true'] > * { position: relative; z-index: 1; }
+
+/* Die Schrift kommt am Panel über eine Tailwind-Klasse; die Schublade braucht sie hier. */
+[data-sidebar='sidebar'][data-mobile='true'] { font-family: var(--font-leiste), system-ui, sans-serif; }
+
+/* ── Das Glas ─────────────────────────────────────────────────────────────── */
+.glas-kachel {
+  position: relative;
+  overflow: hidden;
+  --mx: 50%; --my: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-top-color: rgba(255,255,255,0.30);   /* die Lichtkante — sie trägt das Material */
+  /*
+    DER SOCKEL (Marks Wahl vom 05.09.2026, Richtung B).
+    Aus dem 3D-Button von 21st.dev geborgt: die TIEFE, aber ohne dessen Neigung
+    und ohne das Plastik. Das Glas steht auf warmem Stein und sinkt beim
+    Drücken hinein — das gibt ihm Griffigkeit, ohne das Material zu verraten.
+    Vorher gab es Hover, aber nichts beim Klicken.
+  */
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.10) inset,
+    0 3px 0 rgba(120,74,32,0.55),
+    0 6px 0 rgba(74,44,18,0.45),
+    0 12px 24px rgba(0,0,0,0.42);
+  transition:
+    transform 0.16s cubic-bezier(.22,.8,.3,1),
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+/* Der Lichtschein folgt dem Zeiger — der eigentliche Liquid-Glass-Effekt. */
+.glas-kachel::after {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(150px circle at var(--mx) var(--my),
+              rgba(255,255,255,0.26), rgba(255,190,130,0.10) 40%, transparent 62%);
+  transition: opacity 0.25s ease;
+}
+.glas-kachel > * { position: relative; z-index: 2; }
+
+.glas-kachel:hover { transform: translateY(-2px); }
+.glas-kachel:hover::after { opacity: 1; }
+.glas-kachel:hover {
+  border-color: rgba(255,160,80,0.50);
+  border-top-color: rgba(255,205,150,0.85);
+  box-shadow:
+    0 1px 0 rgba(255,215,180,0.26) inset,
+    0 5px 0 rgba(140,86,38,0.60),
+    0 9px 0 rgba(84,50,20,0.50),
+    0 18px 30px rgba(0,0,0,0.48),
+    0 8px 22px rgba(220,98,16,0.20);
+}
+
+/*
+  Beim Hover nimmt auch das SYMBOL das Warm auf — das gehörte im Mockup zur
+  „warmen Kante" dazu (`.e3:hover svg{color:#ffb066}`) und fehlte beim ersten
+  Einbau. Die Regel schlägt Tailwinds `text-white/80` am Symbol, weil sie eine
+  Klasse und einen Typ nennt statt nur einer Klasse.
+*/
+.glas-kachel:hover svg { color: #ffb066; }
+
+.glas-kachel:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 1px 0 rgba(120,74,32,0.50),
+    0 2px 0 rgba(74,44,18,0.40),
+    0 4px 10px rgba(0,0,0,0.40);
+}
+
+/*
+  DIE AKTIVE KACHEL BRAUCHT ZWEI MERKMALE, NICHT EINS.
+
+  Mark hat „warme Kante" als Hover gewählt — und der aktive Zustand war bis
+  dahin ebenfalls nur eine orange Kante. Beim Darüberfahren hätte man dann nicht
+  mehr gesehen, wo man ist. Ich habe ihn davor gewarnt, er wollte den Effekt
+  trotzdem; also wird es gestalterisch gelöst statt durch Weglassen:
+
+    Hover  = orange KANTE.
+    Aktiv  = orange FÜLLUNG **und** Balken links.
+
+  Zwei Merkmale schlagen eines, und der Balken bleibt auch dann sichtbar, wenn
+  der Zeiger auf einer anderen Kachel steht.
+*/
+.glas-kachel[data-aktiv='ja'] {
+  background: linear-gradient(180deg, rgba(255,148,60,0.24), rgba(255,110,20,0.10));
+  border-color: rgba(255,170,95,0.60);
+  border-top-color: rgba(255,205,160,0.80);
+  box-shadow:
+    0 1px 0 rgba(255,220,190,0.24) inset,
+    0 3px 0 rgba(150,88,34,0.60),
+    0 6px 0 rgba(92,52,20,0.50),
+    0 12px 26px rgba(0,0,0,0.44),
+    0 6px 20px rgba(220,98,16,0.26);
+}
+.glas-kachel[data-aktiv='ja']::before {
+  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px;
+  z-index: 3; border-radius: 0 3px 3px 0;
+  background: linear-gradient(#ffd0a0, #f97316);
+}
+
+/*
+  Wer schnelle Bewegungen abgeschaltet hat, bekommt keine.
+  Die Lichtkante und die Farben bleiben — sie sind Information, keine Bewegung.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .glas-kachel { transition: border-color 0.22s ease; }
+  .glas-kachel:hover, .glas-kachel:active { transform: none; }
+  .glas-kachel::after { transition: none; }
+}

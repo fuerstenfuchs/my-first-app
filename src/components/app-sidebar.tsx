@@ -40,7 +40,8 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useCollections, useCollectionsOverview, type Collection } from '@/hooks/use-collections'
-import { PROMPTS, BAUSTEINE, PRODUKTION, kachelStil } from '@/lib/sidebar-nav'
+import { PROMPTS, BAUSTEINE, PRODUKTION } from '@/lib/sidebar-nav'
+import './sidebar-glas.css'
 import {
   DndContext,
   closestCenter,
@@ -268,8 +269,22 @@ export function AppSidebar() {
     if (pathname.startsWith('/collections/')) router.push('/')
   }
 
+  /**
+   * Der Lichtschein folgt dem Zeiger (PROJ-60).
+   *
+   * Er wird als CSS-Variable auf das Element geschrieben, nicht als React-
+   * Zustand: Bei Mausbewegung würde ein `setState` die ganze Leiste bei jedem
+   * Pixel neu zeichnen. So fasst der Browser nur zwei Zahlen an.
+   */
+  function scheinFolgen(e: React.PointerEvent<HTMLElement>) {
+    const el = e.currentTarget
+    const r = el.getBoundingClientRect()
+    el.style.setProperty('--mx', `${e.clientX - r.left}px`)
+    el.style.setProperty('--my', `${e.clientY - r.top}px`)
+  }
+
   return (
-    <Sidebar>
+    <Sidebar className="leiste-stein font-[family-name:var(--font-leiste)]">
       {/*
         Hoehe begrenzt: Das Logo ist quadratisch angelegt und wurde in voller
         Breite 205px hoch — nach dem Verkuerzen der Leiste war es mit 40 Prozent
@@ -298,14 +313,14 @@ export function AppSidebar() {
             <a
               href={PROMPTS.href}
               aria-current={pathname === '/' ? 'page' : undefined}
-              className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
-              style={kachelStil(PROMPTS.farben, pathname === '/')}
+              className="glas-kachel flex w-full items-center rounded-xl"
+              data-aktiv={pathname === '/' ? 'ja' : 'nein'}
+              onPointerMove={scheinFolgen}
             >
-              <div className="flex items-center justify-center w-14 h-14 shrink-0">
-                <PROMPTS.icon className={cn('h-6 w-6', PROMPTS.farben.symbol)} />
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center">
+                <PROMPTS.icon className={cn('h-6 w-6', pathname === '/' ? 'text-orange-300' : 'text-white/80')} />
               </div>
-              <div className="w-px self-stretch bg-white/15 shrink-0" />
-              <span className="text-base font-semibold text-white px-4">{PROMPTS.label}</span>
+              <span className="px-3 text-base font-semibold text-white">{PROMPTS.label}</span>
             </a>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -325,14 +340,15 @@ export function AppSidebar() {
                   <a
                     href={e.href}
                     aria-current={pathname.startsWith(e.href) ? 'page' : undefined}
-                    className="flex items-center rounded-xl w-full overflow-hidden transition-opacity hover:opacity-90"
-                    style={kachelStil(e.farben, pathname.startsWith(e.href))}
+                    className="glas-kachel flex w-full items-center rounded-xl"
+                    data-aktiv={pathname.startsWith(e.href) ? 'ja' : 'nein'}
+                    onPointerMove={scheinFolgen}
                   >
-                    <div className="flex items-center justify-center w-14 h-14 shrink-0">
-                      <e.icon className={cn('h-6 w-6', e.farben.symbol)} />
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center">
+                      <e.icon className={cn('h-6 w-6',
+                        pathname.startsWith(e.href) ? 'text-orange-300' : 'text-white/80')} />
                     </div>
-                    <div className="w-px self-stretch bg-white/15 shrink-0" />
-                    <span className="text-base font-semibold text-white px-4">{e.label}</span>
+                    <span className="px-3 text-base font-semibold text-white">{e.label}</span>
                   </a>
                 </SidebarMenuItem>
               ))}
@@ -362,12 +378,14 @@ export function AppSidebar() {
                     title={e.label}
                     aria-current={aktiv ? 'page' : undefined}
                     className={cn(
-                      'flex flex-col items-center justify-center gap-1 rounded-lg h-[52px] overflow-hidden transition-opacity hover:opacity-90',
+                      'glas-kachel flex h-[52px] flex-col items-center justify-center gap-1 rounded-lg',
                       letzteAllein && 'col-span-2 flex-row gap-2',
                     )}
-                    style={kachelStil(e.farben, aktiv)}
+                    data-aktiv={aktiv ? 'ja' : 'nein'}
+                    onPointerMove={scheinFolgen}
                   >
-                    <e.icon className={cn('shrink-0', letzteAllein ? 'h-5 w-5' : 'h-4 w-4', e.farben.symbol)} />
+                    <e.icon className={cn('shrink-0', letzteAllein ? 'h-5 w-5' : 'h-4 w-4',
+                      aktiv ? 'text-orange-300' : 'text-white/80')} />
                     <span className={cn(
                       'font-semibold text-white leading-tight truncate',
                       letzteAllein ? 'text-xs' : 'text-[10px] text-center px-1 w-full',

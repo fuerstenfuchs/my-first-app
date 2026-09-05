@@ -1,11 +1,15 @@
 import type { Metadata } from "next"
-import { Inter, JetBrains_Mono } from "next/font/google"
+import { Inter, JetBrains_Mono, Urbanist } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { SwRegister } from "@/components/sw-register"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
+// NUR FÜR DIE SEITENLEISTE (PROJ-60). Mark hat Urbanist aus sechs Schriften
+// gewählt — für die Leiste, nicht für die ganze App. Der Auftrag lautete
+// ausdrücklich „nur die linke Seitenleiste, nur designtechnisch".
+const urbanist = Urbanist({ subsets: ["latin"], variable: "--font-leiste" })
 
 export const metadata: Metadata = {
   title: "Prompt Trésor",
@@ -25,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="icon" type="image/png" href="/logo.png" />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} ${urbanist.variable} font-sans antialiased`}>
         {children}
         <Toaster />
         <SwRegister />
