@@ -200,6 +200,12 @@ void main() {
 
 const MAX_TAPS = 17
 
+/**
+ * Guete des JPEG-Exports — dieselbe wie im Arbeiter (`worker/src/jpeg.ts`).
+ * Aus diesen Bildern wird weitergearbeitet, deshalb hoch angesetzt.
+ */
+const GUETE_JPEG = 0.92
+
 type Ziel = { fb: WebGLFramebuffer; tex: WebGLTexture }
 
 class Programm {
@@ -423,7 +429,21 @@ export class BildWerk {
   }
 
   /**
-   * In voller Aufloesung rechnen und als Blob liefern (PNG).
+   * In voller Aufloesung rechnen und als Blob liefern — als JPEG, wenn das
+   * Ergebnis deckend ist, sonst als PNG.
+   *
+   * WARUM JPEG (PROJ-69): Mark am 05.09.2026: „Wir lassen die PNGs drin und
+   * nehmen aber ab jetzt JPEGs." Der Arbeiter tut das seit PROJ-69; dies hier
+   * ist der ZWEITE laufende Schreibweg in denselben Eimer. Jeder Zuschnitt und
+   * jede Fassung aus dem Bildstudio ging bisher als Leinwand-PNG hoch — bei
+   * einem 21-Megapixel-Bild mehrere Megabyte. Waere der eine Weg umgestellt
+   * und dieser nicht, waere Marks Satz nur zur Haelfte eingeloest, und der
+   * Speicher wuerde weiter wachsen, ohne dass jemand versteht warum.
+   *
+   * DIE AUSNAHME IST DIESELBE: JPEG kann keine Transparenz. Ein Vier-Ecken-Warp
+   * laesst durchsichtige Ecken stehen, und die wuerden schwarz — lautlos.
+   * Deshalb wird der Alphakanal GEPRUEFT, nicht angenommen: Der Rohpuffer liegt
+   * ohnehin schon hier, ein Durchgang genuegt.
    *
    * Danach werden die vollauflösenden Zwischenziele wieder freigegeben. Bei
    * 25 Megapixeln sind das mehrere hundert Megabyte auf der Grafikeinheit, und
@@ -452,11 +472,18 @@ export class BildWerk {
     if (!ctx) throw new Error('BildWerk: 2D-Kontext fuer den Export nicht verfuegbar.')
     ctx.putImageData(new ImageData(new Uint8ClampedArray(roh.buffer), b, h), 0, 0)
 
+    // Deckend? Nur den Alphakanal ansehen, jedes vierte Byte.
+    let deckend = true
+    for (let i = 3; i < roh.length; i += 4) {
+      if (roh[i] !== 255) { deckend = false; break }
+    }
+    const typ = deckend ? 'image/jpeg' : 'image/png'
+
     const blob = await new Promise<Blob>((loesen, ablehnen) => {
       flaeche.toBlob((blob) => {
         if (blob) loesen(blob)
-        else ablehnen(new Error('BildWerk: Der Export liess sich nicht als PNG kodieren.'))
-      }, 'image/png')
+        else ablehnen(new Error(`BildWerk: Der Export liess sich nicht als ${typ} kodieren.`))
+      }, typ, GUETE_JPEG)
     })
 
     // Und jetzt WIRKLICH freigeben. Der Kommentar oben behauptete das schon,

@@ -155,14 +155,17 @@ async function vergroessern(
     nachher = ergebnis.nachher
   }
 
-  const pfad = await ergebnisAblegen(job.user_id, job.id, 0, daten)
+  const abgelegt = await ergebnisAblegen(job.user_id, job.id, 0, daten)
 
   sage(
     `  ${job.upscaler} · ${ziel} → ${nachher.breite}×${nachher.hoehe} ` +
     `in ${Math.round((Date.now() - begonnen) / 1000)}s · ` +
-    `${Math.round(daten.byteLength / 1024)} kB`,
+    // Die abgelegte Groesse, nicht die gelieferte — seit PROJ-69 wandelt die
+    // Ablage um, und eine Zahl, die das verschweigt, waere falsch.
+    `${Math.round(abgelegt.groesse / 1024)} kB` +
+    (abgelegt.hinweis ? ` · ${abgelegt.hinweis}` : ''),
   )
-  await auftragFertig(job.id, [pfad])
+  await auftragFertig(job.id, [abgelegt.pfad])
 }
 
 /** Erzeugen. Jedes fertige Bild wird sofort festgehalten. */
@@ -233,13 +236,15 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
     } else {
       daten = await bildErzeugen(job, signal)
     }
-    const pfad = await ergebnisAblegen(job.user_id, job.id, i, daten)
-    pfade.push(pfad)
+    const abgelegt = await ergebnisAblegen(job.user_id, job.id, i, daten)
+    pfade.push(abgelegt.pfad)
     // Sofort festhalten — sonst wäre alles verloren, wenn das nächste Bild scheitert.
     await fortschrittMerken(job.id, pfade)
     sage(
       `  Bild ${i + 1}/${anzahl} fertig nach ${Math.round((Date.now() - begonnen) / 1000)}s · ` +
-      `${Math.round(daten.byteLength / 1024)} kB`,
+      // Abgelegte Groesse, nicht gelieferte (PROJ-69).
+      `${Math.round(abgelegt.groesse / 1024)} kB` +
+      (abgelegt.hinweis ? ` · ${abgelegt.hinweis}` : ''),
     )
   }
 

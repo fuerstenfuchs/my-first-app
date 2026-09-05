@@ -6,6 +6,7 @@
 import { config, ohneGeheimnis } from './config.ts'
 import type { FalAnfrage } from './fal.ts'
 import { bildart } from './netz.ts'
+import { alsJpeg } from './jpeg.ts'
 
 export type ImageJob = {
   id: string
@@ -128,6 +129,31 @@ export async function fortschrittMerken(id: string, resultPaths: string[]): Prom
     result_paths: resultPaths,
     started_at: new Date().toISOString(),
   })
+}
+
+/**
+ * Die tatsaechlich abgelegten Pfade eines Auftrags zurueckholen.
+ *
+ * WARUM NICHT NACHBAUEN: `einmal.ts` hat die Adressen frueher aus user_id,
+ * job_id, Laufnummer und der festen Endung `.png` zusammengesetzt. Seit
+ * PROJ-69 legt der Arbeiter JPEG ab — jede so gebaute Adresse waere ein 404
+ * gewesen. Der Auftrag weiss selbst, was er geschrieben hat; das ist die
+ * einzige Quelle, die nicht veraltet, wenn sich die Ablage aendert.
+ */
+export async function ergebnisPfade(id: string): Promise<string[]> {
+  const antwort = await fetch(
+    `${config.supabaseUrl}/rest/v1/image_jobs?id=eq.${id}&select=result_paths`,
+    {
+      headers: {
+        apikey: config.supabaseKey,
+        Authorization: `Bearer ${config.supabaseKey}`,
+      },
+      signal: AbortSignal.timeout(30_000),
+    },
+  )
+  if (!antwort.ok) return []
+  const zeilen = await antwort.json() as { result_paths?: string[] | null }[]
+  return zeilen[0]?.result_paths ?? []
 }
 
 /**
@@ -266,15 +292,35 @@ export async function ergebnisHolen(pfad: string, userId: string): Promise<Array
 }
 
 /** Ergebnis ablegen. Pfadmuster {user_id}/{job_id}/{index}.png. */
+export type Ablage = {
+  pfad: string
+  /** Was WIRKLICH im Speicher liegt — nicht, was der Erzeuger geliefert hat. */
+  groesse: number
+  /** Ein Satz fürs Protokoll — immer gesetzt, auch wenn nichts umgewandelt wurde. */
+  hinweis: string
+  /** Ob wirklich nach JPEG umgewandelt wurde. */
+  umgewandelt: boolean
+}
+
 export async function ergebnisAblegen(
   userId: string, jobId: string, index: number, daten: ArrayBuffer,
-): Promise<string> {
+): Promise<Ablage> {
+  // AB HIER JPEG (PROJ-69). Mark am 05.09.2026: „Wir lassen die PNGs drin und
+  // nehmen aber ab jetzt JPEGs." Nachgemessen waren 661 PNG zusammen 1709 MB,
+  // die 521 JPEG derselben Sammlung nur 151 MB. Bestehendes wird nicht
+  // angefasst — hier geht nur Neues durch.
+  //
+  // `alsJpeg` gibt das Bild UNVERAENDERT zurueck, wenn es Transparenz benutzt,
+  // schon JPEG ist oder als JPEG groesser waere. Deshalb muss `bildart` DANACH
+  // laufen: Endung und Typ folgen dem, was tatsaechlich hochgeht.
+  const { daten: fertig, umgewandelt, grund } = await alsJpeg(daten)
+
   // Endung und Typ folgen dem INHALT, nicht der Annahme. Vorher stand hier
   // fest `.png` mit `Content-Type: image/png` — Gemini liefert aber JPEG.
   // Ein JPEG unter PNG-Namen zeigt der Browser richtig an (er rät), aber ein
   // Bildprogramm oder eine Druckerei lehnt es ab, und der Fehler fällt erst
   // außerhalb der App auf.
-  const art = bildart(daten)
+  const art = bildart(fertig)
   if (!art) throw new Error('Das Ergebnis ist kein erkennbares Bild — nicht abgelegt.')
   const pfad = `${userId}/${jobId}/${index}.${art.endung}`
   const antwort = await fetch(
@@ -287,7 +333,7 @@ export async function ergebnisAblegen(
         'Content-Type': art.typ,
         'x-upsert': 'true',
       },
-      body: daten,
+      body: new Uint8Array(fertig),
       signal: AbortSignal.timeout(120_000),
     },
   )
@@ -295,5 +341,13 @@ export async function ergebnisAblegen(
     const roh = await antwort.text().catch(() => '')
     throw new Error(ohneGeheimnis(`Hochladen fehlgeschlagen (HTTP ${antwort.status}): ${roh.slice(0, 300)}`))
   }
-  return pfad
+  return {
+    pfad,
+    groesse: fertig.length,
+    // IMMER melden, auch wenn nichts umgewandelt wurde — der Satz sagt dann,
+    // WARUM nicht. Ein Ausfall von `sharp` sieht sonst genauso aus wie ein
+    // Bild mit Transparenz, und beides sieht aus wie Erfolg.
+    hinweis: grund,
+    umgewandelt,
+  }
 }

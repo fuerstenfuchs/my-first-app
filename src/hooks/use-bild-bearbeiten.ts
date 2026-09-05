@@ -99,10 +99,17 @@ export function useBildBearbeiten() {
         return null
       }
 
-      const pfad = `${user.id}/${zeile.id}/0.png`
+      // Endung und Typ folgen dem BLOB, nicht einer Annahme. Seit PROJ-69
+      // liefert der Export JPEG, wenn das Bild deckend ist, und PNG nur noch
+      // dann, wenn es wirklich durchsichtige Stellen hat (Vier-Ecken-Warp).
+      // Ein JPEG unter `.png` zeigt der Browser richtig an — er raet —, aber
+      // ein Bildprogramm lehnt es ab, und der Fehler faellt erst ausserhalb
+      // der App auf.
+      const endung = blob.type === 'image/jpeg' ? 'jpg' : 'png'
+      const pfad = `${user.id}/${zeile.id}/0.${endung}`
       const { error: hochErr } = await supabase.storage
         .from(BUCKET)
-        .upload(pfad, blob, { contentType: 'image/png', upsert: true })
+        .upload(pfad, blob, { contentType: blob.type || 'image/png', upsert: true })
 
       if (hochErr) {
         await supabase.from('image_jobs').delete().eq('id', zeile.id)

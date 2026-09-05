@@ -113,4 +113,6 @@
 
 | PROJ-68 | Vorschaubilder statt Originale (1709 MB PNG gemessen) | In Review | [PROJ-68](PROJ-68-vorschaubilder.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-69
+| PROJ-69 | Neue Ergebnisbilder als JPEG (Faktor 7,4 gemessen) | In Review | [PROJ-69](PROJ-69-jpeg-statt-png.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-70

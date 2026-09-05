@@ -12,7 +12,7 @@
 
 import { config } from './config.ts'
 import { auftragAbarbeiten, beschreibung } from './abarbeiten.ts'
-import { naechsterAuftrag, auftragFehlgeschlagen } from './supabase.ts'
+import { naechsterAuftrag, auftragFehlgeschlagen, ergebnisPfade } from './supabase.ts'
 
 const job = await naechsterAuftrag()
 
@@ -32,13 +32,18 @@ if (job.job_type === 'generate') {
 
 try {
   await auftragAbarbeiten(job, text => console.log(text))
-  console.log('\nFertig. Öffentliche Adresse(n):')
-  const anzahl = job.job_type === 'upscale' ? 1 : Math.min(Math.max(job.variants ?? 1, 1), 4)
-  for (let i = 0; i < anzahl; i++) {
-    console.log(
-      `  ${config.supabaseUrl}/storage/v1/object/public/generated-images/` +
-      `${job.user_id}/${job.id}/${i}.png`,
-    )
+  // DIE PFADE ZURÜCKLESEN, NICHT NACHBAUEN. Hier stand die Endung fest als
+  // `.png` — seit PROJ-69 legt der Arbeiter JPEG ab, und jede so gebaute
+  // Adresse wäre ein 404 gewesen. Der Zweck dieser Ausgabe ist ein Link zum
+  // Anklicken; einer, der nicht trägt, ist schlimmer als gar keiner.
+  const pfade = await ergebnisPfade(job.id)
+  if (pfade.length === 0) {
+    console.log('\nFertig — aber der Auftrag nennt keine Ergebnispfade.')
+  } else {
+    console.log('\nFertig. Öffentliche Adresse(n):')
+    for (const pfad of pfade) {
+      console.log(`  ${config.supabaseUrl}/storage/v1/object/public/generated-images/${pfad}`)
+    }
   }
   console.log('')
 } catch (e) {
