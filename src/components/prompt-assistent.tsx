@@ -53,7 +53,18 @@ interface Props {
 }
 
 export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Props) {
-  const [offen, setOffen] = useState(false)
+  /*
+    OFFEN, NICHT ZUGEKLAPPT (PROJ-62, Nachtrag).
+
+    Marks Satz „man sieht das Fenster gar nicht" war hier woertlich wahr: Das
+    Eingabefeld existierte im Seitenaufbau erst nach einem Klick. Am 05.09.2026
+    hat er entschieden: „Du kannst die Flaeche schon gerne offen stehen lassen
+    […] Man muss ja nach unten scrollen beziehungsweise passt das schon."
+
+    Der frueher berechtigte Einwand, die Spalte verbrauche zu viel Hoehe, ist
+    damit von ihm selbst aufgehoben. Die Klappe bleibt — er kann sie zumachen.
+  */
+  const [offen, setOffen] = useState(true)
   const [verlauf, setVerlauf] = useState<Nachricht[]>([])
   const [eingabe, setEingabe] = useState('')
   const [laeuft, setLaeuft] = useState(false)
@@ -289,27 +300,35 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
             ? 'Was schwebt dir vor? Zum Beispiel: irgendwas mit einem alten Fischer im Nebel …'
             : 'Nachfassen: kürzer, mehr Nebel, ohne Personen …'}
           rows={3}
-          className="min-h-[4.5rem] resize-y text-xs leading-relaxed"
+          /*
+            HIER WAR DIE SCHWARZE FLAECHE, die Mark am 05.09.2026 gemeldet hat.
+
+            Beim Umbau hatte ich die Antwortbloecke des Assistenten auf
+            `lt-fenster` gestellt, sein EIGENES Eingabefeld aber uebersehen. Es
+            behielt `bg-background` — fast Schwarz — mitten auf der beleuchteten
+            Platte. Es ist dasselbe Fenster wie oben im Erzeugen-Block und
+            gehoert in dieselbe Sprache.
+          */
+          className="lt-fenster min-h-[5.5rem] resize-y px-3.5 py-2.5 text-[14.5px] leading-relaxed" 
         />
 
         <div className="flex gap-1.5">
           {laeuft ? (
             <Button
-              size="sm" variant="outline"
-              className="min-w-0 flex-1 text-xs"
+              variant="outline"
+              className="lt-feld h-10 min-w-0 flex-1 border-0 text-[14px]"
               onClick={abbrechen}
             >
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" />
               <span className="truncate">Abbrechen</span>
             </Button>
           ) : (
             <Button
-              size="sm"
-              className="min-w-0 flex-1 text-xs"
+              className="lt-haupt h-10 min-w-0 flex-1 text-[14px] font-bold hover:bg-transparent"
               onClick={() => void senden()}
               disabled={!eingabe.trim()}
             >
-              <Send className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+              <Send className="mr-2 h-4 w-4 shrink-0" />
               <span className="truncate">
                 {verlauf.length === 0 ? 'Prompt schreiben' : 'Nachfassen'}
               </span>
@@ -319,12 +338,12 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
           {(verlauf.length > 0 || eingabe.trim()) && (
             <Button
               size="sm" variant="ghost"
-              className="h-8 w-8 shrink-0 p-0"
+              className="lt-feld h-10 w-10 shrink-0 border-0 p-0"
               title="Gespräch zurücksetzen"
               aria-label="Gespräch zurücksetzen"
               onClick={zuruecksetzen}
             >
-              {laeuft ? <X className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+              {laeuft ? <X className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
             </Button>
           )}
         </div>

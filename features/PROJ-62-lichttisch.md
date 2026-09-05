@@ -169,15 +169,26 @@ falsch.
 erfasst:** Jedes Bild im Raster wächst beim Überfahren — bei dreißig sichtbaren
 Kacheln mehr Bewegung als alles andere zusammen.
 
-## Offen, weil es Marks Entscheidung ist
+## Der Assistent steht jetzt offen — und sein Feld war noch schwarz
 
-**Der Prompt-Assistent ist weiterhin zugeklappt.** Sein Satz „man sieht das
-Fenster gar nicht" war dort wörtlich wahr: Das Feld existiert im Seitenaufbau
-erst nach einem Klick. Er hat jetzt eine eigene Platte mit Namen und Pfeil, ist
-also **auffindbar** — aber das Fenster selbst erscheint weiterhin erst beim
-Öffnen. Ob es von Anfang an offen stehen soll, ist eine Richtungsfrage: Die
-Spalte ist schmal, und zu viel verbrauchte Höhe war hier schon einmal ein
-berechtigter Einwand von ihm.
+Mark am 05.09.2026, nach der Rückfrage:
+
+> „Du kannst die Fläche schon gerne offen stehen lassen, den Prompt-Assistent.
+> Man muss ja nach unten scrollen beziehungsweise passt das schon. Aber die
+> Fläche ist immer noch schwarz, da wo man den Prompttext eingibt vom
+> Prompt-Assistent. Hast Du die nicht geändert?"
+
+**Nein, hatte ich nicht.** Ich hatte beim Umbau die Antwortblöcke des
+Assistenten auf `.lt-fenster` gestellt und sein **eigenes Eingabefeld**
+übersehen. Es behielt `bg-background` — fast Schwarz — mitten auf der
+beleuchteten Platte. Das war der Rest der schwarzen Fläche, und er hat ihn
+genauer gesehen als ich.
+
+Damit ist der vierte seiner ursprünglichen Sätze wirklich beantwortet: Der
+Assistent steht offen (`useState(true)`), sein Feld ist dasselbe Fenster wie
+oben im Erzeugen-Block, und die beiden Knöpfe darunter sprechen dieselbe
+Sprache wie der Rest. Sein früherer Einwand, die Spalte verbrauche zu viel
+Höhe, ist von ihm selbst aufgehoben — die Klappe bleibt trotzdem.
 
 ## Geprüft
 
