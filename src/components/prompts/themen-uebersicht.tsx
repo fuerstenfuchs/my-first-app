@@ -13,6 +13,7 @@ import {
 import type { Prompt } from '@/hooks/use-prompts'
 import type { Thema } from '@/hooks/use-themen'
 import { cn } from '@/lib/utils'
+import { WaagerechtRollen } from '@/components/waagerecht-rollen'
 
 /**
  * Die Übersicht der Prompt-Datenbank (PROJ-63).
@@ -99,8 +100,9 @@ export function ThemenUebersicht({
               <span className="text-[13.5px] text-muted-foreground">{l.length}</span>
             </div>
             {/* Waagerecht rollen statt senkrecht: So kostet ein Regal eine
-                Reihe Höhe statt fünf. */}
-            <div className="flex gap-3 overflow-x-auto pb-2">
+                Reihe Höhe statt fünf. Ohne Rollbalken, dafür mit Mausrad und
+                Pfeilen — siehe `waagerecht-rollen.tsx`. */}
+            <WaagerechtRollen className="pb-1">
               {l.map(p => (
                 <button key={p.id} onClick={() => onPrompt(p)}
                   className="lt-kachel w-[132px] shrink-0 overflow-hidden text-left">
@@ -110,7 +112,7 @@ export function ThemenUebersicht({
                   </p>
                 </button>
               ))}
-            </div>
+            </WaagerechtRollen>
           </section>
         )
       })}

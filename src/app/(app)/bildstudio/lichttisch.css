@@ -405,3 +405,27 @@
   .lt-kachel img, .lt-kachel:hover img { transform: none; transition: none; }
   .lt .animate-pulse { animation: none; }
 }
+
+/*
+  KEINE ROLLBALKEN (PROJ-64).
+
+  Mark am 05.09.2026: „Jetzt sind da natürlich diese hässlichen Scrollbalken.
+  Die wollte ich eigentlich gar nirgendwo mehr drin haben."
+
+  Senkrecht ist das gefahrlos: Das Mausrad rollt dort ohnehin, es geht nur die
+  Anzeige verloren — und dass eine Fläche weitergeht, sieht man an den
+  angeschnittenen Kacheln am unteren Rand.
+
+  WAAGERECHT IST ES NICHT GEFAHRLOS, und das steht hier als Warnung: Am
+  04.09.2026 habe ich einen waagerechten Balken versteckt, ohne Ersatz. Seine
+  Antwort: „Allerdings kann ich jetzt nicht mehr nach rechts scrollen." Wer
+  einen waagerechten Balken entfernt, muss Mausrad UND Pfeile mitgeben —
+  dafür gibt es `components/waagerecht-rollen.tsx`.
+*/
+.lt [class*='overflow-y-auto'],
+.lt.overflow-y-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.lt [class*='overflow-y-auto']::-webkit-scrollbar,
+.lt.overflow-y-auto::-webkit-scrollbar { width: 0; height: 0; }
