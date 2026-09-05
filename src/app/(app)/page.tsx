@@ -12,7 +12,6 @@ import { PromptListRow, rowVariants } from '@/components/prompts/prompt-list-row
 import { PromptModal } from '@/components/prompts/prompt-modal'
 import { PromptDetailPanel } from '@/components/prompts/prompt-detail-panel'
 import { DeleteDialog } from '@/components/prompts/delete-dialog'
-import { TagFilterBar } from '@/components/prompts/tag-filter-bar'
 import { ThemenUebersicht } from '@/components/prompts/themen-uebersicht'
 import { useThemen } from '@/hooks/use-themen'
 import '../(app)/bildstudio/lichttisch.css'
@@ -359,13 +358,19 @@ export default function PromptsPage() {
           </Button>
         </div>
 
-        {!loading && allTags.length > 0 && (
-          <TagFilterBar
-            tags={allTags}
-            activeTag={activeTag}
-            onTagClick={tag => setActiveTag(prev => prev === tag ? null : tag)}
-          />
-        )}
+        {/*
+          HIER STAND DIE SCHLAGWORTLEISTE (bis 05.09.2026).
+
+          Mark: „Die Leiste mit den Stichwörtern oben weg. Das gefällt mir
+          nicht. Nutze ich auch nie." Die Messung gibt ihm recht: 51 von 80
+          Prompts haben gar kein Schlagwort, und die vorhandenen sind doppelt
+          gefuehrt („portrait" und „Portrait"). Eine Leiste, die zwei Drittel
+          des Bestandes nicht kennt, ordnet nichts.
+
+          Das Filtern nach einem Schlagwort BLEIBT moeglich: Die Verweise in
+          der Seitenleiste setzen weiterhin `?tag=`, und `activeTag` wertet das
+          aus. Nur die Leiste ist weg.
+        */}
         {isEnhanced && searchQuery && (
           <div className="px-4 py-1 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 bg-green-50/60 dark:bg-green-950/25 border-t border-green-100 dark:border-green-900/40">
             <Sparkles className="h-3 w-3" />

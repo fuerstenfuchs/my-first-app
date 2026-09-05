@@ -63,11 +63,23 @@
   --lt-fg2:   #b3c0cb;
   --lt-fg3:   #a0aeba;
 
-  position: relative;
+  /*
+    `position` NUR, WENN DAS ELEMENT NICHT SCHON POSITIONIERT IST.
+
+    Der Belag darunter braucht einen Bezugspunkt. Wer aber `lt` auf ein
+    Element setzt, das bereits `absolute` oder `fixed` ist, verliert dessen
+    Verankerung — beide Regeln wiegen gleich viel, und dieses Stilblatt laedt
+    spaeter. Am 05.09.2026 ist genau das passiert: Der rollende Bereich der
+    Prompt-Seite ist `absolute inset-y-0`, wurde durch `lt` zu `relative` und
+    damit hoehenlos. Mark: „Nur kann ich jetzt leider nicht mehr scrollen."
+
+    Dieselbe Falle hatte Critic bei PROJ-62 fuer `.lt > *` benannt; dort war
+    sie vermieden und eine Ebene tiefer trotzdem eingetreten.
+  */
   isolation: isolate;
-  /* Kein eigener Hintergrund: Die unterste Schicht des `::before` unten ist
-     deckend und liegt darueber. Ein Wert hier waere tot. */
 }
+.lt:not(.absolute):not(.fixed):not(.sticky) { position: relative; }
+.lt > *:not(.absolute):not(.fixed):not(.sticky) { position: relative; }
 
 /*
   DAS LICHT LIEGT UNTER ALLEM.
@@ -113,7 +125,7 @@
       0 0 / 100% 100% no-repeat,
     linear-gradient(180deg, #27343f, #151d25 72%) 0 0 / 100% 100% no-repeat;
 }
-.lt > * { position: relative; z-index: 1; }
+.lt > * { z-index: 1; }
 
 /* ── Die Kopfzeile ────────────────────────────────────────────────────────── */
 .lt-kopf {

@@ -96,7 +96,20 @@ export function PromptDetailPanel({
         {/* Inner fixed-width content — gradient lives here so framer-motion can't interfere */}
         <div
           className="w-[500px] flex flex-col h-full overflow-hidden"
-          style={{ background: 'linear-gradient(160deg, hsl(142,75%,22%) 0%, hsl(130,25%,9%) 50%, hsl(25,60%,14%) 100%)' }}
+          /*
+            BLAEULICH STATT GRUEN (PROJ-63, 05.09.2026).
+
+            Der gruene Verlauf stammte aus der Zeit, als Gruen die Farbe der
+            App war. Seit dem Lichttisch ist die Flaeche, auf der Bilder liegen,
+            blaugrau mit einem warmen Akzent — der gruene Kopf stand daneben
+            wie aus einem anderen Programm. Mark: „eher so bläulich, Verlauf
+            kann schon bleiben."
+
+            Die drei Anschlaege sind die des Lichttischs: das aufgehellte Blau
+            der Tischplatte, die dunkle Platte, und ganz unten ein warmer
+            Anklang als Bruecke zum Akzent.
+          */
+          style={{ background: 'linear-gradient(160deg, hsl(207,28%,26%) 0%, hsl(207,26%,11%) 52%, hsl(24,42%,13%) 100%)' }}
         >
 
           {/* Panel header */}

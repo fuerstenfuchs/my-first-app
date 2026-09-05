@@ -112,6 +112,46 @@ geholt. Genau diese Falle hatte Critic bei PROJ-62 benannt.
 - Bildschirmfoto der gebauten Übersicht (mit Platzhalterbildern, weil die
   Vorschau ohne Anmeldung keine echten Daten sieht).
 
+## Vier Rückmeldungen von Mark, alle noch am selben Tag
+
+**1. „Nur kann ich jetzt leider nicht mehr scrollen."** — Mein Fehler, und zwar
+einer, den ich einen Tag vorher selbst aufgeschrieben hatte. `.lt` setzt
+`position: relative`; der rollende Bereich der Prompt-Seite ist aber
+`absolute inset-y-0`. Beide wiegen gleich viel, mein Stilblatt lädt später —
+also gewann `relative`, und der Kasten verlor seine Verankerung und damit seine
+Höhe. In der Spezifikation stand sogar, warum `lt` nicht an die Wurzel gehört;
+eine Ebene tiefer bin ich trotzdem hineingetappt.
+
+Behoben in `lichttisch.css`: `position` gilt jetzt nur noch, wenn das Element
+nicht schon `absolute`, `fixed` oder `sticky` ist. Im Browser nachgemessen —
+`position: absolute` bleibt, der Bereich rollt (2164px Inhalt), das Kind bleibt
+`relative`, das Licht liegt darunter.
+
+**2. Die Schlagwortleiste ist weg.** „Nutze ich auch nie." Deckt sich mit der
+Messung: 51 von 80 Prompts haben gar kein Schlagwort, und die vorhandenen sind
+doppelt geführt („portrait" und „Portrait"). Das Filtern nach einem Schlagwort
+bleibt möglich — die Verweise aus der Seitenleiste setzen weiter `?tag=`.
+
+**3. Die Sammlungsliste in der Seitenleiste ist weg.** „Ganz kleine Sammlungen.
+Man kann es kaum anklicken." Er hat recht: Die Zeile war eine
+Gruppenüberschrift — 12px graue Schrift mit einem 14px-Pfeil.
+
+**Die Sammlungen selbst bleiben.** Sie stehen jetzt als normale Zeile in der
+Fußzeile, in derselben Größe wie Statistiken und Einstellungen. Wäre der
+Verweis ganz verschwunden, wären 17 Sammlungen mit 30 Prompts nur noch über die
+Adresszeile erreichbar — das ist kein Aufräumen mehr, sondern Verlust. Wenn
+Mark sie ganz weg haben will, ist das eine Zeile.
+
+Mit der Liste sind auch ihre Abfragen weg: Sie liefen auf **jeder** Seite der
+App mit, nur um eine zugeklappte Liste zu füllen. Die Seitenleiste ist dadurch
+von 532 auf 290 Zeilen geschrumpft.
+
+**4. Der grüne Verlauf im Prompt-Fenster ist blau.** Er stammte aus der Zeit,
+als Grün die Farbe der App war, und stand neben dem Lichttisch wie aus einem
+anderen Programm. Jetzt die drei Anschläge des Lichttischs: aufgehelltes Blau,
+dunkle Platte, unten ein warmer Anklang als Brücke zum Akzent. Der Verlauf
+bleibt, wie er es wollte.
+
 ## Offen
 
 - Der **Lichtkasten mit Filmstreifen** (Bild groß, Pfeiltasten) ist noch nicht
