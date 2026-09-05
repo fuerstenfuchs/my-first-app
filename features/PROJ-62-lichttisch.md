@@ -91,6 +91,35 @@ echten Browser bei 375px steht nichts über, nachgemessen. Der Umbruch-Kasten,
 den ich daraufhin gebaut hatte, bleibt trotzdem: Bei „Arbeiter zuletzt vor 14
 Minuten" wird der Text länger, und dann trägt er.
 
+## Nachtrag noch am selben Tag: das Licht war weg
+
+Mark, nachdem er die ausgelieferte Fassung gesehen hatte:
+
+> „Da wurde noch was vergessen mit der schwarzen Fläche."
+> „Oh, was ich noch sehe, der Lichteffekt ist ja gar nicht da. Das Schräglicht."
+
+Beides war **derselbe Fehler**, und er steckte in einer Eigenschaft von
+CSS-Verläufen, die man leicht übersieht:
+
+Die Haltepunkte der vier Strahlen sind **Prozentwerte**. Sie beziehen sich auf
+die Länge der Verlaufslinie — und die wächst mit dem Element. Auf dem Muster,
+das Mark abgenommen hat, war die Fläche 886px breit: vier klare Bänder. In der
+echten App ist sie 1500px und mehr. Dieselben vier Bänder wurden über die ganze
+Breite gezogen, jedes fast doppelt so breit — und dadurch so flach, dass große
+Bereiche einfach dunkel aussahen. Genau die „schwarze Fläche".
+
+Behoben mit `background-size: 940px 100%` und `repeat-x`: Das Muster behält die
+Größe, die er gewählt hat, unabhängig von der Fensterbreite. Die Kacheln stoßen
+an durchsichtigen Rändern aneinander, deshalb gibt es keine Naht.
+
+**Gemessen statt geschätzt:** Auf einem waagerechten Schnitt bei y=700 lagen die
+Helligkeitswerte vorher zwischen 29 und 38 — praktisch flach. Danach zwischen 29
+und 60.
+
+**Die Lehre für das nächste Mal:** Ein Muster, das an einem Entwurf fester Breite
+abgenommen wurde, muss beim Einbau eine feste Größe bekommen. Sonst gilt die
+Abnahme für eine Breite, die es in der App nie gibt.
+
 ## Geprüft
 
 - `npx tsc --noEmit` — keine neuen Fehler.

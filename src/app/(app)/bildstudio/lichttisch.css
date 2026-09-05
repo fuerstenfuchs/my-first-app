@@ -63,17 +63,41 @@
   nicht wie Kästen vor einem Hintergrundbild. Wer die Ebene über den Inhalt
   legt, bekommt einen Schleier statt eines Tisches.
 */
+/*
+  DIE STRAHLEN HABEN EINE FESTE MUSTERBREITE (940px) — UND DAS IST DER PUNKT,
+  AN DEM DER ERSTE EINBAU GESCHEITERT IST.
+
+  Die Haltepunkte im Verlauf sind Prozentwerte. Sie beziehen sich auf die
+  Länge der Verlaufslinie, und die wächst mit dem Element. Auf dem Muster, das
+  Mark abgenommen hat, war die Fläche 886px breit — vier klare Bänder. In der
+  echten App ist sie 1500px und mehr: Dieselben vier Bänder wurden über die
+  ganze Breite gezogen, jedes doppelt so breit und dadurch so flach, dass Mark
+  am 05.09.2026 sagte: „Der Lichteffekt ist ja gar nicht da."
+
+  Mit `background-size: 940px 100%` und `repeat-x` behält das Muster die
+  Größe, die er gewählt hat — egal wie breit das Fenster ist. Die Kacheln
+  stoßen an durchsichtigen Rändern aneinander (links vor 14 %, rechts nach
+  79 %), deshalb sieht man keine Naht.
+
+  WER DIE STÄRKE ÄNDERN WILL, ändert `--s1` bis `--sr` weiter oben.
+  WER DIE GRÖSSE ÄNDERN WILL, ändert die 940px — an allen vier Zeilen.
+*/
 .lt::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
     linear-gradient(103deg, transparent 26%, rgba(205,232,255,var(--s1)) 34%,
-                    rgba(205,232,255,calc(var(--s1) * 0.2)) 42%, transparent 47%),
+                    rgba(205,232,255,calc(var(--s1) * 0.2)) 42%, transparent 47%)
+      0 0 / 940px 100% repeat-x,
     linear-gradient(103deg, transparent 44%, rgba(205,232,255,var(--s2)) 52%,
-                    rgba(205,232,255,calc(var(--s2) * 0.16)) 58%, transparent 63%),
-    linear-gradient(103deg, transparent 62%, rgba(185,215,245,var(--s3)) 70%, transparent 79%),
-    linear-gradient(103deg, transparent 14%, rgba(185,215,245,var(--s4)) 20%, transparent 26%),
-    radial-gradient(130% 85% at 80% -12%, rgba(170,205,240,var(--sr)), transparent 62%),
-    linear-gradient(180deg, #27343f, #151d25 72%);
+                    rgba(205,232,255,calc(var(--s2) * 0.16)) 58%, transparent 63%)
+      0 0 / 940px 100% repeat-x,
+    linear-gradient(103deg, transparent 62%, rgba(185,215,245,var(--s3)) 70%, transparent 79%)
+      0 0 / 940px 100% repeat-x,
+    linear-gradient(103deg, transparent 14%, rgba(185,215,245,var(--s4)) 20%, transparent 26%)
+      0 0 / 940px 100% repeat-x,
+    radial-gradient(130% 85% at 80% -12%, rgba(170,205,240,var(--sr)), transparent 62%)
+      0 0 / 100% 100% no-repeat,
+    linear-gradient(180deg, #27343f, #151d25 72%) 0 0 / 100% 100% no-repeat;
 }
 .lt > * { position: relative; z-index: 1; }
 
