@@ -208,7 +208,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
       <DialogContent className="max-h-[90svh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Link2 className="h-4 w-4 text-violet-400" />
+            <Link2 className="h-4 w-4 text-primary" />
             Referenzkette
             <span className="ml-1 truncate text-sm font-normal text-muted-foreground">
               — {character.name}
@@ -252,7 +252,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                   className={cn(
                     'flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors',
                     aktiv || gepruft
-                      ? 'border-violet-500/50 bg-violet-500/5'
+                      ? 'border-primary/50 bg-primary/5'
                       : liegt
                         ? 'border-emerald-600/30 bg-emerald-600/5'
                         : 'border-border/60 bg-card/40',
@@ -260,7 +260,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                 >
                   <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold">
                     {liegt ? <Check className="h-3.5 w-3.5 text-emerald-400" />
-                      : aktiv ? <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />
+                      : aktiv ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                         : i + 1}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -277,7 +277,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                       </p>
                     )}
                     {dran && phase.art === 'bereit' && (
-                      <p className="mt-1 text-[11px] text-violet-300">Hier geht es weiter.</p>
+                      <p className="mt-1 text-[11px] text-[#ffb066]">Hier geht es weiter.</p>
                     )}
                   </div>
                 </div>
@@ -289,9 +289,9 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
         {/* ── Vorgaben für den Körper-Schritt ──────────────────────────────
           * Bedingung: siehe `koerperVorgabenSichtbar` oben. */}
         {koerperVorgabenSichtbar && (
-          <div className="space-y-4 rounded-xl border border-violet-500/50 bg-violet-500/5 p-4">
+          <div className="space-y-4 rounded-xl border border-primary/50 bg-primary/5 p-4">
             <p className="flex items-center gap-2 text-sm font-semibold">
-              <PersonStanding className="h-4 w-4 text-violet-400" />
+              <PersonStanding className="h-4 w-4 text-primary" />
               Vorgaben für den Körper
               <span className="ml-1 text-[11px] font-normal text-muted-foreground">
                 — freiwillig
@@ -304,7 +304,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
 
               {koerperfotoUrl ? (
                 <div className="flex items-start gap-3">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-violet-500/40 bg-black/30">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-primary/40 bg-black/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={koerperfotoUrl}
@@ -384,8 +384,8 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                               className={cn(
                                 'h-16 w-16 overflow-hidden rounded-md border-2 bg-black/30 transition-colors',
                                 url === koerperfotoUrl
-                                  ? 'border-violet-400'
-                                  : 'border-transparent hover:border-violet-500/50',
+                                  ? 'border-primary'
+                                  : 'border-transparent hover:border-primary/50',
                               )}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -485,7 +485,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
         {phase.art === 'wartet' && (
           <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-4">
             <p className="flex items-center gap-2 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
               {SCHRITT_LABEL[phase.schritt]} ist eingereiht — der Arbeiter auf dem PC holt ihn ab.
             </p>
             <p className="text-xs text-muted-foreground">
@@ -507,7 +507,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
 
         {phase.art === 'legt_ab' && (
           <p className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
             Bild wird in die Variante „{VARIANTEN_NAME[phase.schritt]}" gelegt …
           </p>
         )}
@@ -515,7 +515,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
         {/* Der Halt: groß ansehen und entscheiden. */}
         {phase.art === 'pruefen' && (
           <div className="space-y-3">
-            <div className="overflow-hidden rounded-xl border border-violet-500/40 bg-black/30">
+            <div className="overflow-hidden rounded-xl border border-primary/40 bg-black/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={phase.bildUrl}

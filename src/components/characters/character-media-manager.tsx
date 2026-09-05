@@ -171,7 +171,7 @@ export function CharacterMediaManager({
       <div
         className={cn(
           'rounded-lg border-2 border-dashed transition-colors p-4',
-          isDragOver ? 'border-violet-500 bg-violet-500/10' : 'border-white/10 hover:border-white/20',
+          isDragOver ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-white/20',
         )}
         onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
         onDragLeave={() => setIsDragOver(false)}

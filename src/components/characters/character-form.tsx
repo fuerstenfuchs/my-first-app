@@ -204,7 +204,7 @@ export function CharacterForm({ open, onClose, character, onSave }: Props) {
                         className={cn(
                           'relative aspect-[3/4] rounded-lg border-2 border-dashed transition-colors cursor-pointer overflow-hidden',
                           hasFile
-                            ? 'border-violet-500/50'
+                            ? 'border-primary/50'
                             : 'border-white/10 hover:border-white/25 bg-white/5'
                         )}
                         onClick={() => fileRefs[slot.key].current?.click()}

@@ -61,8 +61,8 @@ export function TitelbildKnopf({ character, varianten, titelbildSetzen, onAender
         size="sm"
         variant="outline"
         className={cn(
-          'h-8 gap-1.5 border-violet-500/40 text-violet-300',
-          'hover:bg-violet-500/10 hover:text-violet-200',
+          'h-8 gap-1.5 border-primary/40 text-[#ffb066]',
+          'hover:bg-primary/10 hover:text-[#ffd0a8]',
         )}
         disabled={!!hindernis || laeuft}
         // Kein stiller gesperrter Knopf: Warum er nicht geht, steht im
@@ -80,7 +80,7 @@ export function TitelbildKnopf({ character, varianten, titelbildSetzen, onAender
         <DialogContent className="max-h-[90svh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <ImagePlus className="h-4 w-4 text-violet-400" />
+              <ImagePlus className="h-4 w-4 text-primary" />
               Titelbild erzeugen
               <span className="ml-1 truncate text-sm font-normal text-muted-foreground">
                 — {character.name}
@@ -213,7 +213,7 @@ function Schritt({ nummer, text, zustand }: {
       className={cn(
         'flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors',
         zustand === 'laeuft'
-          ? 'border-violet-500/50 bg-violet-500/5'
+          ? 'border-primary/50 bg-primary/5'
           : zustand === 'fertig'
             ? 'border-emerald-600/30 bg-emerald-600/5'
             : 'border-border/60 bg-card/40',
@@ -221,7 +221,7 @@ function Schritt({ nummer, text, zustand }: {
     >
       <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold">
         {zustand === 'fertig' ? <Check className="h-3.5 w-3.5 text-emerald-400" />
-          : zustand === 'laeuft' ? <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />
+          : zustand === 'laeuft' ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
             : nummer}
       </div>
       <p className="min-w-0 flex-1 text-xs leading-relaxed">{text}</p>

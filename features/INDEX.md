@@ -107,4 +107,6 @@
 
 | PROJ-65 | Warteschlange auf dem beleuchteten Tisch | In Review | [PROJ-65](PROJ-65-warteschlange.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-66
+| PROJ-66 | Charakterseite auf dem beleuchteten Tisch (Violett raus) | In Review | [PROJ-66](PROJ-66-charakterseite.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-67

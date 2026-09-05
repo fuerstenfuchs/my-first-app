@@ -15,6 +15,13 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+/*
+  Ohne diese Einfuhr gibt es die Klassen `lt`, `lt-kopf`, `lt-feld` und
+  `lt-haupt` auf dieser Seite gar nicht — sie stehen dann im Markup und tun
+  nichts. Genau das ist beim ersten Anlauf passiert: Die Seite blieb schwarz,
+  obwohl alle Klassen gesetzt waren.
+*/
+import '../bildstudio/lichttisch.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -135,17 +142,25 @@ export default function CharactersPage() {
     : null
 
   return (
-    <div className="flex h-svh min-w-0">
+    /*
+      DIE CHARAKTERSEITE AUF DEM BELEUCHTETEN TISCH (PROJ-66).
+
+      `lt` an der Wurzel ist hier geprueft: Die beiden direkten Kinder (Liste
+      links, Detail rechts) sind statisch. Die `absolute`-Rollbereiche darin
+      sind ENKEL — `.lt > *` erreicht sie nicht, und `.lt` selbst traegt seit
+      dem Fehler auf der Prompt-Seite ohnehin einen Waechter.
+    */
+    <div className="lt flex h-svh min-w-0">
 
       {/* ── Left: character list ─────────────────────────────────────── */}
-      <div className="flex flex-col w-72 shrink-0 border-r border-border">
-        <header className="border-b shrink-0 px-4 py-3 flex items-center gap-3">
+      <div className="flex w-72 shrink-0 flex-col border-r border-[rgba(150,185,220,0.14)]">
+        <header className="lt-kopf flex shrink-0 items-center gap-3 px-4 py-3">
           <SidebarTrigger />
-          <h1 className="text-base font-semibold flex-1 truncate">Charaktere</h1>
+          <h1 className="lt-titel flex-1 truncate">Charaktere</h1>
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 shrink-0"
+            className="lt-feld h-10 w-10 shrink-0 border-0"
             onClick={() => { setEditingCharacter(null); setCharFormOpen(true) }}
             title="Neuer Charakter"
           >
@@ -153,14 +168,14 @@ export default function CharactersPage() {
           </Button>
         </header>
 
-        <div className="px-3 py-2 border-b">
+        <div className="border-b border-[rgba(150,185,220,0.12)] px-3 py-2.5">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Suchen…"
-              className="pl-8 h-8 text-sm"
+              className="lt-feld h-10 border-0 pl-9 text-[15px]"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -174,7 +189,7 @@ export default function CharactersPage() {
           <div className="absolute inset-y-0 left-0 right-0 ohne-rollbalken overflow-y-auto overflow-x-hidden">
             {loading ? (
               <div className="p-2 space-y-1">
-                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-[12px] bg-white/[0.06]" />)}
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-2 text-center px-4">
@@ -194,14 +209,16 @@ export default function CharactersPage() {
                 {filtered.map(char => (
                   <li key={char.id}>
                     <button
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors group ${
+                      /* Orange heisst in dieser App „ausgewaehlt" — ueberall.
+                         Hier stand Violett, die alte Kennfarbe dieser Seite. */
+                      className={`group flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors ${
                         selectedId === char.id
-                          ? 'bg-violet-500/10 text-violet-400'
-                          : 'hover:bg-accent/60'
+                          ? 'bg-[rgba(249,115,22,0.16)] text-[#ffb066]'
+                          : 'hover:bg-[rgba(160,195,225,0.09)]'
                       }`}
                       onClick={() => { setSelectedId(char.id); setSelectedVariantId(null) }}
                     >
-                      <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-muted border border-border/50">
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)] bg-black/25">
                         {char.cover_image_url ? (
                           <img src={char.cover_image_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -211,12 +228,12 @@ export default function CharactersPage() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{char.name}</p>
+                        <p className="truncate text-[15px] font-semibold">{char.name}</p>
                         {char.description && (
-                          <p className="text-xs text-muted-foreground truncate">{char.description}</p>
+                          <p className="truncate text-[13px] text-muted-foreground">{char.description}</p>
                         )}
                       </div>
-                      <ChevronRight className={`h-4 w-4 shrink-0 transition-opacity ${selectedId === char.id ? 'opacity-100 text-violet-400' : 'opacity-0 group-hover:opacity-40'}`} />
+                      <ChevronRight className={`h-4 w-4 shrink-0 transition-opacity ${selectedId === char.id ? 'text-[#ffb066] opacity-100' : 'opacity-0 group-hover:opacity-40'}`} />
                     </button>
                   </li>
                 ))}
@@ -230,17 +247,18 @@ export default function CharactersPage() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {!selectedId ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
-            <div className="w-20 h-20 rounded-full bg-muted/40 flex items-center justify-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/[0.06]">
               <Users className="h-10 w-10 text-muted-foreground/30" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Character Vault</h2>
-              <p className="text-sm text-muted-foreground max-w-sm">
+              <h2 className="text-[22px] font-bold">Character Vault</h2>
+              <p className="max-w-sm text-[15px] text-muted-foreground">
                 Wähle einen Charakter aus der Liste oder lege einen neuen an.
                 Jeder Charakter enthält Varianten mit Referenzbildern und Prompts.
               </p>
             </div>
-            <Button onClick={() => { setEditingCharacter(null); setCharFormOpen(true) }}>
+            <Button className="lt-haupt h-11 px-6 text-[15px] font-bold hover:bg-transparent"
+                    onClick={() => { setEditingCharacter(null); setCharFormOpen(true) }}>
               <Plus className="mr-2 h-4 w-4" />
               Neuer Charakter
             </Button>
@@ -251,14 +269,14 @@ export default function CharactersPage() {
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-64" />
             <div className="grid grid-cols-3 gap-3 mt-6">
-              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-[12px] bg-white/[0.06]" />)}
             </div>
           </div>
 
         ) : character ? (
           <>
             {/* Character header */}
-            <header className="border-b shrink-0 px-6 py-4">
+            <header className="lt-kopf shrink-0 px-6 py-4">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-muted border border-border/50">
                   {character.cover_image_url ? (
@@ -284,7 +302,7 @@ export default function CharactersPage() {
                   )}
                   {character.source_url && (
                     <a href={character.source_url} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-400 transition-colors mt-1.5">
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors mt-1.5">
                       <ExternalLink className="h-3 w-3" />
                       {character.source_title || (() => { try { return new URL(character.source_url).hostname.replace('www.', '') } catch { return character.source_url } })()}
                     </a>
@@ -295,7 +313,7 @@ export default function CharactersPage() {
                   {/* Der häufigste Handgriff zuerst (PROJ-48): Kopf, Körper und
                       Referenzsheet in einem Durchlauf, statt dreimal einzeln
                       erzeugen, herunterladen und wieder hochladen. */}
-                  <Button size="sm" className="h-8 gap-1.5 bg-violet-600 hover:bg-violet-500"
+                  <Button size="sm" className="h-8 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => setKettenDialogOffen(true)}>
                     <Link2 className="h-3.5 w-3.5" />
                     Referenzkette
@@ -315,7 +333,7 @@ export default function CharactersPage() {
                     }
                     onAenderung={() => { void refetchDetail() }}
                   />
-                  <Button size="sm" variant="outline" className="h-8 gap-1.5 border-violet-500/40 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 border-primary/40 text-[#ffb066] hover:bg-primary/10 hover:text-[#ffd0a8]"
                     onClick={() => setSheetDialogOpen(true)}>
                     <Sparkles className="h-3.5 w-3.5" />
                     Sheets

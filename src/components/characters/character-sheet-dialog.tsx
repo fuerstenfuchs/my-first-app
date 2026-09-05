@@ -335,7 +335,7 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-violet-400" />
+            <Sparkles className="h-4 w-4 text-primary" />
             Sheet erstellen
             <span className="text-muted-foreground font-normal text-sm ml-1 truncate">— {character.name}</span>
           </DialogTitle>
@@ -371,11 +371,11 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
               <button
                 key={type.id}
                 onClick={() => handleSelect(type.id)}
-                className="w-full flex items-start gap-3 px-4 py-3 rounded-xl border border-border/60 bg-card/60 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all text-left group"
+                className="w-full flex items-start gap-3 px-4 py-3 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group"
               >
                 <span className="text-2xl leading-none shrink-0 mt-0.5">{type.icon}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold group-hover:text-violet-300 transition-colors">{type.label}</p>
+                  <p className="text-sm font-semibold group-hover:text-[#ffb066] transition-colors">{type.label}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {type.views.map(v => (
@@ -383,7 +383,7 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
                     ))}
                   </div>
                 </div>
-                <span className="text-muted-foreground/30 group-hover:text-violet-400 transition-colors text-lg leading-none mt-0.5">›</span>
+                <span className="text-muted-foreground/30 group-hover:text-primary transition-colors text-lg leading-none mt-0.5">›</span>
               </button>
             ))}
           </div>
@@ -408,13 +408,13 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
                 <div className="flex rounded-lg border border-border/60 overflow-hidden">
                   <button
                     onClick={() => setGender('woman')}
-                    className={cn('px-2.5 py-1 text-[11px] transition-colors', gender === 'woman' ? 'bg-violet-600 text-white' : 'hover:bg-muted/50')}
+                    className={cn('px-2.5 py-1 text-[11px] transition-colors', gender === 'woman' ? 'bg-primary text-primary-foreground font-semibold' : 'hover:bg-muted/50')}
                   >
                     Frau
                   </button>
                   <button
                     onClick={() => setGender('man')}
-                    className={cn('px-2.5 py-1 text-[11px] transition-colors', gender === 'man' ? 'bg-violet-600 text-white' : 'hover:bg-muted/50')}
+                    className={cn('px-2.5 py-1 text-[11px] transition-colors', gender === 'man' ? 'bg-primary text-primary-foreground font-semibold' : 'hover:bg-muted/50')}
                   >
                     Mann
                   </button>

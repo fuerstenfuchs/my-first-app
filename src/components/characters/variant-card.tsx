@@ -43,7 +43,7 @@ export function VariantCard({ variant, isSelected, onClick, onEdit, onDelete, on
       style={style}
       className={`rounded-lg border transition-all cursor-pointer group relative ${
         isSelected
-          ? 'border-violet-500/60 bg-violet-500/5 ring-1 ring-violet-500/30'
+          ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/30'
           : 'border-border/50 bg-card/60 hover:border-border hover:bg-card'
       }`}
       onClick={onClick}
