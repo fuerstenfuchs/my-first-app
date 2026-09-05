@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { ImageIcon } from 'lucide-react'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface DropItem {
   id: string
@@ -67,7 +68,7 @@ export function QuickImageDrop({ items, accept, onFiles }: QuickImageDropProps) 
                   <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 </div>
               ) : item.url ? (
-                <img src={item.url} alt="" className="w-full h-full object-cover" />
+                <Vorschaubild src={item.url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-destructive text-xs">✕</div>
               )}

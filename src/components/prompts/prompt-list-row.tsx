@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Prompt } from '@/hooks/use-prompts'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 const GRADIENTS = [
   'from-emerald-950 to-green-900',
@@ -77,7 +78,7 @@ export function PromptListRow({
         {showGradient ? (
           <div className={`w-full h-full bg-gradient-to-br ${gradient}`} />
         ) : (
-          <img
+          <Vorschaubild
             src={prompt.cover_image_url!}
             alt=""
             className="w-full h-full object-cover"

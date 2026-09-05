@@ -45,6 +45,7 @@ import './papier.css'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -289,7 +290,7 @@ function AssetThumb({
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-[var(--sb-pap2)]">
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="h-full w-full object-contain" />
+          <Vorschaubild src={imageUrl} alt={name} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-3xl opacity-25">
             {emoji}
@@ -381,7 +382,7 @@ function RefWahlDialog({
                   : 'border-[var(--sb-rule)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-pap2)]',
               )}
             >
-              <img
+              <Vorschaubild
                 src={img.url}
                 alt={img.label}
                 className="h-52 w-full rounded-[10px] bg-[var(--sb-pap2)] object-contain"
@@ -514,7 +515,7 @@ function RefPicker({
             Breite waere stattdessen jedes Sheet auf Briefmarkenhoehe
             geschrumpft.
           */}
-          <img
+          <Vorschaubild
             src={img.url}
             alt={img.label}
             className={cn(
@@ -587,7 +588,7 @@ function SzenenFeld({
       <div className="flex items-center gap-[11px]">
         <div className="h-[54px] w-[54px] flex-none overflow-hidden rounded-[10px] border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
           {displayImage ? (
-            <img src={displayImage} alt={asset.name} className="h-full w-full object-contain" />
+            <Vorschaubild src={displayImage} alt={asset.name} className="h-full w-full object-contain" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl opacity-40">{slot.emoji}</div>
           )}
@@ -641,7 +642,7 @@ function RefExportCard({ label, emoji, asset, refImage }: {
     <div className="flex items-start gap-2.5">
       <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[10px] border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
         {imageUrl ? (
-          <img src={imageUrl} alt={asset.name} className="h-full w-full object-contain" />
+          <Vorschaubild src={imageUrl} alt={asset.name} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-lg">{emoji}</div>
         )}
@@ -669,7 +670,7 @@ function NebenAsset({ label, emoji, asset }: {
     <div className="flex items-center gap-2.5">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--sb-rule)] bg-[var(--sb-pap2)] text-base">
         {asset.cover_image_url
-          ? <img src={asset.cover_image_url} alt={asset.name} className="h-full w-full object-contain" />
+          ? <Vorschaubild src={asset.cover_image_url} alt={asset.name} className="h-full w-full object-contain" />
           : emoji}
       </div>
       <div className="min-w-0">

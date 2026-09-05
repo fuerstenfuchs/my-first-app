@@ -28,6 +28,7 @@ import { usePromptMedia, IMAGE_TYPES, IMAGE_MAX } from '@/hooks/use-prompt-media
 import { analysiere } from '@/hooks/use-analyse'
 import type { Prompt } from '@/hooks/use-prompts'
 import { proxyBereit } from '@/lib/proxy-analyse'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 export interface SharePayload {
   content: string
@@ -378,7 +379,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
             {/* Hero-Vorschau: geteiltes Bild oben groß anzeigen */}
             {dropItems.length > 0 && dropItems[0].url && (
               <div className="relative rounded-lg overflow-hidden bg-muted">
-                <img
+                <Vorschaubild
                   src={dropItems[0].url}
                   alt="Geteiltes Bild"
                   className="w-full max-h-56 object-contain"

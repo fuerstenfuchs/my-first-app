@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { PromptMedia } from '@/hooks/use-prompt-media'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface MediaGalleryProps {
   items: PromptMedia[]
@@ -96,7 +97,7 @@ export function MediaGallery({ items, initialIndex, onClose }: MediaGalleryProps
               style={{ maxHeight: 'calc(100vh - 180px)' }}
             />
           ) : (
-            <img
+            <Vorschaubild
               key={item.id}
               src={item.url}
               alt=""
@@ -133,7 +134,7 @@ export function MediaGallery({ items, initialIndex, onClose }: MediaGalleryProps
                 {m.type === 'video' ? (
                   <div className="w-full h-full bg-white/10 flex items-center justify-center text-white/60 text-[10px]">▶</div>
                 ) : (
-                  <img src={m.url} alt="" className="w-full h-full object-cover" />
+                  <Vorschaubild src={m.url} alt="" className="w-full h-full object-cover" />
                 )}
               </button>
             ))}

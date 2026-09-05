@@ -34,6 +34,7 @@ import {
   SCENE_TYPES, TIME_OF_DAY, SEASONS, WEATHERS, LIGHT_SOURCES, LIGHT_STYLES, LIGHT_MODIFIERS,
   SHOT_TYPES, CAMERA_ANGLES, LENSES, DEPTH_OF_FIELDS, ASPECT_RATIOS, STUDIO_BACKGROUNDS,
 } from '@/lib/scene-builder-options'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface NamedRef { id: string; name: string; cover_image_url?: string | null }
 
@@ -215,7 +216,7 @@ export function ScenePresetDialog({
                     >
                       <div className="aspect-[4/3] bg-muted/30 relative overflow-hidden">
                         {item.cover_image_url ? (
-                          <img src={item.cover_image_url} alt={item.name} className="w-full h-full object-contain" />
+                          <Vorschaubild src={item.cover_image_url} alt={item.name} className="w-full h-full object-contain" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/70">📁</div>
                         )}
@@ -249,7 +250,7 @@ export function ScenePresetDialog({
                 </div>
 
                 {selected.cover_image_url && (
-                  <img src={selected.cover_image_url} alt={selected.name} className="w-full rounded-lg object-contain max-h-40 bg-black/10" />
+                  <Vorschaubild src={selected.cover_image_url} alt={selected.name} className="w-full rounded-lg object-contain max-h-40 bg-black/10" />
                 )}
 
                 {selected.description && (
@@ -332,10 +333,10 @@ export function ScenePresetDialog({
             <div className="space-y-1.5">
               <Label>Coverbild</Label>
               {coverPreview ? (
-                <img src={coverPreview} alt="" className="w-full h-28 object-contain rounded-lg border border-border/50 bg-muted/30" />
+                <Vorschaubild src={coverPreview} alt="" className="w-full h-28 object-contain rounded-lg border border-border/50 bg-muted/30" />
               ) : autoCoverUrl ? (
                 <div className="space-y-1">
-                  <img src={autoCoverUrl} alt="" className="w-full h-28 object-contain rounded-lg border border-border/50 bg-muted/30" />
+                  <Vorschaubild src={autoCoverUrl} alt="" className="w-full h-28 object-contain rounded-lg border border-border/50 bg-muted/30" />
                   <p className="text-[10px] text-muted-foreground/50">Automatisch aus der aktuellen Szene übernommen.</p>
                 </div>
               ) : (

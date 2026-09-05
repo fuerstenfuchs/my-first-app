@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
 import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -352,7 +353,7 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border/50">
               <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
                 {character.cover_image_url ? (
-                  <img src={character.cover_image_url} alt="" className="w-full h-full object-cover" />
+                  <Vorschaubild src={character.cover_image_url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <User className="h-5 w-5 text-muted-foreground/50" />

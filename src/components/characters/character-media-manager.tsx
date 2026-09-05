@@ -26,6 +26,7 @@ import { ImageLightbox } from '@/components/image-lightbox'
 import { cn } from '@/lib/utils'
 import { useCappedImageSrc } from '@/hooks/use-capped-image-src'
 import type { CharacterImage } from '@/hooks/use-characters'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface SortableImageProps {
   image: CharacterImage
@@ -43,7 +44,7 @@ function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover,
   return (
     <div ref={setNodeRef} style={style} {...attributes} className={cn('relative rounded-md overflow-visible', isDragging && 'opacity-50 z-50')}>
       <div className="relative aspect-video rounded-md overflow-hidden border border-white/10 bg-black group">
-        <img src={src} alt="" className="w-full h-full object-cover" />
+        <Vorschaubild src={src} alt="" className="w-full h-full object-cover" />
 
         {/* Drag handle */}
         <div
@@ -53,7 +54,7 @@ function SortableImage({ image, isCharacterCover, onDelete, onSetCharacterCover,
           <GripVertical className="h-3 w-3 text-white" />
         </div>
 
-        {/* pointer-events-none so the underlying <img> stays draggable */}
+        {/* pointer-events-none so the underlying <Vorschaubild> stays draggable */}
         <button type="button" onClick={onOpen} title="Vergrößern"
           className="absolute bottom-1 right-7 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">
           <ZoomIn className="h-3.5 w-3.5 text-white" />

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { Location, LocationInput, LocationCategory } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open: boolean
@@ -145,7 +146,7 @@ export function LocationForm({ open, onClose, location, defaultCategory, categor
               <Label>Cover-Bild <span className="text-muted-foreground font-normal">(optional)</span></Label>
               {coverPreview ? (
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border/50 group">
-                  <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                  <Vorschaubild src={coverPreview} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => { setCoverFile(null); setCoverPreview(null) }}

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { CollectionPromptItem } from '@/hooks/use-collections'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface CollectionCoverModalProps {
   open: boolean
@@ -134,7 +135,7 @@ export function CollectionCoverModal({
                           : 'border-transparent hover:border-muted-foreground/30'
                       )}
                     >
-                      <img
+                      <Vorschaubild
                         src={url}
                         alt=""
                         className="w-full h-full object-cover"

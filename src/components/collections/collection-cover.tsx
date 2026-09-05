@@ -1,5 +1,6 @@
 import { FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface CollectionCoverProps {
   images: string[]
@@ -33,7 +34,7 @@ export function CollectionCover({
   if (mode === 'single' || images.length === 1) {
     return (
       <div className={cn('overflow-hidden', className)}>
-        <img src={images[0]} alt={name} className="w-full h-full object-cover" />
+        <Vorschaubild src={images[0]} alt={name} className="w-full h-full object-cover" />
       </div>
     )
   }
@@ -42,7 +43,7 @@ export function CollectionCover({
     return (
       <div className={cn('grid grid-cols-2 gap-px overflow-hidden', className)}>
         {images.map((url, i) => (
-          <img key={i} src={url} alt="" className="w-full h-full object-cover" />
+          <Vorschaubild key={i} src={url} alt="" className="w-full h-full object-cover" />
         ))}
       </div>
     )
@@ -54,9 +55,9 @@ export function CollectionCover({
         className={cn('grid gap-px overflow-hidden', className)}
         style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' }}
       >
-        <img src={images[0]} alt="" className="row-span-2 w-full h-full object-cover" />
-        <img src={images[1]} alt="" className="w-full h-full object-cover" />
-        <img src={images[2]} alt="" className="w-full h-full object-cover" />
+        <Vorschaubild src={images[0]} alt="" className="row-span-2 w-full h-full object-cover" />
+        <Vorschaubild src={images[1]} alt="" className="w-full h-full object-cover" />
+        <Vorschaubild src={images[2]} alt="" className="w-full h-full object-cover" />
       </div>
     )
   }
@@ -65,7 +66,7 @@ export function CollectionCover({
   return (
     <div className={cn('grid grid-cols-2 grid-rows-2 gap-px overflow-hidden relative', className)}>
       {images.slice(0, 4).map((url, i) => (
-        <img key={i} src={url} alt="" className="w-full h-full object-cover" />
+        <Vorschaubild key={i} src={url} alt="" className="w-full h-full object-cover" />
       ))}
       {extra > 0 && (
         <div className="absolute bottom-2 right-2">

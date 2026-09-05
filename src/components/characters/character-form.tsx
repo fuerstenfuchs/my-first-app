@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Character, CharacterInput, InitialSlot } from '@/hooks/use-characters'
 import { KOPF_ORIGINAL_VARIANTE, KOERPERFOTO_VARIANTE } from '@/lib/referenzkette'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die Bilder, die Mark selbst mitbringt — beide freiwillig, keines Pflicht.
@@ -211,7 +212,7 @@ export function CharacterForm({ open, onClose, character, onSave }: Props) {
                       >
                         {preview ? (
                           <>
-                            <img src={preview} alt={slot.label} className="w-full h-full object-cover" />
+                            <Vorschaubild src={preview} alt={slot.label} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               onClick={e => { e.stopPropagation(); setSlot(slot.key, null) }}

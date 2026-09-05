@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import type { CharacterVariant, VariantInput } from '@/hooks/use-characters'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open: boolean
@@ -154,7 +155,7 @@ export function VariantForm({ open, onClose, variant, onSave }: Props) {
                 <div className="flex flex-wrap gap-2 mt-2">
                   {previews.map((src, idx) => (
                     <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border border-white/10 group">
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <Vorschaubild src={src} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}

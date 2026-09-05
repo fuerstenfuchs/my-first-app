@@ -14,6 +14,7 @@ import { BausteinFilter } from '@/components/baustein-filter'
 import { useBausteinFilter } from '@/hooks/use-baustein-filter'
 import { useBildUebernehmen, type Eintrag, type Variante } from '@/hooks/use-bild-uebernehmen'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * „Übernehmen nach …" — ein fertiges Bild in eine Bibliothek legen.
@@ -182,7 +183,7 @@ export function BildUebernehmenDialog({ offen, onClose, bild, onFertig }: Props)
                   >
                     <div className="aspect-[3/4] bg-muted/30">
                       {e.cover_image_url ? (
-                        <img
+                        <Vorschaubild
                           src={e.cover_image_url} alt={e.name} loading="lazy"
                           className="h-full w-full object-cover"
                         />

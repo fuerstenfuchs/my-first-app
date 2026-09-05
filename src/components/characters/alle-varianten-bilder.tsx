@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { ImageOff, Images } from 'lucide-react'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Alle Bilder eines Eintrags auf einen Blick — über alle Varianten hinweg.
@@ -70,7 +71,7 @@ export function AlleVariantenBilder({ varianten, onVariante }: Props) {
                 className="h-full w-full"
                 aria-label={`Bild aus Variante ${b.variantName} groß ansehen`}
               >
-                <img
+                <Vorschaubild
                   src={b.url} alt="" loading="lazy"
                   className="h-full w-full object-cover transition group-hover:scale-[1.03]"
                 />

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die Referenz-Ablage — Bilder, die dem Modell als Vorlage mitgehen.
@@ -89,7 +90,7 @@ function adresseAus(dt: DataTransfer): string | null {
   if (/^(https?:|data:image\/)/i.test(text)) return text
 
   const html = dt.getData('text/html')
-  const treffer = /<img[^>]+src=["']([^"']+)["']/i.exec(html)
+  const treffer = /<Vorschaubild[^>]+src=["']([^"']+)["']/i.exec(html)
   return treffer?.[1] ?? null
 }
 
@@ -316,7 +317,7 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
             {bilder.map(b => (
               <div key={b.id} className="group relative aspect-square overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={b.url} alt={b.name} className="h-full w-full object-cover" />
+                <Vorschaubild src={b.url} alt={b.name} className="h-full w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => entfernen(b.id)}

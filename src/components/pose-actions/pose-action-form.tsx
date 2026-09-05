@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { POSE_CATEGORIES, type PoseAction, type PoseActionInput, type PoseCategory } from '@/hooks/use-pose-actions'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open: boolean
@@ -143,7 +144,7 @@ export function PoseActionForm({ open, onClose, poseAction, defaultCategory, onS
               <Label>Referenzbild <span className="text-muted-foreground font-normal">(optional)</span></Label>
               {coverPreview ? (
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border/50 group">
-                  <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                  <Vorschaubild src={coverPreview} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => { setCoverFile(null); setCoverPreview(null) }}

@@ -17,6 +17,7 @@ import {
 } from '@/lib/outfit-kette'
 import type { Outfit } from '@/hooks/use-outfits'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die Outfit-Referenzkette (PROJ-54) — als ein Knopf.
@@ -194,7 +195,7 @@ export function OutfitKetteDialog({ offen, onClose, outfit, onAenderung }: Props
           <div className="space-y-3">
             <div className="overflow-hidden rounded-xl border border-orange-500/40 bg-black/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Vorschaubild
                 src={phase.bildUrl}
                 alt="Erzeugtes Blatt: Vorne freigestellt"
                 className="max-h-[45svh] w-full object-contain"

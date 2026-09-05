@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { CharacterVariant } from '@/hooks/use-characters'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/gif'
 
@@ -61,7 +62,7 @@ export function VariantCard({ variant, isSelected, onClick, onEdit, onDelete, on
       {/* Cover image — square */}
       <div className="relative aspect-square rounded-t-lg overflow-hidden bg-muted/30">
         {coverImage ? (
-          <img src={coverImage.url} alt={variant.name} className="w-full h-full object-cover" />
+          <Vorschaubild src={coverImage.url} alt={variant.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground/40">
             <span className="text-lg font-bold">{variant.name.charAt(0).toUpperCase()}</span>

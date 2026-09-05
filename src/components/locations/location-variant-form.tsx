@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { LocationVariant, LocationVariantInput } from '@/hooks/use-locations'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open: boolean
@@ -121,7 +122,7 @@ export function LocationVariantForm({ open, onClose, variant, defaultName, onSav
                 <div className="flex flex-wrap gap-2 mt-2">
                   {previews.map((src, idx) => (
                     <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border border-white/10 group">
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <Vorschaubild src={src} alt="" className="w-full h-full object-cover" />
                       <button type="button" onClick={() => removeFile(idx)}
                         className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <X className="h-4 w-4 text-white" />

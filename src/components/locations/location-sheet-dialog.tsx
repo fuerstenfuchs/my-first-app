@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button'
 import type { Location } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -552,7 +553,7 @@ export function LocationSheetDialog({ open, onClose, location }: Props) {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border/50">
               <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
                 {location.cover_image_url ? (
-                  <img src={location.cover_image_url} alt="" className="w-full h-full object-cover" />
+                  <Vorschaubild src={location.cover_image_url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <MapPin className="h-5 w-5 text-muted-foreground/50" />

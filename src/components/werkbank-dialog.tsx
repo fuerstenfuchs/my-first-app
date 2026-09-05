@@ -21,6 +21,7 @@ import {
 import { useBildBearbeiten } from '@/hooks/use-bild-bearbeiten'
 import type { ImageJob } from '@/hooks/use-image-jobs'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die Werkbank — zuschneiden und die sieben Regler.

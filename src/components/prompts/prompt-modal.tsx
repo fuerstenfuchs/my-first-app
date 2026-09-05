@@ -33,6 +33,7 @@ import { StarRating } from '@/components/prompts/star-rating'
 import { usePromptMedia } from '@/hooks/use-prompt-media'
 import { createClient } from '@/lib/supabase'
 import type { Prompt, PromptInput, PromptVariant } from '@/hooks/use-prompts'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 type ModalMode = 'view' | 'edit' | 'create'
 
@@ -343,7 +344,7 @@ export function PromptModal({
                       {m.type === 'video' ? (
                         <div className="w-full h-full flex items-center justify-center text-white/50 text-lg">▶</div>
                       ) : (
-                        <img src={m.url} alt="" className="w-full h-full object-cover" />
+                        <Vorschaubild src={m.url} alt="" className="w-full h-full object-cover" />
                       )}
                     </button>
                   ))}
@@ -355,7 +356,7 @@ export function PromptModal({
                   style={{ paddingBottom: '56.25%', position: 'relative' }}
                   onClick={() => setGalleryIndex(0)}
                 >
-                  <img
+                  <Vorschaubild
                     src={prompt.cover_image_url}
                     alt=""
                     className="absolute inset-0 w-full h-full object-contain"

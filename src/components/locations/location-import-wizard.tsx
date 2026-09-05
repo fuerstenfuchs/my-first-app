@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { LocationCategory } from '@/hooks/use-locations'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface ImageResult {
   url: string
@@ -340,7 +341,7 @@ export function LocationImportWizard({ open, onClose, categories, onCreated }: P
               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                 {Array.from(selectedUrls).map(url => (
                   <div key={url} className="w-20 h-20 rounded-md overflow-hidden border border-border/40 bg-muted/20 shrink-0">
-                    <img
+                    <Vorschaubild
                       src={url}
                       alt=""
                       className="w-full h-full object-cover"
@@ -421,7 +422,7 @@ function ImageThumbnail({ thumbnailUrl, fallbackUrl, alt }: {
 }) {
   return (
     <div className="aspect-[4/3] bg-muted/30 overflow-hidden">
-      <img
+      <Vorschaubild
         src={thumbnailUrl}
         alt={alt}
         className="w-full h-full object-cover"

@@ -13,6 +13,7 @@ import { OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategorien'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import { ROLLEN_LABEL, type ReferenzRolle } from '@/lib/image-generation'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 export type PickbaresAsset = {
   id: string
@@ -162,7 +163,7 @@ export function AssetPickerDialog({
                 >
                   <div className="aspect-[3/4] w-full overflow-hidden bg-muted/30">
                     {a.cover_image_url ? (
-                      <img
+                      <Vorschaubild
                         src={a.cover_image_url} alt={a.name} loading="lazy"
                         className="h-full w-full object-cover transition group-hover:scale-[1.04]"
                       />
@@ -205,7 +206,7 @@ export function AssetPickerDialog({
                     className="group overflow-hidden rounded-lg border-2 border-emerald-600/40 bg-card text-left transition hover:border-emerald-500"
                   >
                     <div className="aspect-[3/4] w-full overflow-hidden bg-muted/30">
-                      <img
+                      <Vorschaubild
                         src={gewaehlt.cover_image_url} alt="Titelbild"
                         className="h-full w-full object-cover transition group-hover:scale-[1.04]"
                       />
@@ -223,7 +224,7 @@ export function AssetPickerDialog({
                     className="group overflow-hidden rounded-lg border border-border/60 bg-card text-left transition hover:border-emerald-600/60 hover:ring-1 hover:ring-emerald-600/30"
                   >
                     <div className="aspect-[3/4] w-full overflow-hidden bg-muted/30">
-                      <img
+                      <Vorschaubild
                         src={b.url} alt={b.label} loading="lazy"
                         className="h-full w-full object-cover transition group-hover:scale-[1.04]"
                       />

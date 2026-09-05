@@ -18,6 +18,7 @@ import { ImageLightbox } from '@/components/image-lightbox'
 import { cn } from '@/lib/utils'
 import { useCappedImageSrc } from '@/hooks/use-capped-image-src'
 import type { OutfitImage } from '@/hooks/use-outfits'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface SortableImageProps {
   image: OutfitImage
@@ -35,14 +36,14 @@ function SortableImage({ image, isOutfitCover, onDelete, onSetOutfitCover, onOpe
   return (
     <div ref={setNodeRef} style={style} {...attributes} className={cn('relative rounded-md overflow-visible', isDragging && 'opacity-50 z-50')}>
       <div className="relative aspect-video rounded-md overflow-hidden border border-white/10 bg-black group">
-        <img src={src} alt="" className="w-full h-full object-cover" />
+        <Vorschaubild src={src} alt="" className="w-full h-full object-cover" />
 
         {/* pointer-events-none until hovered, so these invisible hit-areas don't block native image drag-out */}
         <div {...listeners} className="absolute top-1 left-1 cursor-grab active:cursor-grabbing p-1 bg-black/50 rounded z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
           <GripVertical className="h-3 w-3 text-white" />
         </div>
 
-        {/* pointer-events-none so the underlying <img> stays draggable */}
+        {/* pointer-events-none so the underlying <Vorschaubild> stays draggable */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[5]" />
         <button type="button" onClick={onOpen} title="Vergrößern"
           className="absolute bottom-1 right-7 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">

@@ -25,6 +25,7 @@ import {
 } from '@/lib/image-generation'
 import { ASPECT_RATIOS, type AspectRatioKey } from '@/lib/scene-builder-options'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface PromptToImageDialogProps {
   isOpen: boolean
@@ -83,7 +84,7 @@ function ReferenzKarte({
       >
         <div className="aspect-[3/4] w-full overflow-hidden bg-muted/20">
           {anzeigeBild ? (
-            <img
+            <Vorschaubild
               src={anzeigeBild} alt={gewaehlt?.name ?? ''}
               className="h-full w-full object-cover transition group-hover:scale-[1.03]"
             />

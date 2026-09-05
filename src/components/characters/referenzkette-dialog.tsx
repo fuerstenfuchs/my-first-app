@@ -22,6 +22,7 @@ import {
 } from '@/lib/referenzkette'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die Referenzkette (PROJ-48) — Marks häufigster Handgriff, als ein Knopf.
@@ -306,7 +307,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                 <div className="flex items-start gap-3">
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-primary/40 bg-black/30">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Vorschaubild
                       src={koerperfotoUrl}
                       alt="Hochgeladenes Körper-Original"
                       className="h-full w-full object-cover"
@@ -389,7 +390,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                               )}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={url} alt={`Bild aus ${gruppe.label}`} className="h-full w-full object-cover" />
+                              <Vorschaubild src={url} alt={`Bild aus ${gruppe.label}`} className="h-full w-full object-cover" />
                             </button>
                           ))}
                         </div>
@@ -517,7 +518,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
           <div className="space-y-3">
             <div className="overflow-hidden rounded-xl border border-primary/40 bg-black/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Vorschaubild
                 src={phase.bildUrl}
                 alt="Erzeugtes Kopf-Sheet"
                 className="max-h-[45svh] w-full object-contain"

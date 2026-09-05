@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { OutfitVariant, OutfitVariantInput } from '@/hooks/use-outfits'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open: boolean
@@ -135,7 +136,7 @@ export function OutfitVariantForm({ open, onClose, variant, defaultName, onSave 
                 <div className="flex flex-wrap gap-2 mt-2">
                   {previews.map((src, idx) => (
                     <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border border-white/10 group">
-                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <Vorschaubild src={src} alt="" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}

@@ -22,6 +22,7 @@ import { LookGradingForm } from '@/components/look-grading/look-grading-form'
 import { useLookGrading, type LookGradingItem, type LookGradingType, type LookGradingInput } from '@/hooks/use-look-grading'
 import { cn } from '@/lib/utils'
 import { passtZurSuche } from '@/lib/bausteine'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ function LookGradingCard({
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
         {item.cover_image_url ? (
-          <img src={item.cover_image_url} alt={item.name}
+          <Vorschaubild src={item.cover_image_url} alt={item.name}
             className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground/20">
@@ -259,7 +260,7 @@ export default function LookGradingPage() {
               <div className="relative bg-black/20 group/cover">
                 {selectedItem.cover_image_url ? (
                   <>
-                    <img src={selectedItem.cover_image_url} alt={selectedItem.name} className="w-full object-contain max-h-72" />
+                    <Vorschaubild src={selectedItem.cover_image_url} alt={selectedItem.name} className="w-full object-contain max-h-72" />
                     <button
                       onClick={() => coverUploadRef.current?.click()}
                       className="absolute inset-0 bg-black/50 opacity-0 group-hover/cover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-xs text-white"

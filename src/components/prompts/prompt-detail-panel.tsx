@@ -14,6 +14,7 @@ import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog
 import { createClient } from '@/lib/supabase'
 import { usePromptMedia } from '@/hooks/use-prompt-media'
 import type { Prompt, PromptVariant } from '@/hooks/use-prompts'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface PromptDetailPanelProps {
   prompt: Prompt
@@ -173,7 +174,7 @@ export function PromptDetailPanel({
                     muted
                   />
                 ) : (
-                  <img
+                  <Vorschaubild
                     src={allMedia[0].url}
                     alt=""
                     className="absolute inset-0 w-full h-full object-contain"

@@ -42,6 +42,7 @@ import { passtZurSuche } from '@/lib/bausteine'
 import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { bildFuerAnalyse } from '@/lib/bild-fuer-analyse'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Outfits — seit PROJ-53 EIN Bereich für komplette Looks UND einzelne
@@ -87,7 +88,7 @@ function OutfitCard({
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
         {outfit.cover_image_url ? (
-          <img
+          <Vorschaubild
             src={outfit.cover_image_url}
             alt={outfit.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -583,7 +584,7 @@ export default function OutfitsPage() {
                   <div className="relative bg-black/20">
                     {outfit.cover_image_url ? (
                       <>
-                        <img
+                        <Vorschaubild
                           src={outfit.cover_image_url}
                           alt={outfit.name}
                           className="w-full object-contain max-h-80"

@@ -31,6 +31,7 @@ import { preis, VERFAHREN_NAME, kostetGeld } from '@/lib/upscaling'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { cn } from '@/lib/utils'
 import { arbeiterLage } from '@/lib/arbeiter-lage'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 function zeit(iso: string): string {
   const d = new Date(iso)
@@ -376,7 +377,7 @@ export default function QueuePage() {
                                     className="h-14 w-14 overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)]"
                                     aria-label={`Referenz ${i + 1}${rolle ? `, ${ROLLEN_LABEL[rolle]}` : ''}`}
                                   >
-                                    <img src={url} alt={`Referenz ${i + 1}`} loading="lazy"
+                                    <Vorschaubild src={url} alt={`Referenz ${i + 1}`} loading="lazy"
                                       className="h-full w-full object-cover" />
                                   </button>
                                   {/* `truncate`, seit die Groessenregel diese Zeile von

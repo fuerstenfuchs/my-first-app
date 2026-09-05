@@ -11,6 +11,7 @@ import {
   type VisualAsset, type VisualAssetInput, type AssetType, type VisualCategory,
 } from '@/hooks/use-visual-assets'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open:         boolean
@@ -153,7 +154,7 @@ export function VisualAssetForm({ open, onClose, asset, assetType, defaultCatego
             <Label>Referenzbild <span className="text-muted-foreground font-normal">(optional)</span></Label>
             {coverPreview ? (
               <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border/50 group">
-                <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                <Vorschaubild src={coverPreview} alt="" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => { setCoverFile(null); setCoverPreview(null) }}
@@ -164,7 +165,7 @@ export function VisualAssetForm({ open, onClose, asset, assetType, defaultCatego
               </div>
             ) : asset?.cover_image_url && !coverFile ? (
               <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border/50 group">
-                <img src={asset.cover_image_url} alt="" className="w-full h-full object-cover" />
+                <Vorschaubild src={asset.cover_image_url} alt="" className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}

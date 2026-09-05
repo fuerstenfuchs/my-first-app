@@ -11,6 +11,7 @@ import { useTitelbildErzeugen, HINWEIS_NACH_MS } from '@/hooks/use-titelbild-erz
 import { TITELBILD_PRESET_NAME, TITELBILD_VARIANTE, type VarianteMitBildern } from '@/lib/titelbild-preset'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * „Titelbild erzeugen" (PROJ-51) — Marks Fünf-Handgriff-Ablauf als ein Knopf.
@@ -155,7 +156,7 @@ export function TitelbildKnopf({ character, varianten, titelbildSetzen, onAender
             <div className="space-y-3">
               <div className="overflow-hidden rounded-xl border border-emerald-600/40 bg-black/30">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Vorschaubild
                   src={phase.bildUrl}
                   alt="Neues Titelbild"
                   className="max-h-[45svh] w-full object-contain"

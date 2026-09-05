@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ImageLightbox } from '@/components/image-lightbox'
 import { usePromptMedia, type PromptMedia } from '@/hooks/use-prompt-media'
 import { cn } from '@/lib/utils'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 export interface MediaManagerHandle {
   commitDeferredMedia: () => Promise<void>
@@ -65,7 +66,7 @@ function SortableMediaItem({ item, isCover, onSetCover, onDelete, onOpen }: Sort
             <span className="text-xs text-white/40">Video</span>
           </div>
         ) : (
-          <img src={item.url} alt="" className="w-full h-full object-cover" />
+          <Vorschaubild src={item.url} alt="" className="w-full h-full object-cover" />
         )}
         {/* Drag handle */}
         <div
@@ -74,7 +75,7 @@ function SortableMediaItem({ item, isCover, onSetCover, onDelete, onOpen }: Sort
         >
           <GripVertical className="h-3 w-3 text-white" />
         </div>
-        {/* pointer-events-none so the underlying <img> stays draggable */}
+        {/* pointer-events-none so the underlying <Vorschaubild> stays draggable */}
         {item.type === 'image' && onOpen && (
           <button type="button" onClick={onOpen} title="Vergrößern"
             className="absolute bottom-1 right-1 p-1 rounded bg-black/50 hover:bg-black/80 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-10">

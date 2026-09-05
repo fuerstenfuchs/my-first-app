@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { passtZurSuche } from '@/lib/bausteine'
 import { bildFuerAnalyse } from '@/lib/bild-fuer-analyse'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ function AssetCard({
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
         {asset.cover_image_url ? (
-          <img src={asset.cover_image_url} alt={asset.name}
+          <Vorschaubild src={asset.cover_image_url} alt={asset.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground/20">
@@ -432,7 +433,7 @@ export default function VisualAssetsPage() {
                   <div className="relative bg-black/20 group/cover">
                     {selectedAsset.cover_image_url ? (
                       <>
-                        <img src={selectedAsset.cover_image_url} alt={selectedAsset.name} className="w-full object-contain max-h-80" />
+                        <Vorschaubild src={selectedAsset.cover_image_url} alt={selectedAsset.name} className="w-full object-contain max-h-80" />
                         {selectedAsset.asset_type !== 'expression' && (
                           <button
                             onClick={handleAnalyze}

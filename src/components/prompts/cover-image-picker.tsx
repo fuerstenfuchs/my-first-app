@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface CoverImagePickerProps {
   value: string | null
@@ -76,7 +77,7 @@ export function CoverImagePicker({ value, onChange }: CoverImagePickerProps) {
 
       {value && !previewError && (
         <div className="relative w-full rounded-md overflow-hidden border border-border bg-black/40" style={{ paddingBottom: '56.25%' }}>
-          <img
+          <Vorschaubild
             src={value}
             alt="Vorschau"
             className="absolute inset-0 w-full h-full object-contain"

@@ -209,7 +209,7 @@ export function PromptCardGrid({
                 aria-hidden
               >
                 {media.type === 'image' ? (
-                  <img
+                  <Vorschaubild
                     src={media.url}
                     alt=""
                     className="w-full h-full object-contain bg-black/60"
@@ -426,7 +426,7 @@ export function PromptCardGrid({
                 }}
                 onMouseDown={lbMouseDown}
               >
-                <img
+                <Vorschaubild
                   src={prompt.cover_image_url!}
                   alt={prompt.title}
                   className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl select-none block"

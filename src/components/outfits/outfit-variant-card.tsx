@@ -9,6 +9,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { OutfitVariant } from '@/hooks/use-outfits'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/gif'
 
@@ -78,7 +79,7 @@ export function OutfitVariantCard({
       {/* Cover image */}
       <div className="relative aspect-square rounded-t-lg overflow-hidden bg-muted/30">
         {coverImage ? (
-          <img src={coverImage.url} alt={variant.name} className="w-full h-full object-cover" />
+          <Vorschaubild src={coverImage.url} alt={variant.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
             <span className="text-lg font-bold">{variant.name.charAt(0).toUpperCase()}</span>

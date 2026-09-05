@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { LookGradingItem, LookGradingInput, LookGradingType } from '@/hooks/use-look-grading'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 interface Props {
   open:      boolean
@@ -193,7 +194,7 @@ export function LookGradingForm({ open, onClose, type, item, onSave }: Props) {
             <Label>Coverbild <span className="text-muted-foreground font-normal">(optional)</span></Label>
             {coverPreview ? (
               <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border/50 bg-muted/30 group">
-                <img src={coverPreview} alt="" className="w-full h-full object-contain" />
+                <Vorschaubild src={coverPreview} alt="" className="w-full h-full object-contain" />
                 <button
                   type="button"
                   onClick={() => { setCoverFile(null); setCoverPreview(null) }}
@@ -204,7 +205,7 @@ export function LookGradingForm({ open, onClose, type, item, onSave }: Props) {
               </div>
             ) : item?.cover_image_url && !coverFile ? (
               <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border/50 bg-muted/30 group">
-                <img src={item.cover_image_url} alt="" className="w-full h-full object-contain" />
+                <Vorschaubild src={item.cover_image_url} alt="" className="w-full h-full object-contain" />
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}

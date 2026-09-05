@@ -48,6 +48,7 @@ import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { useCappedImageSrc } from '@/hooks/use-capped-image-src'
 import { passtZurSuche } from '@/lib/bausteine'
 import { bildFuerAnalyse } from '@/lib/bild-fuer-analyse'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ function LocationCard({
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
         {location.cover_image_url ? (
-          <img
+          <Vorschaubild
             src={location.cover_image_url}
             alt={location.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -141,14 +142,14 @@ function SortableVariantImage({
   return (
     <div ref={setNodeRef} style={style} {...attributes} className={cn('relative rounded-md', isDragging && 'opacity-50 z-50')}>
       <div className="relative aspect-[4/3] rounded-md overflow-hidden border border-white/10 bg-black group">
-        <img src={src} alt="" className="w-full h-full object-cover" />
+        <Vorschaubild src={src} alt="" className="w-full h-full object-cover" />
 
         {/* pointer-events-none until hovered, so these invisible hit-areas don't block native image drag-out */}
         <div {...listeners} className="absolute top-1 left-1 cursor-grab active:cursor-grabbing p-1 bg-black/50 rounded z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
           <GripVertical className="h-3 w-3 text-white" />
         </div>
 
-        {/* pointer-events-none so the underlying <img> stays draggable */}
+        {/* pointer-events-none so the underlying <Vorschaubild> stays draggable */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[5]" />
 
         <button type="button" onClick={onOpen} title="Vergrößern"
@@ -532,7 +533,7 @@ export default function LocationsPage() {
                   <div className="relative bg-black/20 group/cover">
                     {location.cover_image_url ? (
                       <>
-                        <img src={location.cover_image_url} alt={location.name} className="w-full object-contain max-h-80" />
+                        <Vorschaubild src={location.cover_image_url} alt={location.name} className="w-full object-contain max-h-80" />
                         <button
                           onClick={handleAnalyzeLocation}
                           disabled={aiAnalyzing}

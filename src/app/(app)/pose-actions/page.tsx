@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { passtZurSuche } from '@/lib/bausteine'
 import { bildFuerAnalyse } from '@/lib/bild-fuer-analyse'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Gallery card ──────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ function PoseActionCard({
     >
       <div className="aspect-[3/4] bg-muted/30 relative overflow-hidden">
         {poseAction.cover_image_url ? (
-          <img
+          <Vorschaubild
             src={poseAction.cover_image_url}
             alt={poseAction.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -405,7 +406,7 @@ export default function PoseActionsPage() {
                   <div className="relative bg-black/20 group/cover">
                     {poseAction.cover_image_url ? (
                       <>
-                        <img src={poseAction.cover_image_url} alt={poseAction.name} className="w-full object-contain max-h-80" />
+                        <Vorschaubild src={poseAction.cover_image_url} alt={poseAction.name} className="w-full object-contain max-h-80" />
                         <button
                           onClick={handleAnalyzePose}
                           disabled={aiAnalyzing}
@@ -525,7 +526,7 @@ export default function PoseActionsPage() {
                         return (
                           <>
                             <div className="relative bg-black/20 rounded-xl overflow-hidden group/img">
-                              <img src={currentImg.url} alt="" className="w-full object-contain max-h-80" />
+                              <Vorschaubild src={currentImg.url} alt="" className="w-full object-contain max-h-80" />
                               <button onClick={() => setLightboxOpen(true)} title="Vergrößern"
                                 className="absolute bottom-2 left-2 p-1.5 rounded bg-black/60 hover:bg-black/80 opacity-0 group-hover/img:opacity-100 transition-opacity z-10">
                                 <ZoomIn className="h-3.5 w-3.5 text-white" />
@@ -570,7 +571,7 @@ export default function PoseActionsPage() {
                                 <button key={img.id} onClick={() => setGalleryImageIndex(idx)}
                                   className={cn('relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all group/thumb',
                                     idx === safeIdx ? 'border-primary ring-1 ring-primary/30' : 'border-transparent opacity-60 hover:opacity-100')}>
-                                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                                  <Vorschaubild src={img.url} alt="" className="w-full h-full object-cover" />
                                   <div onClick={e => { e.stopPropagation(); deleteImage(selectedVariant.id, img.id, img.storage_path) }}
                                     className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
                                     <Trash2 className="h-3.5 w-3.5 text-white" />

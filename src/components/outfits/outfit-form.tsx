@@ -16,6 +16,7 @@ import {
   OUTFIT_KATEGORIEN, OUTFIT_KATEGORIE_STANDARD, type OutfitKategorie,
 } from '@/lib/outfit-kategorien'
 import { FORMULAR_SLOTS } from '@/lib/outfit-kette'
+import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
  * Die vier Slots stehen seit PROJ-54 in `@/lib/outfit-kette` und nicht mehr
@@ -236,7 +237,7 @@ export function OutfitForm({ open, onClose, outfit, defaultCategory, onSave }: P
                       >
                         {preview ? (
                           <>
-                            <img src={preview} alt={slot.label} className="w-full h-full object-cover" />
+                            <Vorschaubild src={preview} alt={slot.label} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               onClick={e => { e.stopPropagation(); setSlot(slot.key, null) }}
