@@ -60,8 +60,16 @@
   */
   --lt-kante: rgba(150, 185, 220, 0.36);
   --lt-licht: rgba(190, 220, 245, 0.45);   /* die obere Lichtkante */
-  --lt-fg2:   #b3c0cb;
-  --lt-fg3:   #a0aeba;
+  --lt-fg2:   #cfd8e0;
+  --lt-fg3:   #c3ced8;
+
+  /*
+    `--muted-foreground` wird auch fuer das `lt`-Gebiet neu gesetzt, damit
+    Tailwinds `text-muted-foreground` denselben Wert bekommt wie unsere eigenen
+    Beschriftungen. Sonst haetten wir zwei Graustufen fuer dieselbe Sache.
+    #cfd8e0 = hsl(210 22% 85%).
+  */
+  --muted-foreground: 210 22% 85%;
 
   /*
     `position` NUR, WENN DAS ELEMENT NICHT SCHON POSITIONIERT IST.
@@ -125,7 +133,7 @@
       0 0 / 100% 100% no-repeat,
     linear-gradient(180deg, #27343f, #151d25 72%) 0 0 / 100% 100% no-repeat;
 }
-.lt > * { z-index: 1; }
+.lt > *:not(.absolute):not(.fixed):not(.sticky) { z-index: 1; }
 
 /* ── Die Kopfzeile ────────────────────────────────────────────────────────── */
 .lt-kopf {
@@ -176,12 +184,29 @@
   Auge als Fenster. Ein einzelner Rahmen kann das auf Schwarz nicht leisten,
   und genau daran ist der alte Zustand gescheitert.
 */
+/*
+  DIE PLATTE VERDUNKELT — SIE HELLT NICHT AUF.
+
+  Das war beim ersten Bau andersherum, und es hat sich gerächt. Eine Platte,
+  die den Grund aufhellt, macht ALLES darauf schlechter lesbar: An der hellsten
+  Stelle des Tisches kam die Beschriftung auf 3,55:1 und eine rote Fehlermeldung
+  auf 1,33:1 — unsichtbar. Kritisch wird es ausgerechnet dort, wo das Licht am
+  schönsten ist.
+
+  Dass die Platte ÜBER dem Tisch liegt, trägt die Lichtkante oben und der
+  Schatten darunter — nicht die Füllung. Die darf deshalb dunkler sein, und
+  damit gewinnt jedes Zeichen darauf: Beschriftung 5,45:1, rote Meldung
+  4,87:1, grüne 5,38:1.
+
+  Wer sie wieder aufhellt, muss gegen die HELLSTE Stelle des Tisches rechnen,
+  nicht gegen die dunkelste.
+*/
 .lt-platte {
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(150,190,225,0.07), rgba(150,190,225,0.02));
+  background: linear-gradient(180deg, rgba(8,14,20,0.28), rgba(8,14,20,0.34));
   border: 1px solid var(--lt-kante);
   border-top-color: var(--lt-licht);
-  box-shadow: 0 1px 0 rgba(190, 220, 245, 0.08) inset, 0 10px 22px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 0 rgba(190, 220, 245, 0.10) inset, 0 10px 22px rgba(0, 0, 0, 0.40);
 }
 
 .lt-fenster {
@@ -390,7 +415,19 @@
    Seite, und er trug die einzige Erklärung zu Ziehen und Strg+V. */
 .lt .text-muted-foreground,
 .lt-menue .text-muted-foreground { color: var(--lt-fg2); }
-.lt [class*='text-muted-foreground/'] { color: var(--lt-fg3); }
+/*
+  DIE DREI ABSTUFUNGEN FALLEN ZUSAMMEN — ABSICHTLICH, UND JETZT AUF EINEN WERT,
+  DER TRÄGT.
+
+  Tailwind kennt `text-muted-foreground/50`, `/60`, `/70` als drei Stufen
+  „wichtig / Nebeninfo / Kleingedrucktes". Auf diesem Grund hält keine der drei
+  Stufen die Lesbarkeitsschwelle — die schwächste kam auf 1,96:1. Drei Stufen,
+  von denen zwei unlesbar sind, sind keine Abstufung, sondern ein Verlust.
+
+  Deshalb: EIN Wert für alle drei, mit 6,33:1 auf der Platte und 4,58:1 auf dem
+  Tisch. Unterschieden wird über Größe und Ort, nicht über Blässe.
+*/
+.lt [class*='text-muted-foreground/'] { color: #c3ced8; }
 
 @media (prefers-reduced-motion: reduce) {
   .lt-filter, .lt-feld, .lt-wahl, .lt-haupt, .lt-kachel, .lt-ablage { transition: none; }

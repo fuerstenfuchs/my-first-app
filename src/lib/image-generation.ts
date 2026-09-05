@@ -273,9 +273,21 @@ export const STATUS_TEXT: Record<JobStatus, string> = {
   failed:  'Fehlgeschlagen',
 }
 
+/*
+  DIE ZUSTANDSFARBEN, GERECHNET FUER DEN BELEUCHTETEN TISCH (PROJ-65).
+
+  Vorher: `-400`-Toene auf hellen Traegern, und `queued` sogar auf `bg-muted` —
+  einem DECKENDEN, gruenstichigen Grau. Auf einer durchscheinenden Glasplatte
+  las sich das als Loch, und „Wartet" ist der haeufigste Zustand einer
+  Warteschlange.
+
+  Gerechnet auf der Platte an ihrer hellsten Stelle: Die `-400`-Toene kamen auf
+  2,4 bis 3,0, `failed` sogar auf 1,33 — unsichtbar. Die `-300`-Toene liegen
+  bei 4,9 bis 5,4.
+*/
 export const STATUS_FARBE: Record<JobStatus, string> = {
-  queued:  'bg-muted text-muted-foreground',
-  running: 'bg-blue-500/15 text-blue-400',
-  done:    'bg-emerald-500/15 text-emerald-400',
-  failed:  'bg-destructive/15 text-destructive',
+  queued:  'bg-slate-400/15 text-slate-300',
+  running: 'bg-blue-500/15 text-blue-300',
+  done:    'bg-emerald-500/15 text-emerald-300',
+  failed:  'bg-red-500/15 text-red-300',
 }

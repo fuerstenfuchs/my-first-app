@@ -53,7 +53,7 @@ function dauer(job: ImageJob): string | null {
 function StatusChip({ status }: { status: JobStatus }) {
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
       STATUS_FARBE[status],
     )}>
       {status === 'running' && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
@@ -212,12 +212,12 @@ export default function QueuePage() {
         {loading ? (
           <div className="space-y-2">
             {[0, 1, 2].map(i => (
-              <div key={i} className="h-24 animate-pulse rounded-[14px] bg-muted/20" />
+              <div key={i} className="h-24 animate-pulse rounded-[14px] bg-white/[0.06]" />
             ))}
           </div>
         ) : ladefehler ? (
           <div className="mx-auto mt-16 max-w-md text-center">
-            <ImageOff className="mx-auto h-10 w-10 text-destructive/50" />
+            <ImageOff className="mx-auto h-10 w-10 text-red-400/80" />
             <p className="mt-4 text-[16px] font-bold">Aufträge konnten nicht geladen werden</p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{ladefehler}</p>
             <Button className="lt-haupt mt-5 h-11 px-6 text-[15px] font-bold hover:bg-transparent"
@@ -259,7 +259,7 @@ export default function QueuePage() {
                   <div className="flex items-start gap-3 p-3">
                     <button
                       onClick={() => umschalten(job.id)}
-                      className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground"
+                      className="-m-1 mt-0 shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
                       aria-label={aufgeklappt ? 'Einzelheiten verbergen' : 'Einzelheiten zeigen'}
                       aria-expanded={aufgeklappt}
                     >
@@ -297,7 +297,7 @@ export default function QueuePage() {
                       </p>
 
                       {job.status === 'failed' && job.error && (
-                        <p className="mt-1.5 rounded bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
+                        <p className="mt-2 rounded-[10px] bg-red-500/15 px-2.5 py-1.5 text-[13px] text-red-300">
                           {job.error}
                         </p>
                       )}
@@ -322,7 +322,7 @@ export default function QueuePage() {
                       )}
                       <Button
                         size="icon" variant="ghost"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        className="h-8 w-8 rounded-full text-red-300 hover:bg-red-500/15 hover:text-red-200"
                         onClick={() => setLoeschKandidat(job)}
                         title="Auftrag löschen"
                       >
@@ -379,7 +379,10 @@ export default function QueuePage() {
                                     <img src={url} alt={`Referenz ${i + 1}`} loading="lazy"
                                       className="h-full w-full object-cover" />
                                   </button>
-                                  <p className="mt-0.5 text-center text-[9px] leading-tight text-muted-foreground/70">
+                                  {/* `truncate`, seit die Groessenregel diese Zeile von
+                                      9 auf 13px hebt: „Charakter" ist dann breiter als
+                                      der 56px-Kasten und lief in den Nachbarn. */}
+                                  <p className="mt-1 truncate text-center text-[9px] leading-tight text-muted-foreground/70">
                                     {i + 1} · {rolle ? ROLLEN_LABEL[rolle] : '—'}
                                   </p>
                                 </div>
