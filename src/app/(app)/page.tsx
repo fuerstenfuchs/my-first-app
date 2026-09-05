@@ -50,7 +50,7 @@ export default function PromptsPage() {
     keine Rubriken.
   */
   const [themaId, setThemaId] = useState<string | null>(null)
-  const { themen, umbenennen, zusammenlegen } = useThemen()
+  const { themen, umbenennen, zusammenlegen, titelbildSetzen, belegSetzen } = useThemen()
   const [modalOpen, setModalOpen] = useState(false)
   const [modalPrompt, setModalPrompt] = useState<Prompt | null>(null)
   const [modalMode, setModalMode] = useState<ModalMode>('create')
@@ -267,6 +267,19 @@ export default function PromptsPage() {
     onEdit: () => openEdit(prompt),
     onDelete: () => setDeleteId(prompt.id),
     onAddToCollection: () => setAddToCollectionId(prompt.id),
+    /*
+      NUR IM GEOEFFNETEN THEMA (PROJ-63). Ausserhalb waere „dieses Themas"
+      nicht beantwortbar — und ein Menuepunkt, der je nach Ort etwas anderes
+      bedeutet, ist schlimmer als keiner.
+
+      Ein Prompt ohne Bild kommt nicht auf die Karte: Die Vitrine haette dann
+      ein leeres Feld, und genau das war der Fehler, den die KI beim ersten
+      Einsortieren gemacht hat.
+    */
+    onAlsTitelbild: themaId && prompt.cover_image_url
+      ? () => void titelbildSetzen(themaId, prompt.id) : undefined,
+    onAlsBeleg: themaId && prompt.cover_image_url
+      ? () => void belegSetzen(themaId, prompt.id) : undefined,
     onToggleFavorite: () => toggleFavorite(prompt),
     onSetRating: (rating: number | null) => setRating(prompt, rating),
   })

@@ -82,7 +82,17 @@ Titelbild** — man müsste die Karte bei jedem Besuch neu lesen. Also:
 - Die KI wählt beim Anlegen vier Bilder, an denen man das Thema erkennt.
 - **Danach ändern sie sich nie von selbst.** Neue Prompts wandern ins Thema,
   aber nicht auf die Karte.
-- Mark kann jedes der vier tauschen.
+- Mark kann jedes der vier tauschen: Im **geöffneten Thema** hat jede Karte im
+  Menü (⋮) die Einträge „Als Titelbild des Themas" und „Als Beleg auf der
+  Themenkarte".
+
+  **Nachtrag 05.09.2026:** Das war beim ersten Bau nur ein Versprechen. Die
+  Datenschicht konnte es (`titelbildSetzen`, `belegSetzen`), aber es gab keinen
+  Knopf dafür — Mark hat es gesucht und nicht gefunden. Jetzt gebaut. Die
+  Einträge erscheinen **nur im geöffneten Thema**: Außerhalb wäre „dieses
+  Themas" nicht beantwortbar, und ein Menüpunkt, der je nach Ort etwas anderes
+  bedeutet, ist schlimmer als keiner. Prompts ohne Bild bekommen sie gar nicht
+  erst — die Vitrine hätte sonst ein leeres Feld.
 - Einzige Ausnahme: Wird das Titelbild gelöscht, rückt ein Beleg nach — sonst
   stünde dort eine Lücke.
 

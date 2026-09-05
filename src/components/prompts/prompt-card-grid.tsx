@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, Video, ExternalLink } from 'lucide-react'
+import { Copy, MoreVertical, Pencil, Trash2, FolderPlus, FolderMinus, X, Heart, Images, ImageUp, Video, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -47,6 +47,14 @@ interface PromptCardGridProps {
   onDelete: () => void
   onAddToCollection?: () => void
   onRemoveFromCollection?: () => void
+  /*
+    DIE VIER BILDER EINER THEMENKARTE STEHEN FEST (PROJ-63) — aber Mark muss
+    sie tauschen koennen. Diese zwei Eintraege sind der Ort dafuer, und sie
+    erscheinen nur, wenn gerade ein Thema geoeffnet ist: Ausserhalb waere
+    „dieses Themas" nicht beantwortbar.
+  */
+  onAlsTitelbild?: () => void
+  onAlsBeleg?: () => void
   onToggleFavorite: () => void
   onSetRating: (rating: number | null) => void
   dragHandleSlot?: React.ReactNode
@@ -61,6 +69,8 @@ export function PromptCardGrid({
   onDelete,
   onAddToCollection,
   onRemoveFromCollection,
+  onAlsTitelbild,
+  onAlsBeleg,
   onToggleFavorite,
   onSetRating,
   dragHandleSlot,
@@ -297,6 +307,18 @@ export function PromptCardGrid({
                   <DropdownMenuItem onClick={onRemoveFromCollection}>
                     <FolderMinus className="mr-2 h-4 w-4" />
                     Aus Sammlung entfernen
+                  </DropdownMenuItem>
+                )}
+                {onAlsTitelbild && (
+                  <DropdownMenuItem onClick={onAlsTitelbild}>
+                    <ImageUp className="mr-2 h-4 w-4" />
+                    Als Titelbild des Themas
+                  </DropdownMenuItem>
+                )}
+                {onAlsBeleg && (
+                  <DropdownMenuItem onClick={onAlsBeleg}>
+                    <Images className="mr-2 h-4 w-4" />
+                    Als Beleg auf der Themenkarte
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
