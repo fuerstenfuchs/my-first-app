@@ -291,7 +291,7 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
   return (
     <div className={cn('space-y-1.5', className)}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className="text-[12.5px] font-bold uppercase tracking-wider text-muted-foreground">
           Referenzbilder{bilder.length > 0 ? ` (${bilder.length}/${MAX_REFERENZEN})` : ''}
         </span>
         {laedt && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
@@ -307,16 +307,14 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
         }}
         onDrop={abwerfen}
         className={cn(
-          'rounded-md border border-dashed p-2 transition-colors',
-          ueberzogen
-            ? 'border-primary bg-primary/10'
-            : 'border-border/60 bg-muted/10',
+          'lt-ablage p-3 transition-colors',
+          ueberzogen && 'border-primary bg-primary/10',
         )}
       >
         {bilder.length > 0 && (
           <div className="mb-2 grid grid-cols-4 gap-1.5">
             {bilder.map(b => (
-              <div key={b.id} className="group relative aspect-square overflow-hidden rounded border border-border/60">
+              <div key={b.id} className="group relative aspect-square overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={b.url} alt={b.name} className="h-full w-full object-cover" />
                 <button
@@ -352,17 +350,16 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
 
         <Button
           type="button"
-          size="sm"
           variant="outline"
-          className="h-7 w-full text-[11px]"
+          className="lt-wahl h-11 w-full border-0 bg-transparent text-[15px] font-medium hover:bg-transparent"
           disabled={laedt || voll}
           onClick={() => dateiFeld.current?.click()}
         >
-          <ImagePlus className="mr-1.5 h-3 w-3" />
+          <ImagePlus className="mr-2 h-4 w-4" />
           {voll ? `${MAX_REFERENZEN} Bilder — voll` : 'Bilder wählen'}
         </Button>
 
-        <p className="mt-1 text-center text-[9px] leading-snug text-muted-foreground/70">
+        <p className="mt-2.5 text-center text-[13px] leading-snug text-muted-foreground/70">
           Oder hierher ziehen — vom Rechner oder direkt von einer Webseite.
           Kopierte Bilder mit Strg+V einfügen.
         </p>

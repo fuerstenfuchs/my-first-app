@@ -99,7 +99,7 @@ export function ErgebnisKachel({
   }
 
   return (
-    <div className="group relative aspect-square overflow-hidden rounded border border-border/40 bg-muted/20">
+    <div className="lt-kachel group relative aspect-square overflow-hidden">
       <button onClick={onAnsehen} className="h-full w-full" aria-label={`Ergebnis ${index + 1} ansehen`}>
         <img
           src={url} alt={`Ergebnis ${index + 1}`} loading="lazy"
@@ -111,7 +111,7 @@ export function ErgebnisKachel({
       {abgelegt && (
         <span
           title="Schon in einen Baustein übernommen"
-          className="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-emerald-500/85 px-1 py-0.5 text-[9px] font-medium text-emerald-950 backdrop-blur"
+          className="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-emerald-500/85 lt-mini px-1.5 py-0.5 text-[9px] font-bold text-emerald-950 backdrop-blur"
         >
           <Check className="h-2.5 w-2.5" /> abgelegt
         </span>
@@ -139,11 +139,11 @@ export function ErgebnisKachel({
                 <Maximize2 className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-56">
+            <DropdownMenuContent align="end" className="lt-menue min-w-56">
               {IM_MENUE.map((v, nr) => (
                 <div key={v}>
                   {nr > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
+                  <DropdownMenuLabel className="text-[13px] font-normal text-muted-foreground">
                     {VERFAHREN_NAME[v]} · {VERFAHREN_HINWEIS[v]}
                   </DropdownMenuLabel>
                   {STUFEN[v].map(stufe => (
@@ -158,7 +158,7 @@ export function ErgebnisKachel({
                           ? (zielMasse(job, stufe.wert) ? ` · ${zielMasse(job, stufe.wert)}` : '')
                           : ` · ${KLASSE_FLAECHE[stufe.wert]}`}
                       </span>
-                      <span className="text-[10px] tabular-nums text-muted-foreground">
+                      <span className="text-[13px] tabular-nums text-muted-foreground">
                         {kostetGeld(v) ? preis(v, stufe) : 'gratis'}
                       </span>
                     </DropdownMenuItem>

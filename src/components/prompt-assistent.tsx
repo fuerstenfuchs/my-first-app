@@ -163,17 +163,17 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
         englischer Prompt ohne Umbruchstelle würde sie sonst aufdrücken statt
         umzubrechen.
       */
-      className={cn('min-w-0 shrink-0 space-y-2 border-t border-border/50 pt-2.5', className)}
+      className={cn('lt-platte min-w-0 shrink-0 space-y-2 p-3', className)}
     >
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center gap-1.5 text-left text-xs font-semibold hover:text-primary"
+          className="flex w-full items-center gap-2 text-left text-[15.5px] font-bold transition-colors hover:text-primary"
         >
-          <Wand2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <Wand2 className="h-4 w-4 shrink-0 text-primary" />
           <span className="min-w-0 flex-1 truncate">Prompt-Assistent</span>
           <ChevronDown
-            className={cn('h-3.5 w-3.5 shrink-0 transition-transform', offen && 'rotate-180')}
+            className={cn('h-4 w-4 shrink-0 transition-transform', offen && 'rotate-180')}
           />
         </button>
       </CollapsibleTrigger>
@@ -181,7 +181,7 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
       <CollapsibleContent className="min-w-0 space-y-2">
         {/* Der Zusammenhang steht sichtbar da: Er verändert das Ergebnis, also
             soll man ihn sehen, ohne ihn zu suchen. */}
-        <p className="text-[10px] leading-snug text-muted-foreground">
+        <p className="text-[13px] leading-snug text-muted-foreground">
           Schreibt für <span className="text-foreground">{zusammenhang.bildModell}</span>
           {' · '}{zusammenhang.format}
           {zusammenhang.referenzen > 0 && (
@@ -190,8 +190,8 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
         </p>
 
         <Select value={modell} onValueChange={modellWaehlen}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Textmodell"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Textmodell"><SelectValue /></SelectTrigger>
+          <SelectContent className="lt-menue">
             {TEXT_MODELLE.map(m => (
               <SelectItem key={m.id} value={m.id} className="text-xs">
                 <span className="flex flex-col items-start">
@@ -204,7 +204,7 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
         </Select>
 
         {proxyAus && (
-          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-[10px] leading-snug text-muted-foreground">
+          <div className="rounded-[12px] border border-destructive/40 bg-destructive/5 p-3 text-[13px] leading-snug text-muted-foreground">
             <p className="break-words">{proxyAus}</p>
             <Link
               href="/einstellungen"
@@ -231,16 +231,16 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
               n.rolle === 'nutzer' ? (
                 <p
                   key={i}
-                  className="ml-3 break-words rounded-md bg-muted/60 px-2 py-1 text-[11px] leading-snug"
+                  className="ml-3 break-words rounded-[10px] bg-muted/60 px-3 py-1.5 text-[14px] leading-snug"
                 >
                   {n.text}
                 </p>
               ) : (
                 <div
                   key={i}
-                  className="min-w-0 space-y-1 rounded-md border border-border/60 bg-background p-2"
+                  className="lt-fenster min-w-0 space-y-1 p-3"
                 >
-                  <p className="whitespace-pre-wrap break-words text-[11px] leading-relaxed">
+                  <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">
                     {n.text}
                   </p>
                   <div className="flex gap-1">
@@ -248,7 +248,7 @@ export function PromptAssistent({ zusammenhang, onUebernehmen, className }: Prop
                         derselben Seite wie das Prompt-Feld. */}
                     <Button
                       size="sm"
-                      className="h-7 min-w-0 flex-1 px-2 text-[11px]"
+                      className="lt-feld h-9 min-w-0 flex-1 border-0 px-3 text-[13.5px]"
                       onClick={() => onUebernehmen(n.text)}
                     >
                       <ArrowUp className="mr-1 h-3 w-3 shrink-0" />

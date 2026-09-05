@@ -1,0 +1,274 @@
+/*
+  DER LICHTTISCH (PROJ-62)
+  ════════════════════════════════════════════════════════════════════════════
+
+  Mark am 05.09.2026:
+
+    „Kümmern wir uns mal um den Lichttisch. Da geht grafisch bestimmt auch noch
+     viel mehr. […] Oben, wo man auswählen kann, welche Bilder angezeigt werden.
+     So kleine Schrift im Allgemeinen gar nicht so gut. […] Man sieht das
+     Fenster ja auch gar nicht, das Prompt-Fenster, das soll sich deutlich
+     abheben. Auch das andere Prompt-Fenster darunter vom Prompt-Assistenten."
+
+  Alle vier Punkte waren messbar, nicht Geschmack:
+
+  1. Die Filterzeile stand in 11px ohne Form — fünf lose Wörter.
+  2. 39 Stellen lagen unter 13px. Darunter der PREIS einer kostenpflichtigen
+     Vergrößerung (10px) und der einzige Hinweis auf Ziehen und Strg+V (9px,
+     bei 3,78:1 — unter der Lesbarkeitsschwelle).
+  3. Der Rahmen des Prompt-Fensters hob sich 1,23-fach vom Grund ab. Für ein
+     Bedienelement verlangt WCAG 1.4.11 das Dreifache. Er war faktisch nicht da.
+  4. Beim Assistenten war „man sieht das Fenster nicht" WÖRTLICH wahr: Er ist
+     zugeklappt, das Feld existiert im Seitenaufbau gar nicht, bis man klickt.
+
+  Die Gestalt stammt aus Marks eigenem Entwurf, den er am selben Tag geschickt
+  hat: eine dunkle Platte, über die schräges Licht fällt, mit halbdurchsichtigen
+  Scheiben darauf. Als anfassbares Muster nachgebaut, von ihm abgenommen.
+*/
+
+/* ── Die Tischplatte ──────────────────────────────────────────────────────── */
+
+/*
+  DIE STÄRKE DES LICHTS STEHT AN EINER STELLE — ABSICHTLICH.
+
+  Mark: „Nur das schräge Licht sollten wir noch ein bisschen abmindern. Das ist
+  zu stark." Ich hatte es zuerst dezent gebaut, dann verstärkt, um seinem Bild
+  näherzukommen, und war dabei übers Ziel hinaus. Er hat aus drei Stufen die
+  mittlere gewählt. Die fünf Werte hängen deshalb hier zusammen: „einen Tick
+  heller" ist damit eine Zahl, kein Umbau.
+*/
+.lt {
+  --s1: 0.13;  /* der breite Strahl links  */
+  --s2: 0.09;  /* der mittlere             */
+  --s3: 0.065; /* der rechte, schwächste   */
+  --s4: 0.05;  /* der schmale ganz links   */
+  --sr: 0.14;  /* der Schein oben rechts   */
+
+  --lt-tief:  #161e26;
+  --lt-kante: rgba(150, 185, 220, 0.22);
+  --lt-licht: rgba(190, 220, 245, 0.34);   /* die obere Lichtkante */
+  --lt-fg2:   #93a3b1;
+  --lt-fg3:   #7d8d9b;
+
+  position: relative;
+  isolation: isolate;
+  background: var(--lt-tief);
+}
+
+/*
+  DAS LICHT LIEGT UNTER ALLEM.
+
+  Es scheint durch die halbdurchsichtigen Flächen hindurch — deshalb wirken
+  Fenster und Knöpfe wie Glas, das auf einer beleuchteten Platte liegt, und
+  nicht wie Kästen vor einem Hintergrundbild. Wer die Ebene über den Inhalt
+  legt, bekommt einen Schleier statt eines Tisches.
+*/
+.lt::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(103deg, transparent 26%, rgba(205,232,255,var(--s1)) 34%,
+                    rgba(205,232,255,calc(var(--s1) * 0.2)) 42%, transparent 47%),
+    linear-gradient(103deg, transparent 44%, rgba(205,232,255,var(--s2)) 52%,
+                    rgba(205,232,255,calc(var(--s2) * 0.16)) 58%, transparent 63%),
+    linear-gradient(103deg, transparent 62%, rgba(185,215,245,var(--s3)) 70%, transparent 79%),
+    linear-gradient(103deg, transparent 14%, rgba(185,215,245,var(--s4)) 20%, transparent 26%),
+    radial-gradient(130% 85% at 80% -12%, rgba(170,205,240,var(--sr)), transparent 62%),
+    linear-gradient(180deg, #27343f, #151d25 72%);
+}
+.lt > * { position: relative; z-index: 1; }
+
+/* ── Die Kopfzeile ────────────────────────────────────────────────────────── */
+.lt-kopf {
+  background: rgba(12, 18, 24, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(120, 150, 180, 0.14);
+}
+/* Marks einziger Größenwunsch war wörtlich „nur die Schrift noch ein bisschen
+   größer oben" — der Titel geht von 14 auf 20, die Filter von 11 auf 14,5. */
+.lt-titel { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+
+.lt-filter {
+  font-size: 14.5px; padding: 7px 14px; border-radius: 999px;
+  border: 1px solid transparent; background: none; color: var(--lt-fg2);
+  transition: background 0.18s ease, color 0.18s ease,
+              border-color 0.18s ease, transform 0.14s ease;
+}
+.lt-filter:hover, .lt-filter:focus-visible {
+  background: rgba(160, 195, 225, 0.10); color: #eef3f7; transform: translateY(-1px);
+}
+.lt-filter[data-an='ja'] {
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.45);
+  color: #ffb066; font-weight: 700;
+}
+.lt-filter[data-an='ja']:hover { transform: none; background: rgba(249, 115, 22, 0.24); }
+
+/* ── Die Scheiben ─────────────────────────────────────────────────────────── */
+
+/*
+  EINE SCHEIBE IST ETWAS, DAS ÜBER DER PLATTE STEHT: heller Verlauf, oben eine
+  Lichtkante. Ein FENSTER ist etwas, das darin versinkt: dunkel, mit Schatten
+  nach innen. Zwei entgegengesetzte Stufen um dieselbe Kontur — das liest das
+  Auge als Fenster. Ein einzelner Rahmen kann das auf Schwarz nicht leisten,
+  und genau daran ist der alte Zustand gescheitert.
+*/
+.lt-platte {
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(150,190,225,0.07), rgba(150,190,225,0.02));
+  border: 1px solid var(--lt-kante);
+  border-top-color: var(--lt-licht);
+  box-shadow: 0 1px 0 rgba(190, 220, 245, 0.08) inset, 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.lt-fenster {
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(150,190,225,0.07), rgba(150,190,225,0.02));
+  border: 1px solid var(--lt-kante);
+  border-top-color: var(--lt-licht);
+  box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(190, 220, 245, 0.10);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.lt-fenster:hover { border-color: rgba(175, 210, 240, 0.34); }
+.lt-fenster:focus, .lt-fenster:focus-visible {
+  outline: none;
+  border-color: rgba(249, 145, 60, 0.55);
+  border-top-color: rgba(255, 190, 130, 0.70);
+  box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.45), 0 0 0 3px rgba(249, 115, 22, 0.14);
+}
+.lt-fenster::placeholder { color: #9dadbb; }
+
+/* Ein anfassbares Feld: dieselbe Scheibe, aber sie hebt sich beim Zeigen. */
+.lt-feld {
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(150,190,225,0.08), rgba(150,190,225,0.03));
+  border: 1px solid rgba(150, 185, 220, 0.20);
+  border-top-color: rgba(190, 220, 245, 0.28);
+  color: #eef3f7;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.14s ease;
+}
+.lt-feld:hover, .lt-feld:focus-visible {
+  border-color: rgba(190, 220, 245, 0.42);
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, rgba(150,190,225,0.13), rgba(150,190,225,0.05));
+}
+.lt-feld:active { transform: translateY(1px); }
+
+/* Die Ablage für Referenzbilder — ein Fach, kein Knopf. */
+.lt-ablage {
+  border-radius: 14px;
+  background: rgba(150, 190, 225, 0.04);
+  border: 1px solid rgba(150, 185, 220, 0.14);
+}
+.lt-wahl {
+  border-radius: 11px;
+  border: 1.5px dashed rgba(165, 200, 230, 0.45);
+  background: rgba(150, 190, 225, 0.05);
+  color: #eef3f7;
+  transition: border-color 0.18s ease, background 0.18s ease,
+              color 0.18s ease, transform 0.14s ease;
+}
+.lt-wahl:hover, .lt-wahl:focus-visible {
+  border-color: #f97316; background: rgba(249, 115, 22, 0.10);
+  color: #ffd0a8; transform: translateY(-1px);
+}
+.lt-wahl:active { transform: translateY(1px); }
+
+/* ── Der Hauptknopf ───────────────────────────────────────────────────────── */
+
+/*
+  DAS ORANGE IST DUNKLER ALS IN MARKS ENTWURF — GERECHNET, NICHT GESCHÄTZT.
+
+  Sein Bild hatte weiße Schrift auf hellem Orange. Nachgerechnet: auf #e8721b
+  kommt Weiß auf 3,06:1, auf #f97316 sogar nur auf 2,4 — gefordert sind 4,5.
+  Ich hatte ihm zuerst geschrieben, meine Fassung liege darüber; auch das war
+  falsch, der hellste Punkt lag bei 3,06. Der Verlauf bleibt jetzt vollständig
+  im sicheren Bereich: #c2540b ergibt 4,60, #a03c07 ergibt 6,44.
+
+  Wer ihn aufhellen will, muss gegen den HELLSTEN Punkt rechnen, nicht gegen
+  den Mittelwert.
+*/
+.lt-haupt {
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(96deg, #b8480a, #c2540b 35%, #ac420a 70%, #a03c07);
+  box-shadow: 0 2px 0 #7d3005, 0 8px 20px rgba(160, 60, 7, 0.30);
+  transition: transform 0.14s cubic-bezier(.22,.8,.3,1),
+              box-shadow 0.2s ease, filter 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+/* Ein Lichtreflex läuft einmal quer — dasselbe Licht wie auf der Platte. */
+.lt-haupt::after {
+  content: ''; position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%,
+              rgba(255, 235, 215, 0.28) 50%, transparent 65%);
+  transform: translateX(-60%);
+}
+.lt-haupt:hover:not(:disabled), .lt-haupt:focus-visible:not(:disabled) {
+  transform: translateY(-2px); filter: brightness(1.07);
+  box-shadow: 0 4px 0 #7d3005, 0 14px 28px rgba(160, 60, 7, 0.40);
+}
+.lt-haupt:hover:not(:disabled)::after { opacity: 1; animation: lt-wisch 1.1s ease forwards; }
+@keyframes lt-wisch { to { transform: translateX(60%); } }
+.lt-haupt:active:not(:disabled) {
+  transform: translateY(2px); box-shadow: 0 1px 0 #7d3005, 0 4px 10px rgba(160, 60, 7, 0.3);
+}
+
+/* ── Die Bildkacheln ──────────────────────────────────────────────────────── */
+
+/*
+  Sie hatten denselben unsichtbaren Rahmen wie das Prompt-Fenster, nur noch
+  schwächer (`border-border/40`). Wer das Fenster löst und die Kacheln nicht,
+  hat den Befund nur verschoben — und die Kacheln SIND der Lichttisch.
+*/
+.lt-kachel {
+  border-radius: 12px;
+  border: 1px solid rgba(150, 185, 220, 0.18);
+  border-top-color: rgba(190, 220, 245, 0.28);
+  background: rgba(150, 190, 225, 0.04);
+  box-shadow: 0 1px 0 rgba(190, 220, 245, 0.07) inset, 0 6px 14px rgba(0, 0, 0, 0.32);
+  transition: border-color 0.18s ease, transform 0.14s ease, box-shadow 0.2s ease;
+}
+.lt-kachel:hover {
+  border-color: rgba(255, 170, 95, 0.55);
+  transform: translateY(-2px);
+  box-shadow: 0 1px 0 rgba(255, 215, 180, 0.12) inset, 0 12px 22px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Schriftgrößen ────────────────────────────────────────────────────────── */
+
+/*
+  VON AUSSEN ANGEHOBEN, WIE IM SCENE BUILDER (papier.css:315-318).
+
+  39 Stellen lagen unter 13px. Sie einzeln anzufassen hieße, beim nächsten
+  Bauteil wieder eine zu vergessen — die Regel steht deshalb an EINER Stelle.
+
+  ZWEI AUSNAHMEN, beide mit Grund:
+  - `.lt-mini` bleibt klein: die Marke „abgelegt" sitzt AUF dem Bild und würde
+    sonst ein Drittel breiter.
+  - Menüs in Portalen hängen am `<body>` und damit außerhalb von `.lt`. Sie
+    tragen `lt-menue` und werden hier getrennt angehoben.
+*/
+.lt .text-\[9px\],
+.lt .text-\[10px\],
+.lt .text-\[11px\] { font-size: 13px; }
+.lt .text-xs { font-size: 13.5px; }
+.lt .lt-mini { font-size: 10px; }
+
+.lt-menue .text-\[10px\],
+.lt-menue .text-\[11px\] { font-size: 13px; }
+.lt-menue .text-xs { font-size: 13.5px; }
+
+/* Hinweiszeilen: der 9px-Hinweis lag bei 3,78:1 — der schlechteste Wert der
+   Seite, und er trug die einzige Erklärung zu Ziehen und Strg+V. */
+.lt .text-muted-foreground,
+.lt-menue .text-muted-foreground { color: var(--lt-fg2); }
+.lt [class*='text-muted-foreground/'] { color: var(--lt-fg3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lt-filter, .lt-feld, .lt-wahl, .lt-haupt, .lt-kachel { transition: none; }
+  .lt-filter:hover, .lt-feld:hover, .lt-wahl:hover,
+  .lt-haupt:hover, .lt-kachel:hover, .lt-haupt:active { transform: none; }
+  .lt-haupt:hover::after { animation: none; opacity: 0; }
+}

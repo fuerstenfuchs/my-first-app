@@ -99,4 +99,6 @@
 
 | PROJ-61 | Gepresste Tasten im Scene Builder (rund statt eckig) | In Review | [PROJ-61](PROJ-61-gepresste-tasten.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-62
+| PROJ-62 | Der Lichttisch (schräges Licht, sichtbare Fenster, lesbare Schrift) | In Review | [PROJ-62](PROJ-62-lichttisch.md) | 2026-09-05 |
+
+## Next Available ID: PROJ-63

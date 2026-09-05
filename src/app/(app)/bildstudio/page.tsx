@@ -17,6 +17,7 @@ import { useBildLoeschen } from '@/hooks/use-bild-loeschen'
 import { useWorkerStatus, seitWann } from '@/hooks/use-worker-status'
 import { VERFAHREN_NAME } from '@/lib/upscaling'
 import { cn } from '@/lib/utils'
+import './lichttisch.css'
 
 /**
  * Der Lichttisch — alle Bilder aus allen Aufträgen als ein Raster.
@@ -136,26 +137,28 @@ export default function BildstudioPage() {
   const urls = useMemo(() => gefiltert.map(b => b.url), [gefiltert])
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-border/50 px-4 py-3">
+    <div className="lt flex h-full flex-col">
+      <header className="lt-kopf flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         <SidebarTrigger />
-        <h1 className="text-sm font-semibold">
+        <h1 className="lt-titel">
           Lichttisch{' '}
           <span className="font-normal text-muted-foreground">({alleBilder.length})</span>
         </h1>
 
-        <div className="ml-2 flex flex-wrap items-center gap-1">
+        {/*
+          Marks einziger Groessenwunsch war woertlich „nur die Schrift noch ein
+          bisschen groesser oben". Die Filter standen in 11px ohne Form — fuenf
+          lose Woerter, von denen eines heller war. Gestalt und Groesse stehen
+          jetzt in `lichttisch.css` unter `.lt-filter`.
+        */}
+        <div className="flex flex-wrap items-center gap-1.5">
           {(Object.keys(FILTER_LABEL) as Filter[]).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               aria-pressed={filter === f}
-              className={cn(
-                'rounded px-2 py-1 text-[11px] transition',
-                filter === f
-                  ? 'bg-primary/15 font-medium text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
+              className="lt-filter"
+              data-an={filter === f ? 'ja' : 'nein'}
             >
               {FILTER_LABEL[f]}
             </button>
@@ -163,29 +166,41 @@ export default function BildstudioPage() {
         </div>
 
         <Button
-          size="icon" variant="ghost" className="ml-auto h-7 w-7"
+          size="icon" variant="ghost" className="lt-feld ml-auto h-9 w-9 shrink-0"
           title="Neu laden"
           onClick={() => { void laden(); abgelegteHolen() }}
         >
-          <RefreshCw className="h-3.5 w-3.5" />
+          <RefreshCw className="h-4 w-4" />
         </Button>
 
         {arbeiter.zustand !== 'unbekannt' && (
           <span className={cn(
-            'flex shrink-0 items-center gap-1.5 rounded px-2 py-1 text-[11px]',
+            'flex min-w-0 items-center gap-2 rounded-full px-3 py-1.5 text-[13px] leading-snug',
             arbeiter.zustand === 'laeuft'
               ? 'bg-emerald-500/10 text-emerald-400'
               : 'bg-amber-500/10 text-amber-400',
           )}>
             <span className={cn(
-              'h-1.5 w-1.5 rounded-full',
+              'h-2 w-2 shrink-0 rounded-full',
               arbeiter.zustand === 'laeuft' ? 'bg-emerald-400' : 'bg-amber-400',
             )} />
-            {arbeiter.zustand === 'laeuft'
-              ? 'Arbeiter läuft'
-              : arbeiter.zustand === 'nie'
-                ? 'Arbeiter noch nie gesehen'
-                : `Arbeiter zuletzt ${seitWann(arbeiter.sekundenHer)}`}
+            {/*
+              Der Text steht in einem eigenen Element, damit er umbrechen KANN.
+
+              Er lief auf einem Bildschirmfoto rechts aus dem Bild — das war
+              aber ein Messfehler von mir: Der kopflose Browser rendert nicht
+              schmaler als 500px, mein 420er-Bild war also in Wahrheit 500 breit
+              und nur beschnitten. Im echten Browser bei 375px steht nichts
+              über. Der eigene Kasten bleibt trotzdem: Bei „Arbeiter zuletzt vor
+              14 Minuten" wird der Text länger, und dann trägt er.
+            */}
+            <span className="min-w-0">
+              {arbeiter.zustand === 'laeuft'
+                ? 'Arbeiter läuft'
+                : arbeiter.zustand === 'nie'
+                  ? 'Arbeiter noch nie gesehen'
+                  : `Arbeiter zuletzt ${seitWann(arbeiter.sekundenHer)}`}
+            </span>
           </span>
         )}
       </header>
@@ -205,23 +220,23 @@ export default function BildstudioPage() {
         {loading ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             {Array.from({ length: 18 }).map((_, i) => (
-              <div key={i} className="aspect-square animate-pulse rounded bg-muted/30" />
+              <div key={i} className="aspect-square animate-pulse rounded-[12px] bg-muted/20" />
             ))}
           </div>
         ) : ladefehler ? (
-          <p className="py-16 text-center text-sm text-destructive">
+          <p className="py-16 text-center text-[15px] text-destructive">
             Bilder konnten nicht geladen werden: {ladefehler}
           </p>
         ) : gefiltert.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-20 text-center">
-            <ImageOff className="h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
+            <ImageOff className="h-10 w-10 text-muted-foreground/40" />
+            <p className="text-[15px] text-muted-foreground">
               {alleBilder.length === 0
                 ? 'Noch keine Bilder erzeugt.'
                 : `Kein Bild passt zum Filter „${FILTER_LABEL[filter]}".`}
             </p>
             {alleBilder.length === 0 && (
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm" variant="outline" className="lt-feld h-10 border-0 px-4 text-[14px]">
                 <Link href="/scene-builder">
                   <Clapperboard className="mr-1.5 h-3.5 w-3.5" />
                   Im Scene Builder eine Szene bauen
@@ -251,7 +266,7 @@ export default function BildstudioPage() {
                   onVergroessern={(pfad, stufe, verfahren) =>
                     void vergroessern(b.job, pfad, stufe, verfahren)}
                 />
-                <p className="truncate px-0.5 text-[10px] leading-tight text-muted-foreground">
+                <p className="truncate px-0.5 text-[13px] leading-tight text-muted-foreground">
                   {beschriftung(b.job)}
                 </p>
               </div>

@@ -225,11 +225,11 @@ export function FreieErzeugung(
         den Rand und war nicht mehr erreichbar. Jetzt rollt die Spalte.
         Genau das wollte Mark: „Dann scrolle ich lieber da ein bisschen."
       */
-      className="flex min-h-0 w-full shrink-0 flex-col gap-2.5 overflow-y-auto border-b border-border/50 bg-muted/10 p-3 lg:w-[var(--panel-breite,260px)] lg:border-b-0"
+      className="flex min-h-0 w-full shrink-0 flex-col gap-2.5 overflow-y-auto border-b border-[rgba(150,185,220,0.14)] p-3.5 lg:w-[var(--panel-breite,260px)] lg:border-b-0 lg:border-r"
     >
       <div className="flex items-center gap-1.5">
-        <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <h2 className="text-xs font-semibold">Erzeugen</h2>
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h2 className="text-[15.5px] font-bold">Erzeugen</h2>
       </div>
 
       <Textarea
@@ -249,14 +249,14 @@ export function FreieErzeugung(
           Jetzt eine feste Hoehe, in der gerollt wird; `resize-y` bleibt, wer
           mehr sehen will, zieht es groesser.
         */
-        className="h-[min(34dvh,20rem)] shrink-0 resize-y overflow-y-auto text-xs leading-relaxed"
+        className="lt-fenster h-[min(34dvh,20rem)] shrink-0 resize-y overflow-y-auto px-4 py-3 text-[15px] leading-relaxed"
       />
 
       <ReferenzAblage bilder={referenzen} onChange={setReferenzen} className="shrink-0" />
 
       <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
-        <SelectTrigger className="h-8 text-xs" aria-label="Modell"><SelectValue /></SelectTrigger>
-        <SelectContent>
+        <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Modell"><SelectValue /></SelectTrigger>
+        <SelectContent className="lt-menue">
           {MODELLE.map(m => {
             // Gesperrt, aber sichtbar: Ein Modell, das aus der Liste
             // verschwindet, wirkt wie ein Fehler. Eines, das dasteht und den
@@ -278,8 +278,8 @@ export function FreieErzeugung(
 
       <div className="grid grid-cols-2 gap-1.5">
         <Select value={format} onValueChange={v => setFormat(v as AspectRatioKey)}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Format"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Format"><SelectValue /></SelectTrigger>
+          <SelectContent className="lt-menue">
             {ASPECT_RATIOS.map(f => (
               <SelectItem key={f.key} value={f.key} className="text-xs">{f.label}</SelectItem>
             ))}
@@ -288,8 +288,8 @@ export function FreieErzeugung(
 
         {inKlassen ? (
           <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>
-            <SelectTrigger className="h-8 text-xs" aria-label="Größenklasse"><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Größenklasse"><SelectValue /></SelectTrigger>
+            <SelectContent className="lt-menue">
               {KLASSEN.map(k => (
                 <SelectItem key={k.id} value={k.id} className="text-xs">
                   {k.label} · {k.note}
@@ -299,8 +299,8 @@ export function FreieErzeugung(
           </Select>
         ) : (
           <Select value={String(anzahl)} onValueChange={v => setAnzahl(Number(v) as Durchlaeufe)}>
-            <SelectTrigger className="h-8 text-xs" aria-label="Anzahl Bilder"><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Anzahl Bilder"><SelectValue /></SelectTrigger>
+            <SelectContent className="lt-menue">
               {DURCHLAEUFE.map(d => (
                 <SelectItem key={d} value={String(d)} className="text-xs">
                   {d} {d === 1 ? 'Bild' : 'Bilder'}
@@ -313,8 +313,8 @@ export function FreieErzeugung(
 
       {inKlassen && (
         <Select value={String(anzahl)} onValueChange={v => setAnzahl(Number(v) as Durchlaeufe)}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Anzahl Bilder"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Anzahl Bilder"><SelectValue /></SelectTrigger>
+          <SelectContent className="lt-menue">
             {DURCHLAEUFE.map(d => (
               <SelectItem key={d} value={String(d)} className="text-xs">
                 {d} {d === 1 ? 'Bild' : 'Bilder'}
@@ -332,7 +332,7 @@ export function FreieErzeugung(
           dann nicht, das Modell richtet sich nach der Vorlage. Am 01.09.2026
           gemessen — 1024x1024 angefragt, 1122x1402 zurückbekommen. Eine Zahl,
           die nicht eintrifft, ist schlechter als keine. */}
-      <p className="text-[10px] leading-snug text-muted-foreground">
+      <p className="text-[13px] leading-snug text-muted-foreground">
         {mitReferenz ? (
           <>
             Ergebnis: <span className="text-foreground">richtet sich nach dem Referenzbild</span>
@@ -350,14 +350,23 @@ export function FreieErzeugung(
         )}
       </p>
 
-      <Button size="sm" onClick={() => void erzeugen()} disabled={!prompt.trim() || laeuft}>
+      {/*
+        Gestalt in `bildstudio/lichttisch.css` unter `.lt-haupt`. Dort steht
+        auch, warum das Orange dunkler ist als in Marks Entwurf: Weiss auf dem
+        helleren Ton kam auf 3,06:1, gefordert sind 4,5.
+      */}
+      <Button
+        onClick={() => void erzeugen()}
+        disabled={!prompt.trim() || laeuft}
+        className="lt-haupt h-12 w-full text-[16px] font-bold hover:bg-transparent"
+      >
         {laeuft
-          ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-          : <Send className="mr-1.5 h-3.5 w-3.5" />}
+          ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          : <Send className="mr-2 h-4 w-4" />}
         Erzeugen lassen
       </Button>
 
-      <p className="text-[10px] leading-snug text-muted-foreground">
+      <p className="text-[13px] leading-snug text-muted-foreground">
         Landet in derselben Warteschlange. Der Arbeiter holt es ab — Du musst
         nicht warten.
       </p>
@@ -371,17 +380,17 @@ export function FreieErzeugung(
 
       {prompt.trim() && (
         <div className="mt-auto space-y-1.5 border-t border-border/50 pt-2.5">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="text-[12.5px] font-bold uppercase tracking-wider text-muted-foreground">
             War gut?
           </span>
           <Input
             value={titel}
             onChange={e => setTitel(e.target.value)}
             placeholder={titelVorschlag(prompt) || 'Titel im Trésor'}
-            className="h-8 text-xs"
+            className="lt-feld h-11 border-0 px-3.5 text-[15px]"
           />
           <Button
-            size="sm" variant="outline" className="w-full"
+            variant="outline" className="lt-feld h-11 w-full border-0 text-[15px]"
             onClick={() => void inTresor()}
             disabled={speichert || schonGespeichert}
           >
