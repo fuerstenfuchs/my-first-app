@@ -124,7 +124,7 @@ export function QueueButton({
     <div className="space-y-2.5 rounded-[14px] border border-[var(--sb-rule)] bg-[var(--sb-card)] p-3 shadow-[0_1px_3px_rgba(60,48,25,0.09)]">
       <div className="flex items-center gap-2">
         <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
-          <SelectTrigger className="h-9 flex-1 text-sm" aria-label="Modell">
+          <SelectTrigger className="h-9 flex-1 rounded-[10px] text-sm" aria-label="Modell">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="sb-papier">
@@ -136,7 +136,7 @@ export function QueueButton({
 
         {inKlassen && (
           <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>
-            <SelectTrigger className="h-9 w-[6.75rem] text-sm" aria-label="Größenklasse">
+            <SelectTrigger className="h-9 w-[6.75rem] rounded-[10px] text-sm" aria-label="Größenklasse">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="sb-papier">
@@ -153,7 +153,7 @@ export function QueueButton({
           value={String(durchlaeufe)}
           onValueChange={v => setDurchlaeufe(Number(v) as Durchlaeufe)}
         >
-          <SelectTrigger className="h-9 w-[5.75rem] text-sm" aria-label="Durchläufe">
+          <SelectTrigger className="h-9 w-[5.75rem] rounded-[10px] text-sm" aria-label="Durchläufe">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="sb-papier">
@@ -169,7 +169,7 @@ export function QueueButton({
       <Button
         onClick={handleQueue}
         disabled={!prompt || laeuft}
-        className="h-11 w-full rounded-full bg-emerald-700 text-[15px] font-bold text-white shadow-[0_2px_0_#065f46,0_4px_7px_rgba(6,78,59,0.30)] hover:bg-emerald-800 active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(6,78,59,0.3)] disabled:opacity-40"
+        className="h-11 w-full rounded-full bg-emerald-700 text-[15px] font-bold text-white shadow-[0_2px_0_#065f46,0_4px_7px_rgba(6,78,59,0.30)] hover:bg-emerald-800 active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(6,78,59,0.3)] motion-reduce:active:translate-y-0 motion-reduce:transition-none disabled:opacity-40"
       >
         {laeuft
           ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Wird eingereiht…</>
@@ -193,7 +193,7 @@ export function QueueButton({
         nahm das Modell schon mal die Person aus dem Outfit-Bild.
       */}
       {rollen.length >= 1 && (
-        <div className="border border-dashed border-[var(--sb-rule)] px-2 py-1.5">
+        <div className="rounded-[12px] border border-dashed border-[var(--sb-rule)] px-2 py-1.5">
           <p className="mb-1 text-[13px] font-bold uppercase tracking-[0.15em] text-[var(--sb-ink3)]">
             Zuordnung für das Modell
           </p>
@@ -252,7 +252,7 @@ export function QueueButton({
           <summary className="cursor-pointer list-none text-[13px] text-[var(--sb-ink3)] hover:text-[var(--sb-ink)]">
             + Zusätze im Prompt ansehen
           </summary>
-          <pre className="mt-1.5 whitespace-pre-wrap break-words border border-dashed border-[var(--sb-rule)] bg-[var(--sb-pap2)] px-2 py-1.5 font-mono text-[13px] leading-snug text-[var(--sb-ink2)]">
+          <pre className="mt-1.5 whitespace-pre-wrap break-words rounded-[12px] border border-dashed border-[var(--sb-rule)] bg-[var(--sb-pap2)] px-2 py-1.5 font-mono text-[13px] leading-snug text-[var(--sb-ink2)]">
             {[rollenBlock, ansage].filter(Boolean).join('\n\n')}
           </pre>
         </details>

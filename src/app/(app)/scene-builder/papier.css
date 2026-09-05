@@ -180,9 +180,16 @@
 
   Es sitzt elf Pixel über den Tasten, in derselben Karte. Bliebe es ein
   Schroffrechteck, hinge ein vollrunder Knopf unter einer harten Ecke — zwei
-  unvereinbare Formen auf Fingerbreite. Links bleibt es scharf, weil dort die
-  5px-Farbkante steht: Die ist das Kennzeichen der Karte, und eine gerundete
-  Farbkante verliert genau die Schärfe, die sie als Registerreiter lesbar macht.
+  unvereinbare Formen auf Fingerbreite.
+
+  Links bleibt es scharf, weil dort die 5px-Farbkante steht. Rundet man sie mit,
+  läuft sie an beiden Enden spitz zu und wirkt dünner als 5px — sie ist aber das
+  Kennzeichen der Karte und muss ihre volle Stärke behalten.
+
+  (Hier stand zuerst, sie müsse „als Registerreiter" lesbar bleiben. Das trug
+  nicht: Ein Reiter sitzt an der Kante des Bogens, dieses Schild sitzt 14px
+  innen und berührt keinen Rand. Eine Begründung, die ein Bild beschreibt, das
+  gar nicht auf dem Schirm ist, ist keine.)
 */
 .sb-plate {
   border-radius: 0 9px 9px 0;
@@ -351,14 +358,32 @@
   padding: 7px 12px;
   font-size: 14px;
   /*
-    KONTUR #a49879 STATT --sb-rule (PROJ-61, aus der Prüfung).
+    KONTUR #948668 STATT --sb-rule (PROJ-61).
+
     `--sb-rule` (#cec6b2) hebt sich nur 1,67-fach vom Kartengrund ab; für ein
-    BEDIENELEMENT verlangt WCAG 1.4.11 das Dreifache. #a49879 bringt 3,1 — die
-    Taste ist damit als Taste erkennbar, auch für schwache Augen. `--sb-rule`
-    selbst bleibt unangetastet: Es trägt die feinen Linien des Bogens, und die
-    sollen fein bleiben.
+    BEDIENELEMENT verlangt WCAG 1.4.11 das Dreifache.
+
+    HIER STAND ERST #a49879 mit der Behauptung „bringt 3,1". Nachgerechnet sind
+    es 2,81 gegen den Kartengrund, 2,54 gegen die eigene Füllung der Taste und
+    2,51 auf der gedämpften Karte — die Schwelle wird also an KEINER der drei
+    angrenzenden Flächen erreicht. Die falsche Zahl stammt aus einer Schätzung,
+    die ich ungeprüft übernommen hatte; sie stand als Beleg im Quelltext, wo der
+    nächste ihr geglaubt hätte.
+
+    #948668 bringt 3,52 / 3,18 / 3,14 — an allen drei Flächen über der Schwelle.
+    Wer sie aufhellt, muss gegen alle drei rechnen, nicht nur gegen die Karte.
+
+    `--sb-rule` selbst bleibt unangetastet: Es trägt die feinen Linien des
+    Bogens, und die sollen fein bleiben.
   */
-  border: 1px solid #a49879;
+  border: 1px solid #948668;
+  /*
+    Beides gegen den Zeilenumbruch: Eine Pille, in der ein zweiwortiger Wert
+    umbricht, verliert ihre Form; schrumpfen darf sie erst recht nicht. Die
+    Filterknöpfe daneben tragen `shrink-0` aus demselben Grund.
+  */
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--sb-ink2);
   background: linear-gradient(180deg, #fffefb, #f6f1e6);
   box-shadow:
@@ -408,10 +433,12 @@
 }
 
 /*
-  Der zweite Selektor ist nicht doppelt gemoppelt: `:active` und `[data-an]`
-  wiegen gleich viel, und ohne ihn bekäme ausgerechnet die AUSGEWÄHLTE Taste
-  beim Drücken keine Rückmeldung — die, die man zum Abwählen anfasst. Derselbe
-  Fehler wie in der Seitenleiste, dort schon einmal gefunden.
+  Der zweite Selektor ist heute NICHT nötig — `:active` steht ohnehin nach
+  `[data-an]` und gewinnt bei gleichem Gewicht durch die Stellung. Er bleibt
+  trotzdem stehen: In der Seitenleiste ist genau dieser Fall einmal gekippt,
+  weil jemand später eine Regel dazwischengeschoben hat. Der Selektor macht das
+  Verhalten unabhängig von der Reihenfolge. Wer hier umsortiert, richtet damit
+  keinen Schaden an.
 */
 .sb-taste:active,
 .sb-taste[data-an='ja']:active {
@@ -429,8 +456,32 @@
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
 }
 
+/*
+  GEDÄMPFT **UND** GEWÄHLT — den Fall gibt es wirklich.
+
+  `ChipGroup` reicht `gedaempft` an jeden Knopf der Gruppe durch, auch an den
+  ausgewählten (`page.tsx:188`). Genau eine Gruppe setzt es: der Grundton in der
+  Karte „Studio-Hintergrund" (`page.tsx:1552`) — und dort KANN etwas gewählt
+  sein. Ohne diese Regel gewann `[data-gedaempft]` bei Fläche, Schrift und
+  Schatten, während `[data-an]` nur Randfarbe und Fettschrift setzte: blassbeige
+  Fläche, graue Fettschrift, dunkeloranger Rand. Ein Zustand, den niemand
+  entworfen hat — und ausgerechnet der Gewählt-Zustand wäre in der einen Gruppe
+  verschwunden, in der er auftreten kann.
+
+  Gelöst wird es nicht durch Rückfall auf Beige, sondern durch WENIGER TIEFE:
+  Das Orange bleibt (es heißt „ausgewählt", und das stimmt ja weiterhin), aber
+  der Sockel fällt weg — dieselbe Sprache wie `.sb-mod-dim`, die auch nur den
+  Schatten verliert. Die Kontrastwerte bleiben damit unverändert bei 4,83/7,44.
+*/
+.sb-taste[data-gedaempft='ja'][data-an='ja'] {
+  background: linear-gradient(180deg, #bc5208, #8d3e04);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 1px 0 rgba(255, 225, 200, 0.35) inset;
+}
+
 .sb-taste:disabled { cursor: not-allowed; opacity: 0.55; }
-.sb-taste:disabled:hover { transform: none; border-color: #a49879; color: var(--sb-ink2); }
+.sb-taste:disabled:hover { transform: none; border-color: #948668; color: var(--sb-ink2); }
 
 @media (prefers-reduced-motion: reduce) {
   .sb-taste { transition: border-color 0.18s ease, color 0.18s ease; }
@@ -448,3 +499,24 @@
   Tailwind gestaltet, direkt an der Stelle. Dieselbe Falle wie in der
   Seitenleiste, wo `.leiste-stein` gegen `fixed` stand.
 */
+
+
+/*
+  DIE TASTATUR BRAUCHT EINE EIGENE ANZEIGE — UND ZWAR EINE, DIE AUCH AUF DER
+  GEWÄHLTEN TASTE SICHTBAR IST.
+
+  `:focus-visible` teilte sich die Regel mit `:hover`. Auf einer gewählten Taste
+  wurde davon alles überschrieben, was man sehen konnte — Rand, Farbe, Schatten;
+  übrig blieb ein Pixel Versatz. Das ist keine Fokusanzeige. Gerettet hat es nur
+  der Ring, den der Browser von sich aus zeichnet; wer irgendwann ein
+  `outline: none` in die Grundlagen schreibt, macht die Seite lautlos untastbar.
+
+  Diese Regel steht bewusst GANZ UNTEN und benutzt `outline` statt Randfarbe:
+  `outline` wird von keiner der Zustandsregeln angefasst und liegt außerhalb der
+  Taste, stört den Sockel also nicht. Tinte auf Papier — der stärkste Kontrast,
+  den diese Seite hat.
+*/
+.sb-taste:focus-visible {
+  outline: 2px solid var(--sb-ink);
+  outline-offset: 2px;
+}

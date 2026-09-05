@@ -583,9 +583,9 @@ function SzenenFeld({
   }
 
   return (
-    <div className="relative flex-1 border-2 border-[var(--sb-or)] bg-white p-2">
+    <div className="relative flex-1 rounded-[12px] border-2 border-[var(--sb-or)] bg-white p-2">
       <div className="flex items-center gap-[11px]">
-        <div className="h-[54px] w-[54px] flex-none overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
+        <div className="h-[54px] w-[54px] flex-none overflow-hidden rounded-[10px] border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
           {displayImage ? (
             <img src={displayImage} alt={asset.name} className="h-full w-full object-contain" />
           ) : (
@@ -639,7 +639,7 @@ function RefExportCard({ label, emoji, asset, refImage }: {
 
   return (
     <div className="flex items-start gap-2.5">
-      <div className="h-14 w-14 shrink-0 overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[10px] border border-[var(--sb-rule)] bg-[var(--sb-pap2)]">
         {imageUrl ? (
           <img src={imageUrl} alt={asset.name} className="h-full w-full object-contain" />
         ) : (
@@ -667,7 +667,7 @@ function NebenAsset({ label, emoji, asset }: {
   if (!asset) return null
   return (
     <div className="flex items-center gap-2.5">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border border-[var(--sb-rule)] bg-[var(--sb-pap2)] text-base">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--sb-rule)] bg-[var(--sb-pap2)] text-base">
         {asset.cover_image_url
           ? <img src={asset.cover_image_url} alt={asset.name} className="h-full w-full object-contain" />
           : emoji}
@@ -684,7 +684,7 @@ function NebenAsset({ label, emoji, asset }: {
 function Marke({ children, betont = false }: { children: React.ReactNode; betont?: boolean }) {
   return (
     <span className={cn(
-      'border bg-[var(--sb-card)] px-2.5 py-1.5 text-[13.5px]',
+      'rounded-full border bg-[var(--sb-card)] px-3 py-1.5 text-[13.5px]',
       betont
         ? 'border-[var(--sb-or)] font-bold text-[var(--sb-or-t)]'
         : 'border-[var(--sb-rule)] text-[var(--sb-ink2)]',
@@ -1319,7 +1319,7 @@ export default function SceneBuilderPage() {
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto h-9 text-sm rounded-full border-[#a49879] bg-[var(--sb-card)] text-[var(--sb-ink2)] shadow-[0_2px_0_rgba(150,132,96,0.55),0_3px_5px_rgba(60,48,25,0.12)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(60,48,25,0.14)]"
+            className="ml-auto h-9 text-sm rounded-full border-[#a49879] bg-[var(--sb-card)] text-[var(--sb-ink2)] shadow-[0_2px_0_rgba(150,132,96,0.55),0_3px_5px_rgba(60,48,25,0.12)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(60,48,25,0.14)] motion-reduce:active:translate-y-0 motion-reduce:transition-none"
             onClick={() => setPresetsOpen(true)}
           >
             Presets
@@ -1328,7 +1328,7 @@ export default function SceneBuilderPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-9 text-sm rounded-full border-[#a49879] bg-[var(--sb-card)] text-[var(--sb-ink2)] shadow-[0_2px_0_rgba(150,132,96,0.55),0_3px_5px_rgba(60,48,25,0.12)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(60,48,25,0.14)]"
+              className="h-9 text-sm rounded-full border-[#a49879] bg-[var(--sb-card)] text-[var(--sb-ink2)] shadow-[0_2px_0_rgba(150,132,96,0.55),0_3px_5px_rgba(60,48,25,0.12)] hover:border-[var(--sb-ink3)] hover:bg-[var(--sb-card)] hover:text-[var(--sb-ink)] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(60,48,25,0.14)] motion-reduce:active:translate-y-0 motion-reduce:transition-none"
               onClick={clearAll}
             >
               <X className="mr-1.5 h-3.5 w-3.5" />Leeren
@@ -1627,7 +1627,7 @@ export default function SceneBuilderPage() {
           <Passkreuz />
           <span className="flex-1 text-base font-bold tracking-[0.06em]">Prompt &amp; Referenzen</span>
           <Button size="sm" onClick={handleCopy} disabled={!prompt}
-            className="h-9 shrink-0 rounded-full bg-[var(--sb-or-t)] text-sm font-bold text-white shadow-[0_2px_0_#6d2f03,0_4px_7px_rgba(120,52,3,0.32)] hover:bg-[#8d3e04] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(120,52,3,0.3)] disabled:opacity-40">
+            className="h-9 shrink-0 rounded-full bg-[var(--sb-or-t)] text-sm font-bold text-white shadow-[0_2px_0_#6d2f03,0_4px_7px_rgba(120,52,3,0.32)] hover:bg-[#8d3e04] active:translate-y-[2px] active:shadow-[0_1px_3px_rgba(120,52,3,0.3)] motion-reduce:active:translate-y-0 motion-reduce:transition-none disabled:opacity-40">
             <Copy className="mr-1.5 h-3.5 w-3.5" />Kopieren
           </Button>
         </header>
@@ -1701,7 +1701,7 @@ export default function SceneBuilderPage() {
               </Feldname>
 
               {prompt ? (
-                <div className="border border-[var(--sb-rule)] bg-[var(--sb-card)] p-4">
+                <div className="rounded-[14px] border border-[var(--sb-rule)] bg-[var(--sb-card)] p-4">
                   <pre className="whitespace-pre-wrap font-sans text-[14.5px] leading-[1.62] text-[var(--sb-ink2)]">{prompt}</pre>
                 </div>
               ) : (

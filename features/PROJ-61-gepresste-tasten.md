@@ -77,9 +77,12 @@ Seitenleiste, dort schon einmal gelöst.
 
 **3. Die Ruhekontur war unter der Schwelle — schon vorher.**
 `--sb-rule` (#cec6b2) hebt sich nur **1,67-fach** vom Kartengrund ab; für ein
-Bedienelement verlangt WCAG 1.4.11 das Dreifache. Die Taste bekommt deshalb
-`#a49879` (**3,1:1**). `--sb-rule` selbst bleibt: Es trägt die feinen Linien des
-Bogens, und die sollen fein bleiben.
+Bedienelement verlangt WCAG 1.4.11 das Dreifache. Die Taste bekommt deshalb eine
+eigene Kontur. `--sb-rule` selbst bleibt: Es trägt die feinen Linien des Bogens,
+und die sollen fein bleiben.
+
+Beim ersten Einbau stand dort `#a49879` mit der Angabe „3,1:1" — **die Zahl war
+falsch**, siehe unten.
 
 ## Bricht das die Druckgrafik? Nein — es macht sie erst sichtbar
 
@@ -95,6 +98,51 @@ Gewicht mit (`rounded-md`, `bg-primary`). Wer beides mischt, überlässt das
 Ergebnis der Ladereihenfolge der Stilblätter — dieselbe Falle wie in der
 Seitenleiste, wo `.leiste-stein` gegen `fixed` stand. Die vier Knöpfe in den
 Kopfzeilen sind deshalb rein über Tailwind gestaltet, direkt an der Stelle.
+
+## Zweite Prüfung: drei Nachbesserungen
+
+**1. Meine eigene Kontrastzahl war falsch — und stand als Beleg im Quelltext.**
+`#a49879` bringt gegen den Kartengrund **2,81:1**, nicht die dokumentierten
+3,1:1; gegen die eigene Füllung der Taste sind es 2,54 und auf der gedämpften
+Karte 2,51. Die Schwelle wurde also an keiner der drei angrenzenden Flächen
+erreicht. Ich hatte eine Schätzung aus der ersten Prüfung ungeprüft übernommen
+und als gemessenen Wert weitergeschrieben — der nächste, der die Farbe anfasst,
+hätte ihr geglaubt. Jetzt `#948668`: **3,52 / 3,18 / 3,14**, an allen drei
+Flächen über der Schwelle. Selbst nachgerechnet, nicht übernommen.
+
+**2. Ein Zustand, den niemand entworfen hatte.**
+`ChipGroup` reicht `gedaempft` an jede Taste der Gruppe durch, auch an die
+ausgewählte — und genau eine Gruppe setzt es: der Grundton in der Karte
+„Studio-Hintergrund", in der sehr wohl etwas gewählt sein kann. Gedämpft gewann
+Fläche, Schrift und Schatten, gewählt nur Randfarbe und Fettschrift: blassbeige
+Fläche, graue Fettschrift, dunkeloranger Rand. Der Gewählt-Zustand wäre
+ausgerechnet in der einen Gruppe verschwunden, in der er auftritt. Jetzt eine
+eigene Regel für die Kombination: Das Orange bleibt, nur der Sockel fällt weg —
+dieselbe Sprache wie `.sb-mod-dim`. Im Browser nachgestellt und ausgelesen.
+
+**3. Zwei Flächen wurden beim Befüllen wieder eckig.**
+Der Baustein-Steckplatz und das Prompt-Feld waren im leeren Zustand gerundet, im
+gefüllten nicht — der Zustandswechsel las sich als Formwechsel. Beide gerundet,
+dazu die letzten eckigen Reste: `Marke` (der rechteckige Zwilling der Taste),
+vier Vorschaubilder, zwei gestrichelte Kästen im Warteschlangen-Feld, die drei
+Auswahlfelder darüber und die Chips im Preset-Dialog.
+
+Außerdem: `prefers-reduced-motion` galt nur für `.sb-taste` — die vier großen
+Knöpfe sprangen weiter. Und die Tastatur hatte auf der **gewählten** Taste keine
+Fokusanzeige mehr, weil `:focus-visible` sich die Regel mit dem Mauszeiger
+teilte und vom Gewählt-Zustand überschrieben wurde; sie hat jetzt einen eigenen
+`outline`-Ring, der von keiner Zustandsregel angefasst wird.
+
+**Zwei Kommentare habe ich richtiggestellt**, weil sie etwas behaupteten, das
+nicht trägt: die Begründung für das halb-scharfe Typenschild („Registerreiter" —
+das Schild sitzt 14px innen und berührt keine Kante) und die Notwendigkeit eines
+doppelten `:active`-Selektors.
+
+**Offen, weil es Marks Entscheidung ist:** „Presets" und „Leeren" stehen als
+vollrunde Sockelknöpfe zwischen zwei Passkreuzen — also **oberhalb** der
+Doppellinie, auf der Seite der scharfen Druckgrafik. Nach der Hausregel gehören
+sie dort nicht hin. Mark hat runde Knöpfe verlangt; die Regel ist unsere, nicht
+seine.
 
 ## Geprüft
 

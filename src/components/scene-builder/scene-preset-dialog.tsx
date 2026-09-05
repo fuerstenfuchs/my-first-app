@@ -220,7 +220,7 @@ export function ScenePresetDialog({
                           <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/70">📁</div>
                         )}
                         {item.isStandard && (
-                          <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 text-[9px] bg-black/60 text-white/70 px-1.5 py-0.5 rounded font-medium">
+                          <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 text-[9px] bg-black/60 text-white/70 px-2 py-0.5 rounded-full font-medium">
                             <Lock className="h-2.5 w-2.5" />Standard
                           </div>
                         )}
@@ -259,7 +259,7 @@ export function ScenePresetDialog({
                 {badges.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {badges.map((b, i) => (
-                      <span key={i} className="flex items-center gap-1 text-[11px] bg-muted/40 px-1.5 py-0.5 rounded text-muted-foreground">
+                      <span key={i} className="flex items-center gap-1 text-[11px] bg-muted/40 px-2 py-0.5 rounded-full text-muted-foreground">
                         {b.emoji} {b.label}
                       </span>
                     ))}
@@ -321,7 +321,7 @@ export function ScenePresetDialog({
                 {PRESET_CATEGORIES.map(cat => (
                   <button key={cat} type="button" onClick={() => setCategory(cat)}
                     className={cn(
-                      'px-2.5 py-1 rounded-lg border text-xs transition-colors',
+                      'px-3 py-1 rounded-full border text-xs transition-colors',
                       category === cat ? 'bg-amber-500/15 border-amber-500/60 text-amber-700' : 'border-border/50 text-muted-foreground hover:border-border'
                     )}>
                     {cat}
