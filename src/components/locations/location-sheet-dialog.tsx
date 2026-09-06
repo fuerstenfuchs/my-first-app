@@ -65,6 +65,10 @@ Research and infer:
 • Important landmarks and nearby features
 
 When additional information is known, enrich the sheet with these findings.
+Where the reference image gives no information, stay generic and typical for
+this building type and region. Never borrow distinctive features from another,
+similar-looking place — an invented rear facade that quotes a different
+building becomes the truth for everything generated from this sheet later.
 
 However:
 
@@ -186,8 +190,8 @@ Include highly detailed visual references for:
 • Character POV view
 • Elevated overview
 • Corner perspective
-• Approach path
-• Exit path
+• The main approach, seen once walking toward the location and once looking
+  back from it
 • Environmental context view
 • Landmark relationship view
 
@@ -247,8 +251,9 @@ FILMMAKING VALUE
 
 Clearly communicate through imagery:
 
-• Best establishing-shot positions
-• Best character-shot positions
+• The establishing shot itself, framed exactly as a camera at that position
+  would see it
+• The character shot itself, framed for a person standing in the scene
 • Hero framing opportunities
 • Scale references
 • Background compositions
@@ -369,9 +374,10 @@ Create consistent photorealistic reconstructions showing:
 
 2. Rear Facade
 
-3. Left Elevation
+3. Left side, photographed straight on from a distance with a long lens so
+   that perspective distortion is minimal
 
-4. Right Elevation
+4. Right side, photographed the same way
 
 5. Corner Perspective
 
@@ -392,6 +398,20 @@ Each image should clearly communicate:
 • Architectural hierarchy
 
 Maintain identical architecture across every view.
+
+LIGHTING FOR THESE EIGHT VIEWS
+Light all eight views with the same soft, even overcast daylight from high
+above, so that no view carries a directional sun. Shadows stay short and
+neutral. This is deliberate: a front facade and a rear facade cannot both be
+lit by the sun from the front, and a sheet that claims otherwise teaches the
+next generation an impossible light. Directional sunlight belongs only in the
+hero image and in the time-of-day panels.
+
+CAMERA FOR THESE EIGHT VIEWS
+Camera height 1.6 m for views 1-6, roughly 40 m for view 7. Use a 50 mm
+equivalent lens for views 1-4 so the proportions stay true, 35 mm for views 5,
+6 and 8. Keep the building filling a similar share of the frame in views 1-4,
+and keep its height in storeys identical across all eight.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 ARCHITECTURAL DETAIL REFERENCES
@@ -486,10 +506,27 @@ Consistent architectural accuracy.
 
 The final reference sheet must enable another AI to accurately reconstruct the entire building, materials, environment, and atmosphere from any viewpoint with maximum architectural fidelity.`
 
-function getPrompt(type: SheetType): string {
-  if (type === 'cinematic') return CINEMATIC_PROMPT
-  if (type === 'gebaeude') return GEBAEUDE_PROMPT
-  return LOCATION_PROMPT
+/**
+ * Was die App ueber den Ort WEISS, gehoert in den Prompt.
+ *
+ * Vorher stand in RESEARCH_ENRICHMENT „identify ... if it is recognizable" —
+ * das Modell sollte raten, was drei Zeilen weiter im Objekt stand. Ein
+ * genannter Ort steuert ein Bildmodell sehr wohl; eine Aufforderung, zu
+ * recherchieren, tut es nicht.
+ */
+function ortsAngabe(location: Location): string {
+  const teile = [location.name]
+  if (location.location_type) teile.push(`type: ${location.location_type}`)
+  if (location.description?.trim()) teile.push(location.description.trim())
+  return `THE DEPICTED LOCATION IS: ${teile.join(' — ')}.\n` +
+         `Treat this as established fact, not as a guess.\n\n`
+}
+
+function getPrompt(type: SheetType, location: Location): string {
+  const basis = type === 'cinematic' ? CINEMATIC_PROMPT
+              : type === 'gebaeude' ? GEBAEUDE_PROMPT
+              : LOCATION_PROMPT
+  return ortsAngabe(location) + basis
 }
 
 // ── Dialog component ──────────────────────────────────────────────────────────
@@ -506,7 +543,7 @@ export function LocationSheetDialog({ open, onClose, location }: Props) {
   const [bildDialogOffen, setBildDialogOffen] = useState(false)
   const [copied, setCopied]     = useState(false)
 
-  const prompt = selected ? getPrompt(selected) : ''
+  const prompt = selected ? getPrompt(selected, location) : ''
 
   function handleSelect(type: SheetType) {
     setSelected(type)
