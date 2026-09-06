@@ -52,10 +52,27 @@ Der letzte Halbsatz beschreibt wörtlich, was auf dem Fehlblatt zu sehen war.
 Ein eigener Test hält die Zeilen fest, damit sie beim nächsten Umbau nicht
 stillschweigend verschwinden.
 
-**Offen:** Ob der Anschnitt („cropped, not headless") bei drei Personen hält,
-zeigt erst das nächste Blatt. Bei zweien hat er nicht gehalten — dort hat das
-Modell aber auch alles andere verkleinert, das kann derselbe Fehler gewesen
-sein.
+## Am Dreier-Blatt geprüft — und ein Teil der Vorhersage war falsch
+
+Mark: *„Hat doch ganz gut funktioniert mit den drei. Hab auch schon ein Bild
+damit erstellt, also perfekt."*
+
+Was gehalten hat: große, klar lesbare Gesichter in der oberen Reihe; die
+Körperreihe füllt ihre Höhe (die neue Anweisung wirkt); jede Person in ihrer
+eigenen Kleidung, nichts vertauscht.
+
+**Was NICHT gehalten hat: der Anschnitt.** Die Körper in der unteren Reihe
+tragen ihre Köpfe weiterhin, nur klein. „Cropped, not headless" wird also
+zuverlässig ignoriert — bei zwei Personen wie bei dreien.
+
+Das ist bewusst so belassen. Das Blatt erfüllt seinen Zweck, weil die großen
+Gesichter oben stehen; der kleine Kopf unten schadet nicht, er kostet nur etwas
+Platz. Härter darauf zu drücken hieße, gegen eine Neigung des Modells
+anzuschreiben, für einen Gewinn, den niemand sieht.
+
+**Für den nächsten, der hier arbeitet:** Wenn die Körperreihe größer werden
+soll, ist der Weg nicht eine schärfere Anschnitt-Formulierung, sondern ein
+größerer Anteil für die untere Reihe — der Kopf dort ist dann eben mit drauf.
 
 ## Tests
 

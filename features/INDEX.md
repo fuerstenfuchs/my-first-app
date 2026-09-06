@@ -131,7 +131,7 @@
 
 | PROJ-77 | Auswahlkacheln waren auf 56px gequetscht (Flex/Grid) | In Review | [PROJ-77](PROJ-77-auswahlkacheln.md) | 2026-09-06 |
 
-| PROJ-78 | Gruppen-Referenzbild (Zuordnung im Bild statt im Text) | In Review (Versuch) | [PROJ-78](PROJ-78-gruppen-referenzbild.md) | 2026-09-06 |
+| PROJ-78 | Gruppen-Referenzbild (Zuordnung im Bild statt im Text) | Approved (an Blättern belegt) | [PROJ-78](PROJ-78-gruppen-referenzbild.md) | 2026-09-06 |
 
 | PROJ-79 | Kopfreihe im Gruppenblatt, Gruppe als eigener Charakter | In Review | [PROJ-79](PROJ-79-kopfreihe-und-gruppe.md) | 2026-09-06 |
 
@@ -141,6 +141,6 @@
 
 | PROJ-82 | Dritter Blattaufbau: Köpfe oben, Körper darunter | In Review | [PROJ-82](PROJ-82-aufbau-kopf-und-koerper.md) | 2026-09-06 |
 
-| PROJ-83 | Entschieden: 2 = Spalten, ab 3 = Köpfe oben (an Blättern geprüft) | In Review | [PROJ-83](PROJ-83-aufbau-entschieden.md) | 2026-09-06 |
+| PROJ-83 | Entschieden: 2 = Spalten, ab 3 = Köpfe oben (an Blättern geprüft) | Approved | [PROJ-83](PROJ-83-aufbau-entschieden.md) | 2026-09-06 |
 
 ## Next Available ID: PROJ-84
