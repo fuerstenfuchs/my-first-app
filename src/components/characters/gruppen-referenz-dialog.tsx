@@ -16,8 +16,8 @@ import { groesseFuerFormat, promptFuerAuftrag } from '@/lib/image-generation'
 import { createClient } from '@/lib/supabase'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
-  gruppenPrompt, gruppenReferenzen, gruppenZuordnung, warnung,
-  GRUPPE_MAX, GRUPPE_MIN, type Beteiligt,
+  gruppenPrompt, gruppenReferenzen, gruppenZuordnung, warnung, AUFBAUTEN,
+  GRUPPE_MAX, GRUPPE_MIN, type Aufbau, type Beteiligt,
 } from '@/lib/gruppen-referenz'
 
 /**
@@ -47,6 +47,7 @@ export function GruppenReferenzDialog({
   const [leute, setLeute] = useState<Beteiligt[]>([])
   const [picker, setPicker] = useState<{ art: 'character' | 'outfit'; index: number } | null>(null)
   const [laeuft, setLaeuft] = useState(false)
+  const [aufbau, setAufbau] = useState<Aufbau>('automatisch')
 
   /** Sperre im Ref: `setLaeuft` wirkt erst beim nächsten Rendern. */
   const laeuftRef = useRef(false)
@@ -122,7 +123,7 @@ export function GruppenReferenzDialog({
       const job = await anlegen({
         // DIE BENANNTEN ZEILEN SIND DER GANZE PUNKT. Ohne sie stünde da
         // „Image 2 = OUTFIT" ohne Bezug zu Person 1.
-        prompt: promptFuerAuftrag(gruppenPrompt(leute), 'landscape_16_9',
+        prompt: promptFuerAuftrag(gruppenPrompt(leute, aufbau), 'landscape_16_9',
                                   refs.map(r => r.rolle), zuordnung),
         model: 'gpt-image-2',
         size: zielGroesse.size,
@@ -140,6 +141,9 @@ export function GruppenReferenzDialog({
           personen: leute.map(l => ({
             charakter_id: l.charakter.id, outfit_id: l.outfit?.id ?? null,
           })),
+          // Damit spaeter nachvollziehbar ist, welcher Aufbau dieses Blatt
+          // erzeugt hat — sonst raet man beim Vergleichen zweier Blaetter.
+          aufbau,
           ...(ablage ? { ablage } : {}),
         },
       })
@@ -236,6 +240,38 @@ export function GruppenReferenzDialog({
               rechts. Zum Ändern eine Person entfernen und neu hinzufügen.
             </p>
           )}
+
+          {/*
+            DIE AUSWAHL BLEIBT, DER ALTE AUFBAU AUCH. Mark: „Wir halten das mal
+            so bei, dass wir es immer wieder abrufen koennen, also nicht
+            verwerfen oder loeschen." Ein Vergleich zweier Aufbauten geht nur,
+            solange man beide erzeugen kann.
+          */}
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-medium">Aufbau des Blattes</p>
+            {AUFBAUTEN.map(a => (
+              <label
+                key={a.id}
+                className={`flex cursor-pointer items-start gap-2 rounded-xl border p-2.5 transition-colors ${
+                  aufbau === a.id
+                    ? 'border-primary/60 bg-primary/10'
+                    : 'border-border/60 hover:bg-muted/30'
+                }`}
+              >
+                <input
+                  type="radio" name="aufbau" className="mt-1 h-4 w-4"
+                  checked={aufbau === a.id}
+                  onChange={() => setAufbau(a.id)}
+                />
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-medium">{a.label}</span>
+                  <span className="block text-[12px] leading-relaxed text-muted-foreground">
+                    {a.hinweis}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
 
           {hinweis && (
             <p className="rounded-lg border-l-2 border-amber-500/60 bg-amber-500/10 px-3 py-2 text-[12.5px] leading-relaxed text-amber-200/90">

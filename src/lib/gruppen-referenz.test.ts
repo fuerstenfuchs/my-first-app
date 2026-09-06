@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  gruppenReferenzen, gruppenZuordnung, gruppenPrompt, warnung,
+  gruppenReferenzen, gruppenZuordnung, gruppenPrompt, warnung, AUFBAUTEN,
   type Beteiligt,
 } from './gruppen-referenz'
 import { promptFuerAuftrag } from './image-generation'
@@ -183,5 +183,67 @@ describe('warnung', () => {
   it('warnt ab vier und deutlicher bei fuenf', () => {
     expect(warnung(4)).toContain('Aufstellung')
     expect(warnung(5)).toContain('Grenze')
+  })
+})
+
+describe('Aufbau „Köpfe oben, Körper darunter"', () => {
+  it('aendert den bisherigen Aufbau NICHT', () => {
+    // Mark: „Wir halten das mal so bei, dass wir es immer wieder abrufen
+    // koennen, also nicht verwerfen oder loeschen."
+    expect(gruppenPrompt(ZWEI)).toContain('TWO EQUAL HALVES')
+    expect(gruppenPrompt(ZWEI, 'automatisch')).toContain('TWO EQUAL HALVES')
+    expect(gruppenPrompt(DREI, 'automatisch')).toMatch(/TOP ROW[^]*full body/)
+  })
+
+  it('setzt die Koepfe nach oben und die Koerper darunter', () => {
+    const t = gruppenPrompt(DREI, 'kopf_und_koerper')
+    expect(t).toMatch(/TOP ROW[^]*head-and-shoulders close-ups/)
+    expect(t).toMatch(/BOTTOM ROW[^]*from the shoulders down to the/)
+    expect(t).toContain('THE FACE APPEARS ONLY ONCE ON THIS SHEET')
+  })
+
+  it('verlangt einen ANSCHNITT, keine kopflose Person', () => {
+    /*
+      Die wichtigste Zeile des ganzen Aufbaus. „Eine Person ohne Kopf" ist fuer
+      ein Bildmodell eine anatomische Aussage; die Ergebnisse reichen von „malt
+      den Kopf trotzdem" bis zu etwas, das niemand sehen will. Gemeint ist ein
+      Bildausschnitt — und das muss dastehen.
+    */
+    const t = gruppenPrompt(DREI, 'kopf_und_koerper')
+    expect(t).toContain('CROPPED, NOT HEADLESS')
+    expect(t).toMatch(/Do not draw a person without a head/)
+    expect(t).toMatch(/crop the picture, nothing else/)
+  })
+
+  it('bindet Koerper und Gesicht ueber die Reihenfolge', () => {
+    expect(gruppenPrompt(DREI, 'kopf_und_koerper'))
+      .toContain('The body below position 1 belongs to the face above position 1')
+  })
+
+  it('gilt fuer zwei Personen genauso, wenn man ihn waehlt', () => {
+    const t = gruppenPrompt(ZWEI, 'kopf_und_koerper')
+    expect(t).toContain('exactly two people')
+    expect(t).toContain('CROPPED, NOT HEADLESS')
+    expect(t).not.toContain('TWO EQUAL HALVES')
+  })
+
+  it('behaelt in JEDEM Aufbau die gemeinsamen Regeln', () => {
+    for (const a of AUFBAUTEN.map(x => x.id)) {
+      for (const leute of [ZWEI, DREI]) {
+        const t = gruppenPrompt(leute, a)
+        expect(t).toContain('FILL THE SHEET')
+        expect(t).toMatch(/Do not swap, mix or blend clothing/)
+        expect(t).toMatch(/No names, no labels, no numbers/)
+        expect(t).toMatch(/light grey studio background/)
+      }
+    }
+  })
+
+  it('bietet genau zwei Aufbauten mit Erklaerung an', () => {
+    expect(AUFBAUTEN).toHaveLength(2)
+    for (const a of AUFBAUTEN) {
+      expect(a.label.length).toBeGreaterThan(3)
+      expect(a.hinweis.length).toBeGreaterThan(20)
+    }
   })
 })

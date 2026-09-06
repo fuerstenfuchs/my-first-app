@@ -33,6 +33,36 @@ export type Beteiligt = {
   outfit: Outfit | null
 }
 
+/**
+ * Wie das Blatt aufgeteilt wird (PROJ-82).
+ *
+ * Mark: „Wie wäre es, wenn wir die Aufteilung so machen würden, also großer
+ * Kopf links und rechts … darunter den richtigen Körper ohne Kopf, wie wir es
+ * auch schon beim Referenzblatt beim Charakter haben. Dann hat man auch nur
+ * einmal den Kopf."
+ *
+ * Und ausdrücklich: „Wir halten das mal so bei, dass wir es immer wieder
+ * abrufen können, also nicht verwerfen oder löschen." Der bisherige Aufbau
+ * bleibt deshalb erhalten und ist die Vorgabe.
+ */
+export type Aufbau = 'automatisch' | 'kopf_und_koerper'
+
+export const AUFBAUTEN: { id: Aufbau; label: string; hinweis: string }[] = [
+  {
+    id: 'automatisch',
+    label: 'Nach Personenzahl',
+    hinweis: 'Zwei Personen: je eine Blatthälfte mit Ganzkörper und Kopf ' +
+             'nebeneinander. Ab drei: Ganzkörper oben, Köpfe darunter.',
+  },
+  {
+    id: 'kopf_und_koerper',
+    label: 'Köpfe oben, Körper darunter',
+    hinweis: 'Das Gesicht kommt nur EINMAL vor: oben groß, darunter der Körper ' +
+             'ab den Schultern. Ab drei Personen werden die Köpfe dadurch ' +
+             'größer; bei zweien etwa gleich.',
+  },
+]
+
 /** Was fotografisch noch trägt — siehe die Begründung in `warnung`. */
 export const GRUPPE_MAX = 5
 export const GRUPPE_MIN = 2
@@ -108,12 +138,18 @@ export function gruppenZuordnung(leute: Beteiligt[]): string[] {
  *  - HÄNDE SICHTBAR UND GETRENNT. Freie Hände sind bei Bildmodellen die
  *    zuverlässigste Fehlerquelle. Hier bekommen sie eine feste Aufgabe.
  */
-export function gruppenPrompt(leute: Beteiligt[]): string {
+export function gruppenPrompt(
+  leute: Beteiligt[], aufbau: Aufbau = 'automatisch',
+): string {
   const n = leute.length
   const zahlwort = ['', 'one', 'two', 'three', 'four', 'five'][n] ?? String(n)
 
+  const layout = aufbau === 'kopf_und_koerper'
+    ? kopfUndKoerper(zahlwort)
+    : n === 2 ? zweiSpalten() : zweiReihen(zahlwort)
+
   return [
-    ...(n === 2 ? zweiSpalten() : zweiReihen(zahlwort)),
+    ...layout,
     '',
     'THIS IS A REFERENCE SHEET, NOT A SCENE',
     'Plain, evenly lit light grey studio background. Soft, even frontal light ' +
@@ -129,7 +165,7 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
     'not a person is wasted, and the faces are the reason this sheet exists.',
     '',
     'POSE — THE SAME FOR EVERYONE',
-    'In the full-body view: standing upright and relaxed, weight evenly on ' +
+    'In the standing view: upright and relaxed, weight evenly on ' +
     'both feet, shoulders square to the camera, looking straight into the ' +
     'lens with a neutral, friendly expression. Arms hanging relaxed at the ' +
     'sides, slightly away from the body. Both hands fully visible, fingers ' +
@@ -141,7 +177,7 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
     'face.',
     '',
     'PROPORTIONS',
-    'In the full-body views, keep the true relative heights and builds of the ' +
+    'In the standing views, keep the true relative heights and builds of the ' +
     'people as shown in their reference images. Do not even them out and do ' +
     'not make them all the same size — the height differences are part of what ' +
     'this sheet records.',
@@ -207,6 +243,62 @@ function zweiSpalten(): string[] {
     'room to make each face very large, and that is exactly what makes the ' +
     'sheet usable as an identity reference later. The full-body views carry ' +
     'the clothing and the true height difference.',
+  ]
+}
+
+/**
+ * KÖPFE OBEN, KÖRPER DARUNTER — Marks Vorschlag, mit einer Korrektur.
+ *
+ * SEIN GEWINN, und er ist echt: Das Gesicht kommt nur EINMAL auf das Blatt.
+ * In den anderen Aufbauten steht es zweimal — klein im Ganzkörper, groß in der
+ * Nahaufnahme — und das Modell kann die beiden leicht verschieden malen. Ein
+ * Referenzblatt mit zwei Fassungen desselben Gesichts ist schwächer als eines
+ * mit einer.
+ *
+ * DIE KORREKTUR: Mark sagte „den Körper ohne Kopf". Genau so darf es NICHT im
+ * Prompt stehen. „Eine Person ohne Kopf" ist für ein Bildmodell eine anatomische
+ * Aussage, und die Ergebnisse reichen von „malt den Kopf trotzdem" bis zu
+ * etwas, das niemand sehen will. Was Mark meint, ist ein BILDAUSSCHNITT: Der
+ * Rahmen beginnt unterhalb des Kinns. Das ist eine Kameraanweisung, die jedes
+ * Modell versteht — und genau das, was echte Reference Sheets tun.
+ *
+ * Deshalb steht unten ausdrücklich: anschneiden, nicht weglassen.
+ *
+ * ZUR KOPFGRÖSSE, nachgerechnet auf 1536 × 1024: Weil die Körperreihe keinen
+ * Kopf mehr tragen muss, darf sie niedriger sein — die Kopfreihe bekommt 60
+ * statt 45 Prozent. Bei drei Personen wächst ein Kopf damit von rund 400 auf
+ * rund 530 Pixel. Bei ZWEI Personen bleibt der Spalten-Aufbau überlegen, weil
+ * die Nahaufnahme dort fast die ganze Blatthöhe nutzen darf.
+ */
+function kopfUndKoerper(zahlwort: string): string[] {
+  return [
+    `A plain reference sheet of exactly ${zahlwort} people, laid out in TWO ` +
+    'ROWS on one sheet.',
+    '',
+    'THE TWO ROWS',
+    `TOP ROW, about 60% of the sheet height: ${zahlwort} head-and-shoulders ` +
+    'close-ups side by side, one per person, in the order given by the ' +
+    'reference images — PERSON 1 leftmost, then PERSON 2, and so on. Each face ' +
+    'as large as the row allows, reaching close to the top edge of the sheet.',
+    `BOTTOM ROW, about 35% of the sheet height: the same ${zahlwort} people in ` +
+    'THE SAME ORDER, standing, showing the body from the shoulders down to the ' +
+    'feet.',
+    '',
+    'THE BOTTOM ROW IS CROPPED, NOT HEADLESS',
+    'The lower frame simply starts below the chin, the way a reference sheet ' +
+    'crops a body view. These are ordinary complete people; the camera just ' +
+    'does not include their heads in this row. Do not draw a person without a ' +
+    'head, do not show a cut or a stump — crop the picture, nothing else.',
+    '',
+    'The body below position 1 belongs to the face above position 1, and so on. ' +
+    'Same person, same order, in both rows.',
+    '',
+    'THE FACE APPEARS ONLY ONCE ON THIS SHEET, and that is the point of this ' +
+    'layout: one face per person, as large as the sheet allows. The bottom row ' +
+    'carries the clothing and the build.',
+    '',
+    'In both rows: a gap about one shoulder wide between neighbours. They do ' +
+    'NOT touch and do NOT overlap — each person must be readable on their own.',
   ]
 }
 
