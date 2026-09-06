@@ -45,21 +45,26 @@ export type Beteiligt = {
  * abrufen können, also nicht verwerfen oder löschen." Der bisherige Aufbau
  * bleibt deshalb erhalten und ist die Vorgabe.
  */
-export type Aufbau = 'automatisch' | 'kopf_und_koerper'
+export type Aufbau = 'automatisch' | 'kopf_und_koerper' | 'koerper_und_kopf'
 
 export const AUFBAUTEN: { id: Aufbau; label: string; hinweis: string }[] = [
   {
     id: 'automatisch',
-    label: 'Nach Personenzahl',
+    label: 'Nach Personenzahl (empfohlen)',
     hinweis: 'Zwei Personen: je eine Blatthälfte mit Ganzkörper und Kopf ' +
-             'nebeneinander. Ab drei: Ganzkörper oben, Köpfe darunter.',
+             'nebeneinander. Ab drei: Köpfe oben, Körper darunter.',
   },
   {
     id: 'kopf_und_koerper',
-    label: 'Köpfe oben, Körper darunter',
-    hinweis: 'Das Gesicht kommt nur EINMAL vor: oben groß, darunter der Körper ' +
-             'ab den Schultern. Ab drei Personen werden die Köpfe dadurch ' +
-             'größer; bei zweien etwa gleich.',
+    label: 'Immer Köpfe oben, Körper darunter',
+    hinweis: 'Auch bei zwei Personen. Dort bleibt viel Fläche leer — die ' +
+             'Blatthälften nutzen sie besser.',
+  },
+  {
+    id: 'koerper_und_kopf',
+    label: 'Immer Ganzkörper oben, Köpfe darunter',
+    hinweis: 'Der erste Aufbau. Das Gesicht kommt zweimal vor, einmal klein ' +
+             'und einmal groß.',
   },
 ]
 
@@ -144,9 +149,19 @@ export function gruppenPrompt(
   const n = leute.length
   const zahlwort = ['', 'one', 'two', 'three', 'four', 'five'][n] ?? String(n)
 
-  const layout = aufbau === 'kopf_und_koerper'
-    ? kopfUndKoerper(zahlwort)
-    : n === 2 ? zweiSpalten() : zweiReihen(zahlwort)
+  /*
+    MARKS ENTSCHEIDUNG AM 06.09.2026, nachdem er beide an echten Blaettern
+    gesehen hat: „Also bei zwei Personen ist dein Vorschlag der Bessere. Den
+    lassen wir so. Ab drei Personen nehmen wir mein Vorschlag."
+
+    Belegt durch die Blaetter selbst: Sein Aufbau bei ZWEI Personen ergab
+    winzige Koerper mit einer breiten leeren Mitte — die Reihe hat die Breite
+    nicht gefuellt. Die Blatthaelften tun das von selbst.
+  */
+  const layout =
+    aufbau === 'kopf_und_koerper' ? kopfUndKoerper(zahlwort)
+    : aufbau === 'koerper_und_kopf' ? zweiReihen(zahlwort)
+    : n === 2 ? zweiSpalten() : kopfUndKoerper(zahlwort)
 
   return [
     ...layout,
@@ -289,6 +304,12 @@ function kopfUndKoerper(zahlwort: string): string[] {
     'crops a body view. These are ordinary complete people; the camera just ' +
     'does not include their heads in this row. Do not draw a person without a ' +
     'head, do not show a cut or a stump — crop the picture, nothing else.',
+    '',
+    'EACH BODY FILLS ITS OWN HEIGHT. In the bottom row the shoulders start at ' +
+    'the very top of that row and the feet reach its bottom edge. Do not ' +
+    'shrink the figures and do not leave empty space above them — a small ' +
+    'figure floating in a large empty row is the one thing this row must not ' +
+    'become.',
     '',
     'The body below position 1 belongs to the face above position 1, and so on. ' +
     'Same person, same order, in both rows.',

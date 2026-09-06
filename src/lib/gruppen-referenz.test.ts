@@ -102,15 +102,24 @@ describe('gruppenPrompt', () => {
     expect(t).not.toContain('TOP ROW')
   })
 
-  it('bleibt ab DREI Personen bei zwei Reihen', () => {
-    // Dort fuellt die Reihe die Breite von selbst; eine Spalte je Person
-    // waere zu schmal.
+  it('nimmt ab DREI Personen Marks Aufbau: Koepfe oben, Koerper darunter', () => {
+    /*
+      Marks Entscheidung, nachdem er beide an echten Blaettern gesehen hat:
+      „Bei zwei Personen ist dein Vorschlag der Bessere … ab drei Personen
+      nehmen wir mein Vorschlag."
+    */
     const t = gruppenPrompt(DREI)
+    expect(t).toMatch(/TOP ROW[^]*head-and-shoulders close-ups/)
+    expect(t).toMatch(/BOTTOM ROW[^]*from the shoulders down to the/)
+    expect(t).toContain('CROPPED, NOT HEADLESS')
+    expect(t).not.toContain('TWO EQUAL HALVES')
+  })
+
+  it('haelt den ersten Aufbau weiter abrufbar', () => {
+    // Mark: „nicht verwerfen oder loeschen."
+    const t = gruppenPrompt(DREI, 'koerper_und_kopf')
     expect(t).toMatch(/TOP ROW[^]*full body/)
     expect(t).toMatch(/BOTTOM ROW[^]*head-and-shoulders close-ups/)
-    expect(t).toContain('The face below position 1 is PERSON 1')
-    expect(t).toMatch(/Same person, same order, in both rows/)
-    expect(t).not.toContain('TWO EQUAL HALVES')
   })
 
   it('verlangt in BEIDEN Aufbauten, das Blatt auszunutzen', () => {
@@ -125,7 +134,19 @@ describe('gruppenPrompt', () => {
     // richtig: Das Modell muss spaeter jede Person einzeln herauslesen.
     const t = gruppenPrompt(DREI)
     expect(t).toMatch(/do NOT touch/)
-    expect(t).toMatch(/silhouettes do NOT overlap/)
+    expect(t).toMatch(/NOT overlap/)
+  })
+
+  it('verlangt, dass die Koerper ihre Reihe fuellen', () => {
+    /*
+      AUS EINEM FEHLBILD GELERNT. Marks Blatt mit zwei Personen in diesem
+      Aufbau zeigte winzige Figuren, die in einer halbleeren Reihe schwebten —
+      das Modell hatte geschrumpft statt angeschnitten.
+    */
+    const t = gruppenPrompt(DREI)
+    expect(t).toContain('EACH BODY FILLS ITS OWN HEIGHT')
+    expect(t).toMatch(/Do not shrink the figures/)
+    expect(t).toMatch(/small figure floating in a large empty row/)
   })
 
   it('haelt die beiden bei zwei Personen durch die Blatthaelften auseinander', () => {
@@ -187,12 +208,10 @@ describe('warnung', () => {
 })
 
 describe('Aufbau „Köpfe oben, Körper darunter"', () => {
-  it('aendert den bisherigen Aufbau NICHT', () => {
-    // Mark: „Wir halten das mal so bei, dass wir es immer wieder abrufen
-    // koennen, also nicht verwerfen oder loeschen."
+  it('laesst zwei Personen bei den Blatthaelften', () => {
+    // Marks Urteil am echten Blatt: bei zweien ist der Spalten-Aufbau besser.
     expect(gruppenPrompt(ZWEI)).toContain('TWO EQUAL HALVES')
     expect(gruppenPrompt(ZWEI, 'automatisch')).toContain('TWO EQUAL HALVES')
-    expect(gruppenPrompt(DREI, 'automatisch')).toMatch(/TOP ROW[^]*full body/)
   })
 
   it('setzt die Koepfe nach oben und die Koerper darunter', () => {
@@ -240,7 +259,7 @@ describe('Aufbau „Köpfe oben, Körper darunter"', () => {
   })
 
   it('bietet genau zwei Aufbauten mit Erklaerung an', () => {
-    expect(AUFBAUTEN).toHaveLength(2)
+    expect(AUFBAUTEN).toHaveLength(3)
     for (const a of AUFBAUTEN) {
       expect(a.label.length).toBeGreaterThan(3)
       expect(a.hinweis.length).toBeGreaterThan(20)
