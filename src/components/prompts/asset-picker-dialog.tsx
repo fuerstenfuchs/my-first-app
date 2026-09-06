@@ -150,7 +150,33 @@ export function AssetPickerDialog({
               </div>
             )}
 
-            <div className="grid flex-1 grid-cols-3 gap-3 overflow-y-auto pr-1 sm:grid-cols-4 md:grid-cols-5">
+            {/*
+              `auto-rows-max` IST HIER DER UNTERSCHIED ZWISCHEN BRAUCHBAR UND
+              UNBRAUCHBAR — und es fehlte.
+
+              Mark: „wenn ich hier über das Ganze das Outfit auswählen soll, da
+              seh ich fast nicht, was das für ein Outfit sein soll anhand der
+              Bilder."
+
+              Im Browser nachgemessen: Die Kachel war korrekt 141 × 188 Pixel,
+              der Knopf drumherum aber nur 56 hoch. Weil der Knopf
+              `overflow-hidden` trägt, blieb vom Bild ein Querstreifen übrig
+              und der Name darunter war ganz abgeschnitten.
+
+              GRUND: Das Raster ist Flex-Kind mit `flex-1` und hat damit eine
+              FESTE Höhe. Bei fester Höhe verteilt der Browser die freie Höhe
+              auf die Zeilen — bei 42 Einträgen in neun Zeilen sind das 56px je
+              Zeile, und das Seitenverhältnis der Kachel wird überstimmt.
+
+              `align-content: start` hilft NICHT (nachgemessen, dieselben
+              56px). `grid-auto-rows: max-content` hilft: 215px Knopfhöhe,
+              nichts beschnitten, und das Raster rollt wieder.
+
+              Weniger Spalten dazu: Bei 768px Dialogbreite sind fünf Spalten
+              141px breit, vier sind 180px. Beim Wiedererkennen eines
+              Kleidungsstücks zählt jeder Pixel.
+            */}
+            <div className="grid flex-1 auto-rows-max grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 md:grid-cols-4">
               {gefiltert.length === 0 ? (
                 <p className="col-span-full py-8 text-center text-xs text-muted-foreground">
                   Nichts gefunden.
@@ -165,7 +191,15 @@ export function AssetPickerDialog({
                     {a.cover_image_url ? (
                       <Vorschaubild
                         src={a.cover_image_url} alt={a.name} loading="lazy"
-                        className="h-full w-full object-cover transition group-hover:scale-[1.04]"
+                        /*
+                          ENTHALTEN, NICHT BESCHNEIDEN. Viele Titelbilder sind
+                          Zwei-in-einem-Aufnahmen — vorne und hinten
+                          nebeneinander. `object-cover` schneidet daraus die
+                          MITTE heraus, also genau die Luecke zwischen den
+                          beiden Kleidungsstuecken. Hier zaehlt Wiedererkennen,
+                          nicht ein buendiges Raster.
+                        */
+                        className="h-full w-full object-contain transition group-hover:scale-[1.04]"
                       />
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground/40">
