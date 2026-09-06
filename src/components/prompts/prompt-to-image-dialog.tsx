@@ -35,6 +35,18 @@ interface PromptToImageDialogProps {
   /** Charakter vorauswählen — für den Weg aus einem Charakter-Sheet heraus. */
   vorauswahlCharakter?: { id: string; name: string; cover_image_url?: string | null } | null
   /**
+   * Location vorauswählen — für den Weg aus einem Location-Sheet heraus
+   * (PROJ-72). Mark am 06.09.2026: „Allerdings wenn ich jetzt eins erstellen
+   * will, dann kann ich die nur kopieren, aber nicht automatisch das Bild
+   * erstellen, wie zum Beispiel bei Charakter. Also immer mit dem
+   * Referenzbild, das schon besteht."
+   *
+   * Das Referenzbild IST der Kern der Sache: Ein Location-Sheet ohne das Foto
+   * des Ortes wäre ein erfundener Ort. Deshalb wird es hier gesetzt, nicht nur
+   * angeboten.
+   */
+  vorauswahlLocation?: { id: string; name: string; cover_image_url?: string | null } | null
+  /**
    * Welche Referenzarten angeboten werden. Charakter-Sheets beschreiben einen
    * neutralen Hintergrund — eine Location wäre dort nur Ballast und würde dem
    * Prompt widersprechen.
@@ -126,7 +138,7 @@ function ReferenzKarte({
  * eines Charakters.
  */
 export function PromptToImageDialog({
-  isOpen, onClose, prompt, titel, vorauswahlCharakter = null,
+  isOpen, onClose, prompt, titel, vorauswahlCharakter = null, vorauswahlLocation = null,
   rollen: angeboteneRollen = ['character', 'outfit', 'location'],
 }: PromptToImageDialogProps) {
   const { anlegen } = useImageJobs(false)
@@ -138,7 +150,7 @@ export function PromptToImageDialog({
   const [charakterBild, setCharakterBild] = useState<RefImage | null>(null)
   const [outfit, setOutfit] = useState<PickbaresAsset | null>(null)
   const [outfitBild, setOutfitBild] = useState<RefImage | null>(null)
-  const [location, setLocation] = useState<PickbaresAsset | null>(null)
+  const [location, setLocation] = useState<PickbaresAsset | null>(vorauswahlLocation)
   const [locationBild, setLocationBild] = useState<RefImage | null>(null)
 
   const [modell, setModell] = useState<ModellId>('gpt-image-2')
@@ -187,11 +199,14 @@ export function PromptToImageDialog({
   useEffect(() => {
     if (isOpen && vorauswahlCharakter) setCharakter(vorauswahlCharakter)
   }, [isOpen, vorauswahlCharakter])
+  useEffect(() => {
+    if (isOpen && vorauswahlLocation) setLocation(vorauswahlLocation)
+  }, [isOpen, vorauswahlLocation])
 
   function zuruecksetzen() {
     setCharakter(vorauswahlCharakter); setCharakterBild(null)
     setOutfit(null); setOutfitBild(null)
-    setLocation(null); setLocationBild(null)
+    setLocation(vorauswahlLocation); setLocationBild(null)
     setFormat(null); setDurchlaeufe(1)
   }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, ChevronLeft, Sparkles, MapPin } from 'lucide-react'
+import { Copy, Check, ChevronLeft, Sparkles, MapPin, ImagePlus } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import type { Location } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
+import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -502,6 +503,7 @@ interface Props {
 export function LocationSheetDialog({ open, onClose, location }: Props) {
   const [step, setStep]         = useState<'choose' | 'prompt'>('choose')
   const [selected, setSelected] = useState<SheetType | null>(null)
+  const [bildDialogOffen, setBildDialogOffen] = useState(false)
   const [copied, setCopied]     = useState(false)
 
   const prompt = selected ? getPrompt(selected) : ''
@@ -623,13 +625,38 @@ export function LocationSheetDialog({ open, onClose, location }: Props) {
             </div>
 
             <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-              Kopiere diesen Prompt, ziehe ihn zusammen mit deinem Referenzbild in dein Bildgenerator-Tool.
+              Entweder direkt hier erzeugen lassen — das Referenzbild dieser Location
+              ist dann schon angehängt — oder kopieren und in ein anderes Werkzeug geben.
               Das fertige Sheet kannst du anschließend hier als Titelbild oder Referenzbild dieser Location speichern.
             </p>
 
+            {/*
+              OHNE REFERENZBILD KEIN ERZEUGEN. Alle drei Prompts beginnen mit
+              „Analyze the uploaded image" — ohne Foto bekaeme das Modell nichts
+              zu analysieren und erfaende einen Ort. Ein Knopf, der dann trotzdem
+              etwas erzeugt, waere schlimmer als kein Knopf.
+            */}
+            {location.cover_image_url ? (
+              <Button
+                className="w-full bg-emerald-600 hover:bg-emerald-500"
+                onClick={() => setBildDialogOffen(true)}
+              >
+                <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+                Bild daraus erzeugen
+              </Button>
+            ) : (
+              <p className="text-[11px] text-amber-400/90 leading-relaxed">
+                Diese Location hat noch kein Titelbild. Der Prompt beginnt mit
+                „Analyze the uploaded image" — ohne Foto gäbe es nichts zu
+                analysieren. Lege zuerst ein Bild an, dann kannst du hier direkt
+                erzeugen lassen.
+              </p>
+            )}
+
             <div className="flex gap-2 pt-1">
               <Button
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                variant="outline"
+                className="flex-1"
                 onClick={handleCopy}
                 disabled={copied}
               >
@@ -646,6 +673,35 @@ export function LocationSheetDialog({ open, onClose, location }: Props) {
           </div>
         )}
       </DialogContent>
+
+      {/* Erst mounten, wenn gebraucht: Der Dialog laedt drei Bibliotheken,
+          das waeren sonst drei Abfragen bei jedem geoeffneten Sheet. */}
+      {bildDialogOffen && selected && (
+        <PromptToImageDialog
+          isOpen
+          onClose={() => setBildDialogOffen(false)}
+          prompt={prompt}
+          titel={`${location.name} — ${selectedType?.label ?? 'Sheet'}`}
+          vorauswahlLocation={location}
+          /*
+            NUR DIE LOCATION — und zwar aus einem genauen Grund, nicht aus
+            Ordnungsliebe.
+
+            Nachgemessen: Menschen kommen in diesen Prompts durchaus vor, aber
+            als MASSSTAB, nicht als Personen — „Human scale and movement
+            patterns", „Best character-shot positions", „Street-Level Human
+            Perspective". Gemeint ist irgendjemand, der die Groesse des Ortes
+            zeigt.
+
+            Haengt man hier ein Charakterfoto an, schreibt `promptFuerAuftrag`
+            „Image 2 = CHARACTER — take the person's identity from it" in den
+            Auftrag. Dann baut das Modell eine BESTIMMTE Person in ein Blatt,
+            das den ORT zeigen soll. Wer eine Figur an diesem Ort will, nimmt
+            den Weg ueber das Bildstudio, nicht ueber das Sheet.
+          */
+          rollen={['location']}
+        />
+      )}
     </Dialog>
   )
 }
