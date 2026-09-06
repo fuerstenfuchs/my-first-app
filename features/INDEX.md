@@ -135,4 +135,6 @@
 
 | PROJ-79 | Kopfreihe im Gruppenblatt, Gruppe als eigener Charakter | In Review | [PROJ-79](PROJ-79-kopfreihe-und-gruppe.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-80
+| PROJ-80 | Doppelte Ablage behoben, Gruppen als eigener Abschnitt | In Review | [PROJ-80](PROJ-80-doppelte-ablage-und-gruppenordner.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-81
