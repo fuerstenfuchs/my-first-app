@@ -21,6 +21,8 @@ const ZWEI: Beteiligt[] = [
   { charakter: p('a'), outfit: o('1') },
   { charakter: p('b'), outfit: o('2') },
 ]
+/* Ab drei gilt ein anderer Aufbau — siehe `zweiSpalten` gegen `zweiReihen`. */
+const DREI: Beteiligt[] = [...ZWEI, { charakter: p('c'), outfit: o('3') }]
 
 describe('gruppenReferenzen', () => {
   it('setzt Person und Kleidung direkt hintereinander', () => {
@@ -81,31 +83,55 @@ describe('gruppenPrompt', () => {
     expect(t.split('two').length - 1).toBeGreaterThanOrEqual(3)
   })
 
-  it('verlangt zwei Reihen, und die Gesichter gross', () => {
-    // Marks Einwand am ersten Ergebnis: „Finde schon ziemlich klein der Kopf,
-    // also Referenz." In der Ganzkoerperreihe ist ein Kopf rund 115 Pixel
-    // hoch — zu wenig, um spaeter ein Gesicht zu tragen.
+  it('nimmt bei ZWEI Personen zwei Spalten statt zwei Reihen', () => {
+    /*
+      Marks Einwand am zweiten Blatt: „Da kann man wirklich den Kopf groesser
+      machen. Da ist viel zu viel Platz verschenkt."
+
+      Nachgerechnet: Ein Kopf wird so gross wie das Kleinere von Reihenhoehe
+      und Blattbreite/Personenzahl. Bei zwei Personen sind das 410 gegen 768
+      Pixel — die Hoehe begrenzt, die halbe Breite liegt brach. Zwei Spalten
+      drehen das um.
+    */
     const t = gruppenPrompt(ZWEI)
-    expect(t).toContain('TWO')
+    expect(t).toContain('TWO EQUAL HALVES')
+    expect(t).toContain('LEFT HALF = PERSON 1')
+    expect(t).toContain('RIGHT HALF = PERSON 2')
+    expect(t).toMatch(/close to the top[^]*bottom edges of the sheet/)
+    // Und ausdruecklich NICHT der Reihenaufbau.
+    expect(t).not.toContain('TOP ROW')
+  })
+
+  it('bleibt ab DREI Personen bei zwei Reihen', () => {
+    // Dort fuellt die Reihe die Breite von selbst; eine Spalte je Person
+    // waere zu schmal.
+    const t = gruppenPrompt(DREI)
     expect(t).toMatch(/TOP ROW[^]*full body/)
     expect(t).toMatch(/BOTTOM ROW[^]*head-and-shoulders close-ups/)
-    expect(t).toMatch(/THE BOTTOM ROW IS THE POINT/)
-  })
-
-  it('bindet die Gesichter an dieselbe Reihenfolge wie oben', () => {
-    // Ohne das koennte das Modell die Koepfe vertauschen — und dann waere das
-    // Blatt schlimmer als keines, weil es falsch zuordnet statt gar nicht.
-    const t = gruppenPrompt(ZWEI)
     expect(t).toContain('The face below position 1 is PERSON 1')
     expect(t).toMatch(/Same person, same order, in both rows/)
+    expect(t).not.toContain('TWO EQUAL HALVES')
   })
 
-  it('verlangt Abstand statt Ueberlappung', () => {
+  it('verlangt in BEIDEN Aufbauten, das Blatt auszunutzen', () => {
+    for (const t of [gruppenPrompt(ZWEI), gruppenPrompt(DREI)]) {
+      expect(t).toContain('FILL THE SHEET')
+      expect(t).toMatch(/Do not leave wide empty margins/)
+    }
+  })
+
+  it('haelt die Personen bei drei und mehr auseinander', () => {
     // Im Shooting sollen sich Silhouetten ueberlappen. Hier ist das Gegenteil
     // richtig: Das Modell muss spaeter jede Person einzeln herauslesen.
-    const t = gruppenPrompt(ZWEI)
+    const t = gruppenPrompt(DREI)
     expect(t).toMatch(/do NOT touch/)
     expect(t).toMatch(/silhouettes do NOT overlap/)
+  })
+
+  it('haelt die beiden bei zwei Personen durch die Blatthaelften auseinander', () => {
+    const t = gruppenPrompt(ZWEI)
+    expect(t).toMatch(/Nothing crosses the middle/)
+    expect(t).toMatch(/neither person appears in the other half/)
   })
 
   it('haelt Groessenverhaeltnisse fest', () => {

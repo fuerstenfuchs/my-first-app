@@ -43,3 +43,7 @@ next-env.d.ts
 
 # Arbeiter fuer die Bildgenerierung
 worker/.env
+
+# Windows-Ordnersymbole (FUCHS-Windows) - gehoeren nicht ins Repository
+desktop.ini
+desktop.ini.vor-fuchs

@@ -2,6 +2,8 @@ import type { Character } from '@/hooks/use-characters'
 import type { Outfit } from '@/hooks/use-outfits'
 import type { Referenz } from '@/lib/image-generation'
 
+const ZEILENUMBRUCH = '\n'
+
 /**
  * Das Gruppen-Referenzbild (PROJ-78) — ein Blatt, auf dem alle Beteiligten
  * nebeneinander stehen.
@@ -111,24 +113,7 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
   const zahlwort = ['', 'one', 'two', 'three', 'four', 'five'][n] ?? String(n)
 
   return [
-    `A plain reference sheet of exactly ${zahlwort} people, laid out in TWO ` +
-    `ROWS on one sheet.`,
-    '',
-    'THE TWO ROWS',
-    `TOP ROW, about 55% of the sheet height: all ${zahlwort} people standing ` +
-    'full body, side by side, facing the camera.',
-    `BOTTOM ROW, about 40% of the sheet height: the same ${zahlwort} faces in ` +
-    'THE SAME ORDER as above — head-and-shoulders close-ups, each face as ' +
-    'large as the row allows, evenly spaced.',
-    '',
-    'THE BOTTOM ROW IS THE POINT OF THIS SHEET. In a full-body row a head is ' +
-    'barely a hundred pixels tall — too little to carry a face into another ' +
-    'picture later. The close-ups are what makes this sheet usable as an ' +
-    'identity reference; the full-body row carries the clothing and the true ' +
-    'height differences.',
-    '',
-    'The face below position 1 is PERSON 1, the face below position 2 is ' +
-    'PERSON 2, and so on. Same person, same order, in both rows.',
+    ...(n === 2 ? zweiSpalten() : zweiReihen(zahlwort)),
     '',
     'THIS IS A REFERENCE SHEET, NOT A SCENE',
     'Plain, evenly lit light grey studio background. Soft, even frontal light ' +
@@ -136,38 +121,30 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
     'no props, no location, no mood — nothing here should carry over into ' +
     'later pictures except the people themselves.',
     '',
-    'THE TOP ROW',
-    `Exactly ${zahlwort} people and no one else anywhere on the sheet. They ` +
-    'stand in one straight row, in the order given by the reference images: ' +
-    'PERSON 1 leftmost, then PERSON 2, and so on to the right.',
+    `Exactly ${zahlwort} people and no one else anywhere on the sheet.`,
     '',
-    'A hand\'s width of empty space between neighbours. They do NOT touch, ' +
-    'their silhouettes do NOT overlap, and no one stands in front of anyone ' +
-    'else. Each person must be readable on their own — this sheet will be used ' +
-    'later to tell them apart.',
+    'FILL THE SHEET',
+    'Use the whole surface. Do not leave wide empty margins at the sides or ' +
+    'large empty areas between the people — every part of the sheet that is ' +
+    'not a person is wasted, and the faces are the reason this sheet exists.',
     '',
-    'THE BOTTOM ROW',
-    'Head and shoulders only, cropped just below the collarbone. Straight on ' +
-    'at eye level, looking into the lens, neutral expression, the same even ' +
-    'light as above. No hands, no props, nothing in front of the face. Each ' +
-    'face fills its own space — do not leave empty margins around the heads.',
+    'POSE — THE SAME FOR EVERYONE',
+    'In the full-body view: standing upright and relaxed, weight evenly on ' +
+    'both feet, shoulders square to the camera, looking straight into the ' +
+    'lens with a neutral, friendly expression. Arms hanging relaxed at the ' +
+    'sides, slightly away from the body. Both hands fully visible, fingers ' +
+    'relaxed and clearly separated, nothing held and nothing hidden.',
     '',
-    'POSE IN THE TOP ROW — THE SAME FOR EVERYONE',
-    'Standing upright and relaxed, weight evenly on both feet, shoulders ' +
-    'square to the camera, looking straight into the lens with a neutral, ' +
-    'friendly expression. Arms hanging relaxed at the sides, slightly away ' +
-    'from the body. Both hands fully visible, fingers relaxed and clearly ' +
-    'separated, nothing held and nothing hidden.',
-    '',
-    'FRAMING OF THE TOP ROW',
-    'Full body, head to feet, with room above the heads and below the feet. ' +
-    'Nothing cropped. Eye-level camera, a normal field of view so that ' +
-    'proportions stay true — nothing wide-angle, nothing compressed.',
+    'In the close-up: head and shoulders only, cropped just below the ' +
+    'collarbone, straight on at eye level, looking into the lens, same neutral ' +
+    'expression, same even light. No hands, no props, nothing in front of the ' +
+    'face.',
     '',
     'PROPORTIONS',
-    'Keep the true relative heights and builds of the people as shown in their ' +
-    'reference images. Do not even them out and do not make them all the same ' +
-    'size — the height differences are part of what this sheet records.',
+    'In the full-body views, keep the true relative heights and builds of the ' +
+    'people as shown in their reference images. Do not even them out and do ' +
+    'not make them all the same size — the height differences are part of what ' +
+    'this sheet records.',
     '',
     'CLOTHING',
     'Each person wears their own garments exactly as given by their own ' +
@@ -179,9 +156,88 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
     'No names, no labels, no numbers, no captions, no watermarks anywhere in ' +
     'the image.',
     '',
-    'Ultra-realistic photography, sharp across the whole row, true skin ' +
-    'texture and fabric detail.',
-  ].join('\n')
+    'Ultra-realistic photography, sharp everywhere, true skin texture and ' +
+    'fabric detail.',
+  ].join(ZEILENUMBRUCH)
+}
+
+/**
+ * ZWEI PERSONEN — ZWEI SPALTEN, NICHT ZWEI REIHEN.
+ *
+ * Mark am 06.09.2026 am zweiten Blatt: „kann das Sheet bei zwei Personen noch
+ * mal anders gestalten wie bei drei oder vier Personen. Da kann man wirklich
+ * den Kopf größer machen. Da ist viel zu viel Platz verschenkt."
+ *
+ * Nachgerechnet, und er hat recht. Ein Kopf wird so groß wie das KLEINERE von
+ * beidem: die Höhe seiner Reihe oder die Blattbreite geteilt durch die Zahl der
+ * Personen. Auf einem Blatt von 1536 × 1024:
+ *
+ *   2 Personen → Reihenhöhe 410, Platzbreite 768 → Kopf 410, 358 px je Platz
+ *                verschenkt
+ *   3 Personen → Reihenhöhe 410, Platzbreite 512 → Kopf 410, passt
+ *   4 Personen → Reihenhöhe 410, Platzbreite 384 → Kopf 384, die Breite
+ *                begrenzt
+ *
+ * Bei zweien begrenzt also die HÖHE, und die halbe Blattbreite liegt brach.
+ * Deshalb hier ein anderer Aufbau: jede Person bekommt eine Blatthälfte, und
+ * INNERHALB dieser Hälfte stehen Ganzkörper und Nahaufnahme nebeneinander. Die
+ * Nahaufnahme darf dann fast die volle Blatthöhe nutzen — rund 600 statt 410
+ * Pixel Kopfhöhe.
+ *
+ * Ab drei füllt die Reihe die Breite von selbst; dort bleibt es bei zwei
+ * Reihen, weil eine Spalte je Person zu schmal würde.
+ */
+function zweiSpalten(): string[] {
+  return [
+    'A plain reference sheet of exactly two people, split into TWO EQUAL ' +
+    'HALVES by an invisible vertical line down the middle.',
+    '',
+    'THE LAYOUT',
+    'LEFT HALF = PERSON 1. RIGHT HALF = PERSON 2. Nothing crosses the middle, ' +
+    'and neither person appears in the other half.',
+    '',
+    'Inside each half, two views of that same person, side by side:',
+    '• on the left of the half: the full-body standing figure, head to feet, ' +
+    'nothing cropped, taking up about a third of the width of that half',
+    '• on the right of the half: a head-and-shoulders close-up of the SAME ' +
+    'person, as large as the half allows — it should reach close to the top ' +
+    'and bottom edges of the sheet',
+    '',
+    'THE CLOSE-UPS ARE THE POINT OF THIS SHEET. With only two people there is ' +
+    'room to make each face very large, and that is exactly what makes the ' +
+    'sheet usable as an identity reference later. The full-body views carry ' +
+    'the clothing and the true height difference.',
+  ]
+}
+
+/** Drei bis fünf Personen — die Reihe füllt die Breite von selbst. */
+function zweiReihen(zahlwort: string): string[] {
+  return [
+    `A plain reference sheet of exactly ${zahlwort} people, laid out in TWO ` +
+    'ROWS on one sheet.',
+    '',
+    'THE TWO ROWS',
+    `TOP ROW, about 50% of the sheet height: all ${zahlwort} people standing ` +
+    'full body, side by side, facing the camera, in the order given by the ' +
+    'reference images: PERSON 1 leftmost, then PERSON 2, and so on to the right.',
+    `BOTTOM ROW, about 45% of the sheet height: the same ${zahlwort} faces in ` +
+    'THE SAME ORDER — head-and-shoulders close-ups, each face as large as the ' +
+    'row allows, evenly spaced across the full width.',
+    '',
+    'THE BOTTOM ROW IS THE POINT OF THIS SHEET. In a full-body row a head is ' +
+    'barely a hundred pixels tall — too little to carry a face into another ' +
+    'picture later. The close-ups are what makes this sheet usable as an ' +
+    'identity reference; the full-body row carries the clothing and the true ' +
+    'height differences.',
+    '',
+    'The face below position 1 is PERSON 1, the face below position 2 is ' +
+    'PERSON 2, and so on. Same person, same order, in both rows.',
+    '',
+    'In the top row: a gap about one shoulder wide between neighbours. They ' +
+    'do NOT touch, their silhouettes do NOT overlap, and no one stands in ' +
+    'front of anyone else. Each person must be readable on their own — this ' +
+    'sheet will be used later to tell them apart.',
+  ]
 }
 
 /**
