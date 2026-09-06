@@ -137,4 +137,6 @@
 
 | PROJ-80 | Doppelte Ablage behoben, Gruppen als eigener Abschnitt | In Review | [PROJ-80](PROJ-80-doppelte-ablage-und-gruppenordner.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-81
+| PROJ-81 | Gruppenblatt nach Personenzahl (2 = Spalten, 3+ = Reihen) | In Review | [PROJ-81](PROJ-81-blatt-nach-personenzahl.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-82
