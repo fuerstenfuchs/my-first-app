@@ -71,7 +71,7 @@
 
 | PROJ-43 | Bildstudio (Uebernehmen, Lichttisch, freie Erzeugung, Werkbank) | In Review | [PROJ-43](PROJ-43-bildstudio.md) | 2026-09-02 |
 
-| PROJ-44 | Einstellungsreihe (Kontinuitaet ueber mehrere Einstellungen) | Zurueckgestellt (Achse falsch, Motor bleibt) | [PROJ-44](PROJ-44-einstellungsreihe.md) | 2026-09-03 |
+| PROJ-44 | Einstellungsreihe (Kontinuitaet ueber mehrere Einstellungen) | Motor in PROJ-75 wiederverwendet | [PROJ-44](PROJ-44-einstellungsreihe.md) | 2026-09-03 |
 | PROJ-45 | Lichttisch als Auswahlwerkzeug (Bilder gegeneinander halten) | Planned | [PROJ-45](PROJ-45-lichttisch-vergleich.md) | 2026-09-03 |
 | PROJ-46 | Bausteine finden statt scrollen | In Review | [PROJ-46](PROJ-46-bausteine-finden.md) | 2026-09-03 |
 | PROJ-47 | Prompt-Assistent im Bildstudio (Text-KI ueber den Proxy) | In Review | [PROJ-47](PROJ-47-prompt-assistent.md) | 2026-09-03 |
@@ -125,4 +125,6 @@
 
 | PROJ-74 | Shooting-Plätze als Einzelbilder, Blatt ohne Schrift | In Review | [PROJ-74](PROJ-74-shooting-plaetze-einzeln.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-75
+| PROJ-75 | Shooting-Kette — ein ganzes Shooting an einem Ort (Motor aus PROJ-44) | In Review | [PROJ-75](PROJ-75-shooting-kette.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-76

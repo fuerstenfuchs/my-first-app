@@ -64,9 +64,11 @@ export function ShootingKetteButton({
 
   // OHNE ORT KEIN SHOOTING, OHNE MENSCH AUCH NICHT. Ein Shooting ohne Location
   // wäre nur eine Bilderreihe, und ohne Charakter stünde niemand darin.
+  // Nominativ, nicht Akkusativ: „Dafuer fehlt noch EIN Charakter", nicht
+  // „einen". Und bei zweien fehlEN sie. Im Browser aufgefallen, nicht im Code.
   const fehlt: string[] = []
   if (!scene.location) fehlt.push('eine Location')
-  if (!scene.character) fehlt.push('einen Charakter')
+  if (!scene.character) fehlt.push('ein Charakter')
 
   async function handleShooting() {
     if (laeuftRef.current || fehlt.length > 0) return
@@ -204,8 +206,9 @@ export function ShootingKetteButton({
 
       {fehlt.length > 0 ? (
         <p className="text-[13px] text-amber-400/90 leading-relaxed">
-          Dafür fehlt noch {fehlt.join(' und ')}. Ein Shooting braucht einen
-          Ort und jemanden, der dort steht.
+          Dafür {fehlt.length > 1 ? 'fehlen' : 'fehlt'} noch{' '}
+          {fehlt.join(' und ')}. Ein Shooting braucht einen Ort und jemanden,
+          der dort steht.
         </p>
       ) : (
         <Button
