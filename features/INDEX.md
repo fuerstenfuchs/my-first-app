@@ -119,4 +119,10 @@
 
 | PROJ-71 | Prompt in ein anderes Thema verschieben (totes `verschieben` aus PROJ-63) | In Review | [PROJ-71](PROJ-71-thema-wechseln.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-72
+| PROJ-72 | Location-Sheet direkt erzeugen, vier Promptfehler behoben | In Review | [PROJ-72](PROJ-72-location-sheet-erzeugen.md) | 2026-09-06 |
+
+| PROJ-73 | Sheets entschlackt, Cinematic wird Shooting-Sheet | In Review | [PROJ-73](PROJ-73-sheets-entschlackt.md) | 2026-09-06 |
+
+| PROJ-74 | Shooting-Plätze als Einzelbilder, Blatt ohne Schrift | In Review | [PROJ-74](PROJ-74-shooting-plaetze-einzeln.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-75
