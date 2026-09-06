@@ -55,12 +55,14 @@ import {
   type InitialSlot,
 } from '@/hooks/use-characters'
 import { passtZurSuche } from '@/lib/bausteine'
+import { GruppenReferenzDialog } from '@/components/characters/gruppen-referenz-dialog'
 
 export default function CharactersPage() {
   const { characters, loading, createCharacterWithSlots, updateCharacter, deleteCharacter, patchCharacterCover } = useCharacters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [charFormOpen, setCharFormOpen] = useState(false)
+  const [gruppenDialogOffen, setGruppenDialogOffen] = useState(false)
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [deleteCharId, setDeleteCharId] = useState<string | null>(null)
 
@@ -153,11 +155,31 @@ export default function CharactersPage() {
     */
     <div className="lt flex h-svh min-w-0">
 
+      <GruppenReferenzDialog
+        open={gruppenDialogOffen}
+        onClose={() => setGruppenDialogOffen(false)}
+      />
+
       {/* ── Left: character list ─────────────────────────────────────── */}
       <div className="flex w-72 shrink-0 flex-col border-r border-[rgba(150,185,220,0.14)]">
         <header className="lt-kopf flex shrink-0 items-center gap-3 px-4 py-3">
           <SidebarTrigger />
           <h1 className="lt-titel flex-1 truncate">Charaktere</h1>
+          {/*
+            GRUPPENBILD (PROJ-78) — hier und nicht bei einem einzelnen
+            Charakter, weil es zu MEHREREN gehoert. An einer Person
+            aufgehaengt waere die Frage „welcher gehoert es?" nicht
+            beantwortbar.
+          */}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="lt-feld h-10 w-10 shrink-0 border-0"
+            onClick={() => setGruppenDialogOffen(true)}
+            title="Gruppenbild aus mehreren Charakteren"
+          >
+            <Users className="h-4 w-4" />
+          </Button>
           <Button
             size="icon"
             variant="ghost"

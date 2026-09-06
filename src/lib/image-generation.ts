@@ -170,13 +170,32 @@ export function formatAnsage(format: AspectRatioKey | null): string | null {
  */
 export function promptFuerAuftrag(
   prompt: string, format: AspectRatioKey | null, rollen: ReferenzRolle[],
+  /*
+    EIGENE ZUORDNUNGSZEILEN — für Fälle, in denen dieselbe Rolle mehrfach
+    vorkommt (PROJ-78).
+
+    Die Standardzeilen sagen „Image 1 = CHARACTER, Image 2 = CHARACTER". Bei
+    zwei Personen mit je eigenem Outfit ist das wertlos: Nichts darin verbindet
+    das dritte Bild mit der ersten Person. Das Modell rät — und rät falsch, die
+    Jacke landet bei der Falschen.
+
+    Wer hier eigene Zeilen mitgibt, benennt jedes Bild einzeln. Die Reihenfolge
+    muss zu `reference_urls` passen; das ist die Verantwortung des Aufrufers.
+  */
+  zuordnungTexte?: string[],
 ): string {
   const mitReferenz = rollen.length > 0
   const teile = [prompt]
 
   // Zuerst die Zuordnung: Sie sagt, welches Bild wofür steht. Ohne sie nimmt
   // das Modell schon mal die Person aus dem Outfit-Bild.
-  const zuordnung = referenzZuordnung(rollen)
+  const zuordnung = zuordnungTexte?.length
+    ? [
+        'REFERENCE IMAGES — they arrive in this exact order:',
+        ...zuordnungTexte.map((z, i) => `Image ${i + 1} = ${z}`),
+        vorrangSatz(rollen),
+      ].join('\n')
+    : referenzZuordnung(rollen)
   if (zuordnung) teile.push(zuordnung)
 
   // Die Formatansage nur mit Referenz — ohne Referenz wirkt der Größenparameter.
