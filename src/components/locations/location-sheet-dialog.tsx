@@ -10,6 +10,7 @@ import { LOCATION_TYPES, type Location } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
 import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
+import { ShootingSpotsButton } from '@/components/locations/shooting-spots-button'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -135,11 +136,11 @@ WHAT NOT TO DRAW
 • No measurement lines.
 • No camera maps.
 
-TYPOGRAPHY
+NO TEXT AT ALL
 
-The panel number in the upper left corner, large enough to read at a glance.
-Below each panel, two or three words naming the spot. Nothing else — no light
-data, no lens data, no captions, no sentences.
+The sheet carries no writing of any kind: no headings, no numbers, no captions,
+no labels, no watermarks. Only photographs on a neutral ground. Whoever looks
+at it should see places, not a document.
 
 STYLE
 
@@ -162,12 +163,24 @@ Preserve all visible features, materials, colours and lighting from the
 original image. Reconstruct unseen areas logically while remaining fully
 consistent with what is visible.
 
+WHAT MAKES THIS DIFFERENT FROM A LOCATION SHEET
+
+A location sheet shows the place from several viewpoints — it answers „what
+does it look like here". This sheet answers something else: „where could
+someone stand".
+
+Every panel is therefore framed as a PORTRAIT BACKGROUND, not as a view of the
+place. That means: the camera is at eye level, the standing spot is in the
+foreground with clear room around it, and the background falls away behind it
+with enough separation that a person placed there would read against it. Anyone
+looking at a panel should immediately see where the subject goes.
+
 THE PANELS ARE EMPTY — THIS IS THE POINT
 
 Every panel shows the location WITHOUT any person in it. Do not place a model,
-a figure, a silhouette or a bystander anywhere. Each panel is a background
-plate, framed and lit as if the subject were about to step in, with the spot
-where they would stand left clear and unobstructed.
+a figure, a silhouette or a bystander anywhere, and no shadow of one. The spot
+where they would stand is left clear and unobstructed — visible as a place, not
+marked with a circle, a cross or an outline. A marker becomes a figure.
 
 SHEET STRUCTURE — SIX PANELS, NO MORE
 
@@ -192,17 +205,6 @@ to squeeze everything in — a sheet of unreadable thumbnails teaches nothing.
    • The signature element of this place, whatever a visitor would photograph
    • One backlit spot, where the light comes from behind the standing position
 
-NUMBER THE PANELS
-
-Print a large, clearly legible number in the upper left corner of every panel:
-1 for the hero plate, 2 to 6 for the others. Nothing else is needed to identify
-them.
-
-This matters more than it looks. The finished sheet is used later as a single
-reference image, all six panels at once — so whoever uses it must be able to
-say „use background 4" and be understood. Unnumbered panels cannot be pointed
-at.
-
 LIGHT
 
 Light every panel with the same soft, even daylight. Do not spread the panels
@@ -215,11 +217,13 @@ shadow lengths.
 
 HONESTY
 
-Mark any plate that could not be derived from the reference image with a small
-caption reading RECONSTRUCTED. This sheet has the highest invented share of the
-three — five different spots from one photograph — and it is the one someone
-actually travels to a place for. An invented backlit corner looks exactly as
-real on the sheet as the one that is there.
+This sheet has the highest invented share of the three — five different spots
+from one photograph — and it is the one someone actually travels to a place
+for. Since it carries no text, an invented spot cannot be marked as invented.
+So do not invent freely: every panel must be a place that plausibly exists at
+THIS location, derived from what the reference image and the location's own
+character actually support. When in doubt, show a variation of something
+visible rather than a new corner.
 
 WHAT NOT TO DRAW
 
@@ -622,13 +626,25 @@ export function LocationSheetDialog({ open, onClose, location }: Props) {
               etwas erzeugt, waere schlimmer als kein Knopf.
             */}
             {location.cover_image_url ? (
-              <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-500"
-                onClick={() => setBildDialogOffen(true)}
-              >
-                <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
-                Bild daraus erzeugen
-              </Button>
+              <>
+                <Button
+                  className="w-full bg-emerald-600 hover:bg-emerald-500"
+                  onClick={() => setBildDialogOffen(true)}
+                >
+                  <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+                  Bild daraus erzeugen
+                </Button>
+
+                {/*
+                  NUR BEIM SHOOTING-SHEET. Beim Location- und beim
+                  Gebaeude-Sheet ergaeben Einzelplatten keinen Sinn: Dort sind
+                  die Felder ANSICHTEN desselben Gegenstands, die sich
+                  gegenseitig erklaeren. Beim Shooting-Sheet sind sie
+                  ALTERNATIVEN, und gewollt ist genau eine — das ist der Grund,
+                  aus dem es die Einzelbilder ueberhaupt gibt.
+                */}
+                {selected === 'shooting' && <ShootingSpotsButton location={location} />}
+              </>
             ) : (
               <p className="text-[11px] text-amber-400/90 leading-relaxed">
                 Diese Location hat noch kein Titelbild. Der Prompt beginnt mit
