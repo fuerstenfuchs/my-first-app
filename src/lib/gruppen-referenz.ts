@@ -111,8 +111,24 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
   const zahlwort = ['', 'one', 'two', 'three', 'four', 'five'][n] ?? String(n)
 
   return [
-    `A plain reference sheet showing exactly ${zahlwort} people standing side ` +
-    `by side in a single row, facing the camera.`,
+    `A plain reference sheet of exactly ${zahlwort} people, laid out in TWO ` +
+    `ROWS on one sheet.`,
+    '',
+    'THE TWO ROWS',
+    `TOP ROW, about 55% of the sheet height: all ${zahlwort} people standing ` +
+    'full body, side by side, facing the camera.',
+    `BOTTOM ROW, about 40% of the sheet height: the same ${zahlwort} faces in ` +
+    'THE SAME ORDER as above — head-and-shoulders close-ups, each face as ' +
+    'large as the row allows, evenly spaced.',
+    '',
+    'THE BOTTOM ROW IS THE POINT OF THIS SHEET. In a full-body row a head is ' +
+    'barely a hundred pixels tall — too little to carry a face into another ' +
+    'picture later. The close-ups are what makes this sheet usable as an ' +
+    'identity reference; the full-body row carries the clothing and the true ' +
+    'height differences.',
+    '',
+    'The face below position 1 is PERSON 1, the face below position 2 is ' +
+    'PERSON 2, and so on. Same person, same order, in both rows.',
     '',
     'THIS IS A REFERENCE SHEET, NOT A SCENE',
     'Plain, evenly lit light grey studio background. Soft, even frontal light ' +
@@ -120,25 +136,30 @@ export function gruppenPrompt(leute: Beteiligt[]): string {
     'no props, no location, no mood — nothing here should carry over into ' +
     'later pictures except the people themselves.',
     '',
-    'THE ROW',
-    `Exactly ${zahlwort} people, ${zahlwort} faces visible, and no one else ` +
-    'anywhere in the frame. They stand in one straight row, in the order given ' +
-    'by the reference images: PERSON 1 leftmost, then PERSON 2, and so on to ' +
-    'the right.',
+    'THE TOP ROW',
+    `Exactly ${zahlwort} people and no one else anywhere on the sheet. They ` +
+    'stand in one straight row, in the order given by the reference images: ' +
+    'PERSON 1 leftmost, then PERSON 2, and so on to the right.',
     '',
     'A hand\'s width of empty space between neighbours. They do NOT touch, ' +
     'their silhouettes do NOT overlap, and no one stands in front of anyone ' +
     'else. Each person must be readable on their own — this sheet will be used ' +
     'later to tell them apart.',
     '',
-    'POSE — THE SAME FOR EVERYONE',
+    'THE BOTTOM ROW',
+    'Head and shoulders only, cropped just below the collarbone. Straight on ' +
+    'at eye level, looking into the lens, neutral expression, the same even ' +
+    'light as above. No hands, no props, nothing in front of the face. Each ' +
+    'face fills its own space — do not leave empty margins around the heads.',
+    '',
+    'POSE IN THE TOP ROW — THE SAME FOR EVERYONE',
     'Standing upright and relaxed, weight evenly on both feet, shoulders ' +
     'square to the camera, looking straight into the lens with a neutral, ' +
     'friendly expression. Arms hanging relaxed at the sides, slightly away ' +
     'from the body. Both hands fully visible, fingers relaxed and clearly ' +
     'separated, nothing held and nothing hidden.',
     '',
-    'FRAMING',
+    'FRAMING OF THE TOP ROW',
     'Full body, head to feet, with room above the heads and below the feet. ' +
     'Nothing cropped. Eye-level camera, a normal field of view so that ' +
     'proportions stay true — nothing wide-angle, nothing compressed.',

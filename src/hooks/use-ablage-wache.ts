@@ -75,6 +75,24 @@ export function useAblageWache() {
         */
         if (!alleOk) continue
 
+        /*
+          TITELBILD SETZEN, WENN GEWUENSCHT (PROJ-79). Eine frisch angelegte
+          Gruppe hat noch kein Bild — ohne das stuende sie als leerer Kasten in
+          der Charakterliste, und Mark muesste das Titelbild von Hand
+          nachziehen. Genau die Handarbeit, die diese Ablage abschaffen soll.
+
+          Schlaegt es fehl, sind die Bilder trotzdem im Ordner. Deshalb kein
+          Abbruch, nur eine Meldung.
+        */
+        if (a.ziel.alsTitelbild && a.pfade[0]) {
+          const url = supabase.storage.from(BUCKET).getPublicUrl(a.pfade[0]).data.publicUrl
+          const { error: coverErr } = await supabase
+            .from('characters')
+            .update({ cover_image_url: url, updated_at: new Date().toISOString() })
+            .eq('id', a.ziel.parentId)
+          if (coverErr) toast.error('Titelbild konnte nicht gesetzt werden.')
+        }
+
         const roh = jobs.find(j => j.id === a.jobId)?.scene_meta ?? null
         const { error } = await supabase
           .from('image_jobs')

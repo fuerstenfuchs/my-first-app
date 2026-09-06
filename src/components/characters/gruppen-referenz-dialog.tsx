@@ -13,6 +13,8 @@ import { useCharacters, type Character } from '@/hooks/use-characters'
 import { useOutfits, type Outfit } from '@/hooks/use-outfits'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import { groesseFuerFormat, promptFuerAuftrag } from '@/lib/image-generation'
+import { createClient } from '@/lib/supabase'
+import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
   gruppenPrompt, gruppenReferenzen, gruppenZuordnung, warnung,
   GRUPPE_MAX, GRUPPE_MIN, type Beteiligt,
@@ -61,6 +63,62 @@ export function GruppenReferenzDialog({
       const zuordnung = gruppenZuordnung(leute)
       const zielGroesse = groesseFuerFormat('landscape_16_9')
 
+      /*
+        DIE GRUPPE WIRD EIN CHARAKTER (PROJ-79).
+
+        Mark: „Sollen wir bei Charakter noch einen eigenen anlegen, der dann
+        Gruppe heißt oder so?" — ja, und zwar als GEWOEHNLICHER Charakter, nicht
+        als eigener Bereich. Der Grund ist nicht Bequemlichkeit: Ein Charakter
+        taucht ueberall auf, wo man einen waehlen kann — Scene Builder,
+        Shooting-Kette, Referenzrolle. Ein eigener Bereich „Gruppen" muesste an
+        jeder dieser Stellen nachgebaut werden, und beim naechsten Umbau haette
+        man zwei Sorten Person, von denen eine die Haelfte nicht kann.
+
+        Das Schlagwort `gruppe` macht sie wiederfindbar, ohne sie zu trennen.
+
+        ANGELEGT WIRD JETZT, nicht nach dem Ergebnis: Der Waechter muss beim
+        Ablegen wissen, wohin. Der Eintrag steht also schon in der Liste,
+        waehrend das Blatt noch laeuft — und bekommt sein Titelbild, sobald es
+        fertig ist.
+      */
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const namen = leute.map(l => l.charakter.name)
+      const { data: gruppe } = await supabase
+        .from('characters')
+        .insert({
+          user_id: user?.id,
+          name: namen.join(' + '),
+          description: `Gruppenbild: ${namen.join(', ')}`,
+          tags: ['gruppe'],
+        })
+        .select('id, name')
+        .single()
+
+      let ablage: AblageZiel | null = null
+      if (gruppe?.id) {
+        const { data: variante } = await supabase
+          .from('character_variants')
+          .insert({
+            character_id: gruppe.id, user_id: user?.id,
+            name: 'Gruppenbild', description: 'Das Referenzblatt dieser Gruppe',
+          })
+          .select('id')
+          .single()
+        ablage = {
+          baustein: 'charaktere',
+          parentId: gruppe.id as string,
+          parentName: gruppe.name as string,
+          variantId: (variante?.id as string) ?? null,
+          variantName: 'Gruppenbild',
+          // Ein frischer Eintrag ohne Bild waere ein leerer Kasten in der Liste.
+          alsTitelbild: true,
+        }
+      } else {
+        toast.error('Die Gruppe konnte nicht angelegt werden — das Blatt wird ' +
+                    'trotzdem erzeugt und landet in der Warteschlange.')
+      }
+
       const job = await anlegen({
         // DIE BENANNTEN ZEILEN SIND DER GANZE PUNKT. Ohne sie stünde da
         // „Image 2 = OUTFIT" ohne Bezug zu Person 1.
@@ -82,10 +140,16 @@ export function GruppenReferenzDialog({
           personen: leute.map(l => ({
             charakter_id: l.charakter.id, outfit_id: l.outfit?.id ?? null,
           })),
+          ...(ablage ? { ablage } : {}),
         },
       })
       if (job) {
-        toast.success('Gruppenbild eingereiht — es steht in der Warteschlange.')
+        toast.success(
+          ablage
+            ? `„${ablage.parentName}" angelegt — das Blatt landet dort, sobald es fertig ist.`
+            : 'Gruppenbild eingereiht — es steht in der Warteschlange.',
+          { duration: 8_000 },
+        )
         onClose()
       }
     } catch (e) {
@@ -108,10 +172,15 @@ export function GruppenReferenzDialog({
 
         <div className="space-y-4 overflow-y-auto">
           <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Ein Blatt, auf dem alle nebeneinander stehen — jede Person in ihrer
-            eigenen Kleidung, neutraler Hintergrund, ganzkörper. Das ist die
-            Vorlage für spätere Paar- und Gruppenbilder: Wer was trägt, steht
-            danach im Bild statt im Text.
+            Zwei Reihen: oben alle nebeneinander in voller Größe, darunter die
+            Gesichter groß. Die untere Reihe ist der Zweck — in der
+            Ganzkörperreihe ist ein Kopf rund 115 Pixel hoch, zu wenig, um
+            später ein Gesicht zu tragen.
+          </p>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            Die Gruppe wird als eigener Charakter angelegt und steht danach
+            überall zur Auswahl — Scene Builder, Shooting-Kette, Referenzbild.
+            Das fertige Blatt landet von selbst dort und wird ihr Titelbild.
           </p>
 
           <div className="space-y-2">

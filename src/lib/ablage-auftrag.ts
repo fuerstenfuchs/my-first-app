@@ -24,6 +24,16 @@ export type AblageZiel = {
   /** Der Ordner darin. null wäre „direkt am Charakter", gibt es hier nicht. */
   variantId: string | null
   variantName: string
+  /**
+   * Das abgelegte Bild zusätzlich als Titelbild setzen (PROJ-79).
+   *
+   * Gedacht für frisch angelegte Einträge: Eine Gruppe entsteht in dem Moment,
+   * in dem das Blatt beauftragt wird — sie hat also noch gar kein Bild und
+   * steht bis dahin als leerer Kasten in der Liste. Wer hier `true` setzt,
+   * bekommt das erste Ergebnis als Titelbild und damit einen Eintrag, den man
+   * wiedererkennt.
+   */
+  alsTitelbild?: boolean
 }
 
 /** Was der Wächter von einem Auftrag sehen muss. */

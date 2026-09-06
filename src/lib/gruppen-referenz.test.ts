@@ -76,8 +76,28 @@ describe('gruppenPrompt', () => {
   it('nennt die Anzahl mehrfach — gegen zusaetzliche halbe Personen am Rand', () => {
     const t = gruppenPrompt(ZWEI)
     expect(t).toContain('exactly two people')
-    expect(t).toContain('two faces visible')
-    expect(t).toContain('no one else')
+    expect(t).toContain('no one else anywhere on the sheet')
+    // Mindestens dreimal — einmal reicht bei Bildmodellen erfahrungsgemaess nicht.
+    expect(t.split('two').length - 1).toBeGreaterThanOrEqual(3)
+  })
+
+  it('verlangt zwei Reihen, und die Gesichter gross', () => {
+    // Marks Einwand am ersten Ergebnis: „Finde schon ziemlich klein der Kopf,
+    // also Referenz." In der Ganzkoerperreihe ist ein Kopf rund 115 Pixel
+    // hoch — zu wenig, um spaeter ein Gesicht zu tragen.
+    const t = gruppenPrompt(ZWEI)
+    expect(t).toContain('TWO')
+    expect(t).toMatch(/TOP ROW[^]*full body/)
+    expect(t).toMatch(/BOTTOM ROW[^]*head-and-shoulders close-ups/)
+    expect(t).toMatch(/THE BOTTOM ROW IS THE POINT/)
+  })
+
+  it('bindet die Gesichter an dieselbe Reihenfolge wie oben', () => {
+    // Ohne das koennte das Modell die Koepfe vertauschen — und dann waere das
+    // Blatt schlimmer als keines, weil es falsch zuordnet statt gar nicht.
+    const t = gruppenPrompt(ZWEI)
+    expect(t).toContain('The face below position 1 is PERSON 1')
+    expect(t).toMatch(/Same person, same order, in both rows/)
   })
 
   it('verlangt Abstand statt Ueberlappung', () => {
