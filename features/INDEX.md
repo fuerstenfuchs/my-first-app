@@ -129,4 +129,6 @@
 
 | PROJ-76 | Fertige Shooting-Bilder landen von selbst beim Charakter | In Review | [PROJ-76](PROJ-76-ablage-beim-charakter.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-77
+| PROJ-77 | Auswahlkacheln waren auf 56px gequetscht (Flex/Grid) | In Review | [PROJ-77](PROJ-77-auswahlkacheln.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-78
