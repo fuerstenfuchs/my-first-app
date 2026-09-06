@@ -176,10 +176,11 @@ export function GruppenReferenzDialog({
 
         <div className="space-y-4 overflow-y-auto">
           <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Zwei Reihen: oben alle nebeneinander in voller Größe, darunter die
-            Gesichter groß. Die untere Reihe ist der Zweck — in der
-            Ganzkörperreihe ist ein Kopf rund 115 Pixel hoch, zu wenig, um
-            später ein Gesicht zu tragen.
+            Ein Blatt, das die Gruppe festhält: jede Person mit ihrer eigenen
+            Kleidung, dazu ihr Gesicht groß genug, um später als Referenz zu
+            dienen. Wie das aufgeteilt wird, wählst du unten — in einer
+            Ganzkörperreihe allein ist ein Kopf rund 115 Pixel hoch, und das
+            ist zu wenig.
           </p>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             Die Gruppe wird als eigener Charakter angelegt und steht danach
