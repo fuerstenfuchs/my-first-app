@@ -8,6 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import { useOutfits } from '@/hooks/use-outfits'
 import { AssetPickerDialog } from '@/components/prompts/asset-picker-dialog'
+import { AblageWaehler } from '@/components/ablage-waehler'
+import { createClient } from '@/lib/supabase'
+import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
   groesseFuerFormat, promptFuerAuftrag,
   type ModellId, type KlassenId, type Referenz, type ReferenzRolle,
@@ -50,6 +53,7 @@ export function ShootingKetteButton({
   const { outfits } = useOutfits()
   const [optionen, setOptionen] = useState<KettenOptionen>(KETTE_VORGABE)
   const [pickerOffen, setPickerOffen] = useState(false)
+  const [ablage, setAblage] = useState<AblageZiel | null>(null)
   const [laeuft, setLaeuft] = useState(false)
   const [fortschritt, setFortschritt] = useState(0)
 
@@ -81,6 +85,35 @@ export function ShootingKetteButton({
     const reiheId = crypto.randomUUID()
     const zuordnung = groesseFuerFormat(aspectRatio)
     let eingereiht = 0
+
+    /*
+      DEN ORDNER JETZT ANLEGEN, NICHT FRUEHER.
+
+      `variantId: null` heisst „neuer Ordner". Waere er schon beim Oeffnen des
+      Waehlers entstanden, bliebe bei jedem Blick auf den Knopf ein leerer
+      Ordner am Charakter zurueck — auch wenn Mark es sich anders ueberlegt.
+      Hier ist der Punkt, an dem feststeht, dass wirklich erzeugt wird.
+    */
+    let ziel = ablage
+    if (ziel && !ziel.variantId) {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase
+        .from('character_variants')
+        .insert({
+          character_id: ziel.parentId,
+          user_id: user?.id,
+          name: ziel.variantName,
+          description: `Shooting an ${scene.location?.name ?? 'einem Ort'}`,
+        })
+        .select('id')
+        .single()
+      // Ohne Ordner wird trotzdem erzeugt — die Bilder liegen dann in der
+      // Warteschlange. Das Shooting scheitern zu lassen, weil ein Ordner
+      // nicht angelegt werden konnte, waere die teurere Reaktion.
+      if (data?.id) ziel = { ...ziel, variantId: data.id as string }
+      else { ziel = null; toast.error('Ordner konnte nicht angelegt werden — die Bilder bleiben in der Warteschlange.') }
+    }
 
     try {
       for (const schritt of kette) {
@@ -119,6 +152,9 @@ export function ShootingKetteButton({
             reihe_id: reiheId,
             reihe_nr: schritt.nr,
             reihe_gesamt: schritt.gesamt,
+            // Der Waechter liest das spaeter aus und legt die fertigen Bilder
+            // dort ab (PROJ-76).
+            ...(ziel ? { ablage: ziel } : {}),
           },
         })
 
@@ -177,6 +213,13 @@ export function ShootingKetteButton({
           </span>
         </span>
       </label>
+
+      <AblageWaehler
+        charakter={scene.character}
+        vorschlag={scene.location?.name ?? 'Shooting'}
+        ziel={ablage}
+        onZiel={setAblage}
+      />
 
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">

@@ -7,6 +7,8 @@ import {
   neuFertige, standMerken, fertigTitel, meldung,
   type JobStand, type WachJob,
 } from '@/lib/fertig-melden'
+import { useAblageWache } from '@/hooks/use-ablage-wache'
+import type { AblageJob } from '@/lib/ablage-auftrag'
 
 /**
  * Der Wächter, der Bescheid sagt, wenn ein Bild fertig ist. (PROJ-58)
@@ -79,6 +81,7 @@ export function useFertigWache() {
   /** Wie viele fertige Bilder Mark noch nicht angesehen hat. */
   const ungesehen = useRef(0)
   const basisTitel = useRef('Prompt Trésor')
+  const ablegen = useAblageWache()
 
   const titelSetzen = useCallback(() => {
     document.title = fertigTitel(ungesehen.current, basisTitel.current)
@@ -87,7 +90,9 @@ export function useFertigWache() {
   const pruefen = useCallback(async () => {
     const { data, error } = await supabase
       .from('image_jobs')
-      .select('id, status, result_paths')
+      // `scene_meta` kommt fuer die Ablage mit (PROJ-76). Eine zweite
+      // Abfrage im selben Takt waere doppelte Last fuer dieselben Zeilen.
+      .select('id, status, result_paths, scene_meta')
       .order('created_at', { ascending: false })
       .limit(60)
 
@@ -97,6 +102,21 @@ export function useFertigWache() {
     if (error || !data) return
 
     const jobs = data as WachJob[]
+
+    /*
+      ABLEGEN VOR MELDEN, UND UNABHAENGIG DAVON (PROJ-76).
+
+      `neuFertige` arbeitet mit einer Grundlinie und liefert nur, was sich seit
+      dem letzten Blick GEAENDERT hat. Fuer eine Meldung ist das richtig.
+      Fuers Ablegen waere es fatal: Nach einem Neuladen gilt alles Vorhandene
+      als schon gesehen — wer das Fenster schliesst, waehrend das letzte Bild
+      laeuft, faende es danach nie im Ordner.
+
+      Deshalb liest `zuAblegen` ueber ALLE geholten Auftraege und erkennt am
+      Auftrag selbst, was noch offen ist.
+    */
+    void ablegen(jobs as unknown as AblageJob[])
+
     const fertige = neuFertige(stand.current, jobs)
     stand.current = standMerken(jobs)
     if (fertige.length === 0) return
@@ -138,7 +158,7 @@ export function useFertigWache() {
 
     // 4. Ton.
     if (schalterLesen(TON_SCHLUESSEL)) pling()
-  }, [supabase, titelSetzen])
+  }, [supabase, titelSetzen, ablegen])
 
   useEffect(() => {
     // Den Titel der Seite als Grundlage merken, bevor wir ihn anfassen.
