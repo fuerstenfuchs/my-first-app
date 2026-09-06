@@ -13,29 +13,29 @@ import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
-type SheetType = 'location' | 'cinematic' | 'gebaeude'
+type SheetType = 'location' | 'shooting' | 'gebaeude'
 
 const SHEET_TYPES: { id: SheetType; label: string; icon: string; description: string; views: string[] }[] = [
   {
     id: 'location',
     label: 'Location-Sheet',
     icon: '📍',
-    description: 'Generischer Ansatz für jede Art von Ort',
-    views: ['Hero-Bild', '4-6 Ansichten', 'Detail-Referenzen', 'Atmosphäre'],
+    description: 'Den Ort sehen — ein großes Bild, vier Ansichten',
+    views: ['Großes Hero-Bild', '4 Ansichten', 'Gleiches Licht', 'Fünf Felder'],
   },
   {
-    id: 'cinematic',
-    label: 'Cinematic-Sheet',
-    icon: '🎬',
-    description: 'Filmset-orientiert — Sichtachsen, POV, Wege',
-    views: ['Hero-Bild', 'Establishing Shot', 'Charakter-POV', 'Approach/Exit-Path', 'Filmmaking Value'],
+    id: 'shooting',
+    label: 'Shooting-Sheet',
+    icon: '📸',
+    description: 'Wo hier ein Shooting ginge — leere Hintergründe zum Davorstellen',
+    views: ['Hero-Hintergrund', '5 Hintergründe', 'Standposition', 'Licht & Tageszeit', 'Brennweite'],
   },
   {
     id: 'gebaeude',
     label: 'Gebäude-Sheet',
     icon: '🏛️',
-    description: 'Architektur — Fassaden aus mehreren Winkeln',
-    views: ['Hero-Bild', '8 Fassadenansichten', 'Architektur-Details', 'Material-Referenzen', 'Tageszeiten'],
+    description: 'Architektur — das Gebäude aus acht Winkeln',
+    views: ['Hero-Bild', '8 Ansichten', '3 Details', 'Tag & Nacht', '14 Felder'],
   },
 ]
 
@@ -79,223 +79,164 @@ However:
 
 The goal is to create the most complete and realistic visual reference sheet possible while remaining faithful to the uploaded images. If multiple reference images are provided, combine information from all images before creating the sheet.`
 
-const LOCATION_PROMPT = `Analyze the uploaded image and transform it into a premium AI visual reference sheet.
+const LOCATION_PROMPT = `Analyze the uploaded image and transform it into a visual reference sheet of
+this location.
 
-The goal is NOT technical documentation. The goal is to visually teach an AI exactly how this location looks, feels, and should be recreated.
+The goal is NOT technical documentation and NOT a moodboard. The goal is to
+show what this place looks like, so clearly that someone who has never been
+there could recognise it.
 
 ${RESEARCH_ENRICHMENT}
 
-Preserve all visible architectural features, furniture, materials, decorations, colors, lighting, atmosphere, layout logic, and design language from the original image.
+Preserve all visible architectural features, furniture, materials, colours,
+lighting and atmosphere from the original image.
 
-Reconstruct unseen areas logically while remaining fully consistent with what is visible.
+Reconstruct unseen areas logically while remaining fully consistent with what
+is visible.
 
-REFERENCE SHEET STRUCTURE
+SHEET STRUCTURE — FIVE PANELS, NO MORE
 
-HERO IMAGE
-• One very large centerpiece image occupying approximately 40–50% of the entire sheet.
-• The most iconic and representative view of the location.
-• Highest level of detail.
+FEW PANELS, EACH LARGE. This sheet has exactly five images. Do not add further
+panels, detail crops, material samples or mood tiles. One large photograph that
+can actually be read is worth more than twelve thumbnails.
 
-LARGE LOCATION VIEWS
-• 4–6 large images showing the location from different viewpoints.
-• Opposite angle view.
-• Left perspective.
-• Right perspective.
-• Wide overview shot.
-• Eye-level visitor perspective.
-• Additional viewpoint that best explains the space.
+All five panels are mandatory. Do not drop any of them, and do not shrink them
+to fit more in.
 
-DETAIL REFERENCES
-• 4–6 medium-sized detail images.
-• Important furniture.
-• Signature decorations.
-• Lighting fixtures.
-• Surface materials.
-• Architectural details.
-• Unique visual features that define the location.
+1. HERO IMAGE — approximately 55% of the sheet
+   The single most representative view of the location, at the highest level of
+   detail on the sheet. This is the image someone remembers.
 
-ATMOSPHERE REFERENCES
-• One image focused on overall mood and lighting.
-• One image focused on colors, materials, and visual style.
-• One image showing how the space feels when experienced by a visitor.
+2-5. FOUR SUPPORTING VIEWS — sharing the remaining space, all the same size
+   • The opposite angle, looking back from where the hero image was taken
+   • The view to the left
+   • The view to the right
+   • A wide overview that explains how the space fits together
 
-VISUAL PRIORITIES
+All five views are taken from a position inside the place or immediately at it,
+looking outward or across it. Do not step back and show the place as an object
+seen from outside — that is what the building sheet is for.
 
-• 90% imagery.
-• 10% labels.
-• Very few words.
+CONSISTENCY
+
+Keep scale, proportions and materials identical across all five panels. Light
+all five with the same time of day and the same sun direction — this is one
+place at one moment, seen from five positions, not five different days.
+
+Mark any view that could not be derived from the reference image with a small
+caption reading RECONSTRUCTED.
+
+WHAT NOT TO DRAW
+
 • No floor plans.
 • No blueprints.
 • No architectural drawings.
 • No technical diagrams.
 • No measurement lines.
-• No operation charts.
-• No engineering documentation.
+• No camera maps.
+
+TYPOGRAPHY
+
+Label each panel with two or three words naming what it shows, in a small
+clean sans-serif. No sentences, no paragraphs.
 
 STYLE
 
-Premium environment reference board.
-Luxury hospitality presentation quality.
-AAA game environment concept art quality.
-Professional film production moodboard quality.
 Ultra-realistic photography.
 Clean white or light neutral presentation background.
-Organized grid layout with large images and excellent spacing.
+Generous spacing — the panels may breathe.
 
-The final sheet should instantly communicate how the location looks from multiple angles and provide enough visual information for another AI system to accurately recreate the entire environment.`
+The finished sheet should let someone see this location at a glance, and give
+another AI system enough to place a scene here convincingly.`
 
-const CINEMATIC_PROMPT = `Analyze the uploaded image and transform it into a PREMIUM CINEMATIC LOCATION REFERENCE SHEET.
+const SHOOTING_PROMPT = `Analyze the uploaded image and transform it into a SHOOTING SHEET for this
+location.
 
-The goal is NOT architectural documentation.
-
-The goal is to visually teach an AI, filmmaker, production designer, concept artist, or environment generator exactly how this location looks, feels, functions, and can be used as a cinematic setting.
+This sheet answers one question: where at this place could you photograph
+someone, and what would the background look like?
 
 ${RESEARCH_ENRICHMENT}
 
-Preserve all visible characteristics from the original image:
+Preserve all visible features, materials, colours and lighting from the
+original image. Reconstruct unseen areas logically while remaining fully
+consistent with what is visible.
 
-• Architecture
-• Spatial layout
-• Terrain and elevation
-• Sightlines and viewpoints
-• Materials and textures
-• Environmental details
-• Weathering and age
-• Surrounding context
-• Natural and artificial lighting
-• Atmosphere and mood
-• Human scale and movement patterns
+THE PANELS ARE EMPTY — THIS IS THE POINT
 
-Reconstruct unseen areas logically while remaining fully consistent with the visible environment.
+Every panel shows the location WITHOUT any person in it. Do not place a model,
+a figure, a silhouette or a bystander anywhere. Each panel is a background
+plate, framed and lit as if the subject were about to step in, with the spot
+where they would stand left clear and unobstructed.
 
-────────────────────────
-REFERENCE SHEET STRUCTURE
-────────────────────────
+SHEET STRUCTURE — SIX PANELS, NO MORE
 
-HERO IMAGE
+If more content is listed below than fits at this size, keep the earlier
+sections complete and drop the later ones entirely. Never shrink every panel
+to squeeze everything in — a sheet of unreadable thumbnails teaches nothing.
 
-• One large cinematic hero image occupying roughly 40–50% of the sheet.
-• Most iconic and visually powerful perspective.
-• Magazine-quality environmental photography.
+1. HERO PLATE — approximately 45% of the sheet
+   The strongest shooting spot this location has — even if that is not the most
+   famous view of the place. Framed for a full-body shot of someone who is not
+   there yet: the standing position sits in the lower centre of the frame and is
+   completely empty. Shot at eye level, 35 mm equivalent.
 
-────────────────────────
+2-6. FIVE FURTHER BACKGROUND PLATES — sharing the remaining space, equal size
+   Choose five genuinely different backgrounds this place offers, not five
+   variations of the same wall. Aim for this range:
+   • A wide one, where the location itself is the subject behind the standing position
+   • One with depth — a corridor, path, arcade or row that leads the eye back
+   • A plain textured surface for a tight portrait, close enough to read the
+     material
+   • The signature element of this place, whatever a visitor would photograph
+   • One backlit spot, where the light comes from behind the standing position
 
-LOCATION COVERAGE
+FOR EACH PANEL, GIVE THE PRACTICAL FACTS
 
-Include highly detailed visual references for:
+Under each plate, a two-word name plus three short fact lines — four lines
+maximum, no sentences:
+• where the subject stands
+• the light: direction and best time of day for this spot
+• the lens: 24 mm, 35 mm, 50 mm or 85 mm equivalent
 
-• Wide establishing view
-• Opposite direction view
-• Eye-level perspective
-• Character POV view
-• Elevated overview
-• Corner perspective
-• The main approach, seen once walking toward the location and once looking
-  back from it
-• Environmental context view
-• Landmark relationship view
+Name the standing position in words only. Never mark it in the image with a
+circle, a cross, an outline or a silhouette — a marker becomes a figure.
 
-Show how the location connects to its surroundings.
+The light must be physically possible for that spot. A north-facing wall does
+not get afternoon sun from the front. If two panels state different times of
+day, that is correct and useful — but each panel must be internally consistent
+in sun direction and shadow length.
 
-────────────────────────
+HONESTY
 
-SPATIAL STORYTELLING
+Mark any plate that could not be derived from the reference image with a small
+caption reading RECONSTRUCTED. This sheet has the highest invented share of the
+three — five different spots from one photograph — and it is the one someone
+actually travels to a place for. An invented backlit corner looks exactly as
+real on the sheet as the one that is there.
 
-Visually communicate:
+WHAT NOT TO DRAW
 
-• Arrival experience
-• Movement flow
-• Human interaction zones
-• Gathering areas
-• Transition spaces
-• Focal points
-• Hero viewpoints
-• Background opportunities
-• Framing opportunities
+• No floor plans.
+• No blueprints.
+• No architectural drawings.
+• No technical diagrams.
+• No measurement lines.
+• No camera maps.
+• No people, no mannequins, no silhouettes, no shadows of a person.
 
-────────────────────────
+TYPOGRAPHY
 
-DETAIL REFERENCES
+Label each panel with two or three words naming what it shows, in a small
+clean sans-serif. No sentences, no paragraphs.
 
-Generate close-up visual references for:
-
-• Architectural details
-• Surface materials
-• Stonework
-• Pavement
-• Railings
-• Signage
-• Vegetation
-• Street elements
-• Lighting fixtures
-• Sculptures
-• Monuments
-• Environmental props
-
-────────────────────────
-
-ATMOSPHERE REFERENCES
-
-Include dedicated visual panels showing:
-
-• Mood
-• Lighting
-• Color palette
-• Weather potential
-• Time-of-day variation
-• Environmental storytelling
-
-────────────────────────
-
-FILMMAKING VALUE
-
-Clearly communicate through imagery:
-
-• The establishing shot itself, framed exactly as a camera at that position
-  would see it
-• The character shot itself, framed for a person standing in the scene
-• Hero framing opportunities
-• Scale references
-• Background compositions
-• Visual depth opportunities
-• Crowd potential
-• Action sequence potential
-
-────────────────────────
-
-VISUAL STYLE
-
-Hollywood production design moodboard quality.
-
-AAA cinematic environment concept art quality.
-
-Premium film-location scouting board quality.
+STYLE
 
 Ultra-realistic photography.
+Clean white or light neutral presentation background.
+Generous spacing — the panels may breathe.
 
-Photorealistic lighting.
-
-Natural environmental realism.
-
-High-end editorial presentation design.
-
-────────────────────────
-
-LAYOUT RULES
-
-• 90% imagery
-• 10% labels
-• Minimal text
-• Large images
-• Clean grid layout
-• Premium black or dark charcoal presentation board
-• No floor plans
-• No technical drawings
-• No camera maps
-• No lighting diagrams
-• No blueprint aesthetics
-
-The final sheet should instantly communicate the visual identity, atmosphere, storytelling potential, cinematic scale, and production value of the location.`
+The finished sheet should let someone pick a spot, know when to be there and
+with which lens, and drop a subject straight into the plate.`
 
 const GEBAEUDE_PROMPT = `Analyze the uploaded image and transform it into a PREMIUM ARCHITECTURAL VISUAL REFERENCE SHEET.
 
@@ -324,6 +265,16 @@ Preserve all visible architectural characteristics from the original image:
 Reconstruct unseen portions logically while remaining fully consistent with the visible architecture.
 
 ━━━━━━━━━━━━━━━━━━━━━━
+FOURTEEN PANELS, NO MORE
+
+This sheet holds exactly fourteen images: one hero, eight building views, three
+close-ups and two lighting versions. Do not add further panels, swatch strips
+or context tiles. If more content is listed below than fits at this size, keep
+the earlier sections complete and drop the later ones entirely — never shrink
+every panel to squeeze everything in. Twelve unreadable thumbnails teach less
+than three panels one can actually see.
+
+━━━━━━━━━━━━━━━━━━━━━━
 REFERENCE SHEET LAYOUT
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -347,7 +298,10 @@ No technical diagrams.
 HERO IMAGE
 ━━━━━━━━━━━━━━━━━━━━━━
 
-Dominant centerpiece occupying approximately 45% of the sheet.
+Dominant centerpiece occupying approximately 25% of the sheet. The eight
+building views are the second-largest panels; the three close-ups and the two
+lighting versions may be smaller. At 45% the remaining thirteen panels would be
+thumbnails, which is exactly what this sheet warns against above.
 
 Ultra-photorealistic architectural photograph.
 
@@ -417,39 +371,23 @@ and keep its height in storeys identical across all eight.
 ARCHITECTURAL DETAIL REFERENCES
 ━━━━━━━━━━━━━━━━━━━━━━
 
-Create enlarged close-up panels showing:
+Create exactly THREE enlarged close-up panels, no more:
 
-• Main entrance and gateway
-• Window designs
-• Roof and tower details
-• Stone masonry texture
-• Facade material transitions
-• Decorative carvings and ornaments
-• Archways and structural elements
-• Exterior lighting fixtures
-• Signage and branding elements
-• Landscaping details
-• Pavement and courtyard materials
-• Architectural weathering and aging
+• The main entrance
+• The dominant facade material, close enough to read its texture
+• The one architectural detail that most defines this building
+
+Twelve tiny crops teach less than three that can actually be seen.
 
 Each detail panel should resemble professional luxury real-estate marketing photography.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-MATERIAL REFERENCE STRIP
+MATERIALS
 ━━━━━━━━━━━━━━━━━━━━━━
 
-High-resolution close-up material samples showing:
-
-• Stone texture
-• Mortar texture
-• Roof materials
-• Timber elements
-• Metal components
-• Window framing
-• Glass characteristics
-• Exterior lighting materials
-
-Presented as photographic swatches rather than technical samples.
+No separate swatch strip. The three close-up panels above already carry the
+materials — make sure the facade material among them is photographed close
+enough that stone, mortar, timber or metal can be told apart by texture alone.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 ATMOSPHERE REFERENCES
@@ -457,11 +395,10 @@ ATMOSPHERE REFERENCES
 
 Create additional environmental views:
 
-• Bright daylight version
-• Golden hour version
-• Blue hour version
-• Soft overcast version
-• Night illumination version
+• One daylight version with low directional sun and long, clearly readable
+  shadows — this is the panel that shows the building's modelling, so it must
+  differ from the even overcast light of the eight views
+• One night version with the building's own lighting
 
 Preserve identical architecture while demonstrating different lighting conditions.
 
@@ -469,16 +406,9 @@ Preserve identical architecture while demonstrating different lighting condition
 ENVIRONMENT & CONTEXT
 ━━━━━━━━━━━━━━━━━━━━━━
 
-Show the building within its setting:
-
-• Adjacent structures
-• Trees and vegetation
-• Pathways and circulation routes
-• Courtyard spaces
-• Landscape design
-• Arrival experience
-• Visitor perspective
-• Relationship to surrounding environment
+No separate context panels. View 8 above IS the context view — make it show
+the adjacent structures, the vegetation and the way one arrives at the
+building, all in that single frame.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 VISUAL STYLE
@@ -523,7 +453,7 @@ function ortsAngabe(location: Location): string {
 }
 
 function getPrompt(type: SheetType, location: Location): string {
-  const basis = type === 'cinematic' ? CINEMATIC_PROMPT
+  const basis = type === 'shooting' ? SHOOTING_PROMPT
               : type === 'gebaeude' ? GEBAEUDE_PROMPT
               : LOCATION_PROMPT
   return ortsAngabe(location) + basis
@@ -721,20 +651,24 @@ export function LocationSheetDialog({ open, onClose, location }: Props) {
           titel={`${location.name} — ${selectedType?.label ?? 'Sheet'}`}
           vorauswahlLocation={location}
           /*
-            NUR DIE LOCATION — und zwar aus einem genauen Grund, nicht aus
+            NUR DIE LOCATION — und zwar aus zwei genauen Gruenden, nicht aus
             Ordnungsliebe.
 
-            Nachgemessen: Menschen kommen in diesen Prompts durchaus vor, aber
-            als MASSSTAB, nicht als Personen — „Human scale and movement
-            patterns", „Best character-shot positions", „Street-Level Human
-            Perspective". Gemeint ist irgendjemand, der die Groesse des Ortes
-            zeigt.
+            ERSTENS: Haengt man hier ein Charakterfoto an, schreibt
+            `promptFuerAuftrag` „Image 2 = CHARACTER — take the person's
+            identity from it" in den Auftrag. Dann baut das Modell eine
+            BESTIMMTE Person in ein Blatt, das den ORT zeigen soll. Wo im
+            Gebaeude-Prompt ein Mensch vorkommt („Street-Level Human
+            Perspective"), ist er MASSSTAB, nicht Person — irgendjemand, der
+            die Groesse zeigt.
 
-            Haengt man hier ein Charakterfoto an, schreibt `promptFuerAuftrag`
-            „Image 2 = CHARACTER — take the person's identity from it" in den
-            Auftrag. Dann baut das Modell eine BESTIMMTE Person in ein Blatt,
-            das den ORT zeigen soll. Wer eine Figur an diesem Ort will, nimmt
-            den Weg ueber das Bildstudio, nicht ueber das Sheet.
+            ZWEITENS, und staerker: Das Shooting-Sheet VERBIETET Personen
+            ausdruecklich („No people, no mannequins, no silhouettes, no
+            shadows of a person"). Ein angehaengtes Charakterfoto stuende dort
+            in direktem Widerspruch zum Prompt.
+
+            Wer eine Figur an diesem Ort will, nimmt den Weg ueber das
+            Bildstudio — dort ist das Sheet dann die Vorlage.
           */
           rollen={['location']}
         />
