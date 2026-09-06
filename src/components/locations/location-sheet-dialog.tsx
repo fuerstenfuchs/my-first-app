@@ -28,7 +28,7 @@ const SHEET_TYPES: { id: SheetType; label: string; icon: string; description: st
     label: 'Shooting-Sheet',
     icon: '📸',
     description: 'Wo hier ein Shooting ginge — leere Hintergründe zum Davorstellen',
-    views: ['Hero-Hintergrund', '5 Hintergründe', 'Standposition', 'Licht & Tageszeit', 'Brennweite'],
+    views: ['Hero-Hintergrund', '5 Hintergründe', 'Nummeriert 1-6', 'Ohne Person', 'Sechs Felder'],
   },
   {
     id: 'gebaeude',
@@ -137,8 +137,9 @@ WHAT NOT TO DRAW
 
 TYPOGRAPHY
 
-Label each panel with two or three words naming what it shows, in a small
-clean sans-serif. No sentences, no paragraphs.
+The panel number in the upper left corner, large enough to read at a glance.
+Below each panel, two or three words naming the spot. Nothing else — no light
+data, no lens data, no captions, no sentences.
 
 STYLE
 
@@ -178,7 +179,8 @@ to squeeze everything in — a sheet of unreadable thumbnails teaches nothing.
    The strongest shooting spot this location has — even if that is not the most
    famous view of the place. Framed for a full-body shot of someone who is not
    there yet: the standing position sits in the lower centre of the frame and is
-   completely empty. Shot at eye level, 35 mm equivalent.
+   completely empty. Eye level, a normal field of view — nothing wide-angle and
+   nothing compressed, so the plate stays usable whatever lens is chosen later.
 
 2-6. FIVE FURTHER BACKGROUND PLATES — sharing the remaining space, equal size
    Choose five genuinely different backgrounds this place offers, not five
@@ -190,21 +192,26 @@ to squeeze everything in — a sheet of unreadable thumbnails teaches nothing.
    • The signature element of this place, whatever a visitor would photograph
    • One backlit spot, where the light comes from behind the standing position
 
-FOR EACH PANEL, GIVE THE PRACTICAL FACTS
+NUMBER THE PANELS
 
-Under each plate, a two-word name plus three short fact lines — four lines
-maximum, no sentences:
-• where the subject stands
-• the light: direction and best time of day for this spot
-• the lens: 24 mm, 35 mm, 50 mm or 85 mm equivalent
+Print a large, clearly legible number in the upper left corner of every panel:
+1 for the hero plate, 2 to 6 for the others. Nothing else is needed to identify
+them.
 
-Name the standing position in words only. Never mark it in the image with a
-circle, a cross, an outline or a silhouette — a marker becomes a figure.
+This matters more than it looks. The finished sheet is used later as a single
+reference image, all six panels at once — so whoever uses it must be able to
+say „use background 4" and be understood. Unnumbered panels cannot be pointed
+at.
 
-The light must be physically possible for that spot. A north-facing wall does
-not get afternoon sun from the front. If two panels state different times of
-day, that is correct and useful — but each panel must be internally consistent
-in sun direction and shadow length.
+LIGHT
+
+Light every panel with the same soft, even daylight. Do not spread the panels
+across different times of day and do not add dramatic directional sun: the time
+of day is chosen later, when the actual picture is made, and a plate that
+already carries golden-hour light cannot be used for anything else.
+
+Each panel must still be internally consistent — one sun direction, matching
+shadow lengths.
 
 HONESTY
 
@@ -235,8 +242,9 @@ Ultra-realistic photography.
 Clean white or light neutral presentation background.
 Generous spacing — the panels may breathe.
 
-The finished sheet should let someone pick a spot, know when to be there and
-with which lens, and drop a subject straight into the plate.`
+The finished sheet is a menu of places, nothing more: six usable backgrounds
+at this location, numbered, empty and ready for someone to be placed into
+them.`
 
 const GEBAEUDE_PROMPT = `Analyze the uploaded image and transform it into a PREMIUM ARCHITECTURAL VISUAL REFERENCE SHEET.
 
