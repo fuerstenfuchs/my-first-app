@@ -127,4 +127,6 @@
 
 | PROJ-75 | Shooting-Kette — ein ganzes Shooting an einem Ort (Motor aus PROJ-44) | In Review | [PROJ-75](PROJ-75-shooting-kette.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-76
+| PROJ-76 | Fertige Shooting-Bilder landen von selbst beim Charakter | In Review | [PROJ-76](PROJ-76-ablage-beim-charakter.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-77
