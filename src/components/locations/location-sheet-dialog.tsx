@@ -6,7 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import type { Location } from '@/hooks/use-locations'
+import { LOCATION_TYPES, type Location } from '@/hooks/use-locations'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
 import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
@@ -446,7 +446,17 @@ The final reference sheet must enable another AI to accurately reconstruct the e
  */
 function ortsAngabe(location: Location): string {
   const teile = [location.name]
-  if (location.location_type) teile.push(`type: ${location.location_type}`)
+
+  // NICHT DEN SCHLUESSEL, SONDERN DAS WORT. Im Objekt steht 'stadtgebiet' oder
+  // 'eventlocation' — kleingeschriebene Datenbankkuerzel, die im Bildprompt wie
+  // ein Leck aussehen und dem Modell wenig sagen. Und 'sonstiges' heisst
+  // „keine Angabe": es einzusetzen waere schlechter als es wegzulassen, weil das
+  // Modell dann eine Aussage zu lesen bekommt, wo keine ist.
+  if (location.location_type && location.location_type !== 'sonstiges') {
+    const art = LOCATION_TYPES.find(t => t.key === location.location_type)
+    if (art) teile.push(art.label)
+  }
+
   if (location.description?.trim()) teile.push(location.description.trim())
   return `THE DEPICTED LOCATION IS: ${teile.join(' — ')}.\n` +
          `Treat this as established fact, not as a guess.\n\n`
