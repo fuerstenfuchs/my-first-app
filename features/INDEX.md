@@ -117,4 +117,6 @@
 
 | PROJ-70 | Vorschaubilder auf ALLEN Seiten (46 Dateien nachgezogen) | In Review | [PROJ-70](PROJ-70-vorschaubilder-ueberall.md) | 2026-09-05 |
 
-## Next Available ID: PROJ-71
+| PROJ-71 | Prompt in ein anderes Thema verschieben (totes `verschieben` aus PROJ-63) | In Review | [PROJ-71](PROJ-71-thema-wechseln.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-72
