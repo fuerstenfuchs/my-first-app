@@ -175,13 +175,17 @@ export function GruppenReferenzDialog({
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto">
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Ein Blatt, das die Gruppe festhält: jede Person mit ihrer eigenen
-            Kleidung, dazu ihr Gesicht groß genug, um später als Referenz zu
-            dienen. Wie das aufgeteilt wird, wählst du unten — in einer
-            Ganzkörperreihe allein ist ein Kopf rund 115 Pixel hoch, und das
-            ist zu wenig.
-          </p>
+          {/*
+            HIER STAND EINE ERKLAERUNG, WARUM DAS BLATT SO GEBAUT IST — samt
+            der Pixelrechnung zur Kopfgroesse. Mark: „Nee, nimm mir die
+            Textzeile wieder raus, das interessiert niemanden."
+
+            Er hat recht, und es ist eine Regel, keine Einzelfallkorrektur: Die
+            Begruendung einer Bauentscheidung gehoert in die Spec und in den
+            Quelltext, nicht in die Oberflaeche. Wer hier steht, will etwas
+            TUN. Was bleibt, sagt ihm, was gleich geschieht — nicht, warum wir
+            es so gebaut haben.
+          */}
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             Die Gruppe wird als eigener Charakter angelegt und steht danach
             überall zur Auswahl — Scene Builder, Shooting-Kette, Referenzbild.
