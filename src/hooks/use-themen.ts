@@ -104,12 +104,5 @@ export function useThemen() {
     return true
   }, [themen])
 
-  const verschieben = useCallback(async (promptId: string, themaId: string | null) => {
-    const supabase = createClient()
-    const { error } = await supabase.from('prompts').update({ thema_id: themaId }).eq('id', promptId)
-    if (error) { toast.error('Verschieben fehlgeschlagen'); return false }
-    return true
-  }, [])
-
-  return { themen, loading, laden, umbenennen, zusammenlegen, titelbildSetzen, belegSetzen, verschieben }
+  return { themen, loading, laden, umbenennen, zusammenlegen, titelbildSetzen, belegSetzen }
 }

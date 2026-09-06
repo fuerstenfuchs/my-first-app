@@ -35,7 +35,7 @@ const listContainer = {
 }
 
 export default function PromptsPage() {
-  const { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, toggleFavorite, setRating, prependPrompt, setPromptVariantCount } = usePrompts()
+  const { prompts, loading, createPrompt, updatePrompt, themaSetzen, deletePrompt, copyPrompt, toggleFavorite, setRating, prependPrompt, setPromptVariantCount } = usePrompts()
   const { collections } = useCollections()
   const { viewMode, setMode } = useViewMode()
 
@@ -280,6 +280,19 @@ export default function PromptsPage() {
       ? () => void titelbildSetzen(themaId, prompt.id) : undefined,
     onAlsBeleg: themaId && prompt.cover_image_url
       ? () => void belegSetzen(themaId, prompt.id) : undefined,
+    /*
+      THEMA WECHSELN (PROJ-71). Ueberall verfuegbar, nicht nur im geoeffneten
+      Thema — Mark faellt ein falsch einsortierter Prompt meist beim Stoebern
+      auf. Die Rueckmeldung nennt BEIDE Namen: Nach dem Verschieben
+      verschwindet die Kachel aus dem gerade offenen Thema, und ohne einen Satz
+      dazu saehe das aus wie ein Loeschen.
+    */
+    themen,
+    onVerschieben: async (zielId: string) => {
+      const ziel = themen.find(t => t.id === zielId)
+      if (!ziel || !await themaSetzen(prompt.id, zielId)) return
+      toast.success(`„${prompt.title}“ liegt jetzt in „${ziel.name}“`)
+    },
     onToggleFavorite: () => toggleFavorite(prompt),
     onSetRating: (rating: number | null) => setRating(prompt, rating),
   })

@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ThemaWechseln } from '@/components/prompts/thema-wechseln'
 import type { Prompt } from '@/hooks/use-prompts'
 import { Vorschaubild } from '@/components/vorschaubild'
 
@@ -45,6 +46,10 @@ interface PromptListRowProps {
   onEdit: () => void
   onDelete: () => void
   onAddToCollection?: () => void
+  /* Dieselbe Bedienung wie in der Kachel — sonst kann man es in der einen
+     Ansicht und in der anderen nicht (PROJ-71). */
+  themen?: { id: string; name: string }[]
+  onVerschieben?: (themaId: string) => void
   onToggleFavorite: () => void
   onSetRating: (rating: number | null) => void
 }
@@ -56,6 +61,8 @@ export function PromptListRow({
   onEdit,
   onDelete,
   onAddToCollection,
+  themen,
+  onVerschieben,
   onToggleFavorite,
   onSetRating,
 }: PromptListRowProps) {
@@ -168,6 +175,13 @@ export function PromptListRow({
                 <FolderPlus className="mr-2 h-4 w-4" />
                 Zu Sammlung hinzufügen
               </DropdownMenuItem>
+            )}
+            {themen && onVerschieben && (
+              <ThemaWechseln
+                themen={themen}
+                aktuellesThemaId={prompt.thema_id ?? null}
+                onVerschieben={onVerschieben}
+              />
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem

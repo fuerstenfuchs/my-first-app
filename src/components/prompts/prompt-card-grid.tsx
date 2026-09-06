@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ThemaWechseln } from '@/components/prompts/thema-wechseln'
 import { tagColorClass } from '@/lib/tag-colors'
 import { StarRating } from '@/components/prompts/star-rating'
 import { useCardCarousel } from '@/hooks/use-card-carousel'
@@ -56,6 +57,14 @@ interface PromptCardGridProps {
   */
   onAlsTitelbild?: () => void
   onAlsBeleg?: () => void
+  /*
+    THEMA WECHSELN (PROJ-71). Anders als die beiden Eintraege darueber gilt das
+    UEBERALL, nicht nur im geoeffneten Thema: Mark findet einen falsch
+    einsortierten Prompt meist beim Stoebern in „Alle Prompts", und dort will
+    er ihn auch gleich umhaengen koennen.
+  */
+  themen?: { id: string; name: string }[]
+  onVerschieben?: (themaId: string) => void
   onToggleFavorite: () => void
   onSetRating: (rating: number | null) => void
   dragHandleSlot?: React.ReactNode
@@ -72,6 +81,8 @@ export function PromptCardGrid({
   onRemoveFromCollection,
   onAlsTitelbild,
   onAlsBeleg,
+  themen,
+  onVerschieben,
   onToggleFavorite,
   onSetRating,
   dragHandleSlot,
@@ -324,6 +335,13 @@ export function PromptCardGrid({
                     <Images className="mr-2 h-4 w-4" />
                     Als Beleg auf der Themenkarte
                   </DropdownMenuItem>
+                )}
+                {themen && onVerschieben && (
+                  <ThemaWechseln
+                    themen={themen}
+                    aktuellesThemaId={prompt.thema_id ?? null}
+                    onVerschieben={onVerschieben}
+                  />
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

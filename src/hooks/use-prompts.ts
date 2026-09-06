@@ -130,6 +130,34 @@ export function usePrompts() {
     return true
   }
 
+  /**
+   * Einen Prompt in ein anderes Thema schieben (PROJ-71).
+   *
+   * WARUM HIER UND NICHT IN `use-themen`: Dort lag seit PROJ-63 ein
+   * `verschieben`, das nur die Datenbank anfasste. Die Prompt-Liste im Bild
+   * haengt aber an DIESEM Hook — ein Verschieben von dort haette geschrieben,
+   * und auf dem Bildschirm waere der Prompt im alten Thema stehen geblieben.
+   * Es sah nach einer Funktion aus und war keine. Ein Weg, nicht zwei.
+   *
+   * KEIN NEUES EMBEDDING: `updatePrompt` stoesst nach jeder Aenderung
+   * /api/embed an. Das Thema steht aber nicht im eingebetteten Text — ein
+   * Umsortieren wuerde die semantische Suche unveraendert lassen und nur
+   * Rechenzeit kosten.
+   */
+  async function themaSetzen(id: string, themaId: string): Promise<boolean> {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('prompts')
+      .update({ thema_id: themaId, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) {
+      toast.error('Verschieben fehlgeschlagen — bitte erneut versuchen')
+      return false
+    }
+    setPrompts(prev => prev.map(p => p.id === id ? { ...p, thema_id: themaId } : p))
+    return true
+  }
+
   async function deletePrompt(id: string): Promise<boolean> {
     const supabase = createClient()
     const { error } = await supabase.from('prompts').delete().eq('id', id)
@@ -220,5 +248,5 @@ export function usePrompts() {
     return data?.length ?? 0
   }
 
-  return { prompts, loading, createPrompt, updatePrompt, deletePrompt, copyPrompt, importPrompts, toggleFavorite, setRating, prependPrompt, setPromptVariantCount }
+  return { prompts, loading, createPrompt, updatePrompt, themaSetzen, deletePrompt, copyPrompt, importPrompts, toggleFavorite, setRating, prependPrompt, setPromptVariantCount }
 }
