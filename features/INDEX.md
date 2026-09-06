@@ -139,4 +139,6 @@
 
 | PROJ-81 | Gruppenblatt nach Personenzahl (2 = Spalten, 3+ = Reihen) | In Review | [PROJ-81](PROJ-81-blatt-nach-personenzahl.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-82
+| PROJ-82 | Dritter Blattaufbau: Köpfe oben, Körper darunter | In Review (Versuch) | [PROJ-82](PROJ-82-aufbau-kopf-und-koerper.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-83
