@@ -102,11 +102,26 @@ export function gruppenReferenzen(leute: Beteiligt[]): Referenz[] {
  * Prompt-Datenbank heute losgeworden ist. Die Reihenfolge ist der Anker,
  * nicht der Name.
  */
+/**
+ * Wo jemand im Bild steht — „leftmost", „2nd from the left", „rightmost".
+ *
+ * WARUM DAS EXPORTIERT IST: Die Shooting-Kette einer Gruppe (PROJ-84) muss
+ * dieselben Plätze benennen wie dieses Blatt. Stünde dort eine zweite,
+ * ähnliche Formulierung, wäre das für ein Bildmodell nicht dasselbe Wort —
+ * und der Faden zwischen Blatt und Shooting risse genau da, wo er tragen soll.
+ */
+export function platzImBild(i: number, n: number): string {
+  const nr = i + 1
+  if (i === 0) return 'leftmost'
+  if (i === n - 1) return 'rightmost'
+  return `${nr}${nr === 2 ? 'nd' : nr === 3 ? 'rd' : 'th'} from the left`
+}
+
 export function gruppenZuordnung(leute: Beteiligt[]): string[] {
   const raus: string[] = []
   leute.forEach((p, i) => {
     const nr = i + 1
-    const platz = i === 0 ? 'leftmost' : i === leute.length - 1 ? 'rightmost' : `${nr}${nr === 2 ? 'nd' : nr === 3 ? 'rd' : 'th'} from the left`
+    const platz = platzImBild(i, leute.length)
     if (p.charakter.cover_image_url) {
       raus.push(
         `PERSON ${nr} — the face, hair, skin tone and body identity of the ` +

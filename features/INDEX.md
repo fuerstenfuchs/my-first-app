@@ -143,4 +143,6 @@
 
 | PROJ-83 | Entschieden: 2 = Spalten, ab 3 = Köpfe oben (an Blättern geprüft) | Approved | [PROJ-83](PROJ-83-aufbau-entschieden.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-84
+| PROJ-84 | Gruppen-Shooting-Kette (Konstellation statt Einzelpose) | In Review | [PROJ-84](PROJ-84-gruppen-shooting-kette.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-85

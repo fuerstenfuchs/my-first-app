@@ -183,6 +183,22 @@ export function promptFuerAuftrag(
     muss zu `reference_urls` passen; das ist die Verantwortung des Aufrufers.
   */
   zuordnungTexte?: string[],
+  /*
+    EIGENER VORRANGSATZ (PROJ-84).
+
+    Der Standardsatz sagt: „Beschreibt der Text die Person anders, folge dem
+    Referenzbild und ignoriere die widersprechenden Worte." Fuer ein einzelnes
+    Portraet ist das richtig — wer ein Gesicht anhaengt, will genau dieses.
+
+    Bei einem GRUPPENBLATT kehrt derselbe Satz sich gegen den Prompt: Das Bild
+    zeigt die Leute aufrecht nebeneinander, der Text verlangt kauern, sitzen,
+    gestaffelt stehen. Der Standardsatz wiese das Modell an, im Zweifel dem
+    Blatt zu folgen — und die ganze Konstellation waere ausgehebelt.
+
+    Wer hier etwas mitgibt, engt den Vorrang ein, statt ihn zu streichen: Das
+    Bild entscheidet weiterhin, WER jemand ist; der Text, WO und WIE er steht.
+  */
+  vorrangText?: string,
 ): string {
   const mitReferenz = rollen.length > 0
   const teile = [prompt]
@@ -193,7 +209,7 @@ export function promptFuerAuftrag(
     ? [
         'REFERENCE IMAGES — they arrive in this exact order:',
         ...zuordnungTexte.map((z, i) => `Image ${i + 1} = ${z}`),
-        vorrangSatz(rollen),
+        vorrangText ?? vorrangSatz(rollen),
       ].join('\n')
     : referenzZuordnung(rollen)
   if (zuordnung) teile.push(zuordnung)
@@ -225,7 +241,7 @@ export type ReferenzRolle = 'character' | 'outfit' | 'location'
 
 export type Referenz = { url: string; rolle: ReferenzRolle }
 
-const ROLLEN_ANWEISUNG: Record<ReferenzRolle, string> = {
+export const ROLLEN_ANWEISUNG: Record<ReferenzRolle, string> = {
   character: 'CHARACTER — take the face, hair, skin tone and body identity of this person.',
   outfit:    'OUTFIT — take only the garments, their cut, fabric and colour. The person wearing them in this image is a mannequin for the clothes, not the subject.',
   location:  'LOCATION — take only the setting and architecture of this place. Lighting, time of day and weather are defined in the text above, not by this image.',

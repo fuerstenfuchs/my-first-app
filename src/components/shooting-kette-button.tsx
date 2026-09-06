@@ -13,9 +13,13 @@ import { createClient } from '@/lib/supabase'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
   groesseFuerFormat, promptFuerAuftrag,
+  ROLLEN_ANWEISUNG,
   type ModellId, type KlassenId, type Referenz, type ReferenzRolle,
 } from '@/lib/image-generation'
 import { baueShooting, kettenAnsage, KETTE_VORGABE, type KettenOptionen } from '@/lib/shooting-kette'
+import {
+  gruppenGroesse, gruppenAnsage, gruppenBlattZuordnung, GRUPPEN_VORRANG,
+} from '@/lib/gruppen-shooting'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
 import type { Scene } from '@/lib/szene-prompt'
 import type { Outfit } from '@/hooks/use-outfits'
@@ -64,7 +68,22 @@ export function ShootingKetteButton({
    */
   const laeuftRef = useRef(false)
 
-  const kette = useMemo(() => baueShooting(scene, optionen), [scene, optionen])
+  /*
+    IST DER „CHARAKTER" EINE GRUPPE?
+
+    Die Zahl steht am Charakter, nicht im Knopf — eine Gruppe ist ein
+    gewoehnlicher Eintrag mit dem Schlagwort `gruppe`, ihr Titelbild ist das
+    Referenzblatt. Damit braucht dieser Weg keine eigene Auswahl: Wer die
+    Gruppe als Charakter waehlt, bekommt die Gruppenkette.
+
+    null heisst ein Mensch — dann bleibt alles wie zuvor.
+  */
+  const gruppe = gruppenGroesse(scene.character)
+
+  const kette = useMemo(
+    () => baueShooting(scene, { ...optionen, gruppe }),
+    [scene, optionen, gruppe],
+  )
 
   // OHNE ORT KEIN SHOOTING, OHNE MENSCH AUCH NICHT. Ein Shooting ohne Location
   // wäre nur eine Bilderreihe, und ohne Charakter stünde niemand darin.
@@ -123,17 +142,45 @@ export function ShootingKetteButton({
           zwei gegenläufige Anweisungen: „das Outfit wechselt hier" im Text und
           das alte Kleidungsstück als Bild. Das Bild gewinnt.
         */
-        const refs: Referenz[] = referenzen
-          .filter(r => r.rolle !== 'outfit')
-          .concat(
-            schritt.outfit?.cover_image_url
-              ? [{ url: schritt.outfit.cover_image_url, rolle: 'outfit' as ReferenzRolle }]
-              : [],
-          )
+        const refs: Referenz[] = gruppe !== null
+          // BEI EINER GRUPPE TRAEGT DAS BLATT DIE KLEIDUNG. Ein zusaetzliches
+          // Outfitbild waere EIN Kleidungsstueck fuer alle — und das Bild
+          // gewinnt gegen jeden Text, der etwas anderes sagt.
+          ? referenzen.filter(r => r.rolle !== 'outfit')
+          : referenzen
+              .filter(r => r.rolle !== 'outfit')
+              .concat(
+                schritt.outfit?.cover_image_url
+                  ? [{ url: schritt.outfit.cover_image_url, rolle: 'outfit' as ReferenzRolle }]
+                  : [],
+              )
         const rollen = refs.map(r => r.rolle)
 
+        /*
+          DAS GRUPPENBLATT MUSS ALS BLATT BENANNT WERDEN.
+
+          Ohne eigene Zuordnungszeilen schreibt der Promptbau fuer die
+          Charakterrolle woertlich „take the face, hair, skin tone and body
+          identity of THIS PERSON" — Einzahl, fuer ein Bild mit bis zu fuenf
+          Menschen in zwei Reihen. Genau der generische Wortlaut, gegen den
+          PROJ-78 gebaut wurde, nur eine Ebene tiefer.
+
+          Und der uebliche Vorrangsatz muss eingeengt werden: Er gaebe dem Bild
+          den Vorrang, wenn der Text „die Person" anders beschreibt — und der
+          Text beschreibt sie hier absichtlich anders, naemlich kauernd und
+          sitzend statt aufrecht in einer Reihe.
+        */
+        const zuordnungTexte = gruppe !== null
+          ? rollen.map(r => r === 'character'
+              ? gruppenBlattZuordnung(gruppe)
+              : ROLLEN_ANWEISUNG[r])
+          : undefined
+
         const job = await anlegen({
-          prompt: promptFuerAuftrag(schritt.prompt, aspectRatio, rollen),
+          prompt: promptFuerAuftrag(
+            schritt.prompt, aspectRatio, rollen,
+            zuordnungTexte, gruppe !== null ? GRUPPEN_VORRANG : undefined,
+          ),
           model: modell,
           size: zuordnung.size,
           // EIN Format für das ganze Shooting. Was sich ändert, ist der
@@ -195,8 +242,10 @@ export function ShootingKetteButton({
 
       <p className="text-[13px] text-muted-foreground leading-relaxed">
         Vier Plätze am selben Ort — weit, mit Tiefe, an einer Fläche, im
-        Gegenlicht. Gleiche Person, gleiches Licht, gleicher Tag; nur Standort,
-        Bildausschnitt und Haltung ändern sich.
+        Gegenlicht.{' '}
+        {gruppe !== null
+          ? `${gruppenAnsage(gruppe)} Licht und Tag bleiben gleich.`
+          : 'Gleiche Person, gleiches Licht, gleicher Tag; nur Standort, Bildausschnitt und Haltung ändern sich.'}
       </p>
 
       <label className="flex items-start gap-2 text-[13px] cursor-pointer">
@@ -221,6 +270,13 @@ export function ShootingKetteButton({
         onZiel={setAblage}
       />
 
+      {/*
+        KEIN OUTFITWECHSEL BEI EINER GRUPPE. Die Kleidung steht im
+        Referenzblatt, eine Garnitur je Person. Ein zweites Outfit ist EIN
+        Kleidungsstueck — es zoege allen dasselbe an. Wer eine Gruppe umziehen
+        will, braucht ein zweites Blatt.
+      */}
+      {gruppe === null && (
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <Button
@@ -246,6 +302,7 @@ export function ShootingKetteButton({
             : 'Ohne Angabe bleibt es beim Outfit der Szene.'}
         </p>
       </div>
+      )}
 
       {fehlt.length > 0 ? (
         <p className="text-[13px] text-amber-400/90 leading-relaxed">

@@ -19,6 +19,7 @@ import {
   gruppenPrompt, gruppenReferenzen, gruppenZuordnung, warnung, AUFBAUTEN,
   GRUPPE_MAX, GRUPPE_MIN, type Aufbau, type Beteiligt,
 } from '@/lib/gruppen-referenz'
+import { GRUPPE_TAG } from '@/lib/gruppen-shooting'
 
 /**
  * „Gruppenbild" — ein Referenzblatt mit mehreren Personen (PROJ-78).
@@ -91,7 +92,11 @@ export function GruppenReferenzDialog({
           user_id: user?.id,
           name: namen.join(' + '),
           description: `Gruppenbild: ${namen.join(', ')}`,
-          tags: ['gruppe'],
+          tags: [GRUPPE_TAG],
+          // DIE ZAHL WIRD MITGESCHRIEBEN, damit die Shooting-Kette sie spaeter
+          // nicht aus dem Namen zaehlen muss (PROJ-84). Umbenennen darf eine
+          // Gruppe nicht die Personenzahl kosten.
+          metadata: { gruppe: { anzahl: leute.length } },
         })
         .select('id, name')
         .single()
