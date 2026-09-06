@@ -133,4 +133,6 @@
 
 | PROJ-78 | Gruppen-Referenzbild (Zuordnung im Bild statt im Text) | In Review (Versuch) | [PROJ-78](PROJ-78-gruppen-referenzbild.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-79
+| PROJ-79 | Kopfreihe im Gruppenblatt, Gruppe als eigener Charakter | In Review | [PROJ-79](PROJ-79-kopfreihe-und-gruppe.md) | 2026-09-06 |
+
+## Next Available ID: PROJ-80
