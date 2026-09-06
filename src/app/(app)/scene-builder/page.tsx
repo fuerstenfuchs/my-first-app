@@ -26,6 +26,7 @@ import {
 import { useScenePresets } from '@/hooks/use-scene-presets'
 import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialog'
 import { QueueButton } from '@/components/scene-builder/queue-button'
+import { ShootingKetteButton } from '@/components/shooting-kette-button'
 import type { Referenz, ReferenzRolle } from '@/lib/image-generation'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import { nachNutzen, standardReferenz } from '@/lib/referenz-auswahl'
@@ -1647,6 +1648,22 @@ export default function SceneBuilderPage() {
                 scene.outfit?.name ?? scene.style?.name ?? null
               }
             />
+
+            {/*
+              DAS SHOOTING (PROJ-75) — erscheint nur, wenn ein Ort UND ein
+              Charakter in der Szene stehen. Sonst waere es ein Knopf, der
+              nichts kann: eine Bilderreihe ohne Ort ist kein Shooting, und
+              ohne Charakter stuende niemand darin.
+            */}
+            {scene.location && scene.character && (
+              <ShootingKetteButton
+                scene={scene}
+                referenzen={referenzen}
+                aspectRatio={scene.aspect_ratio}
+                sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}
+                szenenName={scene.location.name}
+              />
+            )}
 
             {/* Szenentyp + Bedingungen als Marken */}
             <div>

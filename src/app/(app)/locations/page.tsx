@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, Crown, Upload, GripVertical, ZoomIn } from 'lucide-react'
+import { Plus, Search, X, Pencil, Trash2, ExternalLink, Sparkles, Check, ChevronLeft, Crown, Upload, GripVertical, ZoomIn, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
@@ -29,6 +29,7 @@ import {
 import { LocationForm } from '@/components/locations/location-form'
 import { LocationVariantForm } from '@/components/locations/location-variant-form'
 import { LocationSheetDialog } from '@/components/locations/location-sheet-dialog'
+import { ShootingHierDialog } from '@/components/locations/shooting-hier-dialog'
 import { LocationImportWizard } from '@/components/locations/location-import-wizard'
 // Eine Variantenkarte für alle Bibliotheken. Bis PROJ-53 lag sie unter
 // `components/fashion-assets/`; mit der Zusammenlegung von Fashion und Outfits
@@ -211,6 +212,7 @@ export default function LocationsPage() {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
 
   const [sheetDialogOpen, setSheetDialogOpen] = useState(false)
+  const [shootingOffen, setShootingOffen] = useState(false)
   const [aiAnalyzing, setAiAnalyzing] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiSuggestion, setAiSuggestion] = useState<{
@@ -514,6 +516,20 @@ export default function LocationsPage() {
                   <Sparkles className="h-3 w-3" />
                   Sheet
                 </Button>
+                {/*
+                  DER ZWEITE EINSTIEG IN DIE SHOOTING-KETTE (PROJ-75). Hier ist
+                  der Ort schon da — es fehlt nur, wer fotografiert wird. Nur
+                  mit Titelbild: Ohne Foto des Ortes waere die Location als
+                  Referenz leer, und das Shooting faende nirgends statt.
+                */}
+                {location.cover_image_url && (
+                  <Button size="sm" variant="outline"
+                    className="h-7 gap-1 text-[11px] shrink-0"
+                    onClick={() => setShootingOffen(true)}>
+                    <Camera className="h-3 w-3" />
+                    Shooting
+                  </Button>
+                )}
                 <Button size="icon" variant="ghost" className="lt-feld h-9 w-9 shrink-0 border-0" onClick={() => { setEditingLocation(location); setFormOpen(true) }}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -852,6 +868,13 @@ export default function LocationsPage() {
         <LocationSheetDialog
           open={sheetDialogOpen}
           onClose={() => setSheetDialogOpen(false)}
+          location={location}
+        />
+      )}
+      {location && shootingOffen && (
+        <ShootingHierDialog
+          open
+          onClose={() => setShootingOffen(false)}
           location={location}
         />
       )}
