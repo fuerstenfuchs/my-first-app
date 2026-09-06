@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import {
@@ -75,7 +75,9 @@ function pling() {
 }
 
 export function useFertigWache() {
-  const supabase = createClient()
+  // Stabil, sonst haengt `pruefen` bei jedem Rendern neu und der Effekt
+  // baut sich staendig ab und auf — mit einem sofortigen `pruefen()` je Mal.
+  const supabase = useMemo(() => createClient(), [])
   /** Was wir beim letzten Blick gesehen haben. Leer = Grundlinie noch offen. */
   const stand = useRef<Map<string, JobStand>>(new Map())
   /** Wie viele fertige Bilder Mark noch nicht angesehen hat. */

@@ -116,3 +116,24 @@ export function ablageMeldung(auftraege: AblageAuftrag[]): string | null {
     ? `Ein Bild wurde bei ${wohin} abgelegt.`
     : `${bilder} Bilder wurden bei ${wohin} abgelegt.`
 }
+
+/**
+ * Welche Aufträge nach einem Durchgang wieder freigegeben werden dürfen.
+ *
+ * NUR DIE FEHLGESCHLAGENEN — und das ist keine Kleinigkeit, sondern der
+ * Fehler, der am 06.09.2026 ein Gruppenbild zweimal im Ordner landen ließ.
+ *
+ * Der Wächter legt ab und schreibt ERST DANACH die Marke `abgelegt`. Ein
+ * zweiter Durchgang, der seine Zeilen VOR dieser Marke geholt hat, sieht den
+ * Auftrag weiter als offen. Die Sperre im Arbeitsspeicher ist in genau diesem
+ * Fenster der einzige Schutz — wer sie nach dem Erfolg aufhebt, nimmt sie
+ * genau dann weg, wenn sie gebraucht wird.
+ *
+ * Was abgelegt IST, bleibt für die Sitzung gesperrt; die Marke in der
+ * Datenbank übernimmt danach. Was NICHT durchkam, soll es erneut versuchen.
+ */
+export function freizugeben(
+  ergebnisse: { jobId: string; ok: boolean }[],
+): string[] {
+  return ergebnisse.filter(e => !e.ok).map(e => e.jobId)
+}

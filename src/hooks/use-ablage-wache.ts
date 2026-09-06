@@ -1,11 +1,11 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
 import {
-  zuAblegen, abgelegtMarke, ablageMeldung, type AblageJob,
+  zuAblegen, abgelegtMarke, ablageMeldung, freizugeben, type AblageJob,
 } from '@/lib/ablage-auftrag'
 
 const BUCKET = 'generated-images'
@@ -31,7 +31,17 @@ const BUCKET = 'generated-images'
  */
 export function useAblageWache() {
   const { uebernehmen } = useBildUebernehmen()
-  const supabase = createClient()
+
+  /*
+    EIN CLIENT FUERS GANZE LEBEN DES BAUTEILS.
+
+    `createClient()` liefert bei jedem Aufruf ein neues Objekt. Stand es direkt
+    im Rumpf, war es bei jedem Rendern neu — damit auch `ablegen`, damit auch
+    `pruefen` im Meldewaechter, und dessen Effekt baute sich bei jedem Rendern
+    ab und wieder auf. Der Effekt ruft beim Aufbau sofort `pruefen()`. Aus
+    einem Takt von fuenf Sekunden wurde so ein Takt von „jedes Rendern".
+  */
+  const supabase = useMemo(() => createClient(), [])
 
   /**
    * WAS GERADE LÄUFT, DARF NICHT NOCH EINMAL ANFANGEN.
@@ -48,6 +58,8 @@ export function useAblageWache() {
     if (auftraege.length === 0) return
 
     for (const a of auftraege) laufend.current.add(a.jobId)
+    /** Was NICHT durchkam — nur das darf beim naechsten Takt erneut ran. */
+    const offen: typeof auftraege = []
     const erledigt: typeof auftraege = []
 
     try {
@@ -73,7 +85,7 @@ export function useAblageWache() {
           und niemand holt sie nach. Lieber ein zweiter Versuch beim nächsten
           Takt als vier Bilder, die nirgends ankommen.
         */
-        if (!alleOk) continue
+        if (!alleOk) { offen.push(a); continue }
 
         /*
           TITELBILD SETZEN, WENN GEWUENSCHT (PROJ-79). Eine frisch angelegte
@@ -103,12 +115,34 @@ export function useAblageWache() {
         // nächsten Takt käme derselbe Auftrag noch einmal — deshalb bleibt er
         // in `laufend`, bis die Seite neu geladen wird. Doppelte Bilder wären
         // schlimmer als eine Ablage, die einmal nicht nachgeholt wird.
-        if (!error) erledigt.push(a)
+        if (error) offen.push(a)
+        else erledigt.push(a)
       }
     } finally {
-      // Nur die erfolgreichen freigeben — die anderen sollen es beim nächsten
-      // Takt NICHT sofort wieder versuchen.
-      for (const a of erledigt) laufend.current.delete(a.jobId)
+      /*
+        NUR DIE FEHLGESCHLAGENEN FREIGEBEN — hier stand es genau andersherum,
+        und das war der Fehler.
+
+        Mark am 06.09.2026: „Das Gruppenbild wurde aber irgendwie zweimal
+        abgelegt." Nachgemessen: EIN Auftrag mit EINEM Ergebnis, zwei Bilder im
+        Ordner, drei Sekunden auseinander.
+
+        So kam es dazu: Ein Takt holt die Auftragszeilen, legt ab, und schreibt
+        erst danach die Marke `abgelegt`. Ein zweiter Takt, der seine Zeilen
+        VOR dieser Marke geholt hat, sieht den Auftrag weiter als offen. Die
+        Sperre in `laufend` haette ihn abgefangen — aber sie wurde nach dem
+        Erfolg wieder aufgehoben. Damit war der einzige Schutz gegen ein
+        zweites Ablegen genau in dem Moment weg, in dem er gebraucht wurde.
+
+        Richtig ist das Gegenteil: Was abgelegt IST, bleibt fuer diese Sitzung
+        gesperrt — die Marke in der Datenbank uebernimmt danach. Was NICHT
+        durchkam, wird freigegeben und beim naechsten Takt erneut versucht.
+      */
+      const frei = freizugeben([
+        ...erledigt.map(a => ({ jobId: a.jobId, ok: true })),
+        ...offen.map(a => ({ jobId: a.jobId, ok: false })),
+      ])
+      for (const id of frei) laufend.current.delete(id)
     }
 
     const text = ablageMeldung(erledigt)

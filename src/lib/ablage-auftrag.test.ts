@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { zuAblegen, abgelegtMarke, ablageMeldung, type AblageJob } from './ablage-auftrag'
+import { zuAblegen, abgelegtMarke, ablageMeldung, freizugeben, type AblageJob } from './ablage-auftrag'
 
 const ZIEL = {
   baustein: 'charaktere', parentId: 'c1', parentName: 'Günther Siegle',
@@ -100,5 +100,25 @@ describe('ablageMeldung', () => {
 
   it('schweigt, wenn nichts abzulegen war', () => {
     expect(ablageMeldung([])).toBeNull()
+  })
+})
+
+describe('freizugeben', () => {
+  it('gibt einen ERFOLGREICHEN Auftrag NICHT wieder frei', () => {
+    // Genau das war der Fehler: Nach dem Erfolg fiel die Sperre, und ein
+    // Durchgang, der seine Zeilen vor der Marke geholt hatte, legte ein
+    // zweites Mal ab. Drei Sekunden spaeter, dasselbe Bild.
+    expect(freizugeben([{ jobId: 'j1', ok: true }])).toEqual([])
+  })
+
+  it('gibt einen fehlgeschlagenen frei, damit er es erneut versucht', () => {
+    expect(freizugeben([{ jobId: 'j1', ok: false }])).toEqual(['j1'])
+  })
+
+  it('trennt beide sauber', () => {
+    expect(freizugeben([
+      { jobId: 'a', ok: true }, { jobId: 'b', ok: false },
+      { jobId: 'c', ok: true }, { jobId: 'd', ok: false },
+    ])).toEqual(['b', 'd'])
   })
 })

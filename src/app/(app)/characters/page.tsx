@@ -97,6 +97,63 @@ export default function CharactersPage() {
   // keine Kategoriespalte, deshalb hier nur die Suche und keine Chips.
   const filtered = characters.filter(c => passtZurSuche(c, search))
 
+  /*
+    GRUPPEN STEHEN FUER SICH (PROJ-80).
+
+    Mark: „Sollte man nicht doch einen Ordner machen, nur mit Gruppenbildern,
+    bei den Charakteren."
+
+    Getrennt ANGEZEIGT, nicht getrennt GESPEICHERT. Eine Gruppe bleibt ein
+    gewoehnlicher Charakter und taucht deshalb weiter ueberall auf, wo man
+    einen waehlen kann — Scene Builder, Shooting-Kette, Referenzrolle. Was
+    Mark stoert, ist die Vermischung in DIESER Liste, und genau die wird hier
+    aufgehoben: eigener Abschnitt, eigene Ueberschrift, unten.
+
+    Ein eigener Datenbereich haette dieselbe Ansicht gebracht und dafuer an
+    jeder Auswahlstelle Nacharbeit gekostet.
+  */
+  const istGruppe = (c: typeof characters[number]) => c.tags?.includes('gruppe')
+  /*
+    EINE ZEILE, ZWEI LISTEN. Der Eintrag sieht in beiden Abschnitten gleich
+    aus und soll es bleiben — zwei Kopien laufen beim naechsten Umbau
+    auseinander, und dann kann man in dem einen Abschnitt etwas, im anderen
+    nicht.
+  */
+  const zeile = (char: typeof characters[number]) => (
+                  <li key={char.id}>
+                    <button
+                      /* Orange heisst in dieser App „ausgewaehlt" — ueberall.
+                         Hier stand Violett, die alte Kennfarbe dieser Seite. */
+                      className={`group flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors ${
+                        selectedId === char.id
+                          ? 'bg-[rgba(249,115,22,0.16)] text-[#ffb066]'
+                          : 'hover:bg-[rgba(160,195,225,0.09)]'
+                      }`}
+                      onClick={() => { setSelectedId(char.id); setSelectedVariantId(null) }}
+                    >
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)] bg-black/25">
+                        {char.cover_image_url ? (
+                          <Vorschaubild src={char.cover_image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-muted-foreground/50" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-[15px] font-semibold">{char.name}</p>
+                        {char.description && (
+                          <p className="truncate text-[13px] text-muted-foreground">{char.description}</p>
+                        )}
+                      </div>
+                      <ChevronRight className={`h-4 w-4 shrink-0 transition-opacity ${selectedId === char.id ? 'text-[#ffb066] opacity-100' : 'opacity-0 group-hover:opacity-40'}`} />
+                    </button>
+                  </li>
+  )
+
+  const einzelne = filtered.filter(c => !istGruppe(c))
+  const gruppen  = filtered.filter(istGruppe)
+
   async function handleCharSave(input: CharacterInput, slots: InitialSlot[]): Promise<boolean | Character | null> {
     if (editingCharacter) return updateCharacter(editingCharacter.id, input)
     const char = await createCharacterWithSlots(input, slots)
@@ -229,38 +286,19 @@ export default function CharactersPage() {
               </div>
             ) : (
               <ul className="p-2 space-y-1">
-                {filtered.map(char => (
-                  <li key={char.id}>
-                    <button
-                      /* Orange heisst in dieser App „ausgewaehlt" — ueberall.
-                         Hier stand Violett, die alte Kennfarbe dieser Seite. */
-                      className={`group flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors ${
-                        selectedId === char.id
-                          ? 'bg-[rgba(249,115,22,0.16)] text-[#ffb066]'
-                          : 'hover:bg-[rgba(160,195,225,0.09)]'
-                      }`}
-                      onClick={() => { setSelectedId(char.id); setSelectedVariantId(null) }}
-                    >
-                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[10px] border border-[rgba(150,185,220,0.22)] bg-black/25">
-                        {char.cover_image_url ? (
-                          <Vorschaubild src={char.cover_image_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <User className="h-5 w-5 text-muted-foreground/50" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-[15px] font-semibold">{char.name}</p>
-                        {char.description && (
-                          <p className="truncate text-[13px] text-muted-foreground">{char.description}</p>
-                        )}
-                      </div>
-                      <ChevronRight className={`h-4 w-4 shrink-0 transition-opacity ${selectedId === char.id ? 'text-[#ffb066] opacity-100' : 'opacity-0 group-hover:opacity-40'}`} />
-                    </button>
-                  </li>
-                ))}
+                {einzelne.map(zeile)}
               </ul>
+            )}
+
+            {gruppen.length > 0 && (
+              <div className="border-t border-[rgba(150,185,220,0.14)] pt-2">
+                <p className="px-4 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
+                  Gruppen
+                </p>
+                <ul className="p-2 pt-0 space-y-1">
+                  {gruppen.map(zeile)}
+                </ul>
+              </div>
             )}
           </div>
         </div>
