@@ -18,7 +18,7 @@ import { useOutfits } from '@/hooks/use-outfits'
 import { useLocations } from '@/hooks/use-locations'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
-import type { Bildplatz } from '@/lib/referenzkette'
+import { istEigenerSpeicher, type Bildplatz } from '@/lib/referenzkette'
 import {
   MODELLE, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
   ROLLEN_LABEL, ROLLEN_ANWEISUNG, zuordnungsBlock,
@@ -152,7 +152,7 @@ function ReferenzKarte({
             </p>
           )}
           {hinweis && (
-            <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground/70">
+            <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
               {hinweis}
             </p>
           )}
@@ -214,6 +214,16 @@ export function PromptToImageDialog({
   >(null)
 
   /*
+    WÄHREND DES VORBELEGENS SIND DIE PLÄTZE GESPERRT.
+
+    Der Effekt unten schreibt das GANZE Feld neu, er verschmilzt nicht. Wer in
+    dem Fenster dazwischen von Hand wählt, verliert seine Wahl wieder — bei
+    schneller Verbindung ein Wimpernschlag, bei langsamer nicht. Ein leerer,
+    aber anklickbarer Platz lädt genau dazu ein.
+  */
+  const [belegtGerade, setBelegtGerade] = useState(false)
+
+  /*
     VORBELEGEN AUS DEN VARIANTEN.
 
     Beide Bilder liegen in aller Regel schon beim Charakter — das Kopf-Sheet in
@@ -225,12 +235,25 @@ export function PromptToImageDialog({
     vorbelegt und wählt es wie bisher von Hand. Ein leerer Platz ist deshalb
     kein Fehler, sondern der Normalfall bei ungewöhnlicher Ablage.
   */
+  /*
+    DIE ABHÄNGIGKEIT IST DER SCHLÜSSEL, NICHT DAS FELD.
+
+    `bildplaetze` ist bei jedem Aufruf ein neues Feld. Hinge der Effekt an
+    seiner Identität, liefe er bei jedem Rendern des Aufrufers erneut und
+    überschriebe eine Auswahl von Hand — ein `useMemo` dort ist heute die
+    einzige Absicherung, und der nächste Aufrufer weiß nichts davon. Ein
+    Schlüssel aus den Beschriftungen ändert sich nur, wenn sich die Plätze
+    wirklich ändern; dann darf und soll neu vorbelegt werden.
+  */
+  const plaetzeSchluessel = bildplaetze?.map(p => p.label).join('|') ?? ''
+
   useEffect(() => {
     if (!isOpen || !bildplaetze?.length) return
     const person = vorauswahlCharakter
     if (!person) { setPlatzWahl(bildplaetze.map(() => null)); return }
 
     let abgebrochen = false
+    setBelegtGerade(true)
     void (async () => {
       let bilder: RefImage[] = []
       try {
@@ -242,18 +265,42 @@ export function PromptToImageDialog({
       if (abgebrochen) return
 
       setPlatzWahl(bildplaetze.map(p => {
-        const treffer = p.variante
-          ? bilder.find(b => b.label === p.variante)
+        /*
+          VARIANTENNAMEN WERDEN ÜBERALL SONST GETRIMMT UND KLEINGESCHRIEBEN
+          VERGLICHEN (`use-referenzkette.ts`, `outfit-kette.ts`). Ein genauer
+          Vergleich fände „Kopf " oder „kopf" nicht — und der Platz bliebe leer,
+          also genau der gemeldete Fehler, nur seltener.
+        */
+        const gesucht = p.variante?.trim().toLowerCase()
+        const treffer = gesucht
+          ? bilder.find(b => String(b.label ?? '').trim().toLowerCase() === gesucht)
           : undefined
-        if (treffer) return { asset: person, bild: treffer }
-        if (p.titelbildWennLeer && person.cover_image_url) {
+
+        /*
+          NUR BILDER AUS DEM EIGENEN SPEICHER VORBELEGEN.
+
+          Der Arbeiter lehnt fremde Adressen als Referenz ab, und die Kette
+          bricht dafür eigens mit einer Meldung ab. Was hier von selbst in den
+          Platz rutscht, hat niemand ausgewählt — scheitert der Auftrag später
+          daran, sucht Mark den Fehler beim Prompt. Ein leerer Platz ist die
+          ehrlichere Antwort.
+        */
+        if (treffer && istEigenerSpeicher(treffer.url)) {
+          return { asset: person, bild: treffer }
+        }
+        if (p.titelbildWennLeer
+            && person.cover_image_url
+            && istEigenerSpeicher(person.cover_image_url)) {
           return { asset: person, bild: null }
         }
         return null
       }))
+      setBelegtGerade(false)
     })()
-    return () => { abgebrochen = true }
-  }, [isOpen, bildplaetze, vorauswahlCharakter])
+    return () => { abgebrochen = true; setBelegtGerade(false) }
+    // `bildplaetze` steckt bewusst nur über `plaetzeSchluessel` drin — siehe oben.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, plaetzeSchluessel, vorauswahlCharakter])
 
   function pickerFertig(asset: PickbaresAsset, gewaehltesBild: RefImage | null) {
     if (!pickerOffen) return
@@ -284,10 +331,23 @@ export function PromptToImageDialog({
   const referenzen: { url: string; rolle: ReferenzRolle; zuordnung: string; label: string }[] = []
 
   if (bildplaetze?.length) {
+    /*
+      FEHLT DAS ERSTE BILD, DARF SICH KEIN SPÄTERES DARAUF BERUFEN.
+
+      Die übliche Zeile zum zweiten Bild lautet „Completely ignore any face
+      visible in it; the head reference ABOVE alone decides the face". Bleibt
+      der erste Platz leer, bekäme das Modell ein einziges Bild und die
+      Anweisung, dessen Gesicht zu ignorieren — und hätte damit gar keine
+      Gesichtsquelle mehr. Am fertigen Blatt sieht man das nicht als Fehler;
+      es zeigt nur einen Fremden.
+    */
+    const ersterDa = !!(platzWahl[0]?.bild?.url ?? platzWahl[0]?.asset.cover_image_url)
     bildplaetze.forEach((platz, i) => {
       const wahl = platzWahl[i]
       const url = wahl?.bild?.url ?? wahl?.asset.cover_image_url
-      if (url) referenzen.push({ url, rolle: 'character', zuordnung: platz.zuordnung, label: platz.label })
+      if (!url) return
+      const zeile = i > 0 && !ersterDa ? platz.zuordnungAllein : platz.zuordnung
+      referenzen.push({ url, rolle: 'character', zuordnung: zeile, label: platz.label })
     })
   } else {
     const charUrl = charakterBild?.url ?? charakter?.cover_image_url
@@ -324,6 +384,27 @@ export function PromptToImageDialog({
   const kartenZahl = (bildplaetze?.length ?? (angeboteneRollen.includes('character') ? 1 : 0))
     + (angeboteneRollen.includes('outfit') ? 1 : 0)
     + (angeboteneRollen.includes('location') ? 1 : 0)
+
+  /** Welche Plätze leer bleiben — für den Hinweis über dem Knopf. */
+  const fehlendePlaetze = (bildplaetze ?? [])
+    .filter((_, i) => !(platzWahl[i]?.bild?.url ?? platzWahl[i]?.asset.cover_image_url))
+    .map(p => p.label)
+
+  /*
+    ZWEIMAL DASSELBE BILD IST EIN WIDERSPRUCH, KEIN VERSEHEN.
+
+    Ist das Titelbild zugleich das Kopfblatt — durch den Titelbild-Knopf gut
+    möglich —, geht dieselbe Adresse zweimal mit: einmal mit „take the face",
+    einmal mit „ignore any face". Das Modell bekommt für ein Bild zwei
+    gegenläufige Anweisungen und folgt einer davon; welcher, sieht man erst am
+    Ergebnis.
+  */
+  const doppeltesBild = bildplaetze?.length
+    ? (() => {
+        const adressen = referenzen.filter(r => r.rolle === 'character').map(r => r.url)
+        return adressen.length > 1 && new Set(adressen).size < adressen.length
+      })()
+    : false
 
   // Beim Öffnen die Vorauswahl übernehmen — der Dialog bleibt gemountet.
   useEffect(() => {
@@ -439,7 +520,8 @@ export function PromptToImageDialog({
                 ? bildplaetze.map((platz, i) => (
                     <ReferenzKarte
                       key={platz.label}
-                      rolle="character" assets={characters} laedt={charLaedt}
+                      rolle="character" assets={characters}
+                      laedt={charLaedt || belegtGerade}
                       titel={platz.label} hinweis={platz.hinweis}
                       gewaehlt={platzWahl[i]?.asset ?? null}
                       bild={platzWahl[i]?.bild ?? null}
@@ -473,6 +555,33 @@ export function PromptToImageDialog({
               )}
             </div>
           </div>
+
+          {/*
+            EIN LEERER PLATZ IST STILL — und still ist hier zu wenig.
+
+            Das Blatt entsteht trotzdem und sieht nicht kaputt aus; es zeigt nur
+            ein anderes Gesicht oder einen erfundenen Körperbau. Wer den Knopf
+            drückt, um zwei Bilder mitzuschicken, hat keinen Anlass, drei Zeilen
+            tiefer nachzuzählen.
+          */}
+          {(fehlendePlaetze.length > 0 || doppeltesBild) && (
+            <div className="space-y-1 rounded-lg border border-dashed border-amber-700/50 bg-amber-950/10 px-2.5 py-2">
+              {fehlendePlaetze.length > 0 && (
+                <p className="text-[13px] leading-snug text-amber-300/90">
+                  {fehlendePlaetze.length === 1
+                    ? `Ohne „${fehlendePlaetze[0]}" `
+                    : `Ohne ${fehlendePlaetze.map(f => `„${f}"`).join(' und ')} `}
+                  entsteht das Blatt trotzdem — das Modell erfindet dann, was
+                  dieses Bild beigetragen hätte.
+                </p>
+              )}
+              {doppeltesBild && (
+                <p className="text-[13px] leading-snug text-amber-300/90">
+                  In zwei Plätzen liegt dasselbe Bild. Wähle in einem ein anderes.
+                </p>
+              )}
+            </div>
+          )}
 
           {rollen.length >= 1 && (
             <div className="rounded border border-dashed border-amber-700/40 bg-amber-950/10 px-2 py-1.5">

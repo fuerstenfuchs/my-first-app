@@ -123,8 +123,10 @@ Vorbelegungs-Effekt im Dialog hängt daran — ohne `useMemo` hieße „ändert 
 hier: bei jedem Rendern. Wer ein Bild von Hand ausgetauscht hätte, sähe es beim
 nächsten Klick irgendwo im Dialog wieder auf die Vorbelegung zurückspringen.
 
-Der Aufrufer hält die Liste deshalb mit `useMemo` stabil, geschlüsselt auf den
-gewählten Blatt-Typ.
+Der Aufrufer hält die Liste mit `useMemo` stabil — und seit der Prüfung hängt
+der Effekt **zusätzlich** nicht mehr am Feld selbst, sondern an einem Schlüssel
+aus den Beschriftungen. Damit kann auch ein künftiger Aufrufer, der das
+`useMemo` vergisst, nichts kaputtmachen.
 
 ---
 
@@ -139,27 +141,109 @@ drei Bilder ein.
 
 ---
 
+## Was die unabhängige Prüfung gefunden hat
+
+Critic hat den fertigen Stand gegengelesen. Jeder Befund wurde an der Datei
+nachgemessen, bevor etwas geändert wurde — **alle stimmten.** Kein Blocker,
+aber fünf Dinge, die ohne die Prüfung stehen geblieben wären, und zwei
+Kleinigkeiten:
+
+### Der Verweis zeigte ins Leere, wenn genau das Bild fehlte
+
+Die übliche Zeile zum zweiten Bild lautet:
+
+> Completely ignore any face visible in it; **the head reference above** alone
+> decides the face.
+
+Bleibt der erste Platz leer, bekommt das Modell **ein** Bild und die Anweisung,
+dessen Gesicht vollständig zu ignorieren — und hat damit gar keine
+Gesichtsquelle mehr. Am fertigen Blatt ist das nicht als Fehler zu erkennen: Es
+ist in Ordnung, es zeigt nur einen Fremden.
+
+Mein eigener Test hat diesen Zustand sogar als gewollt festgeschrieben und nur
+geprüft, dass das Etikett zum verbliebenen Bild passt. Das war die richtige
+Prüfung an der falschen Frage.
+
+Jeder Platz hat jetzt eine **zweite Fassung seiner Zeile** (`zuordnungAllein`)
+ohne jeden Verweis auf ein anderes Bild. Fehlt das Kopfblatt, steht dort
+stattdessen: „ORIGINAL PHOTO OF THE PERSON — take the face … and the body
+proportions … **It is the only reference.**"
+
+Dazu ein sichtbarer Hinweis über dem Knopf, weil ein leerer Platz sonst still
+ist und das Blatt trotzdem entsteht.
+
+### Die Vorbelegung prüfte nicht, ob das Bild im eigenen Speicher liegt
+
+Der Arbeiter lehnt fremde Adressen als Referenz ab, und die Kette bricht dafür
+eigens mit einer Meldung ab (`use-referenzkette.ts`). Was hier von selbst in
+den Platz rutschte, hatte niemand ausgewählt — der Auftrag wäre erst beim
+Arbeiter gescheitert, und der Fehler wäre beim Prompt gesucht worden. Relevant,
+solange PROJ-49 („Erfasste Bilder in den eigenen Speicher kopieren") offen ist.
+
+### Variantennamen wurden genau verglichen, überall sonst getrimmt
+
+`use-referenzkette.ts` und `outfit-kette.ts` vergleichen
+`trim().toLowerCase()`. Eine Variante „Kopf " oder „kopf" wäre hier nicht
+gefunden worden — und der Platz bliebe leer, also **der gemeldete Fehler, nur
+seltener.**
+
+### Die Abhängigkeit hing am Aufrufer statt am Bauteil
+
+Dass der Vorbelegungs-Effekt nicht bei jedem Rendern läuft, hing allein an
+einem `useMemo` beim Aufrufer — am Bauteil selbst stand davon nichts. Der
+nächste Aufrufer schriebe die Liste inline, und Mark verlöre seine Handauswahl
+bei jedem Elternrender. Der Effekt hängt jetzt an einem Schlüssel aus den
+Beschriftungen; damit kann der Aufrufer nichts falsch machen.
+
+### Und der wichtigste Befund war eine Testlücke
+
+Alle sieben ersten Tests führten dieselbe Bewegung aus: rendern, Vorbelegung
+abwarten, abschicken. **Kein einziger öffnete den Wähler oder drückte das
+Kreuz.** Damit wären mindestens drei Rückschritte grün durchgegangen — darunter
+„jede Auswahl landet im ersten Platz", was das Kopfblatt durch das Körperbild
+ersetzt hätte.
+
+Das ist keine Randnotiz: Marks Satz war „das kann man alles nicht **auswählen**".
+Die Vorbelegung ist die Bequemlichkeit, das Auswählen ist die Behebung — und
+geprüft war nur die Bequemlichkeit.
+
+### Zwei kleinere Dinge, gleich mitgenommen
+
+- **Zweimal dasselbe Bild** in beiden Plätzen (durch den Titelbild-Knopf gut
+  möglich) hieße für dieselbe Adresse „take the face" und „ignore any face".
+  Der Dialog sagt es jetzt.
+- **Während des Vorbelegens** waren die Plätze anklickbar, obwohl der Effekt
+  gleich darauf das ganze Feld überschreibt. Sie sind jetzt so lange gesperrt.
+- **Der Hinweistext** stand auf 10px. In `DESIGN.md` steht „nichts unter 13px —
+  kleine Schrift ist für ihn ein Ausfall, kein Schönheitsfehler", und
+  ausgerechnet dieser Satz sagt, welches Bild wohin gehört. Jetzt 13px.
+
+---
+
 ## Geändert
 
 | Datei | Was |
 |---|---|
-| `src/lib/referenzkette.ts` | `Bildplatz` und `bildplaetze()` — aus `quellenFuer` und `ANSAGE_TEXT` abgeleitet |
+| `src/lib/referenzkette.ts` | `Bildplatz` und `bildplaetze()` aus `quellenFuer` und `ANSAGE_TEXT`; zweite Zeilenfassung fuer den Alleingang |
 | `src/lib/referenzkette.test.ts` | 7 neue Tests, darunter der Gleichlauf mit `referenzAnsage` |
 | `src/components/prompts/prompt-to-image-dialog.tsx` | Eigenschaft `bildplaetze`, N Karten, Vorbelegung, eigene Zuordnungszeilen |
-| `src/components/prompts/prompt-to-image-dialog.test.tsx` | **neu** — 7 Tests |
+| `src/components/prompts/prompt-to-image-dialog.test.tsx` | **neu** — 16 Tests, darunter die Auswahl von Hand |
 | `src/lib/image-generation.ts` | `zuordnungsBlock()` herausgezogen; Vorschau und Auftrag lesen dasselbe |
 | `src/components/characters/character-sheet-dialog.tsx` | gibt die Plätze für Körper-Sheet und Referenzsheet mit, stabil per `useMemo` |
 
-Tests gesamt: 738 → 753. Build sauber.
+Tests gesamt: 738 → 762. Build sauber.
 
 ---
 
 ## Nachgemessen
 
-- **Vier Rückschritte eingebaut** und geprüft, ob die Tests sie bemerken: nur
+- **Zehn Rückschritte eingebaut** und geprüft, ob die Tests sie bemerken: nur
   der erste Platz geht mit; keine eigenen Zuordnungszeilen; die Vorbelegung
-  nimmt das erste beste Bild statt des Bildes aus der richtigen Variante; kein
-  Rückfall aufs Titelbild. **Alle vier wurden bemerkt.**
+  nimmt das erste beste Bild; kein Rückfall aufs Titelbild; jede Auswahl landet
+  im ersten Platz; das Kreuz räumt beide Plätze; die Platzverzweigung im Wähler
+  entfernt; der Verweis ins Leere bleibt stehen; keine Speicherprüfung; der
+  Variantenvergleich wieder genau. **Alle zehn wurden bemerkt** — sechs davon
+  erst, nachdem die Prüfung die Testlücke bei der Handauswahl aufgezeigt hatte.
 - **Der Fall „ein Platz bleibt leer"** ist eigens geprüft: Der Auftrag geht
   trotzdem los, und die verbliebene Zeile trägt die Bedeutung des tatsächlich
   gesendeten Bildes — nicht die des fehlenden.

@@ -6,10 +6,14 @@
  * Woran man es sonst merkt: erst am fertigen, bezahlten Bild. Ein Körper-Sheet
  * ohne das Kopfblatt sieht nicht kaputt aus, es zeigt nur ein anderes Gesicht.
  *
- * Der Rest des Dialogs steht hier nicht zur Prüfung; Supabase kommt nicht vor.
+ * ZWEI WEGE, NICHT EINER. Die Vorbelegung ist die Bequemlichkeit, die AUSWAHL
+ * VON HAND ist die eigentliche Behebung — Marks Satz war „das kann man alles
+ * nicht auswählen". Beide stehen hier, und der zweite ist der wichtigere.
+ *
+ * Der Rest des Dialogs steht nicht zur Prüfung; Supabase kommt nicht vor.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, cleanup, within } from '@testing-library/react'
 import { PromptToImageDialog } from './prompt-to-image-dialog'
 import { bildplaetze } from '@/lib/referenzkette'
 
@@ -21,40 +25,65 @@ vi.mock('@/hooks/use-outfits', () => ({ useOutfits: () => ({ outfits: [], loadin
 vi.mock('@/hooks/use-locations', () => ({ useLocations: () => ({ locations: [], loading: false }) }))
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
-const PERSON = { id: 'c1', name: 'Anna', cover_image_url: 'https://x/titel.jpg' }
+/*
+  ECHTE SPEICHERADRESSEN, KEINE PLATZHALTER.
+
+  Der Dialog belegt seit dem Critic-Befund nur Bilder aus dem EIGENEN Speicher
+  vor — der Arbeiter lehnt fremde Adressen als Referenz ab. Mit „https://x/…"
+  bliebe hier alles leer, und der Test prüfte nichts.
+*/
+const EIGEN = 'https://gsfrbxdesarlhfijmguu.supabase.co'
+const speicher = (name: string) => `${EIGEN}/storage/v1/object/public/bilder/${name}`
+
+const KOPFBLATT  = speicher('kopfblatt.jpg')
+const KOERPERFOTO = speicher('koerperfoto.jpg')
+const SONSTIGES  = speicher('sonstiges.jpg')
+const TITELBILD  = speicher('titel.jpg')
+const FREMD      = 'https://irgendwo-anders.example/bild.jpg'
+
+const PERSON = { id: 'c1', name: 'Anna', cover_image_url: TITELBILD }
 
 vi.mock('@/hooks/use-characters', () => ({
-  useCharacters: () => ({ characters: [PERSON], loading: false }),
+  useCharacters: () => ({ characters: [{ id: 'c1', name: 'Anna', cover_image_url: TITELBILD }], loading: false }),
 }))
 
 vi.mock('@/lib/reference-images', () => ({
   loadRefImages: (...a: unknown[]) => ladeBilder(...a),
 }))
 
-function zeichne(mitPlaetzen: boolean) {
+function zeichne(mitPlaetzen: boolean, person: typeof PERSON | null = PERSON) {
   return render(
     <PromptToImageDialog
       isOpen
       onClose={() => {}}
       prompt="a body sheet prompt"
-      vorauswahlCharakter={PERSON}
+      vorauswahlCharakter={person}
       rollen={['character']}
       bildplaetze={mitPlaetzen ? bildplaetze('koerper', { hatKoerperfoto: true }) : undefined}
     />,
   )
 }
 
+/** Warten, bis die Vorbelegung durch ist, dann abschicken. */
+async function abschicken() {
+  await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+  fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
+  await waitFor(() => expect(anlegen).toHaveBeenCalled())
+  return anlegen.mock.calls[0][0]
+}
+
 beforeEach(() => {
+  vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', EIGEN)
   anlegen.mockReset()
   anlegen.mockResolvedValue({ id: 'j1' })
   ladeBilder.mockReset()
   ladeBilder.mockResolvedValue([
-    { url: 'https://x/kopfblatt.jpg', label: 'Kopf' },
-    { url: 'https://x/koerperfoto.jpg', label: 'Körper Original' },
-    { url: 'https://x/sonstiges.jpg', label: 'Sonstiges' },
+    { url: KOPFBLATT,   label: 'Kopf' },
+    { url: KOERPERFOTO, label: 'Körper Original' },
+    { url: SONSTIGES,   label: 'Sonstiges' },
   ])
 })
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.unstubAllEnvs() })
 
 describe('Zwei Bildplätze beim Körper-Sheet', () => {
   it('zeigt zwei verschieden beschriftete Karten', async () => {
@@ -65,84 +94,152 @@ describe('Zwei Bildplätze beim Körper-Sheet', () => {
 
   it('schickt BEIDE Bilder mit — das war der gemeldete Fehler', async () => {
     zeichne(true)
-    await screen.findByText('Kopf-Sheet')
-    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
-
-    fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
-    await waitFor(() => expect(anlegen).toHaveBeenCalled())
-
-    const [auftrag] = anlegen.mock.calls[0]
-    expect(auftrag.reference_urls).toEqual([
-      'https://x/kopfblatt.jpg',
-      'https://x/koerperfoto.jpg',
-    ])
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOPFBLATT, KOERPERFOTO])
   })
 
   it('sagt dem Modell, WOFUER jedes der beiden Bilder steht', async () => {
     /*
       Ohne eigene Zeilen staende zweimal „Image N = CHARACTER" — fuer zwei
-      Bilder, die Verschiedenes beitragen sollen: das eine das Gesicht, das
-      andere den Koerperbau. Und der Prompt selbst verlangt ausdruecklich, den
-      Kopfwinkel „from the matching view in the head reference sheet" zu
-      nehmen; ohne Benennung weiss das Modell nicht, welches Bild das ist.
+      Bilder, die Verschiedenes beitragen sollen. Und der Prompt selbst verlangt
+      ausdruecklich, den Kopfwinkel „from the matching view in the head
+      reference sheet" zu nehmen; ohne Benennung weiss das Modell nicht, welches
+      Bild das ist.
     */
     zeichne(true)
-    await screen.findByText('Kopf-Sheet')
-    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
-
-    fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
-    await waitFor(() => expect(anlegen).toHaveBeenCalled())
-
-    const [auftrag] = anlegen.mock.calls[0]
+    const auftrag = await abschicken()
     expect(auftrag.prompt).toContain('Image 1 = HEAD REFERENCE SHEET')
     expect(auftrag.prompt).toContain('Image 2 = ORIGINAL PHOTO')
     expect(auftrag.prompt).toContain('Completely ignore any face')
   })
+})
 
-  it('nimmt aus jeder Variante das richtige Bild, nicht das erste beste', async () => {
-    // „Sonstiges" liegt in derselben Liste. Wer nur das erste Bild naehme,
-    // haenge irgendein Bild an und niemand saehe es dem Auftrag an.
+describe('Auswahl von Hand — Marks eigentliche Beschwerde', () => {
+  /** Den Platz mit dieser Überschrift öffnen und dort ein Bild wählen. */
+  async function waehle(platz: string, bildLabel: string) {
+    const karte = (await screen.findByText(platz)).closest('div.overflow-hidden')!
+    fireEvent.click(within(karte as HTMLElement).getByRole('button', { name: /wählen|ändern|Anna/i }))
+
+    // Der Waehler ist ein eigener Dialog; „Anna" steht auch auf der Karte
+    // dahinter. Ueber seinen Titel eingegrenzt, sonst trifft man die falsche.
+    const waehler = (await screen.findByText('Charakter wählen')).closest('div[role="dialog"]')!
+    fireEvent.click(within(waehler as HTMLElement).getByText('Anna'))
+    fireEvent.click(await screen.findByText(bildLabel))
+  }
+
+  it('legt ein von Hand gewaehltes Bild in GENAU den Platz, der geoeffnet wurde', async () => {
+    /*
+      DIE LUECKE, DIE CRITIC GEFUNDEN HAT.
+
+      Alle bisherigen Tests haben nur die Vorbelegung geprueft. Ein Fehler im
+      Zuweisungsindex — jede Auswahl landet im ersten Platz — waere gruen
+      durchgekommen, und das Kopfblatt waere durch das Koerperbild ueberschrieben
+      worden. Genau der gemeldete Fehler, nur an anderer Stelle.
+    */
     zeichne(true)
-    await screen.findByText('Kopf-Sheet')
     await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+    await waehle('Körperfoto', 'Sonstiges')
 
-    fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
-    await waitFor(() => expect(anlegen).toHaveBeenCalled())
-    expect(anlegen.mock.calls[0][0].reference_urls).not.toContain('https://x/sonstiges.jpg')
+    const auftrag = await abschicken()
+    // Der ERSTE Platz muss unberuehrt geblieben sein.
+    expect(auftrag.reference_urls).toEqual([KOPFBLATT, SONSTIGES])
+  })
+
+  it('leert mit dem Kreuz NUR den einen Platz', async () => {
+    zeichne(true)
+    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+    fireEvent.click(await screen.findByRole('button', { name: 'Kopf-Sheet entfernen' }))
+
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOERPERFOTO])
+  })
+})
+
+describe('Wenn das Kopfblatt fehlt', () => {
+  it('beruft sich die verbliebene Zeile NICHT auf ein Bild, das nicht mitgeht', async () => {
+    /*
+      DER SCHWERSTE BEFUND DER PRUEFUNG.
+
+      Die uebliche Zeile zum zweiten Bild lautet „Completely ignore any face
+      visible in it; the head reference ABOVE alone decides the face". Ohne das
+      Kopfblatt bekaeme das Modell EIN Bild und die Anweisung, dessen Gesicht zu
+      ignorieren — es haette dann gar keine Gesichtsquelle mehr und erfaende
+      eine. Am Blatt sieht man das nicht: Es ist in Ordnung, es zeigt nur einen
+      Fremden.
+    */
+    ladeBilder.mockResolvedValue([{ url: KOERPERFOTO, label: 'Körper Original' }])
+    zeichne(true)
+    const auftrag = await abschicken()
+
+    expect(auftrag.reference_urls).toEqual([KOERPERFOTO])
+    expect(auftrag.prompt).toContain('Image 1 = ORIGINAL PHOTO OF THE PERSON')
+    expect(auftrag.prompt).toContain('It is the only reference.')
+    // Kein Verweis ins Leere und keine Anweisung, das einzige Gesicht
+    // wegzuwerfen. („the text above" im Vorrangsatz meint den Prompt, nicht ein
+    // Bild — deshalb wird die Bildstelle genau benannt statt nur „above".)
+    expect(auftrag.prompt).not.toContain('head reference above')
+    expect(auftrag.prompt).not.toContain('Completely ignore any face')
+  })
+
+  it('sagt es auch auf dem Bildschirm', async () => {
+    // Ein leerer Platz ist sonst still, und das Blatt entsteht trotzdem.
+    ladeBilder.mockResolvedValue([{ url: KOERPERFOTO, label: 'Körper Original' }])
+    zeichne(true)
+    expect(await screen.findByText(/Ohne „Kopf-Sheet"/)).toBeTruthy()
+  })
+
+  it('schweigt, wenn beide Plaetze belegt sind', async () => {
+    zeichne(true)
+    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByText(/^Ohne /)).toBeNull())
+  })
+})
+
+describe('Vorbelegung', () => {
+  it('nimmt aus jeder Variante das richtige Bild, nicht das erste beste', async () => {
+    zeichne(true)
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).not.toContain(SONSTIGES)
+  })
+
+  it('vergleicht Variantennamen ohne Rücksicht auf Leerzeichen und Grossschreibung', async () => {
+    // Ueberall sonst im Projekt wird getrimmt und kleingeschrieben verglichen.
+    ladeBilder.mockResolvedValue([
+      { url: KOPFBLATT, label: '  kopf ' },
+      { url: KOERPERFOTO, label: 'KÖRPER ORIGINAL' },
+    ])
+    zeichne(true)
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOPFBLATT, KOERPERFOTO])
   })
 
   it('faellt beim Koerperbild auf das Titelbild zurueck', async () => {
-    // Wer kein eigenes Koerperfoto abgelegt hat, soll trotzdem ein zweites
-    // Bild mitschicken koennen — das Ausgangsfoto zeigt den Koerperbau oft.
-    ladeBilder.mockResolvedValue([{ url: 'https://x/kopfblatt.jpg', label: 'Kopf' }])
+    ladeBilder.mockResolvedValue([{ url: KOPFBLATT, label: 'Kopf' }])
     zeichne(true)
-    await screen.findByText('Kopf-Sheet')
-    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
-
-    fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
-    await waitFor(() => expect(anlegen).toHaveBeenCalled())
-    expect(anlegen.mock.calls[0][0].reference_urls).toEqual([
-      'https://x/kopfblatt.jpg',
-      'https://x/titel.jpg',
-    ])
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOPFBLATT, TITELBILD])
   })
 
-  it('reiht auch ein, wenn ein Platz leer bleibt', async () => {
-    // Liegt das Kopfblatt in „Sonstiges", findet die Vorbelegung nichts. Der
-    // Auftrag darf daran nicht scheitern — der Platz ist waehlbar, nicht Pflicht.
-    ladeBilder.mockResolvedValue([{ url: 'https://x/koerperfoto.jpg', label: 'Körper Original' }])
+  it('belegt KEIN Bild vor, das nicht im eigenen Speicher liegt', async () => {
+    /*
+      Der Arbeiter lehnt fremde Adressen als Referenz ab, und die Kette bricht
+      dafuer eigens mit einer Meldung ab. Was hier von selbst in den Platz
+      rutscht, hat niemand ausgewaehlt — scheitert der Auftrag spaeter daran,
+      sucht Mark den Fehler beim Prompt.
+    */
+    ladeBilder.mockResolvedValue([
+      { url: FREMD, label: 'Kopf' },
+      { url: KOERPERFOTO, label: 'Körper Original' },
+    ])
     zeichne(true)
-    await screen.findByText('Kopf-Sheet')
-    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOERPERFOTO])
+  })
 
-    fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
-    await waitFor(() => expect(anlegen).toHaveBeenCalled())
-    const [auftrag] = anlegen.mock.calls[0]
-    expect(auftrag.reference_urls).toEqual(['https://x/koerperfoto.jpg'])
-    // Die verbliebene Zeile muss die des KOERPERBILDES sein, nicht die des
-    // Kopfblattes — sonst haenge das falsche Etikett am Bild.
-    expect(auftrag.prompt).toContain('Image 1 = ORIGINAL PHOTO')
-    expect(auftrag.prompt).not.toContain('HEAD REFERENCE SHEET')
+  it('kommt ohne vorausgewaehlten Charakter zurecht', async () => {
+    zeichne(true, null)
+    expect(await screen.findByText('Kopf-Sheet')).toBeTruthy()
+    expect(ladeBilder).not.toHaveBeenCalled()
   })
 })
 
@@ -157,7 +254,27 @@ describe('Ohne Bildplätze bleibt alles wie zuvor', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Zur Warteschlange/i }))
     await waitFor(() => expect(anlegen).toHaveBeenCalled())
     const [auftrag] = anlegen.mock.calls[0]
-    expect(auftrag.reference_urls).toEqual(['https://x/titel.jpg'])
+    expect(auftrag.reference_urls).toEqual([TITELBILD])
     expect(auftrag.prompt).toContain('body identity of this person')
+  })
+})
+
+describe('Zweimal dasselbe Bild', () => {
+  it('sagt Bescheid, wenn in beiden Plaetzen dasselbe liegt', async () => {
+    /*
+      Ist das Titelbild zugleich das Kopfblatt, geht dieselbe Adresse zweimal
+      mit: einmal mit „take the face", einmal mit „ignore any face". Zwei
+      gegenlaeufige Anweisungen fuer EIN Bild — welcher das Modell folgt, sieht
+      man erst am Ergebnis.
+    */
+    ladeBilder.mockResolvedValue([{ url: TITELBILD, label: 'Kopf' }])
+    zeichne(true)
+    expect(await screen.findByText(/In zwei Plätzen liegt dasselbe Bild/)).toBeTruthy()
+  })
+
+  it('schweigt bei zwei verschiedenen Bildern', async () => {
+    zeichne(true)
+    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByText(/dasselbe Bild/)).toBeNull())
   })
 })

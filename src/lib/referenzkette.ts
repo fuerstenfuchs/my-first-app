@@ -224,9 +224,24 @@ export type Bildplatz = {
   titelbildWennLeer: boolean
   /** Die Zeile, die dem Modell sagt, wofür dieses Bild steht. */
   zuordnung: string
+  /**
+   * Dieselbe Zeile für den Fall, dass das ERSTE Bild fehlt.
+   *
+   * DER BEFUND, DER SIE ERZWUNGEN HAT: Die übliche Zeile zum zweiten Bild
+   * beruft sich auf das erste — „Completely ignore any face visible in it; the
+   * head reference ABOVE alone decides the face." Bleibt der erste Platz leer,
+   * zeigt dieser Verweis ins Leere: Das Modell bekommt ein einziges Bild und
+   * die Anweisung, dessen Gesicht vollständig zu ignorieren. Damit hat es gar
+   * keine Gesichtsquelle mehr und erfindet eine.
+   *
+   * Am Ergebnis ist das nicht als Fehler zu erkennen — das Blatt ist in
+   * Ordnung, es zeigt nur einen Fremden. Deshalb steht hier eine zweite
+   * Fassung, die ohne den Verweis auskommt.
+   */
+  zuordnungAllein: string
 }
 
-const PLATZ_TEXT: Record<Bildquelle, Omit<Bildplatz, 'zuordnung'>> = {
+const PLATZ_TEXT: Record<Bildquelle, Omit<Bildplatz, 'zuordnung' | 'zuordnungAllein'>> = {
   titelbild: {
     label: 'Originalfoto',
     hinweis: 'Das Ausgangsfoto der Person.',
@@ -260,6 +275,24 @@ const PLATZ_TEXT: Record<Bildquelle, Omit<Bildplatz, 'zuordnung'>> = {
 }
 
 /**
+ * Die Zeilen für den Fall, dass das Bild ALLEIN geht.
+ *
+ * Sie verzichten auf jeden Verweis auf ein anderes Bild und geben dem einen
+ * vorhandenen alles, was es tragen kann. Ohne sie stünde bei einem fehlenden
+ * Kopfblatt „ignoriere das Gesicht" als einzige Gesichtsanweisung da.
+ */
+const ALLEIN_TEXT: Record<Rolle, string> = {
+  identitaet:         ANSAGE_TEXT.identitaet,
+  kopfsheet:          ANSAGE_TEXT.kopfsheet,
+  koerperbauOriginal: 'ORIGINAL PHOTO OF THE PERSON — take the face, hair, skin ' +
+                      'tone and identity from it, and the body proportions, ' +
+                      'build and posture as well. It is the only reference.',
+  koerperbauSheet:    'BODY REFERENCE SHEET — take the body proportions, build ' +
+                      'and posture from it, and the face, hair and skin tone as ' +
+                      'well. It is the only reference.',
+}
+
+/**
  * Welche Bildplätze ein Schritt hat — dieselbe Reihenfolge wie in der Kette.
  *
  * Die Reihenfolge ist nicht Geschmack: `ANSAGE_TEXT` sagt beim zweiten Bild
@@ -273,6 +306,7 @@ export function bildplaetze(
   return quellenFuer(schritt, optionen).map(q => ({
     ...PLATZ_TEXT[q.bild],
     zuordnung: ANSAGE_TEXT[q.rolle],
+    zuordnungAllein: ALLEIN_TEXT[q.rolle],
   }))
 }
 
