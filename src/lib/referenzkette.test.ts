@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   KETTEN_SCHRITTE, VARIANTEN_NAME, KOERPERFOTO_VARIANTE, KOPF_ORIGINAL_VARIANTE,
   quellenFuer, referenzAnsage, kettenPrompt, koerperMerkmaleText, istEigenerSpeicher,
-  koerperbildKandidaten,
+  koerperbildKandidaten, bildplaetze,
   naechsterSchritt, offeneSchritte,
   type KettenSchritt,
 } from './referenzkette'
@@ -279,5 +279,94 @@ describe('Wiederaufnehmen', () => {
   it('füllt eine Lücke in der Mitte, nicht das Ende', () => {
     expect(naechsterSchritt(vorhanden('kopf', 'referenzsheet'))).toBe('koerper')
     expect(offeneSchritte(vorhanden('kopf', 'referenzsheet'))).toEqual(['koerper'])
+  })
+})
+
+describe('Bildplätze für die EINZELN erzeugten Blätter — Mark am 07.09.2026', () => {
+  /*
+    MARKS BEFUND, woertlich: „Sowohl beim Koerperbild als auch beim
+    Referenzbild kann man nicht zwei Bilder hochladen, beziehungsweise es geht
+    nur eins — und braucht ja aber sowohl beim Koerperbild als auch beim
+    Charaktersheet zwei Bilder. Einmal vom Kopf und einmal vom Koerper. … Die
+    Kette geht das schon."
+  */
+
+  it('gibt dem Koerper-Sheet zwei Plaetze: Kopfblatt und Koerperbild', () => {
+    const p = bildplaetze('koerper', { hatKoerperfoto: true })
+    expect(p).toHaveLength(2)
+    expect(p[0].variante).toBe(VARIANTEN_NAME.kopf)
+    expect(p[1].variante).toBe(KOERPERFOTO_VARIANTE)
+  })
+
+  it('gibt dem Referenzsheet zwei Plaetze: Kopfblatt und Koerperblatt', () => {
+    const p = bildplaetze('referenzsheet', { hatKoerperfoto: true })
+    expect(p).toHaveLength(2)
+    expect(p[0].variante).toBe(VARIANTEN_NAME.kopf)
+    expect(p[1].variante).toBe(VARIANTEN_NAME.koerper)
+  })
+
+  it('gibt dem Kopf-Sheet einen einzigen Platz', () => {
+    // Der erste Schritt hat nur das Ausgangsfoto — mehr gibt es zu dem
+    // Zeitpunkt noch gar nicht.
+    expect(bildplaetze('kopf', { hatKoerperfoto: false })).toHaveLength(1)
+  })
+
+  it('haelt die Reihenfolge ein: erst der Kopf, dann der Koerper', () => {
+    /*
+      NICHT GESCHMACK, SONDERN VERWEIS: Die Zeile zum zweiten Bild sagt
+      ausdruecklich „the head reference ABOVE decides the face". Kaeme das
+      Koerperbild zuerst, zeigte dieser Verweis ins Leere — und das Modell
+      naehme das Gesicht aus dem Koerperfoto.
+    */
+    for (const schritt of ['koerper', 'referenzsheet'] as const) {
+      const p = bildplaetze(schritt, { hatKoerperfoto: true })
+      expect(p[0].zuordnung).toContain('HEAD REFERENCE SHEET')
+      expect(p[1].zuordnung).toContain('above')
+    }
+  })
+
+  it('unterscheidet Originalfoto und erzeugtes Blatt im Wortlaut', () => {
+    // Ein echtes Foto zeigt das unveraenderte Gesicht — das darf den erzeugten
+    // Kopf unter keinen Umstaenden ueberstimmen („ignore … entirely"). Ein
+    // erzeugtes Koerperblatt ist selbst schon Ergebnis, dort reicht „secondary".
+    expect(bildplaetze('koerper', { hatKoerperfoto: true })[1].zuordnung)
+      .toContain('Completely ignore any face')
+    expect(bildplaetze('referenzsheet', { hatKoerperfoto: true })[1].zuordnung)
+      .toContain('secondary')
+  })
+
+  it('nimmt GENAU die Zeilen, die auch die Kette benutzt', () => {
+    /*
+      EINE WAHRHEIT, NICHT ZWEI. Eine eigene Aufzaehlung im Dialog waere beim
+      naechsten Feilen an der Kette auseinandergelaufen — und das faellt an
+      einem Bild erst auf, wenn es bezahlt ist.
+    */
+    for (const schritt of KETTEN_SCHRITTE) {
+      const ansage = referenzAnsage(schritt, { hatKoerperfoto: true })!
+      for (const platz of bildplaetze(schritt, { hatKoerperfoto: true })) {
+        expect(ansage).toContain(platz.zuordnung)
+      }
+    }
+  })
+
+  it('faellt beim Koerperbild auf das Titelbild zurueck, sonst nicht', () => {
+    // Wer kein eigenes Koerperfoto abgelegt hat, soll trotzdem etwas im Platz
+    // haben. Ein erzeugtes Blatt dagegen laesst sich nicht ersetzen — dort
+    // waere das Titelbild schlicht das falsche Bild.
+    const koerper = bildplaetze('koerper', { hatKoerperfoto: true })
+    expect(koerper[0].titelbildWennLeer).toBe(false)
+    expect(koerper[1].titelbildWennLeer).toBe(true)
+    expect(bildplaetze('referenzsheet', { hatKoerperfoto: true })
+      .every(p => !p.titelbildWennLeer)).toBe(true)
+  })
+
+  it('beschriftet jeden Platz verschieden', () => {
+    // Zweimal „Charakter" ueber zwei verschiedenen Bildern waere die Anzeige,
+    // die den Fehler ueberhaupt erst verdeckt hat.
+    for (const schritt of KETTEN_SCHRITTE) {
+      const labels = bildplaetze(schritt, { hatKoerperfoto: true }).map(p => p.label)
+      expect(new Set(labels).size).toBe(labels.length)
+      expect(labels.every(l => l.length > 0)).toBe(true)
+    }
   })
 })

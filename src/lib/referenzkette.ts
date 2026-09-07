@@ -191,6 +191,92 @@ export function koerperbildKandidaten(
 }
 
 /**
+ * Ein Bildplatz für die EINZELN erzeugten Blätter (PROJ-85).
+ *
+ * MARKS BEFUND vom 07.09.2026, wörtlich: „Sowohl beim Körperbild als auch beim
+ * Referenzbild kann man nicht zwei Bilder hochladen, beziehungsweise es geht
+ * nur eins — und braucht ja aber sowohl beim Körperbild als auch beim
+ * Charaktersheet zwei Bilder. Einmal vom Kopf und einmal vom Körper. … Und das
+ * kann man alles nicht auswählen, wenn man es einzeln macht. Die Kette geht das
+ * schon."
+ *
+ * Das stimmt und ist am Code nachgemessen: `quellenFuer` gibt für „Körper" und
+ * „Referenzsheet" seit dem 03.09.2026 ZWEI Bilder zurück, und die Kette setzt
+ * sie auch beide ein. Der Weg über den Sheet-Knopf ging aber durch einen
+ * Dialog, der genau EINEN Platz je Rolle hat — das zweite Bild konnte dort gar
+ * nicht mitkommen.
+ *
+ * WARUM DIESE FUNKTION UND NICHT EINE ZWEITE LISTE IM DIALOG: Was ein Schritt
+ * braucht, steht in `quellenFuer`, und wofür ein Bild steht, in `ANSAGE_TEXT`.
+ * Eine zweite Aufzählung im Dialog wäre eine zweite Wahrheit, die beim nächsten
+ * Feilen an der Kette auseinanderliefe. Hier kommt nur dazu, was der Dialog
+ * zusätzlich braucht: eine Beschriftung, ein Satz, welches Bild gemeint ist,
+ * und die Variante, aus der sich der Platz von selbst füllen kann.
+ */
+export type Bildplatz = {
+  /** Was in der Oberfläche über dem Bild steht. */
+  label: string
+  /** Welches Bild hier hingehört — ein Satz, keine Begründung. */
+  hinweis: string
+  /** Variante, aus der vorbelegt wird. null heißt: nicht vorbelegen. */
+  variante: string | null
+  /** Ist die Variante leer, das Titelbild des Charakters nehmen. */
+  titelbildWennLeer: boolean
+  /** Die Zeile, die dem Modell sagt, wofür dieses Bild steht. */
+  zuordnung: string
+}
+
+const PLATZ_TEXT: Record<Bildquelle, Omit<Bildplatz, 'zuordnung'>> = {
+  titelbild: {
+    label: 'Originalfoto',
+    hinweis: 'Das Ausgangsfoto der Person.',
+    variante: null,
+    titelbildWennLeer: true,
+  },
+  koerperfoto: {
+    label: 'Körperfoto',
+    hinweis: `Ein Foto, das den Körperbau zeigt. Ohne eigenes liegt hier das Originalfoto.`,
+    variante: KOERPERFOTO_VARIANTE,
+    titelbildWennLeer: true,
+  },
+  kopf: {
+    label: 'Kopf-Sheet',
+    hinweis: 'Das erzeugte Blatt mit den Kopfansichten.',
+    variante: VARIANTEN_NAME.kopf,
+    titelbildWennLeer: false,
+  },
+  koerper: {
+    label: 'Körper-Sheet',
+    hinweis: 'Das erzeugte Ganzkörperblatt.',
+    variante: VARIANTEN_NAME.koerper,
+    titelbildWennLeer: false,
+  },
+  referenzsheet: {
+    label: 'Referenzsheet',
+    hinweis: 'Das fertige Referenzblatt.',
+    variante: VARIANTEN_NAME.referenzsheet,
+    titelbildWennLeer: false,
+  },
+}
+
+/**
+ * Welche Bildplätze ein Schritt hat — dieselbe Reihenfolge wie in der Kette.
+ *
+ * Die Reihenfolge ist nicht Geschmack: `ANSAGE_TEXT` sagt beim zweiten Bild
+ * ausdrücklich „the head reference ABOVE decides the face". Käme es zuerst,
+ * zeigte dieser Verweis ins Leere.
+ */
+export function bildplaetze(
+  schritt: KettenSchritt,
+  optionen: KoerperOptionen,
+): Bildplatz[] {
+  return quellenFuer(schritt, optionen).map(q => ({
+    ...PLATZ_TEXT[q.bild],
+    zuordnung: ANSAGE_TEXT[q.rolle],
+  }))
+}
+
+/**
  * Der Zuordnungsblock für einen Schritt — oder null, wenn er keinen braucht.
  *
  * Auch bei EINEM Bild nötig: Der ursprüngliche Fehler war nicht die

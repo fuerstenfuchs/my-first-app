@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Copy, Check, ChevronLeft, Sparkles, User, ImagePlus } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
 import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
+import { bildplaetze } from '@/lib/referenzkette'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
@@ -306,6 +307,22 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
 
   const prompt = selected ? getPrompt(selected, gender) : ''
 
+  /*
+    STABIL HALTEN, SONST WIRD MARKS AUSWAHL UEBERSCHRIEBEN.
+
+    `bildplaetze()` gibt bei jedem Aufruf ein neues Feld zurueck. Der Bilddialog
+    belegt seine Plaetze vor, sobald sich dieses Feld aendert — ohne useMemo
+    hiesse „aendert sich" hier: bei jedem Rendern dieses Dialogs. Wer dann ein
+    Bild von Hand ausgetauscht haette, saehe es beim naechsten Klick irgendwo
+    im Dialog wieder auf die Vorbelegung zurueckspringen.
+  */
+  const plaetze = useMemo(
+    () => selected === 'koerper' || selected === 'referenzsheet'
+      ? bildplaetze(selected, { hatKoerperfoto: true })
+      : undefined,
+    [selected],
+  )
+
   function handleSelect(type: SheetType) {
     setSelected(type)
     setStep('prompt')
@@ -498,6 +515,26 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
         rollen={selected === 'koerper' || selected === 'referenzsheet'
           ? ['character']
           : ['character', 'outfit']}
+        /*
+          ZWEI BILDPLAETZE FUER KOERPER UND REFERENZSHEET (PROJ-85).
+
+          Mark am 07.09.2026: „Sowohl beim Koerperbild als auch beim
+          Referenzbild kann man nicht zwei Bilder hochladen … Die Kette geht
+          das schon."
+
+          Am Code nachgemessen und bestaetigt: `quellenFuer` gibt fuer diese
+          beiden Schritte ZWEI Bilder zurueck, und der Prompt setzt es voraus —
+          KOERPER_PROMPT sagt woertlich „Take the head angle for each panel from
+          the matching view in the head reference sheet". Ohne das Kopfblatt
+          kann das Modell dieser Anweisung gar nicht folgen.
+
+          `hatKoerperfoto: true` ist hier richtig, obwohl der Dialog es nicht
+          weiss: Die ROLLE des zweiten Bildes ist in beiden Faellen dieselbe
+          (`koerperbauOriginal`), es unterscheidet sich nur, aus welcher
+          Variante vorbelegt wird — und der Platz faellt auf das Titelbild
+          zurueck, wenn kein eigenes Koerperfoto abgelegt ist.
+        */
+        bildplaetze={plaetze}
       />}
     </Dialog>
   )

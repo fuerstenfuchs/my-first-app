@@ -159,6 +159,28 @@ export function formatAnsage(format: AspectRatioKey | null): string | null {
 }
 
 /**
+ * Der fertige Zuordnungsblock — genau der Text, der an den Prompt gehängt wird.
+ *
+ * WARUM ALS EIGENE FUNKTION (PROJ-85): Der Bilddialog zeigt unter „Zusätze im
+ * Prompt ansehen" an, was zusätzlich mitgeht. Baute er sich das selbst
+ * zusammen, zeigte er bei eigenen Zuordnungszeilen weiter die allgemeine
+ * Fassung — eine Vorschau, die etwas anderes verspricht als das, was
+ * abgeschickt wird. Beide lesen jetzt aus derselben Quelle.
+ */
+export function zuordnungsBlock(
+  rollen: ReferenzRolle[],
+  zuordnungTexte?: string[],
+  vorrangText?: string,
+): string | null {
+  if (!zuordnungTexte?.length) return referenzZuordnung(rollen)
+  return [
+    'REFERENCE IMAGES — they arrive in this exact order:',
+    ...zuordnungTexte.map((z, i) => `Image ${i + 1} = ${z}`),
+    vorrangText ?? vorrangSatz(rollen),
+  ].join('\n')
+}
+
+/**
  * Den fertigen Prompt für den Auftrag zusammensetzen.
  *
  * Der Prompt des Scene Builders wird NICHT verändert — angehängt wird nur die
@@ -205,13 +227,7 @@ export function promptFuerAuftrag(
 
   // Zuerst die Zuordnung: Sie sagt, welches Bild wofür steht. Ohne sie nimmt
   // das Modell schon mal die Person aus dem Outfit-Bild.
-  const zuordnung = zuordnungTexte?.length
-    ? [
-        'REFERENCE IMAGES — they arrive in this exact order:',
-        ...zuordnungTexte.map((z, i) => `Image ${i + 1} = ${z}`),
-        vorrangText ?? vorrangSatz(rollen),
-      ].join('\n')
-    : referenzZuordnung(rollen)
+  const zuordnung = zuordnungsBlock(rollen, zuordnungTexte, vorrangText)
   if (zuordnung) teile.push(zuordnung)
 
   // Die Formatansage nur mit Referenz — ohne Referenz wirkt der Größenparameter.

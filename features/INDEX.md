@@ -145,4 +145,6 @@
 
 | PROJ-84 | Gruppen-Shooting-Kette (Konstellation statt Einzelpose) | In Review | [PROJ-84](PROJ-84-gruppen-shooting-kette.md) | 2026-09-06 |
 
-## Next Available ID: PROJ-85
+| PROJ-85 | Zwei Bildplaetze fuer die einzeln erzeugten Blaetter | In Review | [PROJ-85](PROJ-85-zwei-bildplaetze.md) | 2026-09-07 |
+
+## Next Available ID: PROJ-86
