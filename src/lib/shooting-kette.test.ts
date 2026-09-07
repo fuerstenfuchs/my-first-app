@@ -99,7 +99,7 @@ describe('Outfitwechsel', () => {
   })
 
   it('wechselt auch ohne Uebergang zur richtigen Haelfte', () => {
-    const k = baueShooting(SZENE, { mitUebergang: false, zweitesOutfit: OUTFIT_B, gruppe: null })
+    const k = baueShooting(SZENE, { mitUebergang: false, zweitesOutfit: OUTFIT_B, gruppe: null, aufstellung: 'wie_blatt' })
     expect(k.map(s => s.outfit)).toEqual([OUTFIT_A, OUTFIT_A, OUTFIT_B, OUTFIT_B])
   })
 })

@@ -23,7 +23,7 @@ const ladeBilder = vi.fn()
 vi.mock('@/hooks/use-image-jobs', () => ({ useImageJobs: () => ({ anlegen }) }))
 vi.mock('@/hooks/use-outfits', () => ({ useOutfits: () => ({ outfits: [], loading: false }) }))
 vi.mock('@/hooks/use-locations', () => ({ useLocations: () => ({ locations: [], loading: false }) }))
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
 
 /*
   ECHTE SPEICHERADRESSEN, KEINE PLATZHALTER.
@@ -40,6 +40,8 @@ const KOERPERFOTO = speicher('koerperfoto.jpg')
 const SONSTIGES  = speicher('sonstiges.jpg')
 const TITELBILD  = speicher('titel.jpg')
 const FREMD      = 'https://irgendwo-anders.example/bild.jpg'
+/** Was `/api/referenz-holen` fuer ein fremdes Bild zurueckgibt. */
+const GEHOLT     = speicher('geholt.jpg')
 
 const PERSON = { id: 'c1', name: 'Anna', cover_image_url: TITELBILD }
 
@@ -74,6 +76,10 @@ async function abschicken() {
 
 beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', EIGEN)
+  // Die Hol-Route wird nur fuer fremde Adressen ueberhaupt angerufen.
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true, json: async () => ({ url: GEHOLT }),
+  })))
   anlegen.mockReset()
   anlegen.mockResolvedValue({ id: 'j1' })
   ladeBilder.mockReset()
@@ -83,7 +89,7 @@ beforeEach(() => {
     { url: SONSTIGES,   label: 'Sonstiges' },
   ])
 })
-afterEach(() => { cleanup(); vi.unstubAllEnvs() })
+afterEach(() => { cleanup(); vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
 describe('Zwei Bildplätze beim Körper-Sheet', () => {
   it('zeigt zwei verschieden beschriftete Karten', async () => {
@@ -220,12 +226,15 @@ describe('Vorbelegung', () => {
     expect(auftrag.reference_urls).toEqual([KOPFBLATT, TITELBILD])
   })
 
-  it('belegt KEIN Bild vor, das nicht im eigenen Speicher liegt', async () => {
+  it('belegt auch mit einem fremden Bild vor und holt es beim Abschicken', async () => {
     /*
-      Der Arbeiter lehnt fremde Adressen als Referenz ab, und die Kette bricht
-      dafuer eigens mit einer Meldung ab. Was hier von selbst in den Platz
-      rutscht, hat niemand ausgewaehlt — scheitert der Auftrag spaeter daran,
-      sucht Mark den Fehler beim Prompt.
+      BIS PROJ-86 BLIEB DER PLATZ HIER LEER.
+
+      Der Arbeiter lehnt Adressen ausserhalb des eigenen Speichers ab, und ein
+      still gefuellter Platz haette zu einem Auftrag gefuehrt, der sicher
+      scheitert. Seit `referenzenSichern` wird das Bild stattdessen vorher
+      geholt — Mark: „dass die Bilder auf jeden Fall genommen werden, egal wo
+      sie herkommen und welche Endung sie haben."
     */
     ladeBilder.mockResolvedValue([
       { url: FREMD, label: 'Kopf' },
@@ -233,7 +242,7 @@ describe('Vorbelegung', () => {
     ])
     zeichne(true)
     const auftrag = await abschicken()
-    expect(auftrag.reference_urls).toEqual([KOERPERFOTO])
+    expect(auftrag.reference_urls).toEqual([GEHOLT, KOERPERFOTO])
   })
 
   it('kommt ohne vorausgewaehlten Charakter zurecht', async () => {

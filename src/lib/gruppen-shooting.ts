@@ -270,19 +270,83 @@ const EIN_FOTO =
  * Aufträge laufen einzeln, das Modell sieht die anderen Bilder nie. Was überall
  * gelten soll, muss überall dastehen.
  */
-export function gruppenKonstellation(key: SpotKey | 'uebergang', n: number): string {
+/**
+ * WER AN WELCHEM PLATZ STEHT (PROJ-86).
+ *
+ * Mark am 07.09.2026: „Da sollte man die Reihenfolge auf jeden Fall ändern
+ * können. Optisch gesehen anhand der Bilder, die ist immer gleich von links
+ * nach rechts."
+ *
+ * Er hat recht: Bisher stand Person 1 in allen fünf Bildern links und bekam an
+ * jedem Platz die erste Haltung. Über eine Serie liest sich das als Rangordnung
+ * — einer ist der Anführer, weil er immer vorn steht.
+ *
+ * DIE HALTUNG BLEIBT AM PLATZ, NICHT AN DER PERSON. Das ist der Punkt, an dem
+ * ein naheliegender Einfall scheitert: Die Haltungen einfach durchzurotieren
+ * geht nicht, weil manche von ihnen ORTSGEBUNDEN sind — „nearest to the camera
+ * and largest" gehört zum linken Platz an der Fluchtlinie, nicht zu Person 1.
+ * Wandert diese Haltung mit der Person, widerspricht sie der Formation.
+ *
+ * Also wandern die PERSONEN. `reihenfolge[platz]` sagt, welche Person des
+ * Blattes an diesem Platz steht.
+ */
+export type Aufstellung = 'wie_blatt' | 'wechselnd'
+
+export const AUFSTELLUNGEN: { id: Aufstellung; label: string; hinweis: string }[] = [
+  {
+    id: 'wie_blatt',
+    label: 'Wie auf dem Blatt',
+    hinweis: 'In jedem Bild dieselbe Reihenfolge von links nach rechts.',
+  },
+  {
+    id: 'wechselnd',
+    label: 'Wechselnd',
+    hinweis: 'Jedes Bild stellt die Gruppe anders auf.',
+  },
+]
+
+/**
+ * Die Reihenfolge der Personen für ein Bild der Serie.
+ *
+ * „wechselnd" verschiebt sie je Bild um einen Platz. Das ist die einfachste
+ * Regel, die niemanden zweimal hintereinander an denselben Platz stellt — und
+ * eine, die man am fertigen Bild nachzählen kann.
+ */
+export function reihenfolgeFuer(
+  aufstellung: Aufstellung, n: number, bildNr: number,
+): number[] {
+  const plaetze = Array.from({ length: n }, (_, i) => i + 1)
+  if (aufstellung === 'wie_blatt') return plaetze
+  const versatz = ((bildNr - 1) % n + n) % n
+  return plaetze.map((_, i) => plaetze[(i + versatz) % n])
+}
+
+export function gruppenKonstellation(
+  key: SpotKey | 'uebergang',
+  n: number,
+  reihenfolge: number[] = Array.from({ length: n }, (_, i) => i + 1),
+): string {
   const pool = HALTUNGEN[key]
+  const wieBlatt = reihenfolge.every((p, i) => p === i + 1)
   const zeilen = Array.from({ length: n }, (_, i) =>
-    `PERSON ${i + 1} (${platzImBild(i, n)}) is ${pool[i].text}.`,
+    `PERSON ${reihenfolge[i] ?? i + 1} (${platzImBild(i, n)}) is ${pool[i].text}.`,
   )
 
   return [
     `GROUP OF ${zahlwort(n).toUpperCase()} — CONSTELLATION`,
     `A group photograph of ${zahlwort(n)} people: ${zahlwort(n)} faces, ${zahlwort(n)} bodies, and nobody else in the frame.`,
-    'Left to right they stand in the SAME ORDER as on the group sheet: the ' +
-    'person at the far left of the sheet stands at the far left here, the ' +
-    'person at the far right stands at the far right. Only their distance from ' +
-    'the camera differs.',
+    wieBlatt
+      ? 'Left to right they stand in the SAME ORDER as on the group sheet: the ' +
+        'person at the far left of the sheet stands at the far left here, the ' +
+        'person at the far right stands at the far right. Only their distance ' +
+        'from the camera differs.'
+      // Steht die Gruppe anders als auf dem Blatt, waere die Ordnungszeile eine
+      // Luege — und zwar die schaedlichste Sorte, weil sie der einzige Anker
+      // der Zuordnung ist. Dann sagt stattdessen JEDE Zeile selbst, wer wo
+      // steht, und der Satz hier weist ausdruecklich darauf hin.
+      : 'They do NOT stand in the order of the group sheet. Each line below ' +
+        'names which person of the sheet stands where in this picture; follow ' +
+        'those lines exactly.',
     ...formation(key, n),
     '',
     ...zeilen,

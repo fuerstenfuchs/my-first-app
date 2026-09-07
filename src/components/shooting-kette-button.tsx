@@ -10,6 +10,8 @@ import { useOutfits } from '@/hooks/use-outfits'
 import { AssetPickerDialog } from '@/components/prompts/asset-picker-dialog'
 import { AblageWaehler } from '@/components/ablage-waehler'
 import { createClient } from '@/lib/supabase'
+import { referenzenSichern } from '@/lib/referenzen-sichern'
+import { cn } from '@/lib/utils'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
   groesseFuerFormat, promptFuerAuftrag,
@@ -19,6 +21,7 @@ import {
 import { baueShooting, kettenAnsage, KETTE_VORGABE, type KettenOptionen } from '@/lib/shooting-kette'
 import {
   gruppenGroesse, gruppenAnsage, gruppenBlattZuordnung, GRUPPEN_VORRANG,
+  AUFSTELLUNGEN, type Aufstellung,
 } from '@/lib/gruppen-shooting'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
 import type { Scene } from '@/lib/szene-prompt'
@@ -176,6 +179,10 @@ export function ShootingKetteButton({
               : ROLLEN_ANWEISUNG[r])
           : undefined
 
+        // Fremde Adressen vorher in den eigenen Speicher holen (PROJ-86) —
+        // sonst lehnt der Arbeiter das Bild ab und die ganze Kette bricht ab.
+        const gesichert = await referenzenSichern(refs.map(r => r.url))
+
         const job = await anlegen({
           prompt: promptFuerAuftrag(
             schritt.prompt, aspectRatio, rollen,
@@ -188,7 +195,7 @@ export function ShootingKetteButton({
           aspect_ratio: aspectRatio,
           variants: 1,
           ziel_klasse: zielKlasse,
-          reference_urls: refs.map(r => r.url),
+          reference_urls: gesichert.urls,
           reference_roles: rollen,
           scene_meta: {
             ...sceneMeta,
@@ -262,6 +269,38 @@ export function ShootingKetteButton({
           </span>
         </span>
       </label>
+
+      {/*
+        WER WO STEHT (PROJ-86).
+
+        Mark: „Da sollte man die Reihenfolge auf jeden Fall aendern koennen.
+        Optisch gesehen anhand der Bilder, die ist immer gleich von links nach
+        rechts."
+      */}
+      {gruppe !== null && (
+        <div className="space-y-1.5">
+          <span className="text-[13px] font-medium">Aufstellung</span>
+          <div className="flex flex-wrap gap-1.5">
+            {AUFSTELLUNGEN.map(a => (
+              <button
+                key={a.id}
+                onClick={() => setOptionen(o => ({ ...o, aufstellung: a.id }))}
+                className={cn(
+                  'rounded-full border px-3 py-1 text-[13px] transition',
+                  optionen.aufstellung === a.id
+                    ? 'border-emerald-500/60 bg-emerald-600/20 text-foreground'
+                    : 'border-border/60 text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[13px] leading-snug text-muted-foreground">
+            {AUFSTELLUNGEN.find(a => a.id === optionen.aufstellung)?.hinweis}
+          </p>
+        </div>
+      )}
 
       <AblageWaehler
         charakter={scene.character}

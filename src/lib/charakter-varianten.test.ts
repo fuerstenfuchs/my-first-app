@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  findeVariante,
   STANDARD_VARIANTEN,
   fehlendeStandardVarianten,
   istStandardVariante,
@@ -70,5 +71,38 @@ describe('istStandardVariante', () => {
     expect(istStandardVariante('Körper Original')).toBe(false)
     expect(istStandardVariante('Kopf Original')).toBe(false)
     expect(istStandardVariante('')).toBe(false)
+  })
+})
+
+describe('findeVariante', () => {
+  const faecher = [
+    { id: 'a', name: 'Kopf' },
+    { id: 'b', name: ' Körper ' },
+    { id: 'c', name: 'Referenzsheet' },
+  ]
+
+  it('findet das Fach zum Namen', () => {
+    expect(findeVariante(faecher, 'Kopf')?.id).toBe('a')
+  })
+
+  it('kuemmert sich nicht um Leerzeichen und Grossschreibung', () => {
+    /*
+      DENSELBEN VERGLEICH BENUTZT DIE KETTE (`varianteHolen`). Ein genauerer
+      wuerde neben „ Körper " ein zweites Fach „Körper" anlegen — und danach
+      liegen die Blaetter desselben Charakters in zwei Faechern, ohne dass
+      irgendetwas meldet.
+    */
+    expect(findeVariante(faecher, 'körper')?.id).toBe('b')
+    expect(findeVariante(faecher, '  KÖRPER')?.id).toBe('b')
+  })
+
+  it('gibt undefined, wenn es das Fach nicht gibt', () => {
+    expect(findeVariante(faecher, 'Gesichtsdetails')).toBeUndefined()
+  })
+
+  it('kommt mit fehlenden Namen zurecht', () => {
+    // Aus der Datenbank kam `name` schon als null zurueck.
+    expect(findeVariante([{ id: 'x', name: null }], 'Kopf')).toBeUndefined()
+    expect(findeVariante([], 'Kopf')).toBeUndefined()
   })
 })

@@ -18,7 +18,11 @@ import { useOutfits } from '@/hooks/use-outfits'
 import { useLocations } from '@/hooks/use-locations'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
-import { istEigenerSpeicher, type Bildplatz } from '@/lib/referenzkette'
+import type { Bildplatz } from '@/lib/referenzkette'
+import { findeVariante } from '@/lib/charakter-varianten'
+import { createClient } from '@/lib/supabase'
+import type { AblageZiel } from '@/lib/ablage-auftrag'
+import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import {
   MODELLE, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
   ROLLEN_LABEL, ROLLEN_ANWEISUNG, zuordnungsBlock,
@@ -48,6 +52,15 @@ interface PromptToImageDialogProps {
    */
   vorauswahlLocation?: { id: string; name: string; cover_image_url?: string | null } | null
   /**
+   * Outfit vorauswaehlen — fuer den Weg aus einem Outfit-Sheet heraus
+   * (PROJ-86). Mark: „Kannst Du noch mit einbauen bei Outfit? Den
+   * Generierenknopf."
+   *
+   * Dieselbe Sache wie bei Charakter und Ort: Ein Outfit-Sheet ohne das Foto
+   * des Kleidungsstuecks waere ein erfundenes Kleidungsstueck.
+   */
+  vorauswahlOutfit?: { id: string; name: string; cover_image_url?: string | null } | null
+  /**
    * Welche Referenzarten angeboten werden. Charakter-Sheets beschreiben einen
    * neutralen Hintergrund — eine Location wäre dort nur Ballast und würde dem
    * Prompt widersprechen.
@@ -71,6 +84,22 @@ interface PromptToImageDialogProps {
    * Modell mit; Outfit und Ort bleiben unberührt.
    */
   bildplaetze?: Bildplatz[]
+  /**
+   * WOHIN DAS FERTIGE BILD GEHOERT (PROJ-86).
+   *
+   * Mark am 07.09.2026 auf die Frage nach der Ablage: „Koennte man auch da
+   * ablegen, wo sie herkommen beim Charakter?"
+   *
+   * Die Ketten legen ihre Ergebnisse selbst in die richtige Variante; der
+   * Einzelweg liess sie in der Warteschlange liegen. Wer hier ein Ziel
+   * mitgibt, bekommt dasselbe Verhalten — der Waechter (PROJ-76) liest es
+   * spaeter aus `scene_meta` und legt ab.
+   *
+   * `variantId: null` heisst „Fach mit diesem Namen suchen, sonst anlegen".
+   * Aufgeloest wird das erst beim Abschicken, nicht beim Oeffnen: Sonst bliebe
+   * bei jedem Blick auf den Dialog ein leeres Fach am Charakter zurueck.
+   */
+  ablage?: AblageZiel | null
 }
 
 /**
@@ -173,8 +202,9 @@ function ReferenzKarte({
  */
 export function PromptToImageDialog({
   isOpen, onClose, prompt, titel, vorauswahlCharakter = null, vorauswahlLocation = null,
+  vorauswahlOutfit = null,
   rollen: angeboteneRollen = ['character', 'outfit', 'location'],
-  bildplaetze,
+  bildplaetze, ablage = null,
 }: PromptToImageDialogProps) {
   const { anlegen } = useImageJobs(false)
   const { characters, loading: charLaedt } = useCharacters()
@@ -183,7 +213,7 @@ export function PromptToImageDialog({
 
   const [charakter, setCharakter] = useState<PickbaresAsset | null>(vorauswahlCharakter)
   const [charakterBild, setCharakterBild] = useState<RefImage | null>(null)
-  const [outfit, setOutfit] = useState<PickbaresAsset | null>(null)
+  const [outfit, setOutfit] = useState<PickbaresAsset | null>(vorauswahlOutfit)
   const [outfitBild, setOutfitBild] = useState<RefImage | null>(null)
   const [location, setLocation] = useState<PickbaresAsset | null>(vorauswahlLocation)
   const [locationBild, setLocationBild] = useState<RefImage | null>(null)
@@ -277,20 +307,17 @@ export function PromptToImageDialog({
           : undefined
 
         /*
-          NUR BILDER AUS DEM EIGENEN SPEICHER VORBELEGEN.
+          FREMDE BILDER DUERFEN SEIT PROJ-86 WIEDER VORBELEGT WERDEN.
 
-          Der Arbeiter lehnt fremde Adressen als Referenz ab, und die Kette
-          bricht dafür eigens mit einer Meldung ab. Was hier von selbst in den
-          Platz rutscht, hat niemand ausgewählt — scheitert der Auftrag später
-          daran, sucht Mark den Fehler beim Prompt. Ein leerer Platz ist die
-          ehrlichere Antwort.
+          Vorher standen sie hier draussen, weil der Arbeiter Adressen
+          ausserhalb des eigenen Speichers ablehnt und ein still gefuellter
+          Platz spaeter zu einem Auftrag gefuehrt haette, der sicher scheitert.
+          Diese Sorge ist erledigt: `referenzenSichern` holt sie beim
+          Abschicken und sagt es dazu. Ein Platz leer zu lassen, obwohl das
+          Bild da ist, waere jetzt nur noch Handarbeit ohne Grund.
         */
-        if (treffer && istEigenerSpeicher(treffer.url)) {
-          return { asset: person, bild: treffer }
-        }
-        if (p.titelbildWennLeer
-            && person.cover_image_url
-            && istEigenerSpeicher(person.cover_image_url)) {
+        if (treffer) return { asset: person, bild: treffer }
+        if (p.titelbildWennLeer && person.cover_image_url) {
           return { asset: person, bild: null }
         }
         return null
@@ -413,10 +440,13 @@ export function PromptToImageDialog({
   useEffect(() => {
     if (isOpen && vorauswahlLocation) setLocation(vorauswahlLocation)
   }, [isOpen, vorauswahlLocation])
+  useEffect(() => {
+    if (isOpen && vorauswahlOutfit) setOutfit(vorauswahlOutfit)
+  }, [isOpen, vorauswahlOutfit])
 
   function zuruecksetzen() {
     setCharakter(vorauswahlCharakter); setCharakterBild(null)
-    setOutfit(null); setOutfitBild(null)
+    setOutfit(vorauswahlOutfit); setOutfitBild(null)
     setLocation(vorauswahlLocation); setLocationBild(null)
     setFormat(null); setDurchlaeufe(1)
     // Die Plätze NICHT leeren: Der Vorbelegungs-Effekt läuft beim nächsten
@@ -428,15 +458,75 @@ export function PromptToImageDialog({
     if (!text.trim() || laeuft) return
     setLaeuft(true)
 
+    /*
+      DAS FACH ERST JETZT SUCHEN ODER ANLEGEN.
+
+      Beim Oeffnen des Dialogs waere es zu frueh: Wer es sich anders ueberlegt,
+      liesse ein leeres Fach am Charakter zurueck. Hier steht fest, dass
+      wirklich erzeugt wird.
+
+      Gesucht wird ueber `findeVariante` — denselben Vergleich, den auch die
+      Kette benutzt. Ein genauerer legte ein zweites Fach neben das vorhandene.
+    */
+    let ziel = ablage
+    if (ziel && !ziel.variantId) {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        const { data: vorhanden } = await supabase
+          .from('character_variants')
+          .select('id, name')
+          .eq('character_id', ziel.parentId)
+        const treffer = findeVariante(vorhanden ?? [], ziel.variantName)
+        if (treffer?.id) {
+          ziel = { ...ziel, variantId: treffer.id as string }
+        } else {
+          const { data } = await supabase
+            .from('character_variants')
+            .insert({
+              character_id: ziel.parentId, user_id: user?.id,
+              name: ziel.variantName,
+            })
+            .select('id')
+            .single()
+          ziel = data?.id ? { ...ziel, variantId: data.id as string } : null
+        }
+      } catch {
+        ziel = null
+      }
+      // Ohne Fach wird trotzdem erzeugt; das Bild liegt dann in der
+      // Warteschlange. Eine bezahlte Erzeugung an einem fehlgeschlagenen
+      // Ordner scheitern zu lassen, waere die teurere Reaktion.
+      if (!ziel) {
+        toast.error('Der Ordner konnte nicht angelegt werden — das Bild bleibt in der Warteschlange.')
+      }
+    }
+
+    /*
+      FREMDE REFERENZBILDER VORHER HOLEN (PROJ-86).
+
+      Mark: „Das sollte finalisiert werden, dass die Bilder auf jeden Fall
+      genommen werden, egal wo sie herkommen und welche Endung sie haben."
+
+      Der Arbeiter lehnt Adressen ausserhalb des eigenen Speichers ab — und das
+      soll er auch: Er laeuft auf Marks PC und erreicht damit sein Heimnetz.
+      Statt den Auftrag daran scheitern zu lassen, wird das Bild jetzt vorher
+      geholt und abgelegt. Die Reihenfolge bleibt dabei erhalten, sonst truege
+      jedes Bild das falsche Etikett aus den Zuordnungszeilen.
+    */
+    const sicherung = await referenzenSichern(referenzen.map(r => r.url))
+    const meldung = sicherungsMeldung(sicherung)
+    if (meldung) toast.info(meldung)
+
     const job = await anlegen({
       prompt:          promptFuerAuftrag(text, format, rollen, zuordnungTexte),
       model:           modell,
       size:            zuordnung.size,
       aspect_ratio:    format,
       variants:        durchlaeufe,
-      reference_urls:  referenzen.map(r => r.url),
+      reference_urls:  sicherung.urls,
       reference_roles: rollen,
-      scene_meta:      { name: titel ?? null, herkunft: 'prompt' },
+      scene_meta:      { name: titel ?? null, herkunft: 'prompt', ...(ziel ? { ablage: ziel } : {}) },
     })
 
     setLaeuft(false)

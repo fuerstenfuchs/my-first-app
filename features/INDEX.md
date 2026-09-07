@@ -77,7 +77,7 @@
 | PROJ-47 | Prompt-Assistent im Bildstudio (Text-KI ueber den Proxy) | In Review | [PROJ-47](PROJ-47-prompt-assistent.md) | 2026-09-03 |
 
 | PROJ-48 | Referenzkette fuer Charaktere (Kopf, Koerper, Kombi-Referenz) | In Review | [PROJ-48](PROJ-48-referenzkette-charakter.md) | 2026-09-03 |
-| PROJ-49 | Erfasste Bilder in den eigenen Speicher kopieren | In Progress | [PROJ-49](PROJ-49-bilder-in-den-eigenen-speicher.md) | 2026-09-03 |
+| PROJ-49 | Erfasste Bilder in den eigenen Speicher kopieren | In Review (abgeschlossen durch PROJ-89) | [PROJ-49](PROJ-49-bilder-in-den-eigenen-speicher.md) | 2026-09-03 |
 | PROJ-50 | Sieben Standard-Varianten bei Charaktererzeugung | In Review | [PROJ-50](PROJ-50-standard-varianten.md) | 2026-09-03 |
 | PROJ-51 | Titelbild per Knopf aus dem Preset „Calvanize Studio" | In Review | [PROJ-51](PROJ-51-titelbild-preset.md) | 2026-09-03 |
 
@@ -147,4 +147,12 @@
 
 | PROJ-85 | Zwei Bildplaetze fuer die einzeln erzeugten Blaetter | In Review | [PROJ-85](PROJ-85-zwei-bildplaetze.md) | 2026-09-07 |
 
-## Next Available ID: PROJ-86
+| PROJ-86 | Einzelweg kann, was die Kette kann (Merkmale + Ablage) | In Review | [PROJ-86](PROJ-86-einzelweg-kann-was-die-kette-kann.md) | 2026-09-07 |
+
+| PROJ-87 | Aufstellung der Gruppe waehlbar (Personen wandern, nicht Haltungen) | In Review | [PROJ-87](PROJ-87-aufstellung-waehlbar.md) | 2026-09-07 |
+
+| PROJ-88 | Generieren-Knopf bei Outfit-Sheets | In Review | [PROJ-88](PROJ-88-outfit-erzeugen-knopf.md) | 2026-09-07 |
+
+| PROJ-89 | Fremde Referenzbilder vor dem Abschicken holen (schliesst PROJ-49) | In Review | [PROJ-89](PROJ-89-fremde-bilder-vorher-holen.md) | 2026-09-07 |
+
+## Next Available ID: PROJ-90

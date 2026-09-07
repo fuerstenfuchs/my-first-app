@@ -42,6 +42,23 @@ export const STANDARD_VARIANTEN: string[] = [
   'Calvanize',
 ]
 
+/**
+ * Die passende Variante zu einem Namen finden - oder undefined.
+ *
+ * WARUM ES DIESE FUNKTION GIBT (PROJ-86): Die Kette findet ihr Fach ueber einen
+ * Namensvergleich ohne Ruecksicht auf Gross-/Kleinschreibung
+ * (`varianteHolen` in `use-referenzkette.ts`). Der Einzelweg legt seine
+ * Ergebnisse ab jetzt ebenfalls ab und braucht denselben Vergleich - ein
+ * zweiter, genauerer wuerde ein zweites Fach "Koerper " neben "Körper" anlegen.
+ */
+export function findeVariante<T extends { name?: string | null }>(
+  varianten: readonly T[],
+  name: string,
+): T | undefined {
+  const gesucht = schluessel(name)
+  return varianten.find(v => schluessel(String(v.name ?? '')) === gesucht)
+}
+
 /** Namen auf die Form bringen, in der verglichen wird. */
 function schluessel(name: string): string {
   return name.trim().toLowerCase()

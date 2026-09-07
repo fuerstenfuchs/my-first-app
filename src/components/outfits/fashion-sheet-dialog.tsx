@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, ChevronLeft, Sparkles } from 'lucide-react'
+import { Copy, Check, ChevronLeft, Sparkles, ImagePlus } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import type { Outfit } from '@/hooks/use-outfits'
 import { KATEGORIE_EN, kategorieEintrag } from '@/lib/outfit-kategorien'
+import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
 
@@ -146,6 +147,7 @@ interface Props {
 export function FashionSheetDialog({ open, onClose, asset }: Props) {
   const [step, setStep]           = useState<'choose' | 'prompt'>('choose')
   const [selected, setSelected]   = useState<SheetType | null>(null)
+  const [bildDialogOffen, setBildDialogOffen] = useState(false)
   const [copied, setCopied]       = useState(false)
 
   const prompt = selected ? generatePrompt(selected, asset) : ''
@@ -270,14 +272,23 @@ export function FashionSheetDialog({ open, onClose, asset }: Props) {
               </button>
             </div>
 
-            <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-              Kopiere diesen Prompt und füge ihn in dein Bildgenerator-Tool ein (z. B. Midjourney, ComfyUI, Flux).
-              Das fertige Sheet kannst du anschließend als Variante bei diesem Asset speichern.
+            <p className="text-[13px] text-muted-foreground leading-relaxed">
+              Entweder direkt hier erzeugen lassen — das Outfit ist dann schon
+              vorausgewählt — oder kopieren und in ein anderes Werkzeug geben.
             </p>
+
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-500"
+              onClick={() => setBildDialogOffen(true)}
+            >
+              <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+              Bild daraus erzeugen
+            </Button>
 
             <div className="flex gap-2 pt-1">
               <Button
-                className="flex-1 bg-rose-600 hover:bg-rose-500"
+                variant="outline"
+                className="flex-1"
                 onClick={handleCopy}
                 disabled={copied}
               >
@@ -287,13 +298,35 @@ export function FashionSheetDialog({ open, onClose, asset }: Props) {
                   <><Copy className="mr-1.5 h-3.5 w-3.5" />Prompt kopieren</>
                 )}
               </Button>
-              <Button variant="outline" onClick={handleClose}>
+              <Button variant="ghost" onClick={handleClose}>
                 Schließen
               </Button>
             </div>
           </div>
         )}
       </DialogContent>
+
+      {/*
+        NUR DAS OUTFIT ALS REFERENZ.
+
+        Die drei Blaetter beschreiben ein Kleidungsstueck vor neutralem Grund.
+        Ein Charakterbild daneben hiesse „Image 2 = CHARACTER - take the
+        person's identity from it" — und das Modell baute eine bestimmte Person
+        in ein Blatt, das die KLEIDUNG zeigen soll. Ein Ort ebenso: Die
+        Blaetter verlangen ausdruecklich einen neutralen Hintergrund.
+
+        Erst mounten, wenn gebraucht: Der Dialog laedt drei Bibliotheken.
+      */}
+      {bildDialogOffen && (
+        <PromptToImageDialog
+          isOpen
+          onClose={() => setBildDialogOffen(false)}
+          prompt={prompt}
+          titel={`${asset.name} — Sheet`}
+          vorauswahlOutfit={asset}
+          rollen={['outfit']}
+        />
+      )}
     </Dialog>
   )
 }

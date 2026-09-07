@@ -3,6 +3,7 @@ import {
   istGruppe, gruppenGroesse, gruppenKonstellation, gruppenKontinuitaet,
   gruppenAnsage, gruppenBlattZuordnung, gruppenGroesseJePlatz,
   GRUPPEN_VORRANG, HALTUNGEN, GRUPPE_HALTUNGEN_MAX, bausteinFuerGruppe,
+  reihenfolgeFuer, AUFSTELLUNGEN,
 } from './gruppen-shooting'
 import type { Character } from '@/hooks/use-characters'
 
@@ -419,5 +420,76 @@ describe('bausteinFuerGruppe', () => {
   it('laesst alles andere unangetastet', () => {
     const unberuehrt = 'A wide view in which the location itself is the subject.'
     expect(bausteinFuerGruppe(unberuehrt)).toBe(unberuehrt)
+  })
+})
+
+describe('Aufstellung — wer an welchem Platz steht', () => {
+  /*
+    MARKS BEFUND vom 07.09.2026: „Da sollte man die Reihenfolge auf jeden Fall
+    aendern koennen. Optisch gesehen anhand der Bilder, die ist immer gleich von
+    links nach rechts."
+  */
+
+  it('laesst bei „wie auf dem Blatt" alles, wie es war', () => {
+    for (const nr of [1, 2, 3, 4, 5]) {
+      expect(reihenfolgeFuer('wie_blatt', 3, nr)).toEqual([1, 2, 3])
+    }
+  })
+
+  it('stellt bei „wechselnd" jedes Bild anders auf', () => {
+    const bilder = [1, 2, 3, 4, 5].map(nr => reihenfolgeFuer('wechselnd', 3, nr).join(''))
+    // Drei Personen ergeben drei Aufstellungen; ueber fuenf Bilder wiederholt
+    // sich das, aber nie zweimal hintereinander.
+    for (let i = 1; i < bilder.length; i++) {
+      expect(bilder[i], `Bild ${i + 1}`).not.toBe(bilder[i - 1])
+    }
+  })
+
+  it('benutzt jede Person genau einmal', () => {
+    // Eine Verschiebung, die jemanden verliert oder verdoppelt, faellt sonst
+    // erst am Bild auf — und dort sieht sie aus wie ein Modellfehler.
+    for (const n of [2, 3, 4, 5]) {
+      for (const nr of [1, 2, 3, 4, 5]) {
+        const r = reihenfolgeFuer('wechselnd', n, nr)
+        expect(r).toHaveLength(n)
+        expect([...r].sort()).toEqual(Array.from({ length: n }, (_, i) => i + 1))
+      }
+    }
+  })
+
+  it('schreibt die Person an ihren Platz, die Haltung bleibt am Platz', () => {
+    /*
+      DER PUNKT, AN DEM EIN NAHELIEGENDER EINFALL SCHEITERT.
+
+      Die Haltungen einfach durchzurotieren geht NICHT: Manche sind ortsgebunden
+      — „nearest to the camera and largest" gehoert zum linken Platz an der
+      Fluchtlinie, nicht zu Person 1. Wandert sie mit der Person, widerspricht
+      sie der Formation. Also wandern die Personen, nicht die Haltungen.
+    */
+    const t = gruppenKonstellation('tiefe', 3, [2, 3, 1])
+    expect(t).toContain('PERSON 2 (leftmost) is nearest to the camera and largest')
+    expect(t).toContain('PERSON 3 (2nd from the left)')
+    expect(t).toContain('PERSON 1 (rightmost)')
+  })
+
+  it('nimmt die Ordnungszeile zurueck, wenn die Gruppe anders steht', () => {
+    /*
+      „Left to right they stand in the SAME ORDER as on the group sheet" waere
+      dann eine Luege — und zwar die schaedlichste Sorte, weil dieser Satz der
+      einzige Anker der Zuordnung ist. Steht die Gruppe anders, muss JEDE Zeile
+      selbst sagen, wer wo steht.
+    */
+    const anders = gruppenKonstellation('weit', 3, [2, 3, 1])
+    expect(anders).not.toContain('SAME ORDER as on the group sheet')
+    expect(anders).toContain('They do NOT stand in the order of the group sheet')
+
+    const wieBlatt = gruppenKonstellation('weit', 3, [1, 2, 3])
+    expect(wieBlatt).toContain('SAME ORDER as on the group sheet')
+    expect(wieBlatt).not.toContain('They do NOT stand')
+  })
+
+  it('bietet genau zwei Aufstellungen an', () => {
+    expect(AUFSTELLUNGEN.map(a => a.id)).toEqual(['wie_blatt', 'wechselnd'])
+    expect(AUFSTELLUNGEN.every(a => a.label && a.hinweis)).toBe(true)
   })
 })

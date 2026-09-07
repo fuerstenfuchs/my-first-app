@@ -23,7 +23,7 @@ const anlegen = vi.fn()
 
 vi.mock('@/hooks/use-image-jobs', () => ({ useImageJobs: () => ({ anlegen }) }))
 vi.mock('@/hooks/use-outfits', () => ({ useOutfits: () => ({ outfits: [] }) }))
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
 
 // Der Ablagewaehler holt sich die Ordner des Charakters aus der Datenbank.
 // Hier geht es nicht um ihn — ohne Ziel legt der Knopf nichts ab, und genau
@@ -74,10 +74,20 @@ function zeichne(character: Character | null) {
 }
 
 beforeEach(() => {
+  /*
+    KEIN ECHTER NETZZUGRIFF IM TEST.
+
+    Der Knopf holt seit PROJ-86 fremde Referenzadressen vorher in den eigenen
+    Speicher. Ohne dieses Doppel haenge das Ergebnis daran, dass ein Abruf nach
+    „https://x/…" scheitert — ein Test, der von einem Fehlschlag lebt, ist
+    keiner.
+  */
+  vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://gsfrbxdesarlhfijmguu.supabase.co')
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })))
   anlegen.mockReset()
   anlegen.mockResolvedValue({ id: 'j1' })
 })
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
 describe('ShootingKetteButton bei einer Gruppe', () => {
   it('erkennt die Gruppe am Charakter und nennt die Zahl', () => {

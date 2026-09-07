@@ -9,7 +9,12 @@ import { Button } from '@/components/ui/button'
 import type { Character } from '@/hooks/use-characters'
 import { cn } from '@/lib/utils'
 import { PromptToImageDialog } from '@/components/prompts/prompt-to-image-dialog'
-import { bildplaetze } from '@/lib/referenzkette'
+import {
+  bildplaetze, koerperMerkmaleText, VARIANTEN_NAME,
+  type KoerperAuswahl,
+} from '@/lib/referenzkette'
+import type { AblageZiel } from '@/lib/ablage-auftrag'
+import { KoerperMerkmale } from '@/components/characters/koerper-merkmale'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
@@ -305,7 +310,59 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
   const [copied, setCopied]     = useState(false)
   const [bildDialogOffen, setBildDialogOffen] = useState(false)
 
-  const prompt = selected ? getPrompt(selected, gender) : ''
+  /*
+    KOERPERMERKMALE AUCH IM EINZELWEG (PROJ-86).
+
+    Mark am 07.09.2026: „Punkt zwei kannst Du noch einbauen, genau, damit man
+    das auch manuell machen koennte, falls man kein Referenzbild hat fuer den
+    Koerper."
+
+    Genau dieser Fall ist der wichtigste: Zeigt keins der beiden Referenzbilder
+    wirklich einen Koerper, sind diese Zeilen die einzige Quelle fuer den
+    Koerperbau. Bisher gab es sie nur im Ketten-Dialog.
+  */
+  const [koerperAuswahl, setKoerperAuswahl] = useState<KoerperAuswahl>({})
+
+  /*
+    WOHIN DAS FERTIGE BLATT GEHOERT (PROJ-86).
+
+    Mark: „Koennte man auch da ablegen, wo sie herkommen beim Charakter?"
+
+    Die drei Kettenschritte haben ihre Faecher schon — sie stehen an jedem
+    Charakter als Standard-Variante bereit (PROJ-50) und tragen dieselben Namen,
+    die auch die Kette benutzt. Deshalb kommen sie aus `VARIANTEN_NAME` und sind
+    nicht neu getippt: Zwei Zeichenketten fuer dasselbe Fach liefen
+    auseinander, und die Kette legte dann ein zweites daneben an.
+
+    `variantId: null` heisst „Fach mit diesem Namen suchen, sonst anlegen" —
+    aufgeloest wird das erst beim Abschicken.
+  */
+  const VARIANTE_JE_SHEET: Record<SheetType, string> = {
+    kopf:            VARIANTEN_NAME.kopf,
+    koerper:         VARIANTEN_NAME.koerper,
+    referenzsheet:   VARIANTEN_NAME.referenzsheet,
+    ausdruecke:      'Ausdrücke',
+    gesichtsdetails: 'Gesichtsdetails',
+  }
+
+  const ablageZiel: AblageZiel | null = selected
+    ? {
+        baustein: 'charaktere',
+        parentId: character.id,
+        parentName: character.name,
+        variantId: null,
+        variantName: VARIANTE_JE_SHEET[selected],
+      }
+    : null
+
+  const basisPrompt = selected ? getPrompt(selected, gender) : ''
+
+  // Die Merkmale gehen in den ANGEZEIGTEN Prompt, nicht erst beim Abschicken:
+  // Was Mark kopiert, muss dasselbe sein wie das, was erzeugt wird.
+  const merkmale = selected === 'koerper' ? koerperMerkmaleText(koerperAuswahl) : null
+  const prompt = merkmale ? `${basisPrompt}
+
+${merkmale}` : basisPrompt
 
   /*
     STABIL HALTEN, SONST WIRD MARKS AUSWAHL UEBERSCHRIEBEN.
@@ -440,6 +497,14 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
               </div>
             )}
 
+            {selected === 'koerper' && (
+              <KoerperMerkmale
+                auswahl={koerperAuswahl}
+                onAuswahl={setKoerperAuswahl}
+                hinweis="Zusätzlich zu dem, was die Referenzbilder zeigen. Zeigt keins von beiden den Körperbau, ist das hier die einzige Quelle dafür."
+              />
+            )}
+
             {/* Prompt box */}
             <div className="relative">
               <pre className="text-[11px] leading-relaxed bg-muted/30 border border-border/50 rounded-xl p-4 whitespace-pre-wrap font-mono text-foreground/80 max-h-72 overflow-y-auto">
@@ -535,6 +600,7 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
           zurueck, wenn kein eigenes Koerperfoto abgelegt ist.
         */
         bildplaetze={plaetze}
+        ablage={ablageZiel}
       />}
     </Dialog>
   )

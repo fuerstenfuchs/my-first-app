@@ -3,7 +3,7 @@ import type { ShotTypeKey } from '@/lib/scene-builder-options'
 import { buildPrompt, type Scene } from '@/lib/szene-prompt'
 import {
   gruppenKonstellation, gruppenKontinuitaet, gruppenGroesseJePlatz,
-  bausteinFuerGruppe,
+  bausteinFuerGruppe, reihenfolgeFuer, type Aufstellung,
 } from '@/lib/gruppen-shooting'
 import type { Outfit } from '@/hooks/use-outfits'
 
@@ -112,12 +112,25 @@ export type KettenOptionen = {
    * dasselbe Hemd an.
    */
   gruppe: number | null
+  /**
+   * Wie die Gruppe je Bild aufgestellt wird (PROJ-86).
+   *
+   * Mark: „Da sollte man die Reihenfolge auf jeden Fall ändern können. Optisch
+   * gesehen anhand der Bilder, die ist immer gleich von links nach rechts."
+   *
+   * Vorgabe bleibt „wie auf dem Blatt": Das ist der sichere Weg — die
+   * Zuordnung Person↔Gesicht hat dann nur einen Anker. „Wechselnd" verlangt
+   * vom Modell einen Schritt mehr (es muss die Blattposition auf eine andere
+   * Bildposition abbilden), gibt der Serie dafür aber Bewegung.
+   */
+  aufstellung: Aufstellung
 }
 
 export const KETTE_VORGABE: KettenOptionen = {
   mitUebergang: true,
   zweitesOutfit: null,
   gruppe: null,
+  aufstellung: 'wie_blatt',
 }
 
 /**
@@ -146,6 +159,7 @@ function schrittPrompt(
   scene: Scene, shotType: ShotTypeKey, haltung: string, ortsBaustein: string,
   nr: number, gesamt: number, outfitWechsel: boolean,
   key: SpotKey | 'uebergang', gruppe: number | null,
+  reihenfolge: number[],
 ): string {
   /*
     DREI DINGE MUESSEN FUER EINE GRUPPE AUS DER SZENE HERAUS, BEVOR DER
@@ -189,7 +203,7 @@ function schrittPrompt(
   // Gewicht auf einem Bein" UND „jeder steht anders": zwei gegenläufige
   // Anweisungen im selben Prompt, und die Konstellation verlöre.
   const koerper = gruppe !== null
-    ? gruppenKonstellation(key, gruppe)
+    ? gruppenKonstellation(key, gruppe, reihenfolge)
     : ['POSE', `The subject is ${haltung}.`].join('\n')
 
   /*
@@ -310,6 +324,9 @@ export function baueShooting(
         { ...scene, outfit: s.outfit },
         groesse, haltung, baustein, nr, gesamt, wechsel,
         s.key, optionen.gruppe,
+        optionen.gruppe !== null
+          ? reihenfolgeFuer(optionen.aufstellung, optionen.gruppe, nr)
+          : [],
       ),
     }
   })
