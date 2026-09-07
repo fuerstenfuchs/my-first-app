@@ -101,3 +101,43 @@ fehlgeschlagenen Ordner scheitern zu lassen, wäre die teurere Reaktion.
 - **Die Merkmale gelten nur beim Körper-Sheet**, wie in der Kette auch. Beim
   Referenzsheet wären sie ebenso denkbar; dort steht der Körperbau aber schon
   im mitgegebenen Körperblatt.
+
+---
+
+## Was die unabhängige Prüfung gefunden hat
+
+**Der ganze Ablage-Weg war ungetestet.** 782 grüne Tests sagten darüber nichts:
+Die Testdatei hatte Supabase gar nicht ersetzt und nie ein Ziel mitgegeben. Das
+ist keine Aussage über den Code, sondern über die Messung — sie maß hier nicht.
+Jetzt sind es vier Tests, und zwei Rückschritte (vorhandenes Fach ignorieren,
+`sort_order` weglassen) werden bemerkt.
+
+**`sort_order` fehlte beim Anlegen.** Jede andere Anlegestelle im Projekt setzt
+es. Ohne das landet ein neues Fach an unvorhersehbarer Stelle zwischen den
+sieben vorbereiteten — und wäre die Spalte NOT NULL ohne Vorgabewert, scheiterte
+das Anlegen still, und Mark läse „Der Ordner konnte nicht angelegt werden" ohne
+Grund. **Ob die Spalte NOT NULL ist, konnte ich nicht messen** — es liegt kein
+Schema im Ordner, und die Datenbankverbindung ist in dieser Sitzung nicht
+angemeldet. Gesetzt ist es jetzt so oder so.
+
+**Die Doppelklick-Sperre lag im Zustand statt in einem Ref.** Umgestellt — aber
+ehrlich gemessen: **Ein Test mit zwei schnellen Klicks läuft mit BEIDEN
+Fassungen grün durch.** React leert den Zustand zwischen zwei Klick-Ereignissen.
+Das Ref bleibt, weil der Nachbarknopf es seit PROJ-75 so macht und weil an
+diesem Durchlauf jetzt ein Ordner-Eintrag neben der bezahlten Erzeugung hängt —
+aber es ist eine Vorsichtsmaßnahme, kein behobener Fehler. Der Kommentar im Code
+sagt das jetzt auch.
+
+**Ohne Grenze auf der Listenabfrage** — nachgetragen, `backend.md` verlangt sie.
+
+---
+
+## Offen (aus der Prüfung)
+
+- **Das Referenzsheet bekommt die Merkmale nicht**, nur das Körper-Sheet — wie
+  in der Kette auch. Der Referenzsheet-Prompt verlangt aber ausdrücklich
+  lesbare Körperproportionen, und Marks Fall („kein Referenzbild für den
+  Körper") trifft dort gleichermaßen zu. **Frage an Mark, nicht stillschweigend
+  nachrüsten.**
+- **„Gesichtsdetails" ist kein Standardfach.** Es entsteht frisch, wenn Mark
+  dieses Blatt zum ersten Mal erzeugt.

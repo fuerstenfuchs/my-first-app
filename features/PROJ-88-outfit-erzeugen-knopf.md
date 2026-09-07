@@ -55,3 +55,27 @@ Der Kopier-Knopf bleibt - er ist jetzt der zweite Weg, nicht der einzige.
   Referenzsheet braeuchte drei Bilder (vorne, Rueckseite, Details). Waehlte
   jemand hier spaeter einen Kettenschritt an, braeuchte es ein Gegenstueck zu
   `bildplaetze()` fuer Outfits; heute gibt es diesen Weg gar nicht.
+
+---
+
+## Was die unabhängige Prüfung gefunden hat
+
+**`@image1` steht jetzt im Modellprompt.** Alle drei Outfit-Prompts beginnen mit
+`Using @image1 as the garment reference.` Das ist Syntax aus einem anderen
+Werkzeug; für gpt-image-2 ist es ein bedeutungsloses Fragment. Solange der
+Prompt nur kopiert wurde, war das gleichgültig — ab jetzt geht es mit.
+
+**Bewusst stehen gelassen, nicht übersehen.** Der Kopierknopf bleibt Marks
+zweiter Weg, und dort kann `@image1` in seinem anderen Werkzeug etwas bedeuten.
+Es ohne Rückfrage zu entfernen, hieße, seinen bestehenden Arbeitsweg zu ändern.
+Die richtige Zuordnung steht ohnehin darunter (`Image 1 = OUTFIT — take only the
+garments…`), also schadet es nicht; es ist nur überflüssig. **Marks
+Entscheidung.**
+
+**Der Vorbelegungs-Effekt hing an der Objektidentität** und hätte Marks
+Handauswahl bei einem Neuladen der Outfit-Liste zurückgesetzt — bei
+`rollen={['outfit']}` ist das die einzige Karte, also gut sichtbar. Er hängt
+jetzt an der Kennung.
+
+**Bestätigt:** `rollen={['outfit']}` ist richtig, kein Widerspruch zum Prompt.
+Und die neue Vorauswahl ändert für die bisherigen Aufrufer nichts.

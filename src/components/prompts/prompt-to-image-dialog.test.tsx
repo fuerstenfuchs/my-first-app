@@ -12,7 +12,7 @@
  *
  * Der Rest des Dialogs steht nicht zur Prüfung; Supabase kommt nicht vor.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { render, screen, waitFor, fireEvent, cleanup, within } from '@testing-library/react'
 import { PromptToImageDialog } from './prompt-to-image-dialog'
 import { bildplaetze } from '@/lib/referenzkette'
@@ -53,7 +53,45 @@ vi.mock('@/lib/reference-images', () => ({
   loadRefImages: (...a: unknown[]) => ladeBilder(...a),
 }))
 
-function zeichne(mitPlaetzen: boolean, person: typeof PERSON | null = PERSON) {
+/*
+  EIN KLEINES SUPABASE-DOPPEL FUER DEN ABLAGE-WEG (PROJ-86).
+
+  Ohne das war der ganze Zweig „Fach suchen, sonst anlegen" ungetestet — 782
+  gruene Tests sagten darueber nichts. Das Doppel kann genau die zwei Ketten,
+  die der Dialog benutzt: eine Liste holen und eine Zeile einfuegen.
+*/
+let faecher: { id: string; name: string }[] = []
+/** Was der Dialog beim Anlegen eines Fachs zurueckbekommt. */
+type Einfuegen = (zeile: unknown) => Promise<{ data: { id: string } | null }>
+let einfuegen: Mock<Einfuegen>
+
+vi.mock('@/lib/supabase', () => ({
+  createClient: () => ({
+    auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
+    from: () => ({
+      select: () => ({
+        eq: () => ({ limit: async () => ({ data: faecher }) }),
+      }),
+      insert: (zeile: unknown) => ({
+        select: () => ({ single: async () => einfuegen(zeile) }),
+      }),
+    }),
+  }),
+}))
+
+const ABLAGE = {
+  baustein: 'charaktere' as const,
+  parentId: 'c1',
+  parentName: 'Anna',
+  variantId: null,
+  variantName: 'Körper',
+}
+
+function zeichne(
+  mitPlaetzen: boolean,
+  person: typeof PERSON | null = PERSON,
+  ablage: typeof ABLAGE | null = null,
+) {
   return render(
     <PromptToImageDialog
       isOpen
@@ -62,6 +100,7 @@ function zeichne(mitPlaetzen: boolean, person: typeof PERSON | null = PERSON) {
       vorauswahlCharakter={person}
       rollen={['character']}
       bildplaetze={mitPlaetzen ? bildplaetze('koerper', { hatKoerperfoto: true }) : undefined}
+      ablage={ablage}
     />,
   )
 }
@@ -82,6 +121,8 @@ beforeEach(() => {
   })))
   anlegen.mockReset()
   anlegen.mockResolvedValue({ id: 'j1' })
+  faecher = []
+  einfuegen = vi.fn(async () => ({ data: { id: 'neu' } }))
   ladeBilder.mockReset()
   ladeBilder.mockResolvedValue([
     { url: KOPFBLATT,   label: 'Kopf' },
@@ -285,5 +326,78 @@ describe('Zweimal dasselbe Bild', () => {
     zeichne(true)
     await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
     await waitFor(() => expect(screen.queryByText(/dasselbe Bild/)).toBeNull())
+  })
+})
+
+describe('Ablage beim Charakter', () => {
+  it('nimmt das vorhandene Fach, statt ein zweites anzulegen', async () => {
+    // Die drei Kettenfaecher stehen an jedem Charakter schon bereit (PROJ-50).
+    // Ein zweites danebenzulegen hiesse, die Blaetter desselben Charakters auf
+    // zwei Faecher zu verteilen, ohne dass etwas meldet.
+    faecher = [{ id: 'f1', name: ' körper ' }]
+    zeichne(true, PERSON, ABLAGE)
+    const auftrag = await abschicken()
+
+    expect(auftrag.scene_meta.ablage).toMatchObject({
+      baustein: 'charaktere', parentId: 'c1', variantId: 'f1', variantName: 'Körper',
+    })
+    expect(einfuegen).not.toHaveBeenCalled()
+  })
+
+  it('legt ein Fach an, wenn es keins gibt — mit sort_order', async () => {
+    faecher = [{ id: 'a', name: 'Kopf' }, { id: 'b', name: 'Ausdrücke' }]
+    zeichne(true, PERSON, ABLAGE)
+    const auftrag = await abschicken()
+
+    expect(einfuegen).toHaveBeenCalledWith(expect.objectContaining({
+      character_id: 'c1', name: 'Körper', sort_order: 2,
+    }))
+    expect(auftrag.scene_meta.ablage).toMatchObject({ variantId: 'neu' })
+  })
+
+  it('erzeugt TROTZDEM, wenn das Fach nicht angelegt werden kann', async () => {
+    // Eine bezahlte Erzeugung an einem fehlgeschlagenen Ordner scheitern zu
+    // lassen, waere die teurere Reaktion. Das Bild bleibt dann in der
+    // Warteschlange.
+    einfuegen = vi.fn(async () => ({ data: null }))
+    zeichne(true, PERSON, ABLAGE)
+    const auftrag = await abschicken()
+
+    expect(auftrag.scene_meta.ablage).toBeUndefined()
+    expect(auftrag.reference_urls.length).toBeGreaterThan(0)
+  })
+
+  it('fragt gar nicht erst nach, wenn kein Ziel mitgegeben wurde', async () => {
+    zeichne(true, PERSON, null)
+    const auftrag = await abschicken()
+    expect(auftrag.scene_meta.ablage).toBeUndefined()
+    expect(einfuegen).not.toHaveBeenCalled()
+  })
+})
+
+describe('Zwei schnelle Klicks', () => {
+  it('reihen NUR EINEN Auftrag ein und legen NUR EIN Fach an', async () => {
+    /*
+      WAS DIESER TEST FESTHAELT — UND WAS NICHT.
+
+      Er haelt fest: Zwei Klicks ergeben EINEN Auftrag und EIN Fach. Das ist die
+      Zusage, die zaehlt, denn an diesem Durchlauf haengen eine bezahlte
+      Erzeugung und ein Ordner-Eintrag.
+
+      Er unterscheidet NICHT zwischen der Sperre im Ref und der im State:
+      nachgemessen, beide Fassungen laufen hier gruen durch. React leert den
+      Zustand zwischen zwei Klick-Ereignissen. Wer den Test als Beleg fuer die
+      Notwendigkeit des Refs liest, liest mehr hinein, als drinsteht.
+    */
+    zeichne(true, PERSON, ABLAGE)
+    await waitFor(() => expect(ladeBilder).toHaveBeenCalled())
+
+    const knopf = screen.getByRole('button', { name: /Zur Warteschlange/i })
+    fireEvent.click(knopf)
+    fireEvent.click(knopf)
+
+    await waitFor(() => expect(anlegen).toHaveBeenCalled())
+    expect(anlegen).toHaveBeenCalledTimes(1)
+    expect(einfuegen).toHaveBeenCalledTimes(1)
   })
 })

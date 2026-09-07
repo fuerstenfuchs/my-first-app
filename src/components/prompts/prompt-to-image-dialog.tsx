@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Loader2, Send, X, ImagePlus, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -222,6 +222,24 @@ export function PromptToImageDialog({
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)
+  /*
+    DIE SPERRE LIEGT IM REF, NICHT IM STATE — VORSORGLICH.
+
+    Ehrlich gemessen am 07.09.2026: Ein Test mit zwei schnellen Klicks laeuft
+    mit BEIDEN Fassungen gruen durch. React leert den Zustand zwischen zwei
+    Klick-Ereignissen, und `setLaeuft(true)` steht vor dem ersten `await` — der
+    zweite Klick sieht ihn also schon.
+
+    Das Ref bleibt trotzdem, aus zwei Gruenden: Der Nachbarknopf
+    (`shooting-kette-button.tsx`) macht es seit PROJ-75 so, und seit der Ablage
+    haengt an diesem Durchlauf ein zusaetzlicher Ordner-Eintrag neben der
+    bezahlten Erzeugung. Wo zwei Fassungen gleich viel kosten und eine weniger
+    voraussetzt, nimmt man die.
+
+    KEINE BEHAUPTUNG UEBER EINEN BEHOBENEN FEHLER: Ein solcher ist hier nicht
+    belegt worden.
+  */
+  const laeuftRef = useRef(false)
   const [text, setText] = useState(prompt)
   const geaendert = text.trim() !== prompt.trim()
 
@@ -440,9 +458,20 @@ export function PromptToImageDialog({
   useEffect(() => {
     if (isOpen && vorauswahlLocation) setLocation(vorauswahlLocation)
   }, [isOpen, vorauswahlLocation])
+  /*
+    AN DER KENNUNG, NICHT AM OBJEKT.
+
+    `vorauswahlOutfit` ist ein Objekt aus den Eltern-Props. Bekaeme die
+    Elternliste eine neue Identitaet (Neuladen, Realtime-Update), liefe der
+    Effekt erneut und setzte die Karte zurueck — und bei `rollen={['outfit']}`
+    ist das die EINZIGE Karte, also gut sichtbar. Dieselbe Loesung wie bei den
+    Bildplaetzen.
+  */
+  const outfitKennung = vorauswahlOutfit?.id ?? ''
   useEffect(() => {
     if (isOpen && vorauswahlOutfit) setOutfit(vorauswahlOutfit)
-  }, [isOpen, vorauswahlOutfit])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, outfitKennung])
 
   function zuruecksetzen() {
     setCharakter(vorauswahlCharakter); setCharakterBild(null)
@@ -455,7 +484,8 @@ export function PromptToImageDialog({
   }
 
   async function handleQueue() {
-    if (!text.trim() || laeuft) return
+    if (!text.trim() || laeuftRef.current) return
+    laeuftRef.current = true
     setLaeuft(true)
 
     /*
@@ -477,6 +507,7 @@ export function PromptToImageDialog({
           .from('character_variants')
           .select('id, name')
           .eq('character_id', ziel.parentId)
+          .limit(200)
         const treffer = findeVariante(vorhanden ?? [], ziel.variantName)
         if (treffer?.id) {
           ziel = { ...ziel, variantId: treffer.id as string }
@@ -486,6 +517,10 @@ export function PromptToImageDialog({
             .insert({
               character_id: ziel.parentId, user_id: user?.id,
               name: ziel.variantName,
+              // Wie an jeder anderen Anlegestelle im Projekt. Ohne das landet
+              // das neue Fach an unvorhersehbarer Stelle zwischen den sieben
+              // vorbereiteten — und wenn die Spalte NOT NULL ist, gar nicht.
+              sort_order: (vorhanden ?? []).length,
             })
             .select('id')
             .single()
@@ -529,6 +564,7 @@ export function PromptToImageDialog({
       scene_meta:      { name: titel ?? null, herkunft: 'prompt', ...(ziel ? { ablage: ziel } : {}) },
     })
 
+    laeuftRef.current = false
     setLaeuft(false)
     if (!job) return
 

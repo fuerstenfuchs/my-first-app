@@ -89,3 +89,44 @@ fertigen Bild nachzählen kann. Bei zwei Personen tauschen sie schlicht.
 - **Die Verschiebung ist starr.** Bei drei Personen wiederholt sie sich ab dem
   vierten Bild. Für fünf Bilder reicht das; eine echte Mischung wäre erst bei
   längeren Serien nötig.
+
+---
+
+## Was die unabhängige Prüfung gefunden hat
+
+**Ein gegenläufiges Paar im selben Prompt, am Platz „Tiefe".** Bei „wechselnd"
+stand oben *„They do NOT stand in the order of the group sheet"* — und zwei
+Zeilen darunter, aus der Formation, unverändert: *„Left to right **stays** left
+to right."* „Stays" hat im Prompt keinen anderen Bezug als das Blatt.
+
+Dieselbe Sorte Fehler wie früher „überlappen" gegen „Spalt Licht", nur an
+anderer Stelle. Der Satz sagt jetzt, was er meint: Die Tiefenstaffelung
+verschiebt niemanden seitwärts, und die Links-rechts-Ordnung ist die, die
+darunter steht.
+
+**Der Hinweis am Knopf versprach zu viel.** „Jedes Bild stellt die Gruppe anders
+auf" stimmt für Bild 1 nicht (kein Versatz) und bei drei Personen ab Bild 4
+auch nicht. Jetzt: „Von Bild zu Bild tauschen die Plätze — niemand steht zweimal
+hintereinander am selben." Das kann man am Bild nachzählen, und dort stimmt es.
+
+**Bestätigt:** Die Haltungen bleiben ortsgebunden, nur die Personennummer
+wandert — an allen fünf Plätzen dieselbe Mechanik.
+
+---
+
+## Was kein Code entscheiden kann
+
+**Ob „wechselnd" die Gesichtszuordnung trägt, steht nicht im Quelltext.** Der
+einzige Anker ist die Blattzuordnung, und sie definiert Person *n* rein über die
+Blattposition. In „wechselnd" muss das Modell zusätzlich Blattposition auf
+Bildposition abbilden.
+
+Das gehört an einer echten Serie geprüft: eine Dreier-Gruppe einmal in beiden
+Fassungen durchlaufen lassen und die fünf Bilder Gesicht für Gesicht gegen das
+Blatt halten. **Bis dahin ist „wechselnd" eine begründete Erwartung, kein
+Messwert** — deshalb bleibt „wie auf dem Blatt" die Vorgabe.
+
+Überlegenswert, falls es wackelt: `weit` auch in „wechselnd" bei
+Blattreihenfolge lassen. Dort ist die Gruppe klein im Bild und die Zuordnung
+ohnehin am dünnsten — sie dort zusätzlich zu verschieben, holt am wenigsten und
+riskiert am meisten.

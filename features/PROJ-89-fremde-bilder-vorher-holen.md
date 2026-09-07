@@ -107,3 +107,63 @@ irgendwohin, nur nicht auf das Doppel.
 - **Der Reparaturlauf bleibt ein Kommandozeilen-Skript**
   (`worker/src/bilder-nachholen.mts`). Die 30 verbliebenen fremden Adressen sind
   tote Verweise; die holt auch er nicht mehr.
+
+---
+
+## Was die unabhängige Prüfung gefunden hat
+
+Critic hat gegengelesen. Kein Blocker, aber drei Befunde — alle am Quelltext
+nachgemessen, alle bestätigt.
+
+### Mein eigener Kommentar war falsch
+
+Ich hatte hier geschrieben, die Hol-Route lese den Bildtyp „an den ersten Bytes
+ab statt am gemeldeten `Content-Type`". **Das tat sie nicht.** Sie schaute
+allein auf den Kopf und lehnte alles ab, was nicht mit `image/` begann. Das
+Byte-Lesen gab es nur in der Erweiterung und im Arbeiter.
+
+Das ist die gefährlichste Sorte Fehler: Eine Kommentarzeile behauptet eine
+Wache, auf die sich der Nächste verlässt.
+
+**Und sachlich hat Mark deshalb nicht bekommen, was er wollte.** Falsch
+eingerichtete S3-Eimer und CDNs liefern ein gültiges JPEG regelmäßig als
+`application/octet-stream` — das Bild wurde abgelehnt, obwohl es eines war.
+
+Die Route liest jetzt wirklich die Bytes, aber nur dann, wenn der Kopf nichts
+Brauchbares sagt (`''`, `application/octet-stream` und Verwandte). Wer etwas
+ANDERES behauptet (`text/html`, `application/json`), fällt weiterhin vorher
+durch: Wer das erst herunterlädt, um es zu verwerfen, holt sich Seiten ins Haus,
+die er nicht wollte.
+
+Das ist nicht die lockerere, sondern die **strengere** Prüfung — sie glaubt dem
+Inhalt statt einer Behauptung. Eine HTML-Fehlerseite mit Status 200 fällt damit
+ebenso durch wie vorher, und SVG bleibt ausgeschlossen, weil es ausführbarer
+Text ist.
+
+### Dasselbe Bild wurde fünfmal geholt
+
+`referenzenSichern` stand INNERHALB der Auftragsschleife der Kette. Die fünf
+Aufträge teilen sich dieselben Referenzen; die Route legt aber bei jedem Aufruf
+unter einer neuen Kennung ab. Ein Shooting mit zwei fremden Referenzen ergab
+**zehn Dateien statt zwei** — und der Knopf stand die ganze Zeit auf „0/5", weil
+jeder Abruf bis zu 20 Sekunden dauern darf.
+
+Jetzt wird einmal vor der Schleife gesichert. Ein Test hält es fest: Fünf
+Aufträge dürfen aus drei Adressen keine fünfzehn Abrufe machen.
+
+### Was ausdrücklich in Ordnung war
+
+- **Die Reihenfolge bleibt unter allen Umständen erhalten** — genau ein Eintrag
+  je Eingabe, Fehlschläge behalten das Original.
+- **Die Sicherheitsschranke des Arbeiters ist nicht umgangen.** Die Route legt
+  im eigenen Speicher ab; die entstehende Adresse **erfüllt** die Prüfung,
+  statt sie zu umgehen.
+
+---
+
+## Nachgemessen
+
+- **Acht Byte-Signaturen**, darunter zwei, die man leicht falsch macht: RIFF
+  ohne WEBP-Marke (eine WAV-Datei fängt genauso an) und eine HTML-Seite mit
+  Status 200.
+- **Der Abruf-Zähler** in der Kette ist festgenagelt.

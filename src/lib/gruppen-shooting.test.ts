@@ -261,7 +261,7 @@ describe('gruppenKonstellation', () => {
     const t = gruppenKonstellation('tiefe', 4)
     expect(t).toContain('runs DIAGONALLY through the group')
     expect(t).toContain('the leftmost person nearest to the camera')
-    expect(t).toContain('Left to right stays left to right')
+    expect(t).toContain('only the distance from the camera changes')
   })
 
   it('laesst die Gruppe unterwegs NICHT nebeneinander laufen', () => {
@@ -486,6 +486,19 @@ describe('Aufstellung — wer an welchem Platz steht', () => {
     const wieBlatt = gruppenKonstellation('weit', 3, [1, 2, 3])
     expect(wieBlatt).toContain('SAME ORDER as on the group sheet')
     expect(wieBlatt).not.toContain('They do NOT stand')
+  })
+
+it('behauptet bei „wechselnd" nirgends mehr die Blattordnung', () => {
+    /*
+      „Left to right STAYS left to right" hatte im Prompt keinen anderen Bezug
+      als das Blatt — und stand bei „wechselnd" zwei Zeilen unter „They do NOT
+      stand in the order of the group sheet". Dasselbe gegenlaeufige Paar wie
+      frueher bei „ueberlappen" gegen „Spalt Licht", nur an anderer Stelle.
+    */
+    for (const key of PLAETZE) {
+      const t = gruppenKonstellation(key, 3, [2, 3, 1])
+      expect(t).not.toContain('stays left to right')
+    }
   })
 
   it('bietet genau zwei Aufstellungen an', () => {

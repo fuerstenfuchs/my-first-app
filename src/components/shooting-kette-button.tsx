@@ -10,7 +10,7 @@ import { useOutfits } from '@/hooks/use-outfits'
 import { AssetPickerDialog } from '@/components/prompts/asset-picker-dialog'
 import { AblageWaehler } from '@/components/ablage-waehler'
 import { createClient } from '@/lib/supabase'
-import { referenzenSichern } from '@/lib/referenzen-sichern'
+import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import { cn } from '@/lib/utils'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
@@ -137,6 +137,26 @@ export function ShootingKetteButton({
       else { ziel = null; toast.error('Ordner konnte nicht angelegt werden — die Bilder bleiben in der Warteschlange.') }
     }
 
+    /*
+      EINMAL SICHERN, NICHT FUENFMAL (PROJ-89).
+
+      Die fuenf Auftraege teilen sich dieselben Referenzbilder — nur das Outfit
+      wechselt. Stand das Sichern in der Schleife, wurde dasselbe fremde Bild
+      fuenfmal geholt und fuenfmal unter einer neuen Kennung abgelegt: zehn
+      Dateien statt zwei, und der Knopf stand die ganze Zeit auf „0/5". Bei 500
+      MB Speicher ist das nicht folgenlos.
+    */
+    const alleAdressen = [...new Set(
+      kette.flatMap(schritt => referenzen
+        .filter(r => r.rolle !== 'outfit')
+        .map(r => r.url)
+        .concat(schritt.outfit?.cover_image_url ? [schritt.outfit.cover_image_url] : [])),
+    )]
+    const sicherung = await referenzenSichern(alleAdressen)
+    const gesichert = new Map(alleAdressen.map((alt, i) => [alt, sicherung.urls[i]!]))
+    const meldung = sicherungsMeldung(sicherung)
+    if (meldung) toast.info(meldung)
+
     try {
       for (const schritt of kette) {
         /*
@@ -179,10 +199,6 @@ export function ShootingKetteButton({
               : ROLLEN_ANWEISUNG[r])
           : undefined
 
-        // Fremde Adressen vorher in den eigenen Speicher holen (PROJ-86) —
-        // sonst lehnt der Arbeiter das Bild ab und die ganze Kette bricht ab.
-        const gesichert = await referenzenSichern(refs.map(r => r.url))
-
         const job = await anlegen({
           prompt: promptFuerAuftrag(
             schritt.prompt, aspectRatio, rollen,
@@ -195,7 +211,7 @@ export function ShootingKetteButton({
           aspect_ratio: aspectRatio,
           variants: 1,
           ziel_klasse: zielKlasse,
-          reference_urls: gesichert.urls,
+          reference_urls: refs.map(r => gesichert.get(r.url) ?? r.url),
           reference_roles: rollen,
           scene_meta: {
             ...sceneMeta,

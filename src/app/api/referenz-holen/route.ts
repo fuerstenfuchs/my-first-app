@@ -251,6 +251,55 @@ async function imFlussLesen(antwort: Response): Promise<Blob> {
   return new Blob(stuecke as BlobPart[])
 }
 
+/**
+ * Typen, bei denen der Server nichts Verwertbares sagt.
+ *
+ * Bei genau diesen wird der Inhalt selbst befragt, statt abzulehnen. Alles
+ * andere (text/html, application/json …) behauptet etwas ANDERES und fällt
+ * vorher durch — wer das erst herunterlädt, holt sich Seiten ins Haus, die er
+ * nicht wollte.
+ */
+const UNBESTIMMTE_TYPEN = new Set([
+  '', 'application/octet-stream', 'binary/octet-stream', 'application/binary',
+  'application/download', 'application/force-download',
+])
+
+/**
+ * Die Bildart an den ERSTEN BYTES ablesen (PROJ-89).
+ *
+ * Dieselbe Erkennung benutzt die Erweiterung seit dem 03.09.2026
+ * (`extension/src/lib/bildSichern.ts`) und der Arbeiter beim Ablegen — mit
+ * derselben Begründung: Manche Server liefern `application/octet-stream`,
+ * manche eine HTML-Fehlerseite mit Status 200. Die Bytes lügen nicht.
+ *
+ * SVG steht bewusst NICHT drin: Eine SVG-Datei ist ausführbarer Text, kein
+ * Rasterbild — sie im eigenen Speicher unter einer öffentlichen Adresse
+ * abzulegen, wäre eine eigene Entscheidung mit eigenen Folgen.
+ */
+export async function bildartAusBytes(
+  blob: Blob,
+): Promise<{ typ: string; endung: string } | null> {
+  const b = new Uint8Array(await blob.slice(0, 16).arrayBuffer())
+  const ist = (...bytes: number[]) => bytes.every((x, i) => b[i] === x)
+
+  if (ist(0xFF, 0xD8, 0xFF)) return { typ: 'image/jpeg', endung: 'jpg' }
+  if (ist(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)) return { typ: 'image/png', endung: 'png' }
+  if (ist(0x47, 0x49, 0x46, 0x38)) return { typ: 'image/gif', endung: 'gif' }
+  if (ist(0x42, 0x4D)) return { typ: 'image/bmp', endung: 'bmp' }
+  // WebP: „RIFF" … „WEBP" ab Byte 8.
+  if (ist(0x52, 0x49, 0x46, 0x46)
+      && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) {
+    return { typ: 'image/webp', endung: 'webp' }
+  }
+  // AVIF/HEIF: „ftyp" ab Byte 4, danach die Marke.
+  if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+    const marke = String.fromCharCode(b[8]!, b[9]!, b[10]!, b[11]!)
+    if (marke.startsWith('avi')) return { typ: 'image/avif', endung: 'avif' }
+    if (marke.startsWith('hei') || marke.startsWith('mif')) return { typ: 'image/heic', endung: 'heic' }
+  }
+  return null
+}
+
 /** Endung aus dem gemeldeten Typ — für einen lesbaren Dateinamen. */
 function endungFuer(typ: string): string {
   const t = typ.split(';')[0]?.trim().toLowerCase() ?? ''
@@ -318,8 +367,32 @@ export async function POST(anfrage: Request) {
       throw new Fehler(502, `Die Seite antwortete mit ${antwort?.status ?? 'nichts'} — das Bild kam nicht an.`)
     }
 
+    /*
+      DEM GEMELDETEN TYP GLAUBEN — ABER NICHT ALS EINZIGER QUELLE (PROJ-89).
+
+      Mark am 07.09.2026: „dass die Bilder auf jeden Fall genommen werden, egal
+      wo sie herkommen und welche Endung sie haben."
+
+      Bis dahin hat diese Route allein auf `Content-Type` geschaut und alles
+      abgelehnt, was nicht mit `image/` begann. Falsch eingerichtete S3-Eimer
+      und CDNs liefern ein gültiges JPEG aber regelmäßig als
+      `application/octet-stream` — das Bild wurde also abgelehnt, obwohl es
+      eines war, und Mark sah nur „ließ sich nicht holen".
+
+      Jetzt gilt: Sagt der Kopf „image/…", ist die Sache klar. Sagt er nichts
+      Brauchbares, wird es trotzdem geholt und danach an den ERSTEN BYTES
+      entschieden. Das ist nicht die lockerere, sondern die STRENGERE Prüfung —
+      sie glaubt dem Inhalt statt einer Behauptung. Eine HTML-Fehlerseite mit
+      Status 200 fällt damit ebenso durch wie vorher.
+
+      Was von vornherein durchfällt, sind Typen, die etwas ANDERES behaupten
+      (text/html, application/json): Wer die erst herunterlädt, um sie dann zu
+      verwerfen, holt sich Seiten ins Haus, die er nicht wollte.
+    */
     const typ = antwort.headers.get('content-type') ?? ''
-    if (!typ.toLowerCase().startsWith('image/')) {
+    const kopfSagtBild = typ.toLowerCase().startsWith('image/')
+    const kopfSagtNichts = UNBESTIMMTE_TYPEN.has(typ.split(';')[0]?.trim().toLowerCase() ?? '')
+    if (!kopfSagtBild && !kopfSagtNichts) {
       throw new Fehler(415, 'Unter dieser Adresse liegt kein Bild, sondern ' +
         `„${typ.split(';')[0] || 'etwas Unbekanntes'}".`)
     }
@@ -331,11 +404,21 @@ export async function POST(anfrage: Request) {
     }
     const daten = await imFlussLesen(antwort)
 
-    const sauberTyp = typ.split(';')[0]?.trim() ?? 'image/png'
+    const ausBytes = await bildartAusBytes(daten)
+    if (!kopfSagtBild && !ausBytes) {
+      throw new Fehler(415, 'Unter dieser Adresse liegt kein Bild — auch der ' +
+        'Inhalt sieht nicht danach aus.')
+    }
+    // Sagt der Kopf nichts Brauchbares, entscheiden die Bytes; sagt er „image",
+    // bleibt es bei seiner Angabe (er ist dann genauer, etwa bei image/svg+xml).
+    const sauberTyp = kopfSagtBild
+      ? (typ.split(';')[0]?.trim() || 'image/png')
+      : ausBytes!.typ
+
     // Direkt in den Speicher, MIT Marks eigener Anmeldung — die Schreibregel
     // prüft `storage.foldername(name)[1] = auth.uid()` und lässt genau diesen
     // einen Ordner zu.
-    const pfad = `${user.id}/referenzen/${crypto.randomUUID()}.${endungFuer(typ)}`
+    const pfad = `${user.id}/referenzen/${crypto.randomUUID()}.${kopfSagtBild ? endungFuer(typ) : ausBytes!.endung}`
     const { error: hochErr } = await supabase.storage
       .from('generated-images')
       .upload(pfad, daten, { contentType: sauberTyp, upsert: false })

@@ -17,8 +17,15 @@ import { istEigenerSpeicher } from '@/lib/referenzkette'
  * Was sich ändert, ist der Weg davor: Statt den Auftrag scheitern zu lassen
  * (oder das Bild still wegzulassen), wird es vorher geholt und im eigenen
  * Speicher abgelegt — durch `/api/referenz-holen`, das serverseitig gegen SSRF
- * prüft, die Größe begrenzt und den Bildtyp an den ersten Bytes abliest statt
- * am gemeldeten `Content-Type`.
+ * prüft und die Größe begrenzt.
+ *
+ * EIN KOMMENTAR, DER HIER FALSCH STAND: Bis zur Prüfung am 07.09.2026 behauptete
+ * diese Stelle, die Route lese den Bildtyp an den ersten Bytes ab. Das tat sie
+ * nicht — sie schaute allein auf den gemeldeten `Content-Type` und lehnte alles
+ * ab, was nicht mit `image/` begann. Falsch eingerichtete S3-Eimer und CDNs
+ * liefern ein gültiges JPEG aber regelmäßig als `application/octet-stream`.
+ * Seit PROJ-89 stimmt der Satz: Sagt der Kopf nichts Brauchbares, entscheiden
+ * die Bytes.
  *
  * ZUR ENDUNG, die Mark eigens genannt hat: Sie spielt an keiner Stelle eine
  * Rolle. Der Arbeiter prüft nur die Herkunft, und die Route leitet die Endung

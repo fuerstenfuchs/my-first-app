@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { istInternesZiel } from './route'
+import { istInternesZiel, bildartAusBytes } from './route'
 
 /**
  * Die Wache gegen SSRF — festgenagelt, nicht kommentiert.
@@ -92,4 +92,73 @@ describe('istInternesZiel — was durchgelassen wird', () => {
       expect(istInternesZiel(ip)).toBe(false)
     })
   }
+})
+
+describe('bildartAusBytes — der Inhalt entscheidet, nicht die Behauptung', () => {
+  /*
+    MARKS AUFTRAG vom 07.09.2026: „dass die Bilder auf jeden Fall genommen
+    werden, egal wo sie herkommen und welche Endung sie haben."
+
+    Bis dahin schaute diese Route allein auf `Content-Type`. Falsch eingerichtete
+    S3-Eimer und CDNs liefern ein gueltiges JPEG aber regelmaessig als
+    `application/octet-stream` — das Bild wurde abgelehnt, obwohl es eines war.
+    Jetzt entscheiden in diesem Fall die ersten Bytes.
+  */
+  const blob = (...bytes: number[]) => new Blob([new Uint8Array(bytes)])
+  const fuellen = (n: number) => Array.from({ length: n }, () => 0)
+
+  it('erkennt JPEG', async () => {
+    expect(await bildartAusBytes(blob(0xFF, 0xD8, 0xFF, 0xE0, ...fuellen(12))))
+      .toEqual({ typ: 'image/jpeg', endung: 'jpg' })
+  })
+
+  it('erkennt PNG an der vollen Signatur', async () => {
+    expect(await bildartAusBytes(blob(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, ...fuellen(8))))
+      .toEqual({ typ: 'image/png', endung: 'png' })
+  })
+
+  it('erkennt GIF, BMP und WebP', async () => {
+    expect((await bildartAusBytes(blob(0x47, 0x49, 0x46, 0x38, ...fuellen(12))))?.endung).toBe('gif')
+    expect((await bildartAusBytes(blob(0x42, 0x4D, ...fuellen(14))))?.endung).toBe('bmp')
+    // RIFF … WEBP — die Marke steht erst ab Byte 8.
+    expect((await bildartAusBytes(blob(
+      0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, ...fuellen(4),
+    )))?.endung).toBe('webp')
+  })
+
+  it('erkennt AVIF an der Marke hinter ftyp', async () => {
+    expect((await bildartAusBytes(blob(
+      0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66, ...fuellen(4),
+    )))?.endung).toBe('avif')
+  })
+
+  it('weist RIFF ohne WEBP-Marke ab', async () => {
+    // Eine WAV-Datei faengt genauso an. Die ersten vier Bytes allein reichen
+    // nicht — deshalb wird ab Byte 8 nachgesehen.
+    expect(await bildartAusBytes(blob(
+      0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45, ...fuellen(4),
+    ))).toBeNull()
+  })
+
+  it('weist eine HTML-Fehlerseite ab', async () => {
+    /*
+      Manche Server liefern eine Fehlerseite mit Status 200. Kaeme sie durch,
+      laege eine HTML-Datei unter einer oeffentlichen Bildadresse im eigenen
+      Speicher — und der Auftrag scheiterte trotzdem, nur eine Stufe spaeter.
+    */
+    const html = new Blob([new TextEncoder().encode('<!DOCTYPE html><html>')])
+    expect(await bildartAusBytes(html)).toBeNull()
+  })
+
+  it('weist SVG ab — auch wenn es ein Bild ist', async () => {
+    // Eine SVG-Datei ist ausfuehrbarer Text. Sie unter einer oeffentlichen
+    // Adresse im eigenen Speicher abzulegen, waere eine eigene Entscheidung.
+    const svg = new Blob([new TextEncoder().encode('<svg xmlns="http://www.w3')])
+    expect(await bildartAusBytes(svg)).toBeNull()
+  })
+
+  it('stuerzt bei einer zu kurzen Datei nicht ab', async () => {
+    expect(await bildartAusBytes(blob(0xFF))).toBeNull()
+    expect(await bildartAusBytes(new Blob([]))).toBeNull()
+  })
 })

@@ -201,7 +201,7 @@ function formation(key: SpotKey | 'uebergang', n: number): string[] {
       ]
     case 'tiefe':
       return [
-        'The receding line of the perspective runs DIAGONALLY through the group: the leftmost person nearest to the camera and largest, each following person a little further back and a little smaller, the rightmost furthest away. Left to right stays left to right; only the distance from the camera changes.',
+        'The receding line of the perspective runs DIAGONALLY through the group: the leftmost person nearest to the camera and largest, each following person a little further back and a little smaller, the rightmost furthest away. Nobody moves sideways for this: their left-to-right order in this picture is the one given below, and only the distance from the camera changes.',
       ]
     case 'flaeche':
       if (n === 2) {
@@ -301,7 +301,10 @@ export const AUFSTELLUNGEN: { id: Aufstellung; label: string; hinweis: string }[
   {
     id: 'wechselnd',
     label: 'Wechselnd',
-    hinweis: 'Jedes Bild stellt die Gruppe anders auf.',
+    // NICHT „jedes Bild anders": Bild 1 hat keinen Versatz, und bei drei
+    // Personen wiederholt sich die Aufstellung ab Bild 4. Ein Versprechen, das
+    // man am Bild nachzaehlen kann, muss auch dort stimmen.
+    hinweis: 'Von Bild zu Bild tauschen die Plätze — niemand steht zweimal hintereinander am selben.',
   },
 ]
 

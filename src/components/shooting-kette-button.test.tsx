@@ -176,3 +176,26 @@ describe('ShootingKetteButton bei einer Gruppe', () => {
     expect(auftrag.prompt).not.toContain('THE GROUP SHEET')
   })
 })
+
+describe('Fremde Referenzbilder', () => {
+  it('holt jede Adresse EINMAL, nicht einmal je Auftrag', async () => {
+    /*
+      DER BEFUND DER PRUEFUNG vom 07.09.2026.
+
+      Stand das Sichern in der Auftragsschleife, wurde dasselbe fremde Bild
+      fuenfmal geholt und fuenfmal unter einer neuen Kennung abgelegt — zehn
+      Dateien statt zwei, und der Knopf stand die ganze Zeit auf „0/5". Bei 500
+      MB Speicher ist das nicht folgenlos.
+
+      Die drei Referenzen dieses Tests liegen alle ausserhalb; mit einem Outfit
+      sind es drei verschiedene Adressen. Fuenf Auftraege duerfen daraus keine
+      fuenfzehn Abrufe machen.
+    */
+    zeichne(EINZELN)
+    fireEvent.click(screen.getByRole('button', { name: /Shooting erzeugen/ }))
+    await waitFor(() => expect(anlegen).toHaveBeenCalledTimes(5))
+
+    const abrufe = (globalThis.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length
+    expect(abrufe).toBeLessThanOrEqual(4)
+  })
+})
