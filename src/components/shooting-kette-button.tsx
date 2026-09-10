@@ -45,7 +45,7 @@ export function ShootingKetteButton({
   // Beide Einstiege erzeugen mit derselben Vorgabe wie der Auftragsknopf
   // daneben. Wer ein anderes Modell will, waehlt es dort — hier waere eine
   // zweite Modellauswahl nur eine zweite Stelle, an der sie auseinanderlaufen.
-  modell = 'gpt-image-2', zielKlasse = null, szenenName = null,
+  modell = 'gpt-image-2.5-sunburst', zielKlasse = null, szenenName = null,
 }: {
   /** Die Szene — Vorlage für jeden Schritt. Braucht Charakter und Location. */
   scene: Scene

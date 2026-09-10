@@ -36,7 +36,7 @@ export function QueueButton({
   prompt, referenzen, aspectRatio, sceneMeta, szenenName = null,
 }: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
-  const [modell, setModell] = useState<ModellId>('gpt-image-2')
+  const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [laeuft, setLaeuft] = useState(false)
@@ -54,7 +54,7 @@ export function QueueButton({
   // Wer erst Gemini wählt und dann ein Referenzbild dazunimmt, hätte sonst ein
   // Modell eingestellt, das gar nicht mehr im Menü steht.
   useEffect(() => {
-    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2')
+    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2.5-sunburst')
   }, [auswahl, modell])
 
   // Gemini rechnet in Größenklassen statt in Pixeln. Ohne diese Angabe lehnt

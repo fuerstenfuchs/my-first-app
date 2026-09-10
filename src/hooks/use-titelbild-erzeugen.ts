@@ -370,7 +370,7 @@ export function useTitelbildErzeugen(
 
       const job = await anlegen({
         prompt:          promptFuerAuftrag(buildPrompt(scene), aspectRatio, rollen),
-        model:           'gpt-image-2',
+        model:           'gpt-image-2.5-sunburst',
         size:            groesseFuerFormat(aspectRatio).size,
         aspect_ratio:    aspectRatio,
         variants:        1,

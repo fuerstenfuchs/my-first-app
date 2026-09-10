@@ -14,10 +14,55 @@ import type { AspectRatioKey } from './scene-builder-options'
  *    ein bestimmtes Format will, muss es in den Prompt schreiben.
  */
 
+/*
+  DIE DREI SPIELARTEN VON GPT IMAGE 2.5 (11.09.2026).
+
+  Mark am 11.09.2026: „Kannst Du ab sofort als erstes Bildmodell im Proxy GPT
+  Image zwei Punkt fünf sunburst nehmen." Seine globale Regel nennt seit dem
+  10.09. dasselbe — dort steht `gpt-image-2.5-sunburst` als Vorgabe, nachdem er
+  eine Messreihe über 15 Bilder gesehen hat.
+
+  Was die drei unterscheiden (aus seiner Messreihe, nicht aus einer
+  Beschreibung):
+   · sunburst — wärmer und heller, ruhigere Nacht. SEINE WAHL.
+   · 2.5      — neutral und dokumentarisch, am besten für Gesichter.
+   · flare    — mehr Kontrast und Sättigung, für Tageslicht und Produkte.
+
+  In der Geschwindigkeit trennt sie nichts: 37,2 / 38,6 / 38,4 Sekunden im
+  Mittel — die Streuung EINES Modells ist mit 24 Sekunden siebzehnmal größer
+  als der Abstand zwischen ihnen.
+
+  `kannReferenzen: true` ist nicht geraten: Die KI-Zentrale fährt seit dem
+  10.09. mit `gpt-image-2.5-sunburst` und schickt Referenzbilder als `image[]`
+  an `/v1/images/edits` — dieselbe Familie, derselbe Weg wie bei gpt-image-2.
+
+  UNGEMESSEN GEBLIEBEN: ob 2.5 mehr als die drei Größen von gpt-image-2 kennt.
+  Das ließe sich nur mit einer bezahlten Erzeugung feststellen. Die
+  Größenzuordnung unten bleibt deshalb, wie sie war — sie stimmt für die
+  Familie, und zu wenig Formate anzubieten ist der harmlosere Fehler.
+*/
 export const MODELLE = [
   {
+    id: 'gpt-image-2.5-sunburst', label: 'GPT Image 2.5 Sunburst',
+    note: 'Standard — wärmer und heller, ruhigere Nacht',
+    kannReferenzen: true,
+  },
+  {
+    id: 'gpt-image-2.5', label: 'GPT Image 2.5',
+    note: 'Neutral und dokumentarisch — am besten für Gesichter',
+    kannReferenzen: true,
+  },
+  {
+    id: 'gpt-image-2.5-flare', label: 'GPT Image 2.5 Flare',
+    note: 'Mehr Kontrast und Sättigung — Tageslicht und Produkte',
+    kannReferenzen: true,
+  },
+  {
+    // Bleibt in der Liste, ist aber nicht mehr die Vorgabe: In der
+    // Warteschlange stehen Aufträge mit dieser Kennung, und ein Eintrag, den
+    // die Anzeige nicht mehr auflösen kann, sähe dort aus wie ein Fehler.
     id: 'gpt-image-2', label: 'GPT Image 2',
-    note: 'Standard, folgt Referenzbildern treu',
+    note: 'Vorgänger — folgt Referenzbildern treu',
     kannReferenzen: true,
   },
   {

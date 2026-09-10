@@ -130,7 +130,7 @@ export function GruppenReferenzDialog({
         // „Image 2 = OUTFIT" ohne Bezug zu Person 1.
         prompt: promptFuerAuftrag(gruppenPrompt(leute, aufbau), 'landscape_16_9',
                                   refs.map(r => r.rolle), zuordnung),
-        model: 'gpt-image-2',
+        model: 'gpt-image-2.5-sunburst',
         size: zielGroesse.size,
         // QUERFORMAT, weil die Leute nebeneinander stehen. Hochkant müsste das
         // Modell sie stapeln oder beschneiden — beides macht das Blatt

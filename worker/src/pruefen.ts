@@ -31,10 +31,14 @@ try {
     // ein fehlgeschlagener Auftrag in der Warteschlange.
     const daten = await antwort.json().catch(() => null) as { data?: { id?: string }[] } | null
     const modelle = daten?.data?.map(m => m.id).filter((id): id is string => !!id) ?? []
-    if (modelle.includes('gpt-image-2')) {
-      gut('Modell gpt-image-2 steht in der Liste')
+    // Geprueft wird die VORGABE, nicht irgendein Modell der Familie: Am
+    // 11.09.2026 auf gpt-image-2.5-sunburst umgestellt. Stuende hier weiter
+    // der Vorgaenger, meldete die Wache "alles gut", waehrend jeder neue
+    // Auftrag scheitert.
+    if (modelle.includes('gpt-image-2.5-sunburst')) {
+      gut('Modell gpt-image-2.5-sunburst steht in der Liste')
     } else {
-      schlecht('Modell gpt-image-2 fehlt in der Modell-Liste des Proxys — EasyCLIProxyAPI pruefen (Anmeldung des "codex"-Anbieters abgelaufen?)')
+      schlecht('Modell gpt-image-2.5-sunburst fehlt in der Modell-Liste des Proxys — EasyCLIProxyAPI pruefen (Anmeldung des "codex"-Anbieters abgelaufen?)')
     }
   } else if (antwort.status === 401 || antwort.status === 403) {
     schlecht(`${config.proxyUrl} antwortet, lehnt den Token aber ab (HTTP ${antwort.status}). PROXY_TOKEN prüfen.`)

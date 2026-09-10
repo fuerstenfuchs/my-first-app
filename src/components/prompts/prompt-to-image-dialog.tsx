@@ -218,7 +218,7 @@ export function PromptToImageDialog({
   const [location, setLocation] = useState<PickbaresAsset | null>(vorauswahlLocation)
   const [locationBild, setLocationBild] = useState<RefImage | null>(null)
 
-  const [modell, setModell] = useState<ModellId>('gpt-image-2')
+  const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)

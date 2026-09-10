@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+  MODELLE,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE, type ReferenzRolle,
 } from './image-generation'
@@ -192,5 +193,39 @@ describe('Zuordnung der Referenzbilder', () => {
     for (const rolle of ['CHARACTER', 'OUTFIT', 'LOCATION']) {
       expect(block).toContain(rolle)
     }
+  })
+})
+
+describe('Welches Bildmodell die Vorgabe ist', () => {
+  /*
+    MARKS ANSAGE vom 11.09.2026: „Kannst Du ab sofort als erstes Bildmodell im
+    Proxy GPT Image zwei Punkt fuenf sunburst nehmen."
+
+    Warum das einen Test wert ist: Ein falsches Vorgabemodell faellt an keiner
+    Stelle als Fehler auf. Der Auftrag laeuft durch, das Bild kommt, es sieht
+    nur anders aus — kuehler und flacher als das, was Mark ausgesucht hat.
+    Gemerkt haette er es erst beim Vergleich zweier Bilder.
+  */
+  it('nimmt gpt-image-2.5-sunburst als erstes', () => {
+    expect(MODELLE[0].id).toBe('gpt-image-2.5-sunburst')
+  })
+
+  it('fuehrt alle drei Spielarten und laesst sie Referenzbilder annehmen', () => {
+    // Mark am 10.09.2026: „dann sollen fuer mich auch immer alle drei zur
+    // Auswahl stehen." Und `kannReferenzen` entscheidet, ob ein Modell im
+    // Scene Builder ueberhaupt angeboten wird — waere es hier falsch, fiele
+    // die halbe App fuer diese Modelle aus.
+    for (const id of ['gpt-image-2.5-sunburst', 'gpt-image-2.5', 'gpt-image-2.5-flare']) {
+      const m = MODELLE.find(x => x.id === id)
+      expect(m, id).toBeTruthy()
+      expect(m!.kannReferenzen, id).toBe(true)
+    }
+  })
+
+  it('behaelt gpt-image-2 in der Liste', () => {
+    // Nicht aus Nostalgie: In der Warteschlange stehen Auftraege mit dieser
+    // Kennung. Ein Eintrag, den die Anzeige nicht mehr aufloesen kann, saehe
+    // dort aus wie ein Fehler.
+    expect(MODELLE.some(m => m.id === 'gpt-image-2')).toBe(true)
   })
 })

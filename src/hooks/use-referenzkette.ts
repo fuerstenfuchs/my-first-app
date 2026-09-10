@@ -289,7 +289,7 @@ export function useReferenzkette(
 
     const job = await anlegen({
       prompt:          kettenPrompt(schritt, BASIS_PROMPT[schritt], { hatKoerperfoto, koerperAuswahl: koerper.koerperAuswahl }),
-      model:           'gpt-image-2',
+      model:           'gpt-image-2.5-sunburst',
       size:            GROESSE_VORGABE,
       aspect_ratio:    null,
       variants:        1,

@@ -247,7 +247,7 @@ export function useOutfitKette(
 
     const job = await anlegen({
       prompt:          outfitKettenPrompt(schritt, BASIS_PROMPT[schritt]),
-      model:           'gpt-image-2',
+      model:           'gpt-image-2.5-sunburst',
       size:            GROESSE_VORGABE,
       aspect_ratio:    null,
       variants:        1,

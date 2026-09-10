@@ -46,7 +46,7 @@ export function FreieErzeugung(
   const supabase = createClient()
 
   const [prompt, setPrompt] = useState('')
-  const [modell, setModell] = useState<ModellId>('gpt-image-2')
+  const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const [format, setFormat] = useState<AspectRatioKey>('landscape_16_9')
   const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [anzahl, setAnzahl] = useState<Durchlaeufe>(1)
@@ -76,7 +76,7 @@ export function FreieErzeugung(
   // Wer erst Gemini wählt und dann ein Referenzbild dazulegt, hätte sonst ein
   // Modell eingestellt, das gar nicht mehr im Menü steht.
   useEffect(() => {
-    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2')
+    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2.5-sunburst')
   }, [auswahl, modell])
 
   const [titel, setTitel] = useState('')
@@ -324,8 +324,15 @@ export function FreieErzeugung(
         </Select>
       )}
 
-      {/* Was das Format bei diesem Modell wirklich ergibt. gpt-image-2 kennt nur
-          drei Größen und macht aus 16:9 ein 3:2 — das gehört vor den Klick. */}
+      {/* Was das Format bei diesem Modell wirklich ergibt. Die GPT-Image-Reihe
+          rechnet in drei festen Größen und macht aus 16:9 ein 3:2 — das
+          gehört vor den Klick.
+
+          KEIN MODELLNAME MEHR IM SICHTBAREN TEXT (11.09.2026): Dort stand
+          „gpt-image-2", und seit der Umstellung auf gpt-image-2.5-sunburst
+          benannte der Satz ein Modell, das gar nicht gewählt war. Ob 2.5 mehr
+          als drei Größen kennt, ist ungemessen — die Zuordnung bildet so oder
+          so auf drei ab, und genau das sagt der Satz jetzt. */}
       {/* Erst das Format, dann die Genauigkeit. „Format: auf ~1 % genau" allein
           beantwortet die Frage „was kommt heraus?" nicht. */}
       {/* Mit Referenz stimmt die Größenangabe nicht mehr: Der Parameter wirkt
@@ -345,7 +352,7 @@ export function FreieErzeugung(
             </span>
             {inKlassen
               ? ' — Gemini kennt alle sieben Verhältnisse.'
-              : ' — gpt-image-2 kennt nur drei Größen.'}
+              : ' — die GPT-Image-Reihe rechnet in drei festen Größen.'}
           </>
         )}
       </p>

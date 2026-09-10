@@ -53,7 +53,7 @@ export function ShootingSpotsButton({ location }: { location: Location }) {
       for (const [i, spot] of SHOOTING_SPOTS.entries()) {
         const job = await anlegen({
           prompt: promptFuerAuftrag(spotPrompt(spot, location), null, ['location']),
-          model: 'gpt-image-2',
+          model: 'gpt-image-2.5-sunburst',
           size: zuordnung.size,
           aspect_ratio: null,
           variants: 1,
