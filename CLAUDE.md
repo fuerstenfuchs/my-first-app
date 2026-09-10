@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Befehle
 
 ```bash
-npm run dev          # Entwicklungsserver auf localhost:3000
+npm run dev          # Entwicklungsserver auf localhost:3020
 npm run build        # Produktions-Build
 npm run lint         # ESLint
 npm test             # Vitest (einmalig)
