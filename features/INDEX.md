@@ -155,4 +155,6 @@
 
 | PROJ-89 | Fremde Referenzbilder vor dem Abschicken holen (schliesst PROJ-49) | In Review | [PROJ-89](PROJ-89-fremde-bilder-vorher-holen.md) | 2026-09-07 |
 
-## Next Available ID: PROJ-90
+| PROJ-90 | GPT Image 2.5 Sunburst als Vorgabe (11 Stellen umgestellt) | In Review | [PROJ-90](PROJ-90-sunburst-als-vorgabe.md) | 2026-09-11 |
+
+## Next Available ID: PROJ-91
