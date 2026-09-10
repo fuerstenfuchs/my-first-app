@@ -152,6 +152,66 @@ export default function PromptsPage() {
     }
   }, [])
 
+  /*
+    EINEN EINZELNEN PROMPT PER ADRESSE OEFFNEN (?prompt=<id>, ?thema=<id>).
+
+    WOFUER DAS DA IST: Marks KI-Zentrale liest den Tresor mit und zeigt seine
+    Prompts in ihrer Suche. Ein Treffer soll dorthin fuehren, wo der Prompt
+    wirklich steht. Bis zum 10.09.2026 ging das nicht — der Tresor hatte keine
+    Adresse je Eintrag, nur diese Uebersichtsseite. Die Zentrale verwies
+    deshalb auf `/`, und zehn Klicks auf zehn Treffer oeffneten zehn gleiche
+    Reiter dieser Seite. Ein Verweis, der aussieht wie ein Angebot und keines
+    ist, ist schlechter als gar keiner.
+
+    ES BRAUCHTE KEINE NEUE ANSICHT: `detailPromptId` und `themaId` gibt es
+    laengst, sie waren nur von aussen nicht erreichbar. Diese Wirkung haengt
+    also an bereits geprueftem Verhalten und nicht an einem zweiten Weg
+    daneben.
+
+    DIE ADRESSE WIRD ERST GEPUTZT, WENN DER PROMPT DA IST. Beim ersten Lauf
+    laeuft `prompts` noch; wer sofort `replaceState` ruft, hat die Kennung
+    weggeworfen, bevor er sie benutzen konnte, und ein Neuladen der Seite
+    fuehrt ins Nichts.
+
+    UND WENN ES IHN NICHT GIBT, WIRD DAS GESAGT. Ein geloeschter Prompt ergaebe
+    sonst eine leere Seitenspalte — sieht aus wie ein kaputtes Programm, ist
+    aber nur ein alter Verweis. (Die Suche der Zentrale kann veraltet sein: sie
+    liest den Tresor in Abstaenden mit.)
+  */
+  useEffect(() => {
+    if (loading) return
+    const params = new URLSearchParams(window.location.search)
+    const promptId = params.get('prompt')
+    const gewuenschtesThema = params.get('thema')
+    if (!promptId && !gewuenschtesThema) return
+
+    if (gewuenschtesThema) setThemaId(gewuenschtesThema)
+
+    if (promptId) {
+      if (prompts.some(p => p.id === promptId)) {
+        setDetailPromptId(promptId)
+      } else if (prompts.length === 0) {
+        /*
+          KEINE LISTE HEISST NICHT "GELOESCHT". `loading` wird auch dann false,
+          wenn das Laden FEHLGESCHLAGEN ist (`use-prompts.ts` meldet den Fehler
+          selbst und setzt danach trotzdem `setLoading(false)`). Wer hier
+          "gibt es nicht mehr" sagt, verwechselt einen Ladefehler mit einer
+          Loeschung — und schickt Mark in die falsche Richtung.
+
+          Die Adresse bleibt in diesem Fall stehen. Kommen die Prompts spaeter
+          doch noch, laeuft dieser Effekt erneut (er haengt an `prompts`) und
+          oeffnet den richtigen.
+        */
+        return
+      } else {
+        toast.error('Diesen Prompt gibt es nicht mehr.', {
+          description: 'Der Verweis stammt aus einer Suche, die ihn noch kannte.',
+        })
+      }
+    }
+    window.history.replaceState(null, '', '/')
+  }, [loading, prompts])
+
   // Open Quick Capture with shared content when redirected from /share or /api/share
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)

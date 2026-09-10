@@ -47,3 +47,9 @@ worker/.env
 # Windows-Ordnersymbole (FUCHS-Windows) - gehoeren nicht ins Repository
 desktop.ini
 desktop.ini.vor-fuchs
+
+# Das Zugangstoken wurde am 10.09.2026 aus .mcp.json in die
+# Umgebungsvariable SUPABASE_ACCESS_TOKEN verschoben. Die Sicherungskopie
+# von davor traegt es noch im Klartext und darf NIE ins Repository.
+.mcp.json.vor-token-umzug
+.mcp.json.*

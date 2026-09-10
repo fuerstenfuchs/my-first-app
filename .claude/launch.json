@@ -5,8 +5,8 @@
       "name": "prompt-tresor",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000,
-      "url": "http://localhost:3000"
+      "port": 3020,
+      "url": "http://localhost:3020"
     }
   ]
 }
