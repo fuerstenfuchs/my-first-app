@@ -125,6 +125,12 @@ export function useBildBearbeiten() {
       if (pfadErr) {
         // Datei liegt, Zeile weiß nichts davon — beides wieder weg, sonst
         // bleibt eine verwaiste Datei und eine leere Kachel.
+        //
+        // RÜCKBAU OHNE ZÄHLUNG, BEWUSST: Der Pfad enthält die ID der Zeile, die
+        // gerade eben erst angelegt wurde (`<nutzer>/<neue-id>/0.<endung>`).
+        // Die Datei ist Sekunden alt, und ihr `result_paths` wurde nie
+        // geschrieben — es gibt keinen Verweis, den eine Zählung finden könnte.
+        // `speicher-loeschstellen.test.ts` lässt diese Stelle deshalb zu.
         await supabase.storage.from(BUCKET).remove([pfad])
         await supabase.from('image_jobs').delete().eq('id', zeile.id)
         toast.error(`Eintragen fehlgeschlagen: ${pfadErr.message}`)

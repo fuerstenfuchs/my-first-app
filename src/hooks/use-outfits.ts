@@ -5,6 +5,9 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
 import {
+  dateiFreigeben, gleicheDatei, titelbildNachLoeschen, TITELBILD_BEIM_LOESCHEN_NACHZIEHEN,
+} from '@/lib/datei-freigeben'
+import {
   OUTFIT_KATEGORIE_STANDARD, alsKategorie, type OutfitKategorie,
 } from '@/lib/outfit-kategorien'
 
@@ -384,13 +387,66 @@ export function useOutfitDetail(outfitId: string | null) {
     }
   }
 
-  async function deleteImage(variantId: string, imageId: string, storagePath: string | null): Promise<void> {
+  /**
+   * Ein Bild löschen: Zeile → (Titelbild/Zuschnitt prüfen) → Datei freigeben.
+   *
+   * TITELBILD UND ZUSCHNITT BLEIBEN — Marks Entscheidung vom 15.09.2026, siehe
+   * `TITELBILD_BEIM_LOESCHEN_NACHZIEHEN` in `datei-freigeben.ts`. Sie zählen
+   * dann als Verweis, und die Datei bleibt liegen. Der Rest dieses Kommentars
+   * beschreibt, was geschieht, wenn der Schalter wieder umgelegt wird.
+   *
+   * `_storagePath` wird nicht mehr benutzt. Er ist unzuverlässig: Nach dem
+   * Umzug PROJ-53 zeigen Zeilen per Adresse in `fashion-assets`, der Pfad
+   * wurde aber gegen `outfit-images` gelöscht. Eimer und Pfad kommen jetzt aus
+   * der Adresse der gelöschten Zeile. Der Parameter bleibt, damit die Seiten
+   * unverändert aufrufen können.
+   *
+   * WARUM DAS TITELBILD VOR DEM FREIGEBEN: Es ist selbst ein Verweis. Stünde
+   * es noch auf dem Bild, bliebe die Datei liegen — und das Titelbild zeigte
+   * ein Bild, das es im Eintrag nicht mehr gibt. Früher zog nur der Charakter
+   * sein Titelbild nach; Outfits zeigten danach ein gelöschtes Bild.
+   */
+  async function deleteImage(variantId: string, imageId: string, _storagePath: string | null): Promise<void> {
     const supabase = createClient()
-    if (storagePath) await supabase.storage.from(BUCKET).remove([storagePath])
-    await supabase.from('outfit_images').delete().eq('id', imageId)
+    const variant = variants.find(v => v.id === variantId)
+    const imZustand = variant?.images.find(i => i.id === imageId)
+
+    // Die gelöschte Zeile zurückholen: ihre Adresse ist die Wahrheit über die
+    // Datei, nicht der Zustand vom letzten Zeichnen.
+    const { data: weg, error } = await supabase
+      .from('outfit_images').delete().eq('id', imageId).select('url').maybeSingle()
+    if (error) { toast.error('Bild konnte nicht gelöscht werden'); return }
+    const url = (weg?.url as string | undefined) ?? imZustand?.url ?? null
+
     setVariants(prev => prev.map(v =>
       v.id === variantId ? { ...v, images: v.images.filter(i => i.id !== imageId) } : v
     ))
+
+    if (url && outfitId) {
+      const rest = (variant?.images ?? []).filter(i => i.id !== imageId).map(i => i.url)
+      const patch: { cover_image_url?: string | null; crop_image_url?: string | null } = {}
+      // Ob überhaupt nachgezogen wird, steht am Schalter in datei-freigeben.ts.
+      const titel = titelbildNachLoeschen('outfits', outfit?.cover_image_url, url, rest)
+      if (titel.aendern) patch.cover_image_url = titel.neu
+      // Der Zuschnitt ist ein bestimmter Ausschnitt EINES Bildes — ein anderes
+      // Bild dafür einzusetzen wäre falsch. Er wird nur geleert, und nur, wenn
+      // der Schalter das Titelbild überhaupt anfassen lässt.
+      if (TITELBILD_BEIM_LOESCHEN_NACHZIEHEN.outfits && gleicheDatei(outfit?.crop_image_url, url)) {
+        patch.crop_image_url = null
+      }
+      if (Object.keys(patch).length > 0) {
+        const { error: titelErr } = await supabase.from('outfits').update(patch).eq('id', outfitId)
+        if (titelErr) {
+          // Ohne umgehängtes Titelbild zählt es beim Freigeben mit — die Datei
+          // bleibt dann liegen, und das Titelbild bleibt heil.
+          toast.error('Titelbild konnte nicht nachgezogen werden')
+        } else {
+          setOutfit(prev => prev ? { ...prev, ...patch } : prev)
+        }
+      }
+    }
+
+    await dateiFreigeben(supabase, url)
   }
 
   async function reorderImages(variantId: string, orderedIds: string[]): Promise<void> {

@@ -1,7 +1,25 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import {
   typAusBytes, fuerAnalyseGeeignet, vorgehenFuer, base64Aus, ANALYSE_TYPEN,
 } from './bildart'
+
+/*
+  GEMEINSAME BEISPIELE FÜR ALLE VIER KOPIEN (15.09.2026). Per Dateisystem
+  gelesen statt importiert: Die Erweiterung wird getrennt gebaut, und ein
+  JSON-Import aus `src/` hinge an Einstellungen, die sie nicht hat.
+*/
+const bildartBeispiele = JSON.parse(
+  readFileSync(join(__dirname, '..', '..', '..', 'src', 'lib', 'bildart-beispiele.json'), 'utf8'),
+) as { name: string; hex: string; typ: string | null }[]
+
+describe('typAusBytes — gemeinsame Beispiele (bildart-beispiele.json)', () => {
+  it.each(bildartBeispiele)('$name → $typ', ({ hex, typ }) => {
+    const bytes = Uint8Array.from(hex.match(/../g) ?? [], h => parseInt(h, 16))
+    expect(typAusBytes(bytes)).toBe(typ)
+  })
+})
 
 /** Eine Signatur mit Füllung auf mindestens 12 Bytes. */
 function sig(...bytes: number[]): Uint8Array {
@@ -39,6 +57,18 @@ describe('typAusBytes', () => {
     expect(typAusBytes(ftyp('avis'))).toBe('image/avif')
     expect(typAusBytes(ftyp('heic'))).toBe('image/heic')
     expect(typAusBytes(ftyp('mif1'))).toBe('image/heic')
+    // `mif1` ist nur der allgemeine HEIF-Rahmen (15.09.2026): Die kompatiblen
+    // Marken ab Byte 16 entscheiden, ob es AVIF oder HEIC ist.
+    const mitMarken = (...marken: string[]) => {
+      const groesse = 12 + 4 * marken.length
+      const a = new Uint8Array(groesse)
+      a.set([0, 0, 0, groesse, 0x66, 0x74, 0x79, 0x70])
+      a.set([...marken[0]!].map(c => c.charCodeAt(0)), 8)
+      marken.slice(1).forEach((m, i) => a.set([...m].map(c => c.charCodeAt(0)), 16 + 4 * i))
+      return a
+    }
+    expect(typAusBytes(mitMarken('mif1', 'mif1', 'avif'))).toBe('image/avif')
+    expect(typAusBytes(mitMarken('mif1', 'mif1', 'heic'))).toBe('image/heic')
   })
 
   it('nennt SVG und HTML kein Bild — beide kommen hier oft an', () => {

@@ -16,6 +16,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 process.env.PROXY_URL ??= 'http://127.0.0.1:8317'
 process.env.PROXY_TOKEN ??= 'test'
@@ -78,6 +79,21 @@ test('uebersetzeFehler entfernt Geheimnisse aus der Meldung', () => {
   assert.ok(!f.message.includes('geheim123'), 'der Schlüssel darf nicht in der Meldung stehen')
 })
 
+/*
+ * GEMEINSAME BEISPIELE FÜR ALLE VIER KOPIEN (15.09.2026, Critic K1).
+ * Dieselbe Datei prüfen `src/lib/bildtyp.test.ts`, die Route und die
+ * Erweiterung. Weicht diese Kopie ab, wird genau dieser Test rot.
+ */
+test('bildart stimmt mit den gemeinsamen Beispielen überein', () => {
+  const beispiele = JSON.parse(
+    readFileSync(new URL('../../src/lib/bildart-beispiele.json', import.meta.url), 'utf8'),
+  ) as { name: string; hex: string; typ: string | null }[]
+  assert.ok(beispiele.length > 10, 'Beispieldatei gefunden')
+  for (const { name, hex, typ } of beispiele) {
+    assert.equal(bildart(Buffer.from(hex, 'hex'))?.typ ?? null, typ, name)
+  }
+})
+
 test('bildart erkennt die Formate und lehnt alles andere ab', () => {
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
   const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -120,6 +136,18 @@ test('bildart benennt AVIF und HEIC, statt sie zu verschweigen', () => {
   ])
   assert.equal(bildart(rahmen('avif'))?.typ, 'image/avif')
   assert.equal(bildart(rahmen('heic'))?.typ, 'image/heic')
+  // `mif1` ist nur der allgemeine HEIF-Rahmen (15.09.2026, Critic K2): Die
+  // kompatiblen Marken ab Byte 16 entscheiden, ob es AVIF oder HEIC ist.
+  const mitMarken = (...marken: string[]) => {
+    const groesse = 12 + 4 * marken.length
+    return Buffer.concat([
+      Buffer.from([0, 0, 0, groesse, 0x66, 0x74, 0x79, 0x70]),
+      Buffer.from(marken[0]!, 'ascii'), Buffer.from([0, 0, 0, 0]),
+      Buffer.from(marken.slice(1).join(''), 'ascii'),
+    ])
+  }
+  assert.equal(bildart(mitMarken('mif1', 'mif1', 'avif'))?.typ, 'image/avif', 'mif1 mit avif ist AVIF')
+  assert.equal(bildart(mitMarken('mif1', 'mif1', 'heic'))?.typ, 'image/heic', 'mif1 mit heic bleibt HEIC')
   // Der entscheidende Punkt: erkannt, aber NICHT direkt verwendbar — genau
   // deshalb wandelt `proxy.ts` sie vorher nach PNG um.
   assert.equal(bildart(rahmen('avif'))?.vomModell, false)

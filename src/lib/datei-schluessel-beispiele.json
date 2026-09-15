@@ -1,0 +1,18 @@
+[
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/character-images/u1/c1/v1/123-ab.png", "schluessel": "character-images/u1/c1/v1/123-ab.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/generated-images/u1/j1/0.png?v=3", "schluessel": "generated-images/u1/j1/0.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/u1/p1/x.jpg?v=1&t=2#oben", "schluessel": "prompt-media/u1/p1/x.jpg" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/generated-images/u1/j1/0.png#a?b", "schluessel": "generated-images/u1/j1/0.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/sign/outfit-images/u1/o1/a.png?token=eyJ", "schluessel": "outfit-images/u1/o1/a.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/authenticated/prompt-covers/u1/a.png", "schluessel": "prompt-covers/u1/a.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/render/image/public/visual-assets/u1/a.png?width=200", "schluessel": "visual-assets/u1/a.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/fashion-assets/u1/f1/v1/bild.jpg", "schluessel": "fashion-assets/u1/f1/v1/bild.jpg" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/u1/mein%20bild.png", "schluessel": "prompt-media/u1/mein bild.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/u1/K%C3%A4se.png", "schluessel": "prompt-media/u1/Käse.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/u1/k%c3%a4se.png", "schluessel": "prompt-media/u1/käse.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/u1/100%zz.png", "schluessel": "prompt-media/u1/100%zz.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/u1/kaputt%FF.png", "schluessel": "prompt-media/u1/kaputt%FF.png" },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media/", "schluessel": null },
+  { "adresse": "https://abc.supabase.co/storage/v1/object/public/prompt-media", "schluessel": null },
+  { "adresse": "https://abc.supabase.co/bild.jpg", "schluessel": null }
+]

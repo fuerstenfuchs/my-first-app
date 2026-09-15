@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { validateMediaFile } from './use-prompt-media'
+import { dateiFreigeben, titelbildNachLoeschen } from '@/lib/datei-freigeben'
 
 export const POSE_CATEGORIES = [
   { key: 'stehend',     label: 'Stehend',      emoji: '🧍' },
@@ -324,13 +325,48 @@ export function usePoseActionDetail(poseActionId: string | null) {
     }
   }
 
-  async function deleteImage(variantId: string, imageId: string, storagePath: string | null): Promise<void> {
+  /**
+   * Ein Bild löschen: Zeile → (Titelbild prüfen) → Datei freigeben.
+   *
+   * DAS TITELBILD BLEIBT — Marks Entscheidung vom 15.09.2026, siehe
+   * `TITELBILD_BEIM_LOESCHEN_NACHZIEHEN` in `datei-freigeben.ts`. Es zählt dann
+   * als Verweis, und die Datei bleibt liegen.
+   *
+   * `_storagePath` wird nicht mehr benutzt — unzuverlässig, siehe
+   * `use-outfits.ts`. Eimer und Pfad kommen aus der Adresse der gelöschten
+   * Zeile. Das Titelbild wird VOR dem Freigeben umgehängt, sonst zählt es als
+   * Verweis mit und zeigt danach ein Bild, das es im Eintrag nicht mehr gibt.
+   *
+   * `crop_image_url` wird hier nicht angefasst: `PoseAction` kennt die Spalte
+   * nicht, und im Repo ist sie nur für `outfits` belegt (proj-53).
+   */
+  async function deleteImage(variantId: string, imageId: string, _storagePath: string | null): Promise<void> {
     const supabase = createClient()
-    if (storagePath) await supabase.storage.from(BUCKET).remove([storagePath])
-    await supabase.from('pose_action_images').delete().eq('id', imageId)
+    const variant = variants.find(v => v.id === variantId)
+    const imZustand = variant?.images.find(i => i.id === imageId)
+
+    const { data: weg, error } = await supabase
+      .from('pose_action_images').delete().eq('id', imageId).select('url').maybeSingle()
+    if (error) { toast.error('Bild konnte nicht gelöscht werden'); return }
+    const url = (weg?.url as string | undefined) ?? imZustand?.url ?? null
+
     setVariants(prev => prev.map(v =>
       v.id === variantId ? { ...v, images: v.images.filter(i => i.id !== imageId) } : v
     ))
+
+    if (url && poseActionId) {
+      const rest = (variant?.images ?? []).filter(i => i.id !== imageId).map(i => i.url)
+      // Ob überhaupt nachgezogen wird, steht am Schalter in datei-freigeben.ts.
+      const titel = titelbildNachLoeschen('posen', poseAction?.cover_image_url, url, rest)
+      if (titel.aendern) {
+        const { error: titelErr } = await supabase
+          .from('pose_actions').update({ cover_image_url: titel.neu }).eq('id', poseActionId)
+        if (titelErr) toast.error('Titelbild konnte nicht nachgezogen werden')
+        else setPoseAction(prev => prev ? { ...prev, cover_image_url: titel.neu } : prev)
+      }
+    }
+
+    await dateiFreigeben(supabase, url)
   }
 
   async function reorderImages(variantId: string, orderedIds: string[]): Promise<void> {

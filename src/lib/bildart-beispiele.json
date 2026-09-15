@@ -1,0 +1,21 @@
+[
+  { "name": "JPEG", "hex": "ffd8ffe0000000000000000000000000", "typ": "image/jpeg" },
+  { "name": "PNG", "hex": "89504e470d0a1a0a0000000000000000", "typ": "image/png" },
+  { "name": "GIF", "hex": "47494638396100000000000000000000", "typ": "image/gif" },
+  { "name": "BMP", "hex": "424d0000000000000000000000000000", "typ": "image/bmp" },
+  { "name": "WEBP", "hex": "52494646000000005745425000000000", "typ": "image/webp" },
+  { "name": "RIFF ohne WEBP-Marke (WAV)", "hex": "52494646000000005741564500000000", "typ": null },
+  { "name": "ftyp avif", "hex": "00000020667479706176696600000000", "typ": "image/avif" },
+  { "name": "ftyp avis", "hex": "00000020667479706176697300000000", "typ": "image/avif" },
+  { "name": "ftyp heic", "hex": "00000020667479706865696300000000", "typ": "image/heic" },
+  { "name": "ftyp heix", "hex": "00000020667479706865697800000000", "typ": "image/heic" },
+  { "name": "ftyp mif1 ohne kompatible Marken", "hex": "00000010667479706d69663100000000", "typ": "image/heic" },
+  { "name": "ftyp mif1, kompatibel mif1 avif", "hex": "00000018667479706d696631000000006d69663161766966", "typ": "image/avif" },
+  { "name": "ftyp mif1, kompatibel mif1 heic", "hex": "00000018667479706d696631000000006d69663168656963", "typ": "image/heic" },
+  { "name": "ftyp mif1 mit avif dahinter, aber nur 16 Bytes gelesen", "hex": "00000018667479706d69663100000000", "typ": "image/heic" },
+  { "name": "ftyp avio (nur ähnlich wie avif)", "hex": "00000020667479706176696f00000000", "typ": null },
+  { "name": "ftyp mif2 (nur ähnlich wie mif1)", "hex": "00000020667479706d69663200000000", "typ": null },
+  { "name": "HTML-Fehlerseite", "hex": "3c21444f43545950452068746d6c3e0a", "typ": null },
+  { "name": "zu kurz: drei Bytes JPEG-Anfang", "hex": "ffd8ff", "typ": null },
+  { "name": "zu kurz: elf Bytes", "hex": "ffd8ffe000000000000000", "typ": null }
+]

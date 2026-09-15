@@ -52,9 +52,21 @@ export function typAusBytes(bytes: Uint8Array): string | null {
       b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp'
   // ....ftyp… — AVIF und HEIC teilen sich den Rahmen, die Marke steht dahinter
   if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-    const marke = String.fromCharCode(b[8]!, b[9]!, b[10]!, b[11]!)
+    const vier = (i: number) => String.fromCharCode(b[i]!, b[i + 1]!, b[i + 2]!, b[i + 3]!)
+    const marke = vier(8)
     if (marke.startsWith('avif') || marke.startsWith('avis')) return 'image/avif'
-    if (marke.startsWith('heic') || marke.startsWith('heix') || marke.startsWith('mif1')) return 'image/heic'
+    if (marke.startsWith('heic') || marke.startsWith('heix')) return 'image/heic'
+    if (marke.startsWith('mif1')) {
+      // `mif1` ist nur der allgemeine HEIF-Rahmen — auch AVIF trägt ihn als
+      // Hauptmarke. Die kompatiblen Marken ab Byte 16 entscheiden
+      // (15.09.2026). Dieselbe Regel steht in `src/lib/bildtyp.ts`.
+      const ende = Math.min(b.length, ((b[0]! << 24) | (b[1]! << 16) | (b[2]! << 8) | b[3]!) >>> 0)
+      for (let i = 16; i + 4 <= ende; i += 4) {
+        const k = vier(i)
+        if (k === 'avif' || k === 'avis') return 'image/avif'
+      }
+      return 'image/heic'
+    }
   }
   // SVG ist Text und hat keine Signatur — bewusst nicht unterstuetzt.
   return null

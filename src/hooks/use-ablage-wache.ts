@@ -65,9 +65,11 @@ export function useAblageWache() {
     try {
       for (const a of auftraege) {
         let alleOk = true
+        /** Adresse der Kopie des ERSTEN Bildes — sie wird das Titelbild. */
+        let ersteKopie: string | null = null
         for (const pfad of a.pfade) {
           const url = supabase.storage.from(BUCKET).getPublicUrl(pfad).data.publicUrl
-          const ok = await uebernehmen(url, pfad, {
+          const kopie = await uebernehmen(url, pfad, {
             baustein: a.ziel.baustein,
             parentId: a.ziel.parentId,
             parentName: a.ziel.parentName,
@@ -76,7 +78,8 @@ export function useAblageWache() {
             // Einblendung. Der Wächter fasst am Ende einmal zusammen.
             stillLeise: true,
           })
-          if (!ok) { alleOk = false; break }
+          if (!kopie) { alleOk = false; break }
+          ersteKopie ??= kopie
         }
 
         /*
@@ -95,12 +98,18 @@ export function useAblageWache() {
 
           Schlaegt es fehl, sind die Bilder trotzdem im Ordner. Deshalb kein
           Abbruch, nur eine Meldung.
+
+          DAS TITELBILD ZEIGT AUF DIE KOPIE, nicht auf die Auftragsdatei in
+          generated-images. Bis 15.09.2026 stand hier die Auftragsadresse: Wurde
+          der Auftrag geloescht, verschwand mit ihm das Titelbild — genau der
+          Fall, gegen den `uebernehmen` ueberhaupt kopiert. Mit der
+          Verweiszaehlung bliebe die Datei zwar liegen, aber der Auftrag liesse
+          sich dann nie mehr ganz aufraeumen.
         */
-        if (a.ziel.alsTitelbild && a.pfade[0]) {
-          const url = supabase.storage.from(BUCKET).getPublicUrl(a.pfade[0]).data.publicUrl
+        if (a.ziel.alsTitelbild && ersteKopie) {
           const { error: coverErr } = await supabase
             .from('characters')
-            .update({ cover_image_url: url, updated_at: new Date().toISOString() })
+            .update({ cover_image_url: ersteKopie, updated_at: new Date().toISOString() })
             .eq('id', a.ziel.parentId)
           if (coverErr) toast.error('Titelbild konnte nicht gesetzt werden.')
         }

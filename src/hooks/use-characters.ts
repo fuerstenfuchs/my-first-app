@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
+import { dateiFreigeben, titelbildNachLoeschen } from '@/lib/datei-freigeben'
 import { STANDARD_VARIANTEN, fehlendeStandardVarianten } from '@/lib/charakter-varianten'
 import { VARIANTEN_NAME, KOPF_ORIGINAL_VARIANTE } from '@/lib/referenzkette'
 
@@ -471,26 +472,49 @@ export function useCharacterDetail(characterId: string | null) {
     return img
   }
 
-  async function deleteImage(variantId: string, imageId: string, storagePath: string | null): Promise<void> {
+  /**
+   * Ein Bild löschen: Zeile → (Titelbild prüfen) → Datei freigeben.
+   *
+   * `_storagePath` wird nicht mehr benutzt: Nach dem Umzug PROJ-52 zeigen
+   * Zeilen per Adresse in `character-archetype-images`, gelöscht wurde aber
+   * fest in `character-images`. Eimer und Pfad kommen jetzt aus der Adresse.
+   *
+   * DAS TITELBILD BLEIBT — Marks Entscheidung vom 15.09.2026. Bis dahin bekam
+   * ein Charakter hier automatisch das nächste Bild als Titelbild. Jetzt steht
+   * der Schalter `TITELBILD_BEIM_LOESCHEN_NACHZIEHEN.charaktere` in
+   * `datei-freigeben.ts` auf `false`; die Begründung steht dort. Ein Titelbild
+   * ohne Datei entsteht dadurch nicht: Das Titelbild zählt als Verweis, die
+   * Datei bleibt liegen. Der Aufruf bleibt stehen, damit ein Umlegen des
+   * Schalters wieder genau das alte Verhalten ergibt.
+   */
+  async function deleteImage(variantId: string, imageId: string, _storagePath: string | null): Promise<void> {
     const supabase = createClient()
-    const { error } = await supabase.from('character_images').delete().eq('id', imageId)
-    if (error) { toast.error('Bild konnte nicht gelöscht werden'); return }
-
     const variant = variants.find(v => v.id === variantId)
     const deletedImg = variant?.images.find(i => i.id === imageId)
+
+    const { data: weg, error } = await supabase
+      .from('character_images').delete().eq('id', imageId).select('url').maybeSingle()
+    if (error) { toast.error('Bild konnte nicht gelöscht werden'); return }
+    const url = (weg?.url as string | undefined) ?? deletedImg?.url ?? null
 
     setVariants(prev => prev.map(v =>
       v.id === variantId ? { ...v, images: v.images.filter(i => i.id !== imageId) } : v
     ))
 
-    if (storagePath) await supabase.storage.from('character-images').remove([storagePath])
-
-    if (deletedImg?.url === character?.cover_image_url) {
-      const remaining = (variant?.images ?? []).filter(i => i.id !== imageId)
-      const nextUrl = remaining[0]?.url ?? null
-      await supabase.from('characters').update({ cover_image_url: nextUrl }).eq('id', characterId!)
-      setCharacter(prev => prev ? { ...prev, cover_image_url: nextUrl } : prev)
+    if (url && characterId) {
+      const remaining = (variant?.images ?? []).filter(i => i.id !== imageId).map(i => i.url)
+      // Vergleich über die Datei statt über die genaue Adresse: Ein Titelbild
+      // mit `?v=` galt vorher als „anderes Bild" und wurde nie nachgezogen.
+      const titel = titelbildNachLoeschen('charaktere', character?.cover_image_url, url, remaining)
+      if (titel.aendern) {
+        const { error: titelErr } = await supabase
+          .from('characters').update({ cover_image_url: titel.neu }).eq('id', characterId)
+        if (titelErr) toast.error('Titelbild konnte nicht nachgezogen werden')
+        else setCharacter(prev => prev ? { ...prev, cover_image_url: titel.neu } : prev)
+      }
     }
+
+    await dateiFreigeben(supabase, url)
   }
 
   async function reorderImages(variantId: string, orderedIds: string[]): Promise<void> {

@@ -47,11 +47,72 @@ export function typAusBytes(bytes: Uint8Array): string | null {
   if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
       b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp'
   if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-    const marke = String.fromCharCode(b[8]!, b[9]!, b[10]!, b[11]!)
+    const vier = (i: number) => String.fromCharCode(b[i]!, b[i + 1]!, b[i + 2]!, b[i + 3]!)
+    const marke = vier(8)
     if (marke.startsWith('avif') || marke.startsWith('avis')) return 'image/avif'
-    if (marke.startsWith('heic') || marke.startsWith('heix') || marke.startsWith('mif1')) return 'image/heic'
+    if (marke.startsWith('heic') || marke.startsWith('heix')) return 'image/heic'
+    if (marke.startsWith('mif1')) {
+      // `mif1` ist nur der allgemeine HEIF-Rahmen — auch AVIF-Dateien tragen
+      // ihn als Hauptmarke. Was es wirklich ist, steht in den KOMPATIBLEN
+      // Marken ab Byte 16 (15.09.2026, Critic K2). Reichen die Bytes dafür
+      // nicht, bleibt es bei HEIC wie bisher.
+      const ende = Math.min(b.length, ((b[0]! << 24) | (b[1]! << 16) | (b[2]! << 8) | b[3]!) >>> 0)
+      for (let i = 16; i + 4 <= ende; i += 4) {
+        const k = vier(i)
+        if (k === 'avif' || k === 'avis') return 'image/avif'
+      }
+      return 'image/heic'
+    }
   }
   return null
+}
+
+const ENDUNG_FUER_TYP: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
+  'image/webp': 'webp', 'image/bmp': 'bmp', 'image/avif': 'avif', 'image/heic': 'heic',
+}
+
+/** Die Dateiendung zu einem Bildtyp, `null` bei Unbekanntem. Zeichensatz-Anhang egal. */
+export function endungFuerTyp(typ: string | null | undefined): string | null {
+  const sauber = (typ ?? '').split(';')[0]?.trim().toLowerCase() ?? ''
+  return ENDUNG_FUER_TYP[sauber] ?? null
+}
+
+/**
+ * Die Dateiendung eines Bildes — aus den BYTES, nicht aus dem Namen.
+ *
+ * WARUM: Mark hat am 15.09.2026 entschieden, große Bilder in allen Eimern an
+ * DERSELBEN Adresse durch WebP zu ersetzen. Die Endung im Pfad bleibt dabei
+ * (`0.png` enthält dann WebP). Wer die Endung aus dem Pfad nimmt, schreibt ab
+ * da falsche Namen: ein WebP als `.png`. Der Browser zeigt es trotzdem an (er
+ * rät), ein Bildprogramm oder eine Druckerei lehnt es ab — und der Fehler
+ * fällt erst außerhalb der App auf.
+ *
+ * Reihenfolge: Bytes → gemeldeter Typ (nur wenn bekannt) → `rueckfall`.
+ * Der gemeldete Typ steht an zweiter Stelle, weil der Speicher zurückgibt, was
+ * beim Hochladen behauptet wurde — und das stimmt nach einem Austausch nur,
+ * wenn der Austausch es richtig gesetzt hat.
+ */
+export function bildTyp(
+  bytes: Uint8Array, gemeldet?: string | null, rueckfall = 'image/png',
+): string {
+  // Der Typ, unter dem ein Bild abgelegt wird — dieselbe Reihenfolge wie
+  // `bildEndung`. WARUM BEIDE AUS DENSELBEN BYTES (15.09.2026, Critic S1):
+  // Die Endung kam schon aus den Bytes, der Typ noch aus dem Kopf der Antwort.
+  // Nach dem Austausch an derselben Adresse meldet der Speicher bis zu einer
+  // Stunde lang weiter `image/png` für WebP-Bytes — die Kopie hieße `.webp`
+  // und läge als `image/png` im Speicher.
+  const echt = typAusBytes(bytes)
+  if (echt) return echt
+  const sauber = (gemeldet ?? '').split(';')[0]?.trim().toLowerCase() ?? ''
+  if (!endungFuerTyp(sauber)) return rueckfall
+  return sauber === 'image/jpg' ? 'image/jpeg' : sauber
+}
+
+export function bildEndung(
+  bytes: Uint8Array, gemeldet?: string | null, rueckfall = 'png',
+): string {
+  return endungFuerTyp(typAusBytes(bytes)) ?? endungFuerTyp(gemeldet) ?? rueckfall
 }
 
 export function istAnalyseTyp(typ: string | null): typ is AnalyseTyp {
@@ -87,7 +148,9 @@ export type TypBefund =
  * Meldung, die in die Irre führt.
  */
 export function analyseTypBestimmen(base64: string, gemeldet?: string | null): TypBefund {
-  const echt = typAusBytes(ersteBytesAusBase64(base64))
+  // 32 statt 16 Bytes: Bei `mif1` stehen die entscheidenden kompatiblen
+  // Marken erst ab Byte 16.
+  const echt = typAusBytes(ersteBytesAusBase64(base64, 32))
 
   if (istAnalyseTyp(echt)) return { ok: true, typ: echt }
 

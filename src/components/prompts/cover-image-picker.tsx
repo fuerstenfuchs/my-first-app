@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { dateiFreigeben } from '@/lib/datei-freigeben'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 interface CoverImagePickerProps {
@@ -43,11 +44,7 @@ export function CoverImagePicker({ value, onChange }: CoverImagePickerProps) {
       const { data: { user } } = await supabase.auth.getUser()
       const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
       const path = `${user!.id}/${crypto.randomUUID()}.${ext}`
-
-      if (value && value.includes('prompt-covers')) {
-        const parts = value.split('/prompt-covers/')
-        if (parts[1]) await supabase.storage.from('prompt-covers').remove([parts[1]])
-      }
+      const altesBild = value
 
       const { error } = await supabase.storage.from('prompt-covers').upload(path, file)
       if (error) {
@@ -57,6 +54,22 @@ export function CoverImagePicker({ value, onChange }: CoverImagePickerProps) {
       const { data: { publicUrl } } = supabase.storage.from('prompt-covers').getPublicUrl(path)
       onChange(publicUrl)
       setUrlInput(publicUrl)
+
+      /*
+        DAS ALTE BILD ERST NACH DEM NEUEN, UND NUR OHNE VERWEIS.
+
+        Hier wurde bis 15.09.2026 das alte Titelbild VOR dem Hochladen gelöscht
+        — noch bevor der Prompt gespeichert war. Brach Mark danach ab oder
+        schlug das Hochladen fehl, zeigte der gespeicherte Prompt auf eine
+        gelöschte Datei.
+
+        Jetzt: Solange der gespeicherte Prompt noch darauf zeigt, zählt die
+        Datenbank ihn mit, und die Datei bleibt. Nach dem Speichern bleibt sie
+        dadurch verwaist liegen — der bewusste, billigere Fehler. Weg kommt sie
+        nur, wenn niemand sie je gespeichert hat (zweimal hochgeladen, bevor
+        gespeichert wurde).
+      */
+      if (altesBild) await dateiFreigeben(supabase, altesBild)
     } finally {
       setUploading(false)
     }

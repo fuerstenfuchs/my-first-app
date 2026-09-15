@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { dateiFreigeben } from '@/lib/datei-freigeben'
 
 export interface PromptMedia {
   id: string
@@ -198,14 +199,12 @@ export function usePromptMedia() {
       return
     }
 
-    // Remove from Storage (best-effort, don't block on this)
-    if (url.includes('prompt-media')) {
-      const parts = url.split('/prompt-media/')
-      if (parts[1]) {
-        const filePath = parts[1].split('?')[0]
-        await supabase.storage.from('prompt-media').remove([filePath])
-      }
-    }
+    // Die Datei nur freigeben, wenn nach dem Löschen der Zeile niemand mehr
+    // darauf zeigt. Eimer und Pfad kommen aus der Adresse — eine per URL
+    // angehängte Datei kann in jedem Eimer liegen, nicht nur in prompt-media.
+    // Früher wurde hier bei jeder Adresse mit „prompt-media" gelöscht, auch
+    // wenn dasselbe Bild noch das Titelbild des Prompts war.
+    await dateiFreigeben(supabase, url)
   }
 
   async function reorderMedia(orderedIds: string[]): Promise<void> {

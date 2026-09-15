@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { dateienFreigeben } from '@/lib/datei-freigeben'
 import type { ImageJob } from '@/hooks/use-image-jobs'
 
 /**
@@ -21,12 +22,20 @@ import type { ImageJob } from '@/hooks/use-image-jobs'
  * Beim Übernehmen wird KOPIERT, nicht verknüpft (so entschieden am 02.09.2026,
  * genau für diesen Fall). Ein Charakterbild überlebt das Löschen hier also.
  *
- * WARUM ERST DIE DATEI, DANN DIE ZEILE: Andersherum wäre die Zeile weg und die
- * Datei läge verwaist im Speicher — niemand fände sie je wieder, und sie
- * zählte weiter gegen das Speicherkontingent. Scheitert dagegen die Zeile,
- * steht die Kachel noch da und man kann es erneut versuchen.
+ * WARUM SEIT 15.09.2026 ERST DIE ZEILE, DANN DIE DATEI: Hier stand bis dahin
+ * das Gegenteil — erst die Datei, weil sonst eine verwaiste Datei im Speicher
+ * läge. Das stimmte, solange jede Datei genau EINER Zeile gehörte. Werden
+ * byte-gleiche Bilder zusammengelegt, zeigen mehrere Zeilen auf dieselbe
+ * Datei; sie darf erst weg, wenn niemand mehr darauf zeigt. Gezählt werden
+ * kann aber erst, wenn die eigene Zeile nicht mehr mitzählt.
+ *
+ * Die alte Sorge bleibt als bewusster Preis stehen: Scheitert das Freigeben
+ * nach dem Aktualisieren der Zeile, bleibt eine verwaiste Datei liegen. Das
+ * ist der billigere Fehler — ein kaputtes Bild in einer fremden Zeile wäre
+ * nicht mehr zurückzuholen. Siehe `src/lib/datei-freigeben.ts`.
  */
 
+/** `result_paths` sind laut proj-37 immer Pfade in diesem Eimer. */
 const BUCKET = 'generated-images'
 
 export function useBildLoeschen() {
@@ -36,15 +45,6 @@ export function useBildLoeschen() {
   const loeschen = useCallback(async (job: ImageJob, pfad: string): Promise<boolean> => {
     setLoescht(pfad)
     try {
-      const { error: dateiErr } = await supabase.storage.from(BUCKET).remove([pfad])
-      if (dateiErr && !/not.?found|does not exist|404/i.test(dateiErr.message)) {
-        toast.error(`Datei ließ sich nicht löschen: ${dateiErr.message}`)
-        return false
-      }
-      // Eine schon fehlende Datei ist KEIN Grund aufzuhoeren. Sonst waere jede
-      // Kachel, deren Datei aus irgendeinem Grund fehlt, fuer immer
-      // unloeschbar — sie stuende da und zeigte ein kaputtes Bild.
-
       // Den Stand FRISCH holen statt aus dem Zustand: `job.result_paths` ist
       // eine Momentaufnahme vom letzten Zeichnen. Loescht man zwei Bilder
       // schnell hintereinander, rechnet das zweite Loeschen sonst auf dem alten
@@ -52,7 +52,7 @@ export function useBildLoeschen() {
       // Datei.
       const { data: frisch } = await supabase
         .from('image_jobs')
-        .select('result_paths')
+        .select('result_paths, source_path')
         .eq('id', job.id)
         .maybeSingle()
       const stand: string[] = frisch?.result_paths ?? job.result_paths ?? []
@@ -71,19 +71,36 @@ export function useBildLoeschen() {
           toast.error(`Auftrag ließ sich nicht entfernen: ${error.message}`)
           return false
         }
+      } else {
+        const { error } = await supabase
+          .from('image_jobs')
+          .update({ result_paths: rest })
+          .eq('id', job.id)
+        if (error) {
+          toast.error(`Eintrag ließ sich nicht aktualisieren: ${error.message}`)
+          return false
+        }
+      }
+
+      // Erst jetzt zählt die eigene Zeile nicht mehr mit. Bleibt die Datei
+      // liegen (noch verwendet, Zählung gescheitert), ist das Bild für diesen
+      // Auftrag trotzdem gelöscht — deshalb keine Fehlermeldung, nur das
+      // Protokoll in `dateiFreigeben`.
+      //
+      // War es das letzte Bild, ist der Auftrag weg — und mit ihm sein Verweis
+      // auf die QUELLE einer Vergrößerung oder Bearbeitung. Dann ist auch sie
+      // Kandidat; die Zählung entscheidet (siehe `use-image-jobs.ts`).
+      const quelle = rest.length === 0 ? (frisch?.source_path ?? job.source_path ?? null) : null
+      await dateienFreigeben(supabase, [
+        { bucket: BUCKET, pfad },
+        ...(quelle ? [{ bucket: BUCKET, pfad: quelle }] : []),
+      ])
+
+      if (rest.length === 0) {
         toast.success('Bild gelöscht', {
           description: 'Es war das letzte des Auftrags — der Eintrag ist mit weg.',
         })
         return true
-      }
-
-      const { error } = await supabase
-        .from('image_jobs')
-        .update({ result_paths: rest })
-        .eq('id', job.id)
-      if (error) {
-        toast.error(`Eintrag ließ sich nicht aktualisieren: ${error.message}`)
-        return false
       }
       toast.success('Bild gelöscht', {
         description: `${rest.length} ${rest.length === 1 ? 'Bild' : 'Bilder'} des Auftrags ${rest.length === 1 ? 'bleibt' : 'bleiben'} stehen.`,

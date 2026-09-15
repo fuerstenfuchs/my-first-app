@@ -279,7 +279,15 @@ const UNBESTIMMTE_TYPEN = new Set([
 export async function bildartAusBytes(
   blob: Blob,
 ): Promise<{ typ: string; endung: string } | null> {
-  const b = new Uint8Array(await blob.slice(0, 16).arrayBuffer())
+  // 32 Bytes: Bei `mif1` stehen die kompatiblen Marken erst ab Byte 16.
+  const b = new Uint8Array(await blob.slice(0, 32).arrayBuffer())
+  // DIESELBE REGEL WIE DIE ANDEREN DREI KOPIEN (15.09.2026, Critic K1):
+  // `src/lib/bildtyp.ts`, `worker/src/netz.ts`, `extension/src/lib/bildart.ts`.
+  // Bis dahin war diese hier großzügiger: keine Mindestlänge (drei Bytes
+  // `FF D8 FF` galten als JPEG) und Marken nur am Anfang verglichen (`avio`
+  // als AVIF, `mif2` als HEIC). Geprüft wird das gegen die gemeinsamen
+  // Beispiele in `src/lib/bildart-beispiele.json`.
+  if (b.length < 12) return null
   const ist = (...bytes: number[]) => bytes.every((x, i) => b[i] === x)
 
   if (ist(0xFF, 0xD8, 0xFF)) return { typ: 'image/jpeg', endung: 'jpg' }
@@ -293,9 +301,21 @@ export async function bildartAusBytes(
   }
   // AVIF/HEIF: „ftyp" ab Byte 4, danach die Marke.
   if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-    const marke = String.fromCharCode(b[8]!, b[9]!, b[10]!, b[11]!)
-    if (marke.startsWith('avi')) return { typ: 'image/avif', endung: 'avif' }
-    if (marke.startsWith('hei') || marke.startsWith('mif')) return { typ: 'image/heic', endung: 'heic' }
+    const vier = (i: number) => String.fromCharCode(b[i]!, b[i + 1]!, b[i + 2]!, b[i + 3]!)
+    const marke = vier(8)
+    if (marke === 'avif' || marke === 'avis') return { typ: 'image/avif', endung: 'avif' }
+    if (marke === 'heic' || marke === 'heix') return { typ: 'image/heic', endung: 'heic' }
+    if (marke === 'mif1') {
+      // `mif1` ist nur der allgemeine HEIF-Rahmen — auch AVIF trägt ihn als
+      // Hauptmarke. Die kompatiblen Marken ab Byte 16 entscheiden
+      // (15.09.2026, Critic K2).
+      const ende = Math.min(b.length, ((b[0]! << 24) | (b[1]! << 16) | (b[2]! << 8) | b[3]!) >>> 0)
+      for (let i = 16; i + 4 <= ende; i += 4) {
+        const k = vier(i)
+        if (k === 'avif' || k === 'avis') return { typ: 'image/avif', endung: 'avif' }
+      }
+      return { typ: 'image/heic', endung: 'heic' }
+    }
   }
   return null
 }
@@ -312,6 +332,30 @@ function endungFuer(typ: string): string {
 
 /** Was hereinkommen darf. Die inhaltliche Pruefung macht danach `zielPruefen`. */
 const EINGABE = z.object({ url: z.string().min(1).max(4096) })
+
+/**
+ * Unter welchem Typ und welcher Endung eine geholte Referenz abgelegt wird.
+ *
+ * DIE BYTES ZUERST, DER KOPF NUR ALS RÜCKFALL — seit 15.09.2026 andersherum.
+ *
+ * Vorher galt: Sagt der Kopf „image/…", bleibt es bei seiner Angabe. Das hielt,
+ * solange ein Speicher zurückgab, was drin ist. Mark hat am 15.09.2026
+ * entschieden, große Bilder in allen Eimern an DERSELBEN Adresse durch WebP zu
+ * ersetzen. Zieht Mark danach ein Bild aus dem eigenen Speicher herein, und der
+ * Austausch hat den Kopf nicht mitgeändert, meldet der Kopf `image/png` für
+ * WebP-Bytes — und die Referenz läge als `.png` mit falschem Typ in
+ * generated-images. Genau das lehnte das Bildmodell am 04.09.2026 mit
+ * „Invalid image data" ab.
+ *
+ * Der Kopf bleibt der Rückfall für das, was die Bytes nicht erkennen — SVG
+ * etwa (`image/svg+xml`), wofür er genauer ist.
+ */
+export function ablageArt(
+  kopfTyp: string, ausBytes: { typ: string; endung: string } | null,
+): { typ: string; endung: string } {
+  if (ausBytes) return { typ: ausBytes.typ, endung: ausBytes.endung }
+  return { typ: kopfTyp.split(';')[0]?.trim() || 'image/png', endung: endungFuer(kopfTyp) }
+}
 
 export async function POST(anfrage: Request) {
   try {
@@ -409,16 +453,12 @@ export async function POST(anfrage: Request) {
       throw new Fehler(415, 'Unter dieser Adresse liegt kein Bild — auch der ' +
         'Inhalt sieht nicht danach aus.')
     }
-    // Sagt der Kopf nichts Brauchbares, entscheiden die Bytes; sagt er „image",
-    // bleibt es bei seiner Angabe (er ist dann genauer, etwa bei image/svg+xml).
-    const sauberTyp = kopfSagtBild
-      ? (typ.split(';')[0]?.trim() || 'image/png')
-      : ausBytes!.typ
+    const { typ: sauberTyp, endung } = ablageArt(typ, ausBytes)
 
     // Direkt in den Speicher, MIT Marks eigener Anmeldung — die Schreibregel
     // prüft `storage.foldername(name)[1] = auth.uid()` und lässt genau diesen
     // einen Ordner zu.
-    const pfad = `${user.id}/referenzen/${crypto.randomUUID()}.${kopfSagtBild ? endungFuer(typ) : ausBytes!.endung}`
+    const pfad = `${user.id}/referenzen/${crypto.randomUUID()}.${endung}`
     const { error: hochErr } = await supabase.storage
       .from('generated-images')
       .upload(pfad, daten, { contentType: sauberTyp, upsert: false })

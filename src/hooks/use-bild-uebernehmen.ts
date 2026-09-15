@@ -7,6 +7,7 @@ import {
   BAUSTEINE, ablagepfad, auswahlSpalten, pruefeBildgroesse,
   type Baustein, type BausteinSchluessel,
 } from '@/lib/bausteine'
+import { bildEndung, bildTyp } from '@/lib/bildtyp'
 
 /**
  * Ein fertiges Bild aus der Warteschlange in einen Baustein übernehmen.
@@ -64,10 +65,22 @@ export type Eintrag = {
 }
 export type Variante = { id: string; name: string; sort_order: number }
 
-/** Die Dateiendung aus einem Speicherpfad — Vorgabe png. */
-function endungAus(pfad: string): string {
-  const m = /\.([a-z0-9]{2,5})$/i.exec(pfad)
-  return m ? m[1].toLowerCase() : 'png'
+/**
+ * Die Dateiendung der Kopie — aus den BYTES des geholten Bildes.
+ *
+ * WARUM NICHT MEHR AUS DEM PFAD: Mark hat am 15.09.2026 entschieden, große
+ * Bilder an derselben Adresse durch WebP zu ersetzen; `0.png` in
+ * generated-images kann dann WebP enthalten. Aus dem Pfad gelesen, bekäme die
+ * Kopie im Baustein wieder `.png` — und trüge den falschen Namen weiter.
+ * Reihenfolge und Rückfall stehen in `bildEndung` (`src/lib/bildtyp.ts`).
+ */
+async function artAus(blob: Blob): Promise<{ endung: string; typ: string }> {
+  // Endung UND Typ aus denselben Bytes (15.09.2026, Critic S1): Kam nur die
+  // Endung aus den Bytes und der Typ aus `blob.type`, hieß die Kopie `.webp`
+  // und lag als `image/png` im Speicher — der Kopf einer ausgetauschten Datei
+  // meldet bis zu einer Stunde lang noch den alten Typ.
+  const kopf = new Uint8Array(await blob.slice(0, 32).arrayBuffer())
+  return { endung: bildEndung(kopf, blob.type, 'png'), typ: bildTyp(kopf, blob.type, 'image/png') }
 }
 
 export function useBildUebernehmen() {
@@ -116,29 +129,35 @@ export function useBildUebernehmen() {
    * `quellUrl` ist die öffentliche Adresse des Ergebnisbildes. Sie wird
    * heruntergeladen und in den Eimer des Bausteins hochgeladen — danach hat
    * der Baustein sein eigenes Exemplar.
+   *
+   * LIEFERT DIE ADRESSE DER KOPIE, bei Misserfolg `null` (bis 15.09.2026 nur
+   * ja/nein). Die Ablage-Wache setzt damit das Titelbild auf die Kopie statt
+   * auf die Auftragsdatei in generated-images — sonst hinge das Titelbild am
+   * Auftrag, und genau das soll das Kopieren verhindern. Alle übrigen Aufrufer
+   * prüfen nur, OB etwas zurückkam; für sie ändert sich nichts.
    */
   const uebernehmen = useCallback(async (
     quellUrl: string, quellPfad: string, ziel: Ziel,
-  ): Promise<boolean> => {
+  ): Promise<string | null> => {
     const b = BAUSTEINE.find(x => x.schluessel === ziel.baustein)
-    if (!b) { toast.error('Unbekanntes Ziel'); return false }
+    if (!b) { toast.error('Unbekanntes Ziel'); return null }
 
     setLaeuft(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { toast.error('Nicht angemeldet'); return false }
+      if (!user) { toast.error('Nicht angemeldet'); return null }
 
       // 1. Holen. Ohne Zwischenspeicher, damit ein gerade neu erzeugtes Bild
       //    nicht als alte Fassung aus dem Browser-Zwischenspeicher kommt.
       const antwort = await fetch(quellUrl, { cache: 'no-store' })
       if (!antwort.ok) {
         toast.error(`Bild konnte nicht geladen werden (HTTP ${antwort.status})`)
-        return false
+        return null
       }
       const blob = await antwort.blob()
       if (blob.size < 100) {
         toast.error('Das Bild ist leer — nicht übernommen.')
-        return false
+        return null
       }
 
       // Bevor irgendetwas hochgeladen wird: Passt es überhaupt in den Eimer?
@@ -151,17 +170,18 @@ export function useBildUebernehmen() {
       const zuGross = pruefeBildgroesse(blob.size, b)
       if (zuGross) {
         toast.error(zuGross)
-        return false
+        return null
       }
 
       // 2. Ablegen, im Eimer des Bausteins.
-      const pfad = ablagepfad(user.id, ziel.parentId, ziel.variantId, endungAus(quellUrl))
+      const bildArt = await artAus(blob)
+      const pfad = ablagepfad(user.id, ziel.parentId, ziel.variantId, bildArt.endung)
       // Woran die Bildzeile hängt: an der Variante oder am Prompt.
       const anker = b.varianten ? ziel.variantId : ziel.parentId
-      if (!anker) { toast.error('Kein Ziel für das Bild gefunden.'); return false }
+      if (!anker) { toast.error('Kein Ziel für das Bild gefunden.'); return null }
       const { error: hochErr } = await supabase.storage
         .from(b.bucket)
-        .upload(pfad, blob, { contentType: blob.type || 'image/png', upsert: false })
+        .upload(pfad, blob, { contentType: bildArt.typ, upsert: false })
       if (hochErr) {
         // Falls die Tabelle in bausteine.ts und die Grenze in Supabase je
         // auseinanderlaufen (die eine ist eine Kopie der anderen — siehe
@@ -170,7 +190,7 @@ export function useBildUebernehmen() {
         toast.error(klingtNachGroesse
           ? `Das Bild ist zu groß für ${b.label} (${(blob.size / 1024 / 1024).toFixed(1)} MB).`
           : `Ablegen fehlgeschlagen: ${hochErr.message}`)
-        return false
+        return null
       }
 
       const { data: { publicUrl } } = supabase.storage.from(b.bucket).getPublicUrl(pfad)
@@ -197,9 +217,15 @@ export function useBildUebernehmen() {
       if (zeileErr) {
         // Die Datei liegt schon im Eimer — ohne Zeile wüsste niemand mehr,
         // wozu sie gehört. Also wieder wegräumen.
+        //
+        // RÜCKBAU OHNE ZÄHLUNG, BEWUSST: Die Datei wurde Sekunden zuvor unter
+        // einem frischen Pfad (Zeitstempel + Zufall, `upsert: false`) von hier
+        // hochgeladen, und die Zeile, die auf sie zeigen sollte, kam nie an.
+        // Niemand sonst kann schon auf sie verweisen.
+        // `speicher-loeschstellen.test.ts` lässt diese Stelle deshalb zu.
         await supabase.storage.from(b.bucket).remove([pfad])
         toast.error(`Eintragen fehlgeschlagen: ${zeileErr.message}`)
-        return false
+        return null
       }
 
       // Notiz, dass dieses Ergebnisbild abgelegt ist — damit der Lichttisch es
@@ -223,10 +249,10 @@ export function useBildUebernehmen() {
           description: `Als weiteres Bild hinzugefügt — das Titelbild bleibt unverändert.`,
         })
       }
-      return true
+      return publicUrl
     } catch (e) {
       toast.error(`Übernehmen fehlgeschlagen: ${(e as Error).message}`)
-      return false
+      return null
     } finally {
       setLaeuft(false)
     }

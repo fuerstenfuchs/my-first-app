@@ -1,3 +1,5 @@
+import { bildEndung } from './bildtyp'
+
 /**
  * Ein Bild direkt herunterladen, ohne Umweg über einen neuen Tab.
  *
@@ -17,11 +19,14 @@ export async function bildHerunterladen(url: string, dateiname: string): Promise
     throw new Error(`Bild nicht erreichbar (HTTP ${antwort.status})`)
   }
   const blob = await antwort.blob()
+  // Die Endung folgt dem, was TATSÄCHLICH ankam — siehe `dateinameMitEndung`.
+  const kopf = new Uint8Array(await blob.slice(0, 32).arrayBuffer())
+  const name = dateinameMitEndung(dateiname, bildEndung(kopf, blob.type, ''))
   const blobUrl = URL.createObjectURL(blob)
   try {
     const a = document.createElement('a')
     a.href = blobUrl
-    a.download = dateiname
+    a.download = name
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -66,8 +71,27 @@ export function dateinameFuerBild(
   }
   if (gesamt > 1) teile.push(String(index + 1))
 
-  // Endung aus dem Pfad, Rückfall png. Ein JPEG unter .png zeigt der Browser
-  // richtig an (er rät), aber ein Bildprogramm oder eine Druckerei lehnt es ab.
+  // Endung aus dem Pfad, Rückfall png — aber NUR ALS VORSCHLAG. Seit dem
+  // 15.09.2026 kann `0.png` WebP enthalten (Marks Entscheidung: große Bilder
+  // an derselben Adresse durch WebP ersetzen, Endung bleibt). Die endgültige
+  // Endung setzt `bildHerunterladen`, nachdem es die Bytes gesehen hat.
   const endung = (pfad && /\.([a-z0-9]{2,5})$/i.exec(pfad)?.[1]?.toLowerCase()) || 'png'
   return `${teile.join('-')}.${endung}`
+}
+
+/**
+ * Die Endung eines Dateinamens durch die ECHTE ersetzen.
+ *
+ * WARUM ERST BEIM HERUNTERLADEN: Nur dort sind die Bytes da. Der Pfad lügt,
+ * sobald ein Bild an derselben Adresse durch WebP ersetzt wurde. Ein WebP als
+ * `.png` gespeichert zeigt der Browser an, ein Bildprogramm oder eine
+ * Druckerei lehnt es ab.
+ *
+ * Leere `endung` (nichts erkannt): Der Name bleibt, wie er ist — lieber der
+ * Vorschlag aus dem Pfad als eine erfundene Endung.
+ */
+export function dateinameMitEndung(dateiname: string, endung: string): string {
+  if (!endung) return dateiname
+  const ohne = dateiname.replace(/\.[a-z0-9]{2,5}$/i, '')
+  return `${ohne}.${endung}`
 }

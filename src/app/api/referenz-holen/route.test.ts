@@ -1,5 +1,56 @@
 import { describe, it, expect } from 'vitest'
-import { istInternesZiel, bildartAusBytes } from './route'
+import { istInternesZiel, bildartAusBytes, ablageArt } from './route'
+import bildartBeispiele from '../../../lib/bildart-beispiele.json'
+
+/*
+  GEMEINSAME BEISPIELE FÜR ALLE VIER KOPIEN (15.09.2026, Critic K1). Diese
+  Kopie war großzügiger als die anderen drei; dieselbe Datei wird auch in
+  `src/lib/bildtyp.test.ts`, `worker/src/netz.test.ts` und
+  `extension/src/lib/bildart.test.ts` geprüft.
+*/
+describe('bildartAusBytes — gemeinsame Beispiele (bildart-beispiele.json)', () => {
+  it.each(bildartBeispiele)('$name → $typ', async ({ hex, typ }) => {
+    const bytes = Uint8Array.from(hex.match(/../g) ?? [], h => parseInt(h, 16))
+    expect((await bildartAusBytes(new Blob([bytes])))?.typ ?? null).toBe(typ)
+  })
+})
+
+/**
+ * Seit 15.09.2026: Große Bilder werden an derselben Adresse durch WebP ersetzt,
+ * die Endung `.png` im Pfad bleibt. Ein Kopf, der danach noch `image/png` sagt,
+ * darf die Ablage nicht bestimmen, wenn die Bytes etwas anderes zeigen.
+ */
+describe('bildartAusBytes — mif1 entscheidet an den kompatiblen Marken (Critic K2)', () => {
+  const kasten = (...marken: string[]) => {
+    const groesse = 12 + 4 * marken.length
+    const a = new Uint8Array(groesse)
+    a.set([0, 0, 0, groesse, 0x66, 0x74, 0x79, 0x70])
+    a.set([...marken[0]!].map(c => c.charCodeAt(0)), 8)
+    marken.slice(1).forEach((m, i) => a.set([...m].map(c => c.charCodeAt(0)), 16 + 4 * i))
+    return new Blob([a])
+  }
+  it('mif1 mit avif ist AVIF', async () => {
+    expect(await bildartAusBytes(kasten('mif1', 'mif1', 'avif'))).toEqual({ typ: 'image/avif', endung: 'avif' })
+  })
+  it('mif1 mit heic bleibt HEIC', async () => {
+    expect(await bildartAusBytes(kasten('mif1', 'mif1', 'heic'))).toEqual({ typ: 'image/heic', endung: 'heic' })
+  })
+})
+
+describe('ablageArt — Bytes vor Kopf', () => {
+  it('WebP-Bytes mit Kopf image/png → als WebP ablegen', () => {
+    expect(ablageArt('image/png', { typ: 'image/webp', endung: 'webp' }))
+      .toEqual({ typ: 'image/webp', endung: 'webp' })
+  })
+  it('JPEG-Bytes mit Kopf image/png; charset → als JPEG ablegen', () => {
+    expect(ablageArt('image/png; charset=binary', { typ: 'image/jpeg', endung: 'jpg' }))
+      .toEqual({ typ: 'image/jpeg', endung: 'jpg' })
+  })
+  it('Bytes unbekannt (SVG) → der Kopf entscheidet, ohne Zeichensatz', () => {
+    const art = ablageArt('image/svg+xml; charset=utf-8', null)
+    expect(art.typ).toBe('image/svg+xml')
+  })
+})
 
 /**
  * Die Wache gegen SSRF — festgenagelt, nicht kommentiert.

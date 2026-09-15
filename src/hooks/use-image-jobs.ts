@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import type { JobStatus, ReferenzRolle } from '@/lib/image-generation'
 import { kostenSatz, stufeLabel, type Upscaler, type Stufe } from '@/lib/upscaling'
+import { dateienFreigeben } from '@/lib/datei-freigeben'
 
 export type { Upscaler, Stufe }
 
@@ -166,23 +167,44 @@ export function useImageJobs(aktiv = true) {
   }, [supabase])
 
   const loeschen = useCallback(async (job: ImageJob): Promise<boolean> => {
-    // Erst die Bilder, dann die Zeile — andersherum wüsste niemand mehr,
-    // welche Dateien zu löschen wären.
-    if (job.result_paths.length > 0) {
-      const { error: storageError } = await supabase.storage.from(BUCKET).remove(job.result_paths)
-      if (storageError) {
-        // Nicht weitermachen: Ohne die Zeile wüsste niemand mehr, wozu die
-        // zurückgebliebenen Dateien gehören.
-        toast.error(`Bilder konnten nicht gelöscht werden: ${storageError.message}`)
-        return false
-      }
-    }
-    const { error } = await supabase.from(TABLE).delete().eq('id', job.id)
+    /*
+      ERST DIE ZEILE, DANN DIE DATEIEN — seit 15.09.2026 andersherum als zuvor.
+
+      Die Dateien werden nur noch freigegeben, wenn niemand mehr auf sie zeigt
+      (`src/lib/datei-freigeben.ts`). Stünde die Zeile beim Zählen noch da,
+      zählte sie sich selbst, und keine Datei käme je weg. Welche Dateien es
+      waren, geht dabei nicht verloren: Das Löschen liefert die gelöschte Zeile
+      zurück.
+
+      Der Preis: Scheitert danach das Freigeben, bleibt eine verwaiste Datei.
+      Früher wäre dagegen eine Datei weg gewesen, auf die eine Vergrößerung
+      (`source_path`) oder ein übernommenes Titelbild noch zeigte.
+    */
+    const { data: weg, error } = await supabase
+      .from(TABLE)
+      .delete()
+      .eq('id', job.id)
+      .select('result_paths, source_path')
+      .maybeSingle()
     if (error) {
       toast.error('Löschen fehlgeschlagen')
       return false
     }
     setJobs(prev => prev.filter(j => j.id !== job.id))
+
+    // `result_paths` und `source_path` sind laut proj-37/39 IMMER Pfade in
+    // generated-images — der Eimer ist hier eine Eigenschaft der Spalten,
+    // keine Annahme über die Datei.
+    const pfade: string[] = (weg?.result_paths as string[] | undefined) ?? job.result_paths ?? []
+    // Die QUELLE einer Vergrößerung oder Bearbeitung ist ebenfalls Kandidat.
+    // Meist gehört sie noch ihrem eigenen Auftrag — dann zählt die Datenbank
+    // ihn mit, und sie bleibt. Ist dieser längst gelöscht, war dieser Auftrag
+    // der letzte Verweis; ohne diese Zeile bliebe sie für immer liegen.
+    const quelle = (weg?.source_path as string | null | undefined) ?? job.source_path ?? null
+    await dateienFreigeben(supabase, [
+      ...pfade.map(pfad => ({ bucket: BUCKET, pfad })),
+      ...(quelle ? [{ bucket: BUCKET, pfad: quelle }] : []),
+    ])
     return true
   }, [supabase])
 

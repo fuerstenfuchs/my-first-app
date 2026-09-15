@@ -21,7 +21,30 @@ process.env.PROXY_TOKEN ??= 'test'
 process.env.SUPABASE_URL ??= 'https://beispiel.supabase.co'
 process.env.SUPABASE_SERVICE_KEY ??= 'test'
 
-const { hostErlaubt } = await import('./fal.ts')
+const { hostErlaubt, datenAdresse } = await import('./fal.ts')
+
+/*
+ * DER TYP IN DER DATA-ADRESSE FOLGT DEN BYTES (15.09.2026).
+ * Vorher stand fest `data:image/png`. Mark hat entschieden, große Bilder an
+ * derselben Adresse durch WebP zu ersetzen — `0.png` enthält dann WebP. Ab
+ * dem Absenden kostet es Geld; ein falscher Typ darf dort nicht hinausgehen.
+ */
+test('datenAdresse nennt den echten Typ, nicht den aus dem Namen', () => {
+  const webp = Buffer.from([0x52,0x49,0x46,0x46, 1,2,3,4, 0x57,0x45,0x42,0x50, 9,9])
+  const jpg  = Buffer.from([0xff,0xd8,0xff,0xe0, 0,0,0,0, 0,0,0,0])
+  const png  = Buffer.from([0x89,0x50,0x4e,0x47, 0x0d,0x0a,0x1a,0x0a, 0,0,0,0])
+  assert.ok(datenAdresse(webp).startsWith('data:image/webp;base64,'))
+  assert.ok(datenAdresse(jpg).startsWith('data:image/jpeg;base64,'))
+  assert.ok(datenAdresse(png).startsWith('data:image/png;base64,'))
+  // Auch aus einem ArrayBuffer, wie ihn `ergebnisHolen` liefert — und die
+  // Bytes müssen vollständig ankommen.
+  const ab = webp.buffer.slice(webp.byteOffset, webp.byteOffset + webp.length)
+  assert.equal(datenAdresse(ab), `data:image/webp;base64,${webp.toString('base64')}`)
+})
+
+test('datenAdresse lehnt Nicht-Bilder ab, bevor etwas bezahlt wird', () => {
+  assert.throws(() => datenAdresse(Buffer.from('<!DOCTYPE html><html>oops</html>')), /kein erkennbares Bild/)
+})
 
 test('erlaubt die Adressen von fal.ai', () => {
   for (const url of [

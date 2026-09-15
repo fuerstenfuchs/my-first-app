@@ -176,11 +176,35 @@ function alsJson(antwort: Antwort, was: string): Record<string, unknown> {
   }
 }
 
+/**
+ * Das Ausgangsbild als data-Adresse — mit dem Typ, den die BYTES haben.
+ *
+ * WARUM: Hier stand fest `data:image/png`. Das stimmte, solange in
+ * generated-images nur PNG lag. Seit PROJ-69 liegen dort auch JPEGs, und Mark
+ * hat am 15.09.2026 entschieden, große Bilder an derselben Adresse durch WebP
+ * zu ersetzen — die Endung `.png` im Pfad bleibt dabei stehen. Ein WebP mit
+ * `image/png` davor lehnt ein Dienst im besten Fall ab (dann ist der Auftrag
+ * gescheitert), im schlechtesten liest er es falsch und berechnet trotzdem.
+ * Das ist derselbe Fehler, der am 04.09.2026 beim Bildmodell „Invalid image
+ * data" ergab.
+ *
+ * Ein nicht erkennbares Bild wird VOR dem Absenden abgelehnt: Ab `absenden`
+ * kostet es Geld, und ein Aufruf mit Datenmüll wäre bezahlt und nutzlos.
+ */
+export function datenAdresse(quelle: ArrayBuffer | Buffer): string {
+  const art = bildart(quelle)
+  if (!art) {
+    throw new Error('Das Ausgangsbild ist kein erkennbares Bild — nicht an fal.ai geschickt.')
+  }
+  const puffer = Buffer.isBuffer(quelle) ? quelle : Buffer.from(quelle)
+  return `data:${art.typ};base64,${puffer.toString('base64')}`
+}
+
 /** Auftrag absenden. Ab hier kostet es Geld. */
 async function absenden(
   quelle: ArrayBuffer, faktor: number, modell: FalModell, signal?: AbortSignal,
 ): Promise<FalAnfrage> {
-  const bild = `data:image/png;base64,${Buffer.from(quelle).toString('base64')}`
+  const bild = datenAdresse(quelle)
 
   const roh = await falRuf(`${ANMELDEN}/${modell.id}`, {
     method: 'POST',
