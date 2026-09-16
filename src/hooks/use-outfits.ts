@@ -7,6 +7,7 @@ import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
 import {
   dateiFreigeben, gleicheDatei, titelbildNachLoeschen, TITELBILD_BEIM_LOESCHEN_NACHZIEHEN,
 } from '@/lib/datei-freigeben'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import {
   OUTFIT_KATEGORIE_STANDARD, alsKategorie, type OutfitKategorie,
 } from '@/lib/outfit-kategorien'
@@ -153,12 +154,16 @@ export function useOutfits() {
 
       if (vErr || !variant) continue
 
-      const ext = slot.file.name.split('.').pop() ?? 'jpg'
-      const storagePath = `${user.id}/${outfit.id}/${variant.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(storagePath, slot.file)
-      if (upErr) continue
+      // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+      const hoch = await bildHochladen(supabase, {
+        bucket: BUCKET,
+        pfadFuer: endung => `${user.id}/${outfit.id}/${variant.id}/${Date.now()}.${endung}`,
+        datei: slot.file,
+      })
+      if (!hoch.ok) continue
 
-      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(storagePath)
+      const storagePath = hoch.pfad
+      const publicUrl = hoch.url
 
       await supabase.from('outfit_images').insert({
         variant_id: variant.id,
@@ -336,17 +341,20 @@ export function useOutfitDetail(outfitId: string | null) {
         continue
       }
 
-      const ext = entry.file.name.split('.').pop() ?? 'jpg'
-      const storagePath = `${user.id}/${outfitId}/${variantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(storagePath, entry.file)
-      if (upErr) {
+      const hoch = await bildHochladen(supabase, {
+        bucket: BUCKET,
+        pfadFuer: endung =>
+          `${user.id}/${outfitId}/${variantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${endung}`,
+        datei: entry.file,
+      })
+      if (!hoch.ok) {
         toast.error(`Upload fehlgeschlagen: ${entry.file.name}`)
         setUploading(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error' } : e))
         continue
       }
 
-      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(storagePath)
+      const storagePath = hoch.pfad
+      const publicUrl = hoch.url
       const { data: img } = await supabase.from('outfit_images').insert({
         variant_id: variantId,
         user_id: user.id,

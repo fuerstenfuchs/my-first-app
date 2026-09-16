@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { bildHochladen } from '../../../src/lib/bild-hochladen'
 import type { PendingCapture } from '../types'
 import { proxyLesen, proxyBereit, analyseUeberProxy } from '../lib/proxy'
 import { alsAnalysebild } from '../lib/bildart'
@@ -123,22 +124,21 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setImageUploading(false); return }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `${user.id}/${draftId}/${crypto.randomUUID()}.${ext}`
+    // Verkleinert vor dem Hochladen — dieselbe Funktion wie in der App
+    // (src/lib/bild-hochladen.ts). Die Endung folgt dem Ergebnis.
+    const hoch = await bildHochladen(supabase, {
+      bucket: 'prompt-media',
+      pfadFuer: endung => `${user.id}/${draftId}/${crypto.randomUUID()}.${endung}`,
+      datei: file,
+    })
 
-    const { error: uploadError } = await supabase.storage
-      .from('prompt-media')
-      .upload(path, file)
-
-    if (uploadError) {
+    if (!hoch.ok) {
       setImageUploading(false)
       setError('Bild-Upload fehlgeschlagen.')
       return
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('prompt-media')
-      .getPublicUrl(path)
+    const publicUrl = hoch.url
 
     setCoverImageUrl(publicUrl)
     setImageUploading(false)

@@ -247,8 +247,16 @@ export default function BildstudioPage() {
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {gefiltert.map((b, i) => (
-              <div key={`${b.job.id}-${b.index}`} className="space-y-1">
+              /*
+                ALS SPALTE, DIE KACHEL FÜLLT SIE (Critic S2, 16.09.2026). Das
+                Raster streckt nur diese Hülle auf Zeilenhöhe. Hat eine Kachel der
+                Reihe die Plakettenzeile („abgelegt", „Original …"), wäre sie rund
+                30 px höher — und die Beschriftungen darunter sprängen. Mit
+                `flex-1` sind alle Kacheln einer Reihe gleich hoch.
+              */
+              <div key={`${b.job.id}-${b.index}`} className="flex flex-col gap-1">
                 <ErgebnisKachel
+                  className="flex-1"
                   job={b.job}
                   url={b.url}
                   pfad={b.pfad}

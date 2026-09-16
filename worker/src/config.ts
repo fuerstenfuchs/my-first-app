@@ -81,12 +81,45 @@ export const config = {
    * frueh aufgegebener Lauf ist dort schon bezahlt.
    */
   falTimeoutMs: zahl('FAL_TIMEOUT_MS', 600_000),
+  /**
+   * Backblaze B2 für die ORIGINALE neuer Ergebnisse (15.09.2026).
+   *
+   * Seit dem Umzug liegen in Supabase nur WebP-Fassungen ≤ 2048 px; die
+   * Originale gehören nach Backblaze. Bewusst KEINE Pflicht: Fehlt ein Wert,
+   * legt der Arbeiter wie bisher in voller Größe ab. Lieber ein voller Speicher
+   * als ein verlorenes Original — und ein Arbeiter, der wegen eines fehlenden
+   * Archivs gar nicht startet, erzeugt auch keine Bilder.
+   */
+  b2KeyId: (process.env.B2_KEY_ID ?? '').trim(),
+  b2AppKey: (process.env.B2_APP_KEY ?? '').trim(),
+  b2Bucket: (process.env.B2_BUCKET ?? '').trim(),
+}
+
+export type B2Einrichtung =
+  | { an: true; fehlt: [] }
+  | { an: false; fehlt: string[]; teilweise: boolean }
+
+/**
+ * Ist Backblaze vollständig eingerichtet? Und wenn nicht: was fehlt?
+ *
+ * `teilweise` unterscheidet „bewusst aus" (nichts gesetzt) von „halb
+ * eingetragen" — Letzteres ist fast immer ein Tippfehler in der .env und
+ * verdient eine deutliche Meldung, nicht ein stilles Abschalten.
+ */
+export function b2Einrichtung(
+  werte: { b2KeyId: string; b2AppKey: string; b2Bucket: string } = config,
+): B2Einrichtung {
+  const fehlt = ([['B2_KEY_ID', werte.b2KeyId], ['B2_APP_KEY', werte.b2AppKey], ['B2_BUCKET', werte.b2Bucket]] as const)
+    .filter(([, wert]) => !wert)
+    .map(([name]) => name)
+  if (fehlt.length === 0) return { an: true, fehlt: [] }
+  return { an: false, fehlt, teilweise: fehlt.length < 3 }
 }
 
 /** Schlüssel aus Fehlertexten entfernen, bevor irgendetwas ausgegeben wird. */
 export function ohneGeheimnis(text: string): string {
   let sauber = text
-  for (const geheim of [config.proxyToken, config.supabaseKey, config.falKey]) {
+  for (const geheim of [config.proxyToken, config.supabaseKey, config.falKey, config.b2KeyId, config.b2AppKey]) {
     if (geheim && geheim.length > 6) {
       sauber = sauber.split(geheim).join('***')
     }

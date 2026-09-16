@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import { STANDARD_SCENE_PRESETS } from '@/lib/scene-presets-standard'
 import { EMPTY_PRESET_CONFIG, type ScenePresetConfig } from '@/lib/scene-preset-types'
 
@@ -123,11 +124,15 @@ export function useScenePresets() {
     if (error || !row) { toast.error('Preset konnte nicht gespeichert werden'); return null }
 
     if (coverFile) {
-      const ext = coverFile.name.split('.').pop() ?? 'jpg'
-      const path = `${user.id}/presets/${row.id}/cover.${ext}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, coverFile, { upsert: true })
-      if (!upErr) {
-        const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
+      // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+      const hoch = await bildHochladen(supabase, {
+        bucket: BUCKET,
+        pfadFuer: endung => `${user.id}/presets/${row.id}/cover.${endung}`,
+        datei: coverFile,
+        upsert: true,
+      })
+      if (hoch.ok) {
+        const publicUrl = hoch.url
         const bustedUrl = `${publicUrl}?v=${Date.now()}`
         await supabase.from(TABLE).update({ cover_image_url: bustedUrl }).eq('id', row.id)
         row.cover_image_url = bustedUrl

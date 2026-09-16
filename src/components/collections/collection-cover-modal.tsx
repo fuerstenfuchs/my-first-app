@@ -5,6 +5,7 @@ import { Check, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -73,19 +74,18 @@ export function CollectionCoverModal({
     setUploading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${user!.id}/${collectionId}/${Date.now()}.${ext}`
-    const { error: uploadError } = await supabase.storage
-      .from('collection-covers')
-      .upload(path, file)
-    if (uploadError) {
+    // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+    const hoch = await bildHochladen(supabase, {
+      bucket: 'collection-covers',
+      pfadFuer: endung => `${user!.id}/${collectionId}/${Date.now()}.${endung}`,
+      datei: file,
+    })
+    if (!hoch.ok) {
       toast.error('Upload fehlgeschlagen')
       setUploading(false)
       return
     }
-    const { data: { publicUrl } } = supabase.storage
-      .from('collection-covers')
-      .getPublicUrl(path)
+    const publicUrl = hoch.url
     setUploading(false)
     await handleSave(publicUrl)
   }

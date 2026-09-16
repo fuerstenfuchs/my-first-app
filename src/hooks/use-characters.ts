@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { IMAGE_TYPES, IMAGE_MAX, validateMediaFile } from './use-prompt-media'
 import { dateiFreigeben, titelbildNachLoeschen } from '@/lib/datei-freigeben'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import { STANDARD_VARIANTEN, fehlendeStandardVarianten } from '@/lib/charakter-varianten'
 import { VARIANTEN_NAME, KOPF_ORIGINAL_VARIANTE } from '@/lib/referenzkette'
 
@@ -185,17 +186,17 @@ export function useCharacters() {
       }
 
       const file = slot.file
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-      const storagePath = `${user.id}/${variantId}/${crypto.randomUUID()}.${ext}`
+      // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis
+      // (src/lib/bild-hochladen.ts).
+      const hoch = await bildHochladen(supabase, {
+        bucket: 'character-images',
+        pfadFuer: endung => `${user.id}/${variantId}/${crypto.randomUUID()}.${endung}`,
+        datei: file,
+      })
 
-      const { error: upErr } = await supabase.storage
-        .from('character-images')
-        .upload(storagePath, file)
-
-      if (!upErr) {
-        const { data: { publicUrl } } = supabase.storage
-          .from('character-images')
-          .getPublicUrl(storagePath)
+      if (hoch.ok) {
+        const storagePath = hoch.pfad
+        const publicUrl = hoch.url
 
         await supabase.from('character_images').insert({
           variant_id: variantId,
@@ -405,17 +406,19 @@ export function useCharacterDetail(characterId: string | null) {
 
     await Promise.all(pending.map(async (entry, idx) => {
       const file = entry.file
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-      const storagePath = `${user.id}/${variantId}/${crypto.randomUUID()}.${ext}`
-
-      const { error: upErr } = await supabase.storage.from('character-images').upload(storagePath, file)
-      if (upErr) {
+      const hoch = await bildHochladen(supabase, {
+        bucket: 'character-images',
+        pfadFuer: endung => `${user.id}/${variantId}/${crypto.randomUUID()}.${endung}`,
+        datei: file,
+      })
+      if (!hoch.ok) {
         setUploading(prev => prev.map(u => u.id === entry.id ? { ...u, status: 'error' } : u))
         toast.error(`${file.name}: Upload fehlgeschlagen`)
         return
       }
 
-      const { data: { publicUrl } } = supabase.storage.from('character-images').getPublicUrl(storagePath)
+      const storagePath = hoch.pfad
+      const publicUrl = hoch.url
 
       const { data: row, error: insertErr } = await supabase
         .from('character_images')

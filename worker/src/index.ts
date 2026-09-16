@@ -11,7 +11,8 @@
  *         bricht sofort ab und stellt den Auftrag zurueck.
  */
 
-import { config } from './config.ts'
+import { config, ohneGeheimnis, b2Einrichtung } from './config.ts'
+import { b2AusKonfiguration } from './b2.ts'
 import { PROXY_UNERREICHBAR } from './netz.ts'
 import { auftragAbarbeiten, beschreibung } from './abarbeiten.ts'
 import {
@@ -119,6 +120,29 @@ async function hauptschleife(): Promise<void> {
   sage('Arbeiter läuft.')
   sage(`  Proxy:    ${config.proxyUrl}`)
   sage(`  Supabase: ${config.supabaseUrl}`)
+
+  /*
+    BACKBLAZE BEIM START PRÜFEN (15.09.2026) — und laut sagen, was gilt.
+    Ohne Backblaze legt der Arbeiter in voller Größe ab. Das ist sicher, aber es
+    füllt den Speicher wieder; still darf das nicht passieren. Ein halb
+    eingetragener Schlüssel ist fast immer ein Tippfehler und wird deshalb
+    anders gemeldet als ein bewusst leeres Feld.
+  */
+  const b2 = b2Einrichtung()
+  if (b2.an) {
+    try {
+      await b2AusKonfiguration()!.anmelden()
+      sage(`  Backblaze: an (${config.b2Bucket}) — neue Ergebnisse als WebP ≤ 2048 px, Originale nach Backblaze.`)
+    } catch (e) {
+      sage(`  Backblaze: FEHLER — ${ohneGeheimnis((e as Error).message)}`)
+      sage('    Ergebnisse werden in voller Größe abgelegt, bis das behoben ist.')
+    }
+  } else if (b2.teilweise) {
+    sage(`  Backblaze: UNVOLLSTÄNDIG — in worker/.env fehlt ${b2.fehlt.join(', ')}.`)
+    sage('    Ergebnisse werden in voller Größe abgelegt, bis alle drei Werte stehen.')
+  } else {
+    sage('  Backblaze: aus (B2_KEY_ID, B2_APP_KEY, B2_BUCKET nicht gesetzt) — Ergebnisse in voller Größe.')
+  }
   sage(`  Abfrage alle ${config.pollIntervalMs / 1000}s, bei längerer Ruhe seltener.`)
   sage('  Beenden mit Strg+C.')
 

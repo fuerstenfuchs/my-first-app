@@ -5,7 +5,8 @@
  * an der Einrichtung liegen. Läuft mit `npm run pruefen`.
  */
 
-import { config, ohneGeheimnis } from './config.ts'
+import { config, ohneGeheimnis, b2Einrichtung } from './config.ts'
+import { b2AusKonfiguration } from './b2.ts'
 
 let fehler = 0
 
@@ -133,6 +134,27 @@ if (!config.falKey) {
     }
   } catch (e) {
     schlecht(ohneGeheimnis(`fal.ai nicht erreichbar: ${(e as Error).message}`))
+  }
+}
+
+// ── 5. Backblaze (Originale neuer Ergebnisse) ─────────────────────────────────
+//
+// Angemeldet wird wirklich, samt Blick auf das Bucket und seine Lebenszyklus-
+// regeln. Hochgeladen wird nichts — die Prüfung soll nichts hinterlassen.
+console.log('\nBackblaze (Originale)')
+{
+  const b2 = b2Einrichtung()
+  if (b2.an) {
+    try {
+      await b2AusKonfiguration()!.anmelden()
+      gut(`angemeldet, Bucket ${config.b2Bucket} gefunden, keine Lebenszyklusregeln`)
+    } catch (e) {
+      schlecht(ohneGeheimnis((e as Error).message))
+    }
+  } else if (b2.teilweise) {
+    schlecht(`unvollständig eingetragen — es fehlt ${b2.fehlt.join(', ')}`)
+  } else {
+    hinweis('B2_KEY_ID, B2_APP_KEY, B2_BUCKET nicht gesetzt — Ergebnisse werden in voller Größe abgelegt.')
   }
 }
 

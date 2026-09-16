@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { validateMediaFile } from './use-prompt-media'
 import { dateiFreigeben, titelbildNachLoeschen } from '@/lib/datei-freigeben'
+import { bildHochladen } from '@/lib/bild-hochladen'
 
 export const POSE_CATEGORIES = [
   { key: 'stehend',     label: 'Stehend',      emoji: '🧍' },
@@ -128,11 +129,14 @@ export function usePoseActions() {
     if (coverFile) {
       const validation = validateMediaFile(coverFile)
       if (!validation) {
-        const ext = coverFile.name.split('.').pop() ?? 'jpg'
-        const storagePath = `${user.id}/${pa.id}/cover.${ext}`
-        const { error: upErr } = await supabase.storage.from(BUCKET).upload(storagePath, coverFile)
-        if (!upErr) {
-          const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(storagePath)
+        // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+        const hoch = await bildHochladen(supabase, {
+          bucket: BUCKET,
+          pfadFuer: endung => `${user.id}/${pa.id}/cover.${endung}`,
+          datei: coverFile,
+        })
+        if (hoch.ok) {
+          const publicUrl = hoch.url
           await supabase.from('pose_actions').update({ cover_image_url: publicUrl }).eq('id', pa.id)
           pa.cover_image_url = publicUrl
         }
@@ -288,15 +292,19 @@ export function usePoseActionDetail(poseActionId: string | null) {
         setUploading(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error' } : e))
         continue
       }
-      const ext = entry.file.name.split('.').pop() ?? 'jpg'
-      const storagePath = `${user.id}/${poseActionId}/${variantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(storagePath, entry.file)
-      if (upErr) {
+      const hoch = await bildHochladen(supabase, {
+        bucket: BUCKET,
+        pfadFuer: endung =>
+          `${user.id}/${poseActionId}/${variantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${endung}`,
+        datei: entry.file,
+      })
+      if (!hoch.ok) {
         toast.error(`Upload fehlgeschlagen: ${entry.file.name}`)
         setUploading(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error' } : e))
         continue
       }
-      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(storagePath)
+      const storagePath = hoch.pfad
+      const publicUrl = hoch.url
       const { data: img } = await supabase.from('pose_action_images').insert({
         variant_id: variantId, user_id: user.id, url: publicUrl, storage_path: storagePath, sort_order: nextOrder++,
       }).select().single()

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { bildHochladen } from '@/lib/bild-hochladen'
 
 // ── Categories ────────────────────────────────────────────────────────────────
 
@@ -144,11 +145,14 @@ export function useVisualAssets() {
     if (error || !row) { toast.error('Asset konnte nicht erstellt werden'); return null }
 
     if (coverFile) {
-      const ext = coverFile.name.split('.').pop() ?? 'jpg'
-      const path = `${user.id}/${row.id}/cover.${ext}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, coverFile)
-      if (!upErr) {
-        const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
+      // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+      const hoch = await bildHochladen(supabase, {
+        bucket: BUCKET,
+        pfadFuer: endung => `${user.id}/${row.id}/cover.${endung}`,
+        datei: coverFile,
+      })
+      if (hoch.ok) {
+        const publicUrl = hoch.url
         await supabase.from('visual_assets').update({ cover_image_url: publicUrl }).eq('id', row.id)
         row.cover_image_url = publicUrl
       }
@@ -194,11 +198,17 @@ export function useVisualAssets() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
-    const ext  = file.name.split('.').pop() ?? 'jpg'
-    const path = `${user.id}/${id}/cover.${ext}`
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
-    if (error) { toast.error('Upload fehlgeschlagen'); return null }
-    const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
+    // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis. Wechselt sie
+    // (vorher `cover.png`, jetzt `cover.webp`), bleibt die alte Datei liegen —
+    // überschrieben wird nur bei gleicher Endung.
+    const hoch = await bildHochladen(supabase, {
+      bucket: BUCKET,
+      pfadFuer: endung => `${user.id}/${id}/cover.${endung}`,
+      datei: file,
+      upsert: true,
+    })
+    if (!hoch.ok) { toast.error('Upload fehlgeschlagen'); return null }
+    const publicUrl = hoch.url
     // Cache-bust: replacing a cover overwrites the same storage path, so the public URL
     // would otherwise stay identical and the browser keeps showing the stale cached image.
     const bustedUrl = `${publicUrl}?v=${Date.now()}`

@@ -18,6 +18,7 @@ import {
   stufeLabel, KLASSE_FLAECHE, type Stufe, type Upscaler,
 } from '@/lib/upscaling'
 import type { ImageJob } from '@/hooks/use-image-jobs'
+import { originalInBackblaze } from '@/lib/speicher-vermerk'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -52,6 +53,12 @@ export type KachelAktionen = {
 }
 
 interface Props extends KachelAktionen {
+  /**
+   * Für das umgebende Raster. Der Lichttisch gibt `flex-1`, damit alle Kacheln
+   * einer Reihe gleich hoch sind, auch wenn nur eine davon die Plakettenzeile
+   * hat (Critic S2, 16.09.2026).
+   */
+  className?: string
   job: ImageJob
   url: string
   pfad: string
@@ -77,12 +84,13 @@ function zielMasse(job: ImageJob, faktor: number): string {
 }
 
 export function ErgebnisKachel({
-  job, url, pfad, index, gesamt, abgelegt,
+  job, url, pfad, index, gesamt, abgelegt, className,
   onVergroessern, onUebernehmen, onAnsehen, onBearbeiten, onLoeschen,
 }: Props) {
   const [laedt, setLaedt] = useState(false)
   const [fragt, setFragt] = useState(false)
   const [loescht, setLoescht] = useState(false)
+  const original = originalInBackblaze(job.scene_meta, pfad)
 
   async function herunterladen() {
     setLaedt(true)
@@ -100,7 +108,16 @@ export function ErgebnisKachel({
   }
 
   return (
-    <div className="lt-kachel group relative aspect-square overflow-hidden">
+    <div className={cn('lt-kachel group relative flex flex-col overflow-hidden', className)}>
+      {/*
+        Bild und Knöpfe im Quadrat, die Plaketten in einer Zeile DARUNTER
+        (16.09.2026). Auf dem Bild hatten „abgelegt" und „Original …" nur 9 bis
+        10 px — Marks Mindestmaß sind 13 px (DESIGN.md). In 13 px passen beide
+        auf einer 180 px breiten Handy-Kachel nicht mehr nebeneinander ins Bild,
+        und sie verdeckten es. Enge ist schlimmer als Länge: lieber eine Zeile
+        mehr.
+      */}
+      <div className="relative aspect-square overflow-hidden">
       <button onClick={onAnsehen} className="h-full w-full" aria-label={`Ergebnis ${index + 1} ansehen`}>
         {/* Die kleine Vorschau: Im Lichttisch liegen bis zu hundert Kacheln
             nebeneinander, und die Originale sind im Schnitt 3 MB gross. Das
@@ -110,16 +127,6 @@ export function ErgebnisKachel({
           className="h-full w-full object-cover transition group-hover:scale-[1.03]"
         />
       </button>
-
-      {/* Schon abgelegt — links oben, damit es die Knöpfe rechts nicht stört */}
-      {abgelegt && (
-        <span
-          title="Schon in einen Baustein übernommen"
-          className="absolute left-1.5 top-1.5 flex items-center gap-0.5 rounded bg-emerald-500/85 lt-mini px-1.5 py-0.5 text-[9px] font-bold text-emerald-950 backdrop-blur"
-        >
-          <Check className="h-2.5 w-2.5" /> abgelegt
-        </span>
-      )}
 
       <div /*
         Ohne Zeigegeraet gibt es kein Ueberfahren: Auf dem Handy waren die
@@ -158,8 +165,16 @@ export function ErgebnisKachel({
                     >
                       <span>
                         {stufeLabel(stufe)}
+                        {/* „Original" NUR, wenn dieses Bild selbst einen
+                            Backblaze-Vermerk hat (Critic K3, 16.09.2026). Das ist
+                            der einzige Beleg, den die App hat, dass der Arbeiter
+                            mit Backblaze läuft — und damit auch die Vergrößerung
+                            als Fassung bis 2048 px erscheint. Ohne Vermerk die
+                            Maße wie früher, ohne etwas zu behaupten. */}
                         {stufe.art === 'faktor'
-                          ? (zielMasse(job, stufe.wert) ? ` · ${zielMasse(job, stufe.wert)}` : '')
+                          ? (zielMasse(job, stufe.wert)
+                              ? ` · ${original ? 'Original ' : ''}${zielMasse(job, stufe.wert)}`
+                              : '')
                           : ` · ${KLASSE_FLAECHE[stufe.wert]}`}
                       </span>
                       <span className="text-[13px] tabular-nums text-muted-foreground">
@@ -222,6 +237,41 @@ export function ErgebnisKachel({
           </Button>
         )}
       </div>
+      </div>
+
+      {/*
+        Die Plaketten, 13 px, unter dem Bild.
+
+        DUNKLER, FAST DECKENDER GRUND — nachgemessen am 16.09.2026: Die Kachel
+        ist durchsichtig, darunter laufen die Lichtstreifen des Tisches. Mit
+        einem hellen 6-%-Grund kam „abgelegt" an der hellsten Stelle auf
+        3,62 : 1 und „Original" mit Kartenschicht auf 4,30 : 1 — beide unter
+        Marks 4,5 : 1. Mit rgba(8,12,16,0.72) liegen beide auch dort darüber.
+        „abgelegt": schon in einen Baustein übernommen.
+        „Original …": Das Bild oben ist eine Fassung bis 2048 px; das volle Bild
+        liegt in Backblaze (Marks Entscheidung vom 16.09.2026). Ohne diesen
+        Hinweis sähe eine bezahlte 4×-Vergrößerung aus wie ein gewöhnliches Bild.
+      */}
+      {(abgelegt || original) && (
+        <div className="flex flex-wrap items-center gap-1 px-1.5 py-1.5">
+          {abgelegt && (
+            <span
+              title="Schon in einen Baustein übernommen"
+              className="inline-flex items-center gap-1 rounded-full bg-[rgba(8,12,16,0.72)] px-2 py-0.5 text-[13px] font-semibold leading-5 text-emerald-300"
+            >
+              <Check className="h-3.5 w-3.5" aria-hidden /> abgelegt
+            </span>
+          )}
+          {original && (
+            <span
+              title={`Das volle Bild (${original.breite}×${original.hoehe}) liegt in Backblaze; hier liegt eine Fassung bis 2048 px.`}
+              className="inline-flex items-center rounded-full bg-[rgba(8,12,16,0.72)] px-2 py-0.5 text-[13px] font-semibold leading-5 tabular-nums text-foreground"
+            >
+              Original {original.breite}×{original.hoehe}
+            </span>
+          )}
+        </div>
+      )}
 
       {/*
         Rueckfrage, weil sich Loeschen nicht zuruecknehmen laesst. Der Text sagt

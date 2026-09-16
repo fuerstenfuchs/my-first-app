@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import { useImageJobs, ergebnisUrl } from '@/hooks/use-image-jobs'
 import { useBildUebernehmen } from '@/hooks/use-bild-uebernehmen'
 import { type Character } from '@/hooks/use-characters'
@@ -414,13 +415,16 @@ export function useReferenzkette(
       if (!user) { toast.error('Nicht angemeldet'); return false }
 
       const variantId = await varianteHolen(KOERPERFOTO_VARIANTE)
-      const endung = (datei.name.split('.').pop() || 'jpg').toLowerCase()
-      const pfad = ablagepfad(user.id, character.id, variantId, endung)
 
-      const { error: hochErr } = await supabase.storage
-        .from(CHARAKTER_BAUSTEIN.bucket)
-        .upload(pfad, datei, { contentType: datei.type || 'image/jpeg', upsert: false })
-      if (hochErr) { toast.error(`Körperfoto konnte nicht abgelegt werden: ${hochErr.message}`); return false }
+      // Verkleinert vor dem Hochladen (src/lib/bild-hochladen.ts). Endung und
+      // Typ folgen dem Ergebnis, nicht dem Dateinamen.
+      const hoch = await bildHochladen(supabase, {
+        bucket: CHARAKTER_BAUSTEIN.bucket,
+        pfadFuer: endung => ablagepfad(user.id, character.id, variantId, endung),
+        datei,
+      })
+      if (!hoch.ok) { toast.error(`Körperfoto konnte nicht abgelegt werden: ${hoch.fehler}`); return false }
+      const pfad = hoch.pfad
 
       // `sort_order` ist in der Datenbank ein normales 4-Byte `integer`
       // (max. rund 2,1 Milliarden) — `Date.now()` liegt heute bei rund

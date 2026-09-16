@@ -393,11 +393,12 @@
   39 Stellen lagen unter 13px. Sie einzeln anzufassen hieße, beim nächsten
   Bauteil wieder eine zu vergessen — die Regel steht deshalb an EINER Stelle.
 
-  ZWEI AUSNAHMEN, beide mit Grund:
-  - `.lt-mini` bleibt klein: die Marke „abgelegt" sitzt AUF dem Bild und würde
-    sonst ein Drittel breiter.
-  - Menüs in Portalen hängen am `<body>` und damit außerhalb von `.lt`. Sie
-    tragen `lt-menue` und werden hier getrennt angehoben.
+  EINE AUSNAHME: Menüs in Portalen hängen am `<body>` und damit außerhalb von
+  `.lt`. Sie tragen `lt-menue` und werden hier getrennt angehoben.
+
+  Bis 16.09.2026 gab es eine zweite: `.lt-mini` hielt die Marke „abgelegt" auf
+  10 px, weil sie AUF dem Bild saß. Die Marken stehen jetzt in einer Zeile unter
+  dem Bild (ergebnis-kachel.tsx) und haben 13 px wie alles andere.
 */
 .lt .text-\[9px\],
 .lt .text-\[10px\],
@@ -405,7 +406,6 @@
 .lt .text-\[12px\],
 .lt .text-\[12\.5px\] { font-size: 13px; }
 .lt .text-xs { font-size: 13.5px; }
-.lt .lt-mini { font-size: 10px; }
 
 .lt-menue .text-\[10px\],
 .lt-menue .text-\[11px\] { font-size: 13px; }

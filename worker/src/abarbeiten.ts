@@ -15,9 +15,10 @@ import { bildVergroessern } from './upscale.ts'
 import { bildVergroessernKi, type KiVerfahren } from './fal.ts'
 import { bildNachbauen, bildErzeugenGemini, GROESSENKLASSEN } from './gemini.ts'
 import {
-  auftragFertig, ergebnisAblegen, ergebnisHolen, externeAnfrageMerken, fortschrittMerken,
+  auftragFertig, ergebnisAblegen, quelleHolen, externeAnfrageMerken, fortschrittMerken,
 } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
+import { speicherVermerk, type Vermerk } from './speicher.ts'
 
 /** Wohin Zwischenmeldungen gehen — der Dauerbetrieb stempelt die Uhrzeit davor. */
 export type Melder = (text: string) => void
@@ -108,7 +109,13 @@ async function vergroessern(
   }
 
   const begonnen = Date.now()
-  const quelle = await ergebnisHolen(job.source_path, job.user_id)
+  // Das ORIGINAL aus Backblaze, wenn es eines gibt — in Supabase liegt seit dem
+  // 15.09.2026 nur die WebP-Fassung ≤ 2048 (siehe `quelleHolen`).
+  // Fällt Backblaze aus oder passt das Original nicht, steht der Grund hier.
+  const { daten: quelle, herkunft, hinweis } = await quelleHolen(job.source_path, job.user_id)
+  sage(hinweis
+    ? `  ${hinweis}.`
+    : herkunft === 'backblaze' ? '  Quelle: Original aus Backblaze.' : '  Quelle: Fassung aus Supabase.')
 
   let daten: ArrayBuffer
   let nachher: { breite: number; hoehe: number }
@@ -155,7 +162,10 @@ async function vergroessern(
     nachher = ergebnis.nachher
   }
 
-  const abgelegt = await ergebnisAblegen(job.user_id, job.id, 0, daten)
+  // Als Vergrößerung ablegen. Seit Marks Entscheidung vom 16.09.2026
+  // (VERGROESSERUNGEN_VOLLE_GROESSE = false) wie jedes Ergebnis: Original nach
+  // Backblaze, WebP ≤ 2048 nach Supabase.
+  const abgelegt = await ergebnisAblegen(job.user_id, job.id, 0, daten, { art: 'vergroesserung', signal })
 
   sage(
     `  ${job.upscaler} · ${ziel} → ${nachher.breite}×${nachher.hoehe} ` +
@@ -165,7 +175,15 @@ async function vergroessern(
     `${Math.round(abgelegt.groesse / 1024)} kB` +
     (abgelegt.hinweis ? ` · ${abgelegt.hinweis}` : ''),
   )
-  await auftragFertig(job.id, [abgelegt.pfad])
+  // Vermerk „Original in Backblaze" und die TATSÄCHLICHE Größe (16.09.2026):
+  // `size` stammt beim Einreihen aus der Quelle; seit Vergrößerungen auf
+  // 2048 px verkleinert werden, stünde dort sonst eine Größe, die es in
+  // Supabase nicht gibt.
+  const vermerk = speicherVermerk(job.scene_meta, [{ pfad: abgelegt.pfad, originalMasse: abgelegt.originalMasse, masse: abgelegt.masse }])
+  await auftragFertig(job.id, [abgelegt.pfad], {
+    ...(vermerk ? { scene_meta: vermerk } : {}),
+    ...(abgelegt.masse ? { size: `${abgelegt.masse.breite}x${abgelegt.masse.hoehe}` } : {}),
+  })
 }
 
 /** Erzeugen. Jedes fertige Bild wird sofort festgehalten. */
@@ -203,6 +221,7 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
   // Schleifenbedingung. Siehe `nochZuErzeugen`: Der Rumpf laesst `pfade`
   // wachsen, eine Bedingung mit `pfade.length` darin schrumpft also mit.
   const offeneIndizes = nochZuErzeugen(pfade, anzahl)
+  const vermerke: Vermerk[] = []
 
   for (const i of offeneIndizes) {
     const begonnen = Date.now()
@@ -236,8 +255,9 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
     } else {
       daten = await bildErzeugen(job, signal)
     }
-    const abgelegt = await ergebnisAblegen(job.user_id, job.id, i, daten)
+    const abgelegt = await ergebnisAblegen(job.user_id, job.id, i, daten, { art: 'erzeugung', signal })
     pfade.push(abgelegt.pfad)
+    vermerke.push({ pfad: abgelegt.pfad, originalMasse: abgelegt.originalMasse, masse: abgelegt.masse })
     // Sofort festhalten — sonst wäre alles verloren, wenn das nächste Bild scheitert.
     await fortschrittMerken(job.id, pfade)
     sage(
@@ -248,7 +268,9 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
     )
   }
 
-  await auftragFertig(job.id, pfade)
+  // Welche Bilder ein Original in Backblaze haben — die Kachel zeigt es an.
+  const vermerk = speicherVermerk(job.scene_meta, vermerke)
+  await auftragFertig(job.id, pfade, vermerk ? { scene_meta: vermerk } : {})
 }
 
 export async function auftragAbarbeiten(

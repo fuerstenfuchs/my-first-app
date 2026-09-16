@@ -6,6 +6,7 @@ import { ImagePlus, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
 
@@ -56,14 +57,6 @@ const BUCKET = 'generated-images'
 export const MAX_REFERENZEN = 8
 const MAX_MB = 15
 const MAX_BYTES = MAX_MB * 1024 * 1024
-
-/** Die Dateiendung für den Speicherpfad — aus dem Namen, sonst aus dem Typ. */
-function endungAus(datei: File): string {
-  const ausName = /\.([a-z0-9]{2,5})$/i.exec(datei.name)?.[1]
-  if (ausName) return ausName.toLowerCase()
-  const ausTyp = datei.type.split('/')[1]?.replace(/[^a-z0-9]/gi, '').toLowerCase()
-  return ausTyp || 'png'
-}
 
 /**
  * Was in einem Fallenlassen steckt, wenn es KEINE Datei ist.
@@ -173,17 +166,21 @@ export function ReferenzAblage({ bilder, onChange, className }: Props) {
         // Der erste Ordner MUSS die eigene Benutzerkennung sein, sonst lehnt
         // die Schreibregel ab. `referenzen/` trennt sie von den Ergebnissen,
         // die im selben Eimer liegen.
-        const pfad = `${user.id}/referenzen/${crypto.randomUUID()}.${endungAus(datei)}`
-        const { error } = await supabase.storage
-          .from(BUCKET)
-          .upload(pfad, datei, { contentType: datei.type || 'image/png', upsert: false })
+        // Verkleinert vor dem Hochladen (src/lib/bild-hochladen.ts). Endung und
+        // Typ folgen dem Ergebnis, nicht dem Dateinamen.
+        const hoch = await bildHochladen(supabase, {
+          bucket: BUCKET,
+          pfadFuer: endung => `${user.id}/referenzen/${crypto.randomUUID()}.${endung}`,
+          datei,
+        })
 
-        if (error) {
-          toast.error(`„${datei.name || 'Bild'}" konnte nicht abgelegt werden: ${error.message}`)
+        if (!hoch.ok) {
+          toast.error(`„${datei.name || 'Bild'}" konnte nicht abgelegt werden: ${hoch.fehler}`)
           continue
         }
 
-        const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(pfad)
+        const pfad = hoch.pfad
+        const publicUrl = hoch.url
         neue.push({ id: pfad, url: publicUrl, name: datei.name || 'Referenz' })
       }
 

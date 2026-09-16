@@ -17,8 +17,8 @@ import { ErgebnisKachel } from '@/components/ergebnis-kachel'
 /*
   DIE KACHEL WIRD VON ZWEI SEITEN BENUTZT (PROJ-62).
 
-  `ergebnis-kachel.tsx` traegt seit dem Umbau `lt-kachel`, `lt-mini` und
-  `lt-menue`. Das Stilblatt dazu hing aber nur am Lichttisch — hier waere die
+  `ergebnis-kachel.tsx` traegt seit dem Umbau `lt-kachel` und `lt-menue`
+  (`lt-mini` entfiel am 16.09.2026 mit den 13-px-Marken). Das Stilblatt dazu hing aber nur am Lichttisch — hier waere die
   Kachel ohne Rahmen, Rundung und Schatten gewesen, und schlimmer: je nachdem,
   ob man von dort herkommt oder die Seite frisch laedt, verschieden. Deshalb
   gehoert es auch hierher. Die Klassen wirken eigenstaendig, sie brauchen das

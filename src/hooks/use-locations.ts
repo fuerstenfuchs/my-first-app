@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { validateMediaFile } from './use-prompt-media'
 import { dateiFreigeben, titelbildNachLoeschen } from '@/lib/datei-freigeben'
+import { bildHochladen } from '@/lib/bild-hochladen'
 
 export const LOCATION_CATEGORIES = [
   { key: 'stadt',          label: 'Stadt',          emoji: '🌆' },
@@ -146,11 +147,14 @@ export function useLocations() {
     if (coverFile) {
       const validation = validateMediaFile(coverFile)
       if (!validation) {
-        const ext = coverFile.name.split('.').pop() ?? 'jpg'
-        const storagePath = `${user.id}/${loc.id}/cover.${ext}`
-        const { error: upErr } = await supabase.storage.from(BUCKET).upload(storagePath, coverFile)
-        if (!upErr) {
-          const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(storagePath)
+        // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+        const hoch = await bildHochladen(supabase, {
+          bucket: BUCKET,
+          pfadFuer: endung => `${user.id}/${loc.id}/cover.${endung}`,
+          datei: coverFile,
+        })
+        if (hoch.ok) {
+          const publicUrl = hoch.url
           await supabase.from('locations').update({ cover_image_url: publicUrl }).eq('id', loc.id)
           loc.cover_image_url = publicUrl
         }
@@ -307,15 +311,19 @@ export function useLocationDetail(locationId: string | null) {
         setUploading(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error' } : e))
         continue
       }
-      const ext = entry.file.name.split('.').pop() ?? 'jpg'
-      const storagePath = `${user.id}/${locationId}/${variantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(storagePath, entry.file)
-      if (upErr) {
+      const hoch = await bildHochladen(supabase, {
+        bucket: BUCKET,
+        pfadFuer: endung =>
+          `${user.id}/${locationId}/${variantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${endung}`,
+        datei: entry.file,
+      })
+      if (!hoch.ok) {
         toast.error(`Upload fehlgeschlagen: ${entry.file.name}`)
         setUploading(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'error' } : e))
         continue
       }
-      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(storagePath)
+      const storagePath = hoch.pfad
+      const publicUrl = hoch.url
       const { data: img } = await supabase.from('location_images').insert({
         variant_id: variantId, user_id: user.id, url: publicUrl, storage_path: storagePath, sort_order: nextOrder++,
       }).select().single()

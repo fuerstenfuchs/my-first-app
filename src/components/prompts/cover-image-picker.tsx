@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { dateiFreigeben } from '@/lib/datei-freigeben'
+import { bildHochladen } from '@/lib/bild-hochladen'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 interface CoverImagePickerProps {
@@ -42,16 +43,19 @@ export function CoverImagePicker({ value, onChange }: CoverImagePickerProps) {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-      const path = `${user!.id}/${crypto.randomUUID()}.${ext}`
       const altesBild = value
 
-      const { error } = await supabase.storage.from('prompt-covers').upload(path, file)
-      if (error) {
+      // Verkleinert vor dem Hochladen; die Endung folgt dem Ergebnis.
+      const hoch = await bildHochladen(supabase, {
+        bucket: 'prompt-covers',
+        pfadFuer: endung => `${user!.id}/${crypto.randomUUID()}.${endung}`,
+        datei: file,
+      })
+      if (!hoch.ok) {
         toast.error('Upload fehlgeschlagen — bitte erneut versuchen')
         return
       }
-      const { data: { publicUrl } } = supabase.storage.from('prompt-covers').getPublicUrl(path)
+      const publicUrl = hoch.url
       onChange(publicUrl)
       setUrlInput(publicUrl)
 

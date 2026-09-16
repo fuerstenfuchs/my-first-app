@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 // Die Erkennung steht seit dem 04.09.2026 in `bildart.ts` — die Analyse
 // braucht sie auch, und zwei Kopien liefen irgendwann auseinander.
 import { typAusBytes } from './bildart'
+import { bildHochladen } from '../../../src/lib/bild-hochladen'
 
 /**
  * Erfasste Bilder in den eigenen Speicher holen.
@@ -81,20 +82,6 @@ function speicherHerkunft(): string | null {
 export function liegtImEigenenSpeicher(url: string): boolean {
   const herkunft = speicherHerkunft()
   return !!herkunft && url.startsWith(herkunft)
-}
-
-/** Dateiendung zum Typ. Ohne Punkt. */
-function endungZuTyp(typ: string): string {
-  switch (typ) {
-    case 'image/jpeg': return 'jpg'
-    case 'image/png':  return 'png'
-    case 'image/gif':  return 'gif'
-    case 'image/webp': return 'webp'
-    case 'image/avif': return 'avif'
-    case 'image/heic': return 'heic'
-    case 'image/bmp':  return 'bmp'
-    default:           return 'bin'
-  }
 }
 
 /** Eine Adresse so kuerzen, dass sie in eine Fehlermeldung passt. */
@@ -195,16 +182,20 @@ async function ablegen(
   const typ = typAusBytes(bytes)
   if (!typ) return behalten(`Von ${herkunft} kam kein erkennbares Bild zurueck.`)
 
-  const pfad = `${nutzerId}/erfasst/${crypto.randomUUID()}.${endungZuTyp(typ)}`
+  // VERKLEINERT VOR DEM ABLEGEN (15.09.2026) — mit DERSELBEN Funktion und
+  // denselben Regeln wie die App (`src/lib/bild-hochladen.ts`,
+  // `src/lib/speicher-regeln.ts`). Eingebunden statt kopiert, wie schon
+  // `analyse-prompts.ts`: Eine Kopie liefe irgendwann auseinander, und die
+  // Beispiele muessten doppelt geprueft werden. Endung und Typ folgen dem
+  // Ergebnis — ein PNG-Fund liegt danach meist als `.webp` im Eimer.
+  const hoch = await bildHochladen(supabase, {
+    bucket: EIMER[art],
+    pfadFuer: endung => `${nutzerId}/erfasst/${crypto.randomUUID()}.${endung}`,
+    datei: new Blob([bytes as BlobPart], { type: typ }),
+  })
+  if (!hoch.ok) return behalten(`Ablegen im eigenen Speicher fehlgeschlagen: ${hoch.fehler}`)
 
-  const { error: hochError } = await supabase.storage
-    .from(EIMER[art])
-    .upload(pfad, new Blob([bytes as BlobPart], { type: typ }), { contentType: typ, upsert: false })
-
-  if (hochError) return behalten(`Ablegen im eigenen Speicher fehlgeschlagen: ${hochError.message}`)
-
-  const { data: { publicUrl } } = supabase.storage.from(EIMER[art]).getPublicUrl(pfad)
-  return { url: publicUrl, gesichert: true, fehler: null }
+  return { url: hoch.url, gesichert: true, fehler: null }
 }
 
 /**

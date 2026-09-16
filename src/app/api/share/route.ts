@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { bildFuerSpeicherServer } from '@/lib/bild-fuer-speicher-server'
 
 function looksLikeUrl(s: string): boolean {
   if (!s.trim()) return false
@@ -55,13 +56,19 @@ export async function POST(request: NextRequest) {
     if (!ALLOWED_IMAGE_TYPES.includes(image.type)) continue
     if (image.size > IMAGE_MAX_BYTES) continue
 
-    const ext = image.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `${user.id}/shared/${crypto.randomUUID()}.${ext}`
-    const bytes = new Uint8Array(await image.arrayBuffer())
+    // Verkleinert nach denselben Regeln wie im Browser — hier mit sharp
+    // (src/lib/bild-fuer-speicher-server.ts). Endung und Typ folgen dem Ergebnis.
+    const bild = await bildFuerSpeicherServer(
+      new Uint8Array(await image.arrayBuffer()), image.name.split('.').pop(),
+    )
+    // Warum ein Bild groß hochging, soll im Serverprotokoll stehen — sonst sieht
+    // ein Ausfall von sharp genauso aus wie ein kleines Bild (Critic K2).
+    if (!bild.umgewandelt) console.info(`share: Bild unverändert abgelegt — ${bild.grund}`)
+    const path = `${user.id}/shared/${crypto.randomUUID()}.${bild.endung}`
 
     const { error } = await supabase.storage
       .from('prompt-media')
-      .upload(path, bytes, { contentType: image.type })
+      .upload(path, bild.daten, { contentType: bild.typ })
 
     if (!error) {
       const { data: { publicUrl } } = supabase.storage

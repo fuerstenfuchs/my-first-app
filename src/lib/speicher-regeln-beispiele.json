@@ -1,0 +1,240 @@
+{
+  "masse": [
+    {
+      "name": "klein, quadratisch",
+      "breite": 1024,
+      "hoehe": 1024,
+      "ziel": {
+        "breite": 1024,
+        "hoehe": 1024,
+        "qualitaet": 90,
+        "verkleinert": false
+      }
+    },
+    {
+      "name": "genau 1200 — noch klein",
+      "breite": 1200,
+      "hoehe": 800,
+      "ziel": {
+        "breite": 1200,
+        "hoehe": 800,
+        "qualitaet": 90,
+        "verkleinert": false
+      }
+    },
+    {
+      "name": "1201 — nicht mehr klein",
+      "breite": 1201,
+      "hoehe": 800,
+      "ziel": {
+        "breite": 1201,
+        "hoehe": 800,
+        "qualitaet": 82,
+        "verkleinert": false
+      }
+    },
+    {
+      "name": "genau 2048",
+      "breite": 2048,
+      "hoehe": 2048,
+      "ziel": {
+        "breite": 2048,
+        "hoehe": 2048,
+        "qualitaet": 82,
+        "verkleinert": false
+      }
+    },
+    {
+      "name": "4K quadratisch",
+      "breite": 4096,
+      "hoehe": 4096,
+      "ziel": {
+        "breite": 2048,
+        "hoehe": 2048,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "quer 3:2",
+      "breite": 3000,
+      "hoehe": 2000,
+      "ziel": {
+        "breite": 2048,
+        "hoehe": 1365,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "hoch 2:3",
+      "breite": 2000,
+      "hoehe": 3000,
+      "ziel": {
+        "breite": 1365,
+        "hoehe": 2048,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "genau 3:1 ist noch kein Streifen",
+      "breite": 6144,
+      "hoehe": 2048,
+      "ziel": {
+        "breite": 2048,
+        "hoehe": 683,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "knapp über 3:1 ist ein Streifen",
+      "breite": 6145,
+      "hoehe": 2048,
+      "ziel": {
+        "breite": 4321,
+        "hoehe": 1440,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "Streifen 10:1",
+      "breite": 20000,
+      "hoehe": 2000,
+      "ziel": {
+        "breite": 14400,
+        "hoehe": 1440,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "Streifen 40:1, lange Seite begrenzt",
+      "breite": 40000,
+      "hoehe": 1000,
+      "ziel": {
+        "breite": 16383,
+        "hoehe": 410,
+        "qualitaet": 82,
+        "verkleinert": true
+      }
+    },
+    {
+      "name": "hoher Streifen, kurze Seite schon klein",
+      "breite": 900,
+      "hoehe": 5000,
+      "ziel": {
+        "breite": 900,
+        "hoehe": 5000,
+        "qualitaet": 82,
+        "verkleinert": false
+      }
+    },
+    {
+      "name": "klein 3:1",
+      "breite": 300,
+      "hoehe": 100,
+      "ziel": {
+        "breite": 300,
+        "hoehe": 100,
+        "qualitaet": 90,
+        "verkleinert": false
+      }
+    }
+  ],
+  "ersparnis": [
+    {
+      "name": "genau 30 % gespart",
+      "alt": 1000,
+      "neu": 700,
+      "lohnt": true
+    },
+    {
+      "name": "knapp unter 30 %",
+      "alt": 1000,
+      "neu": 701,
+      "lohnt": false
+    },
+    {
+      "name": "größer geworden",
+      "alt": 1000,
+      "neu": 1200,
+      "lohnt": false
+    },
+    {
+      "name": "leere neue Datei ist kein Erfolg",
+      "alt": 1000,
+      "neu": 0,
+      "lohnt": false
+    }
+  ],
+  "kandidaten": [
+    { "name": "PNG 400 KB", "typ": "image/png", "groesse": 409600, "ja": true },
+    { "name": "JPEG genau 300 KB", "typ": "image/jpeg", "groesse": 307200, "ja": true },
+    { "name": "JPEG ein Byte unter 300 KB", "typ": "image/jpeg", "groesse": 307199, "ja": false },
+    { "name": "WebP bleibt (auch groß)", "typ": "image/webp", "groesse": 5242880, "ja": false },
+    { "name": "GIF bleibt", "typ": "image/gif", "groesse": 5242880, "ja": false },
+    { "name": "HEIC bleibt", "typ": "image/heic", "groesse": 5242880, "ja": false },
+    { "name": "AVIF bleibt", "typ": "image/avif", "groesse": 5242880, "ja": false },
+    { "name": "kein erkennbares Bild (Video)", "typ": null, "groesse": 5242880, "ja": false }
+  ],
+  "bewegt": [
+    {
+      "name": "GIF",
+      "hex": "47494638396100000000000000000000",
+      "bewegt": true
+    },
+    {
+      "name": "PNG ohne acTL",
+      "hex": "89504e470d0a1a0a0000000d4948445200000000000000000000000000000000000000000049444154000000000000000049454e4400000000",
+      "bewegt": false
+    },
+    {
+      "name": "APNG: acTL direkt nach IHDR",
+      "hex": "89504e470d0a1a0a0000000d494844520000000000000000000000000000000000000000086163544c000000000000000000000000000000004944415400000000",
+      "bewegt": true
+    },
+    {
+      "name": "APNG: acTL erst nach einem iCCP-Block (Blöcke werden abgeschritten)",
+      "hex": "89504e470d0a1a0a0000000d49484452000000000000000000000000000000000000000028694343500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000086163544c000000000000000000000000000000004944415400000000",
+      "bewegt": true
+    },
+    {
+      "name": "PNG: acTL erst nach IDAT zählt nicht",
+      "hex": "89504e470d0a1a0a0000000d494844520000000000000000000000000000000000000000004944415400000000000000086163544c000000000000000000000000",
+      "bewegt": false
+    },
+    {
+      "name": "WebP VP8 (einfach)",
+      "hex": "524946461600000057454250565038200000000000000000000000000000",
+      "bewegt": false
+    },
+    {
+      "name": "WebP VP8X mit Animations-Bit",
+      "hex": "524946461600000057454250565038580a00000002000000000000000000",
+      "bewegt": true
+    },
+    {
+      "name": "WebP VP8X mit Animation und Transparenz",
+      "hex": "524946461600000057454250565038580a00000012000000000000000000",
+      "bewegt": true
+    },
+    {
+      "name": "WebP VP8X nur mit Transparenz",
+      "hex": "524946461600000057454250565038580a00000010000000000000000000",
+      "bewegt": false
+    },
+    {
+      "name": "JPEG",
+      "hex": "ffd8ffe0000000000000000000000000",
+      "bewegt": false
+    },
+    {
+      "name": "zu kurz",
+      "hex": "8950",
+      "bewegt": false
+    }
+  ]
+}

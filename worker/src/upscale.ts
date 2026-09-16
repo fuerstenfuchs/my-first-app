@@ -35,8 +35,19 @@ export async function bildVergroessern(
     throw new Error('Das Ausgangsbild hat keine lesbaren Maße.')
   }
 
-  let breite = info.width * faktor
-  let hoehe = info.height * faktor
+  /*
+    EXIF-DREHUNG ANWENDEN (Critic, 15.09.2026). Seit Vergrößerungen ihr Original
+    aus Backblaze holen, kann die Quelle ein Foto mit EXIF-Drehung sein — nicht
+    mehr nur ein Modellergebnis ohne. `sharp` meldet die Maße UNGEDREHT; ohne
+    `rotate()` läge ein hochkant fotografiertes Bild nach der Vergrößerung quer,
+    und bei 5–8 wären Breite und Höhe vertauscht gerechnet.
+  */
+  const gedreht = [5, 6, 7, 8].includes(info.orientation ?? 1)
+  const quelleBreite = gedreht ? info.height : info.width
+  const quelleHoehe = gedreht ? info.width : info.height
+
+  let breite = quelleBreite * faktor
+  let hoehe = quelleHoehe * faktor
 
   // Notbremse: Ein Bild jenseits von 8192 Pixeln Kantenlänge frisst Speicher,
   // ohne dass ein einziger echter Bildpunkt dazukäme. Dann wird der Faktor
@@ -49,6 +60,7 @@ export async function bildVergroessern(
   }
 
   const ausgang = await sharp(eingang)
+    .rotate()
     .resize(breite, hoehe, { kernel: 'lanczos3', fit: 'fill' })
     .png({ compressionLevel: 9 })
     .toBuffer()
@@ -57,7 +69,7 @@ export async function bildVergroessern(
     daten: ausgang.buffer.slice(
       ausgang.byteOffset, ausgang.byteOffset + ausgang.byteLength,
     ) as ArrayBuffer,
-    vorher:  { breite: info.width, hoehe: info.height },
+    vorher:  { breite: quelleBreite, hoehe: quelleHoehe },
     nachher: { breite, hoehe },
   }
 }

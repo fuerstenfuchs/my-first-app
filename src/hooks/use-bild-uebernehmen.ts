@@ -7,7 +7,8 @@ import {
   BAUSTEINE, ablagepfad, auswahlSpalten, pruefeBildgroesse,
   type Baustein, type BausteinSchluessel,
 } from '@/lib/bausteine'
-import { bildEndung, bildTyp } from '@/lib/bildtyp'
+import { bildFuerSpeicher } from '@/lib/bild-fuer-speicher'
+import { bildHochladen } from '@/lib/bild-hochladen'
 
 /**
  * Ein fertiges Bild aus der Warteschlange in einen Baustein übernehmen.
@@ -64,24 +65,6 @@ export type Eintrag = {
   tags?: string[] | null
 }
 export type Variante = { id: string; name: string; sort_order: number }
-
-/**
- * Die Dateiendung der Kopie — aus den BYTES des geholten Bildes.
- *
- * WARUM NICHT MEHR AUS DEM PFAD: Mark hat am 15.09.2026 entschieden, große
- * Bilder an derselben Adresse durch WebP zu ersetzen; `0.png` in
- * generated-images kann dann WebP enthalten. Aus dem Pfad gelesen, bekäme die
- * Kopie im Baustein wieder `.png` — und trüge den falschen Namen weiter.
- * Reihenfolge und Rückfall stehen in `bildEndung` (`src/lib/bildtyp.ts`).
- */
-async function artAus(blob: Blob): Promise<{ endung: string; typ: string }> {
-  // Endung UND Typ aus denselben Bytes (15.09.2026, Critic S1): Kam nur die
-  // Endung aus den Bytes und der Typ aus `blob.type`, hieß die Kopie `.webp`
-  // und lag als `image/png` im Speicher — der Kopf einer ausgetauschten Datei
-  // meldet bis zu einer Stunde lang noch den alten Typ.
-  const kopf = new Uint8Array(await blob.slice(0, 32).arrayBuffer())
-  return { endung: bildEndung(kopf, blob.type, 'png'), typ: bildTyp(kopf, blob.type, 'image/png') }
-}
 
 export function useBildUebernehmen() {
   const [laeuft, setLaeuft] = useState(false)
@@ -167,33 +150,47 @@ export function useBildUebernehmen() {
       // 4×-vergrößertes Referenzsheet (28,1 MB) passte nicht in
       // `character-images` (damals 20 MB) und Supabase antwortete nur auf
       // Englisch, ohne Zahl.
-      const zuGross = pruefeBildgroesse(blob.size, b)
+      /*
+        VERKLEINERT VOR DEM ABLEGEN (15.09.2026). Ist die Quelle noch groß — ein
+        4K-Ergebnis, eine Vergrößerung —, kommt sie als WebP ≤ 2048 in den
+        Baustein, nach denselben Regeln wie jeder Upload
+        (`src/lib/speicher-regeln.ts`). Ein zweites Original gibt es dabei nicht:
+        Das Original bleibt beim Auftrag in generated-images (und liegt, sobald
+        der Arbeiter Backblaze kennt, auch dort).
+
+        Die Größenprüfung gilt dem, was WIRKLICH hochgeht — sonst lehnte sie ein
+        28-MB-Sheet ab, das verkleinert nur noch 1 MB groß ist.
+      */
+      const bild = await bildFuerSpeicher(blob)
+      const zuGross = pruefeBildgroesse(bild.blob.size, b)
       if (zuGross) {
         toast.error(zuGross)
         return null
       }
 
-      // 2. Ablegen, im Eimer des Bausteins.
-      const bildArt = await artAus(blob)
-      const pfad = ablagepfad(user.id, ziel.parentId, ziel.variantId, bildArt.endung)
       // Woran die Bildzeile hängt: an der Variante oder am Prompt.
       const anker = b.varianten ? ziel.variantId : ziel.parentId
       if (!anker) { toast.error('Kein Ziel für das Bild gefunden.'); return null }
-      const { error: hochErr } = await supabase.storage
-        .from(b.bucket)
-        .upload(pfad, blob, { contentType: bildArt.typ, upsert: false })
-      if (hochErr) {
+
+      // 2. Ablegen, im Eimer des Bausteins. Endung und Typ folgen dem Ergebnis.
+      const hoch = await bildHochladen(supabase, {
+        bucket: b.bucket,
+        pfadFuer: endung => ablagepfad(user.id, ziel.parentId, ziel.variantId, endung),
+        datei: bild,
+      })
+      if (!hoch.ok) {
         // Falls die Tabelle in bausteine.ts und die Grenze in Supabase je
         // auseinanderlaufen (die eine ist eine Kopie der anderen — siehe
         // SPEICHERLIMIT_MB), fängt das hier den Fall trotzdem lesbar auf.
-        const klingtNachGroesse = /exceed|maximum|too large|payload/i.test(hochErr.message)
+        const klingtNachGroesse = /exceed|maximum|too large|payload/i.test(hoch.fehler)
         toast.error(klingtNachGroesse
-          ? `Das Bild ist zu groß für ${b.label} (${(blob.size / 1024 / 1024).toFixed(1)} MB).`
-          : `Ablegen fehlgeschlagen: ${hochErr.message}`)
+          ? `Das Bild ist zu groß für ${b.label} (${(bild.blob.size / 1024 / 1024).toFixed(1)} MB).`
+          : `Ablegen fehlgeschlagen: ${hoch.fehler}`)
         return null
       }
 
-      const { data: { publicUrl } } = supabase.storage.from(b.bucket).getPublicUrl(pfad)
+      const pfad = hoch.pfad
+      const publicUrl = hoch.url
 
       // 3. Ans Ende der vorhandenen Bilder hängen.
       const { data: letzte } = await supabase

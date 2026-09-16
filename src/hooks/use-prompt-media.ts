@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
 import { dateiFreigeben } from '@/lib/datei-freigeben'
+import { bildHochladen } from '@/lib/bild-hochladen'
 
 export interface PromptMedia {
   id: string
@@ -97,24 +98,24 @@ export function usePromptMedia() {
       pending.map(async (item, idx) => {
         const file = item.file
         const isVideo = VIDEO_TYPES.includes(file.type)
-        const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
-        const path = `${user.id}/${promptId}/${crypto.randomUUID()}.${ext}`
+        // Bilder werden verkleinert, Videos gehen unverändert durch; die Endung
+        // folgt dem Ergebnis (src/lib/bild-hochladen.ts).
+        const hoch = await bildHochladen(supabase, {
+          bucket: 'prompt-media',
+          pfadFuer: endung => `${user.id}/${promptId}/${crypto.randomUUID()}.${endung}`,
+          datei: file,
+        })
 
-        const { error: uploadError } = await supabase.storage
-          .from('prompt-media')
-          .upload(path, file)
-
-        if (uploadError) {
+        if (!hoch.ok) {
+          const fehler = hoch.fehler
           setUploading(prev => prev.map(u =>
-            u.id === item.id ? { ...u, status: 'error', error: uploadError.message } : u
+            u.id === item.id ? { ...u, status: 'error', error: fehler } : u
           ))
           toast.error(`${file.name}: Upload fehlgeschlagen`)
           return
         }
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('prompt-media')
-          .getPublicUrl(path)
+        const publicUrl = hoch.url
 
         const sortOrder = currentSortMax + 1 + idx
         const mediaType: 'image' | 'video' = isVideo ? 'video' : 'image'
