@@ -54,6 +54,9 @@ export interface PromptInput {
   cover_image_url?: string | null
   source_url?: string | null
   source_type?: string | null
+  /** Direkt beim Anlegen einem Thema zuordnen, statt es erst danach in
+   *  „Thema wechseln" nachzuholen (Mark, 18.09.2026). */
+  thema_id?: string | null
 }
 
 export function usePrompts() {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Pencil, Merge, ChevronRight } from 'lucide-react'
+import { Pencil, Merge, ChevronRight, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -10,6 +10,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ThemaWechseln } from '@/components/prompts/thema-wechseln'
 import type { Prompt } from '@/hooks/use-prompts'
 import type { Thema } from '@/hooks/use-themen'
 import { cn } from '@/lib/utils'
@@ -36,6 +40,14 @@ type Props = {
   onPrompt: (p: Prompt) => void
   onUmbenennen: (id: string, name: string) => Promise<boolean>
   onZusammenlegen: (vonId: string, nachId: string) => Promise<boolean>
+  /*
+    THEMA WECHSELN AUCH IN DEN REGALEN (Mark, 18.09.2026): „Ich sehe den neuen
+    Prompt, aber nur bei den neu dazugekommenen … und da gibt es diese drei
+    Punkte nicht." Ein frischer Prompt hat noch kein Thema und taucht deshalb
+    auf keiner Themenkarte auf — bis jetzt war „Suchen" der einzige Weg, um an
+    das ⋮-Menü mit „Thema wechseln" heranzukommen.
+  */
+  onVerschieben: (promptId: string, themaId: string) => void
 }
 
 /** Ein Bildfeld — mit dem Prompt-Titel als Rückfall, wenn kein Bild da ist. */
@@ -58,7 +70,7 @@ function Feld({ p, className }: { p?: Prompt; className?: string }) {
 }
 
 export function ThemenUebersicht({
-  prompts, themen, onThema, onPrompt, onUmbenennen, onZusammenlegen,
+  prompts, themen, onThema, onPrompt, onUmbenennen, onZusammenlegen, onVerschieben,
 }: Props) {
   const [bearbeite, setBearbeite] = useState<Thema | null>(null)
   const [neuerName, setNeuerName] = useState('')
@@ -104,13 +116,35 @@ export function ThemenUebersicht({
                 Pfeilen — siehe `waagerecht-rollen.tsx`. */}
             <WaagerechtRollen className="pb-1">
               {l.map(p => (
-                <button key={p.id} onClick={() => onPrompt(p)}
-                  className="lt-kachel w-[132px] shrink-0 overflow-hidden text-left">
-                  <div className="aspect-square"><Feld p={p} /></div>
-                  <p className="line-clamp-2 px-2 py-1.5 text-[13px] leading-tight text-muted-foreground">
-                    {p.title}
-                  </p>
-                </button>
+                <div key={p.id} className="lt-kachel group/regal relative w-[132px] shrink-0 overflow-hidden">
+                  <button onClick={() => onPrompt(p)} className="block w-full text-left">
+                    <div className="aspect-square"><Feld p={p} /></div>
+                    <p className="line-clamp-2 px-2 py-1.5 text-[13px] leading-tight text-muted-foreground">
+                      {p.title}
+                    </p>
+                  </button>
+                  {themen.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1 h-6 w-6 rounded-md bg-background/80 opacity-0 backdrop-blur-sm transition-opacity group-hover/regal:opacity-100"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                          <span className="sr-only">Menü</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="lt-menue" onClick={e => e.stopPropagation()}>
+                        <ThemaWechseln
+                          themen={themen}
+                          aktuellesThemaId={p.thema_id}
+                          onVerschieben={themaId => onVerschieben(p.id, themaId)}
+                        />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               ))}
             </WaagerechtRollen>
           </section>

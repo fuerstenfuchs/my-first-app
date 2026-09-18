@@ -119,6 +119,19 @@ export default function PromptsPage() {
   const zeigeUebersicht = !hasActiveFilter && themaId === null
   const offenesThema = themen.find(t => t.id === themaId) ?? null
 
+  /*
+    STANDALONE VERSCHIEBEN, nicht ueber `sharedCardProps` (die haengt an einem
+    einzelnen `prompt` aus dem Closure). Die Themen-Uebersicht iteriert selbst
+    ueber mehrere Prompts (die beiden Regale), deshalb braucht sie eine
+    Funktion, die die ID entgegennimmt statt sie schon zu kennen.
+  */
+  const verschiebenNachId = useCallback(async (promptId: string, zielId: string) => {
+    const ziel = themen.find(t => t.id === zielId)
+    const prompt = prompts.find(p => p.id === promptId)
+    if (!ziel || !prompt || !await themaSetzen(promptId, zielId)) return
+    toast.success(`„${prompt.title}“ liegt jetzt in „${ziel.name}“`)
+  }, [themen, prompts, themaSetzen])
+
   function resetFilters() {
     setThemaId(null)
     setSearchQuery('')
@@ -515,6 +528,7 @@ export default function PromptsPage() {
             onPrompt={p => setDetailPromptId(id => id === p.id ? null : p.id)}
             onUmbenennen={umbenennen}
             onZusammenlegen={zusammenlegen}
+            onVerschieben={verschiebenNachId}
           />
         ) : viewMode === 'grid' ? (
           <motion.div
@@ -566,6 +580,7 @@ export default function PromptsPage() {
         prompt={modalPrompt}
         mode={modalMode}
         onSave={handleSave}
+        themen={themen}
         onCopy={modalPrompt ? () => copyPrompt(modalPrompt) : undefined}
         onToggleFavorite={modalPrompt ? () => toggleFavorite(modalPrompt) : undefined}
         onSetRating={modalPrompt ? (r) => setRating(modalPrompt, r) : undefined}

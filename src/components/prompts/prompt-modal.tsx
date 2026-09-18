@@ -33,6 +33,7 @@ import { StarRating } from '@/components/prompts/star-rating'
 import { usePromptMedia } from '@/hooks/use-prompt-media'
 import { createClient } from '@/lib/supabase'
 import type { Prompt, PromptInput, PromptVariant } from '@/hooks/use-prompts'
+import type { Thema } from '@/hooks/use-themen'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 type ModalMode = 'view' | 'edit' | 'create'
@@ -47,6 +48,14 @@ interface PromptModalProps {
   onToggleFavorite?: () => void
   onSetRating?: (rating: number | null) => void
   onVariantCountChange?: (promptId: string, count: number) => void
+  /*
+    THEMA GLEICH BEIM ANLEGEN (Mark, 18.09.2026): „Gut wäre auch, wenn schon
+    beim Erstellen des Prompts ein Thema zur Auswahl stünde, damit man das
+    gleich zuordnen kann." Vorher landete ein neuer Prompt immer ohne Thema
+    und war nur über die Suche zu finden, nicht über die Themen-Kacheln —
+    „Thema wechseln" gab es erst danach, in einem zweiten Schritt.
+  */
+  themen?: Thema[]
 }
 
 export function PromptModal({
@@ -59,6 +68,7 @@ export function PromptModal({
   onToggleFavorite,
   onSetRating,
   onVariantCountChange,
+  themen = [],
 }: PromptModalProps) {
   // ── Core prompt form state ───────────────────────────────────────────────
   const [mode, setMode] = useState<ModalMode>(initialMode)
@@ -69,6 +79,7 @@ export function PromptModal({
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
   const [sourceUrl, setSourceUrl] = useState('')
   const [sourceUrlError, setSourceUrlError] = useState('')
+  const [themaId, setThemaId] = useState<string | null>(null)
   const [draftPromptId] = useState<string>(() => crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const mediaManagerRef = useRef<MediaManagerHandle>(null)
@@ -142,6 +153,7 @@ export function PromptModal({
         setTagsInput(prompt.tags.join(', '))
         setCoverImageUrl(prompt.cover_image_url)
         setSourceUrl(prompt.source_url ?? '')
+        setThemaId(prompt.thema_id)
         if (initialMode === 'view') {
           fetchViewMedia(prompt.id)
           if (prompt.variant_count > 0) {
@@ -155,6 +167,7 @@ export function PromptModal({
         setTagsInput('')
         setCoverImageUrl(null)
         setSourceUrl('')
+        setThemaId(null)
       }
     }
   }, [open, prompt, initialMode]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -300,6 +313,7 @@ export function PromptModal({
       tags,
       cover_image_url: coverImageUrl,
       source_url: sourceUrl.trim() || null,
+      thema_id: themaId,
     }
     const success = await onSave(input, mode === 'create' ? draftPromptId : undefined)
     if (success && mode === 'create') {
@@ -638,6 +652,28 @@ export function PromptModal({
                   placeholder="z.B. schreiben, blog, deutsch"
                 />
               </div>
+              {themen.length > 0 && (
+                <div className="space-y-1">
+                  <Label htmlFor="modal-thema">
+                    Thema{' '}
+                    <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <Select
+                    value={themaId ?? 'keins'}
+                    onValueChange={v => setThemaId(v === 'keins' ? null : v)}
+                  >
+                    <SelectTrigger id="modal-thema">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="keins">Noch kein Thema</SelectItem>
+                      {themen.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label htmlFor="modal-source">
                   Quell-Link{' '}
