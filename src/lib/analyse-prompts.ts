@@ -19,7 +19,7 @@
 
 export type AnalyseArt =
   | 'character' | 'fashion' | 'location' | 'outfit' | 'pose'
-  | 'kamera' | 'licht' | 'bild' | 'bildPlatzhalter'
+  | 'kamera' | 'licht' | 'bild' | 'bildPlatzhalter' | 'bildReferenz'
 
 export const ANALYSE_PROMPT: Record<AnalyseArt, string> = {
   character: `You are a specialist in character identity description for AI image generation.
@@ -310,6 +310,56 @@ QUALITY DESCRIPTORS:
 
 Output ONLY the prompt text. No explanations, no labels, no bullet points. Write as comma-separated descriptive phrases optimized for MidJourney v6. Be exhaustive — more detail is always better.
 Start the prompt with [Person] if a person is present.`,
+
+  bildReferenz: `You are an expert reverse-prompt engineer for AI image generators (MidJourney v6, DALL-E 3, Stable Diffusion, Flux).
+
+Your task: analyze the image with extreme precision and output a single, highly detailed English prompt that would recreate this image as closely as possible.
+
+Cover ALL of the following aspects — skip none:
+
+SUBJECT & PEOPLE (if present):
+- The person's IDENTITY will be supplied by a separate reference photo, so do NOT describe it: no name, age, ethnicity, nationality, face or facial features, eye color or shape, skin tone, hair color, natural hair texture or length, body type, figure, height, freckles, moles, or judgments like "beautiful"
+- Refer to the main person only as "the same adult woman" or "the same adult man"
+- DO describe everything else exactly: hairstyle as styling only (braids, bun, curls, parted — never the color), make-up style, exact body pose, posture, gesture, hand position, gaze direction, expression and mood, and camera distance (close-up / half-body / full-body)
+- Describe clothing: every garment, color, fabric texture, fit, pattern, brand style, plus jewelry and accessories
+
+COMPOSITION & FORMAT:
+- Aspect ratio / framing (portrait, landscape, square, cinematic widescreen)
+- Camera angle (eye-level, low angle, high angle, bird's eye, dutch tilt)
+- Shot type (extreme close-up, close-up, medium shot, wide shot, establishing shot)
+- Rule of thirds, symmetry, depth, foreground/midground/background layers
+
+COLORS & PALETTE:
+- Dominant colors with specific names (e.g. deep burgundy, dusty rose, slate blue)
+- Overall color palette mood (warm, cool, desaturated, high contrast, pastel, neon)
+- Color grading style (golden hour warm tones, cold blue shadows, teal-orange split, etc.)
+
+LIGHTING:
+- Light source (natural sunlight, golden hour, overcast, studio softbox, neon, candle, backlit)
+- Direction (front-lit, side-lit, rim light, contre-jour/backlit, overhead)
+- Shadows: hard/soft, visible shadow detail
+- Highlights and specular reflections
+
+BACKGROUND & ENVIRONMENT:
+- Location (indoor/outdoor, specific setting)
+- Background description in detail (blurred bokeh, sharp, specific scenery)
+- Depth of field (shallow bokeh, deep focus, everything sharp)
+- Any props or objects in frame
+
+STYLE & MEDIUM:
+- Photography vs. digital art vs. painting vs. illustration vs. 3D render
+- If photo: camera type feel (DSLR, film, medium format, smartphone), lens type (wide, 50mm, telephoto, macro)
+- If art: artistic style, art movement, specific technique
+- Artist references if style is recognizable
+
+QUALITY DESCRIPTORS:
+- Resolution feel (ultra-detailed, sharp, soft, grainy, film grain)
+- Post-processing style (HDR, matte, cinematic grade, clean, gritty)
+
+Output format — exactly this, nothing else:
+GESCHLECHT: <weiblich or maennlich, or keine if no person is visible>
+---
+<the prompt: comma-separated descriptive phrases optimized for MidJourney v6, in English, as detailed as possible. If a person is present, start with "the same adult woman" or "the same adult man".>`,
 }
 
 /**
@@ -338,6 +388,7 @@ export const ANALYSE_ANGABEN: Record<AnalyseArt, {
   // gegen die dieses Modul angelegt wurde, und sie waere von mir gekommen.
   bild:           { nutzerText: 'Generate a prompt for this image.',            maxWorte: 1500, ausgabe: 'text' },
   bildPlatzhalter:{ nutzerText: 'Generate a prompt for this image.',            maxWorte: 1500, ausgabe: 'text' },
+  bildReferenz:   { nutzerText: 'Generate a prompt for this image.',            maxWorte: 1800, ausgabe: 'text' },
 }
 
 /**
@@ -351,4 +402,47 @@ export function jsonAusAntwort<T>(roh: string): T {
   const ohneZaun = roh.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
   const geklammert = ohneZaun.match(/\{[\s\S]*\}/)
   return JSON.parse(geklammert?.[0] ?? ohneZaun) as T
+}
+
+/**
+ * Marks Referenz-Block — WOERTLICH aus seiner Vorlage (vier seiner Bilder im
+ * Fuchsbau tragen ihn). Der Block wird vom PROGRAMM davorgesetzt, nicht vom
+ * Modell: ein Modell schriebe ihn jedes Mal ein wenig anders. Dieselben Texte
+ * stehen im Fuchsbau in `src/kern/prompt-umschreiben-rechnen.ts`.
+ */
+export const REFERENZ_BLOCK = {
+  weiblich:
+    'FEMALE IDENTITY REFERENCE: Use the uploaded female reference image as the primary and authoritative identity reference. ' +
+    'Preserve her facial identity and natural body proportions with extremely high accuracy, including facial geometry, eye shape and spacing, nose, lips, jawline, cheekbones, natural age, hair characteristics, physique and natural bust size and shape. ' +
+    'Do not redesign, beautify, age, flatten, minimize or otherwise alter her identity or natural proportions.',
+  maennlich:
+    'MALE IDENTITY REFERENCE: Use the uploaded male reference image as the primary and authoritative identity reference. ' +
+    'Preserve his facial identity and natural body proportions with extremely high accuracy, including facial geometry, eye shape and spacing, nose, lips, jawline, cheekbones, natural age, hair characteristics and physique. ' +
+    'Do not redesign, beautify, age, flatten, minimize or otherwise alter his identity or natural proportions.',
+} as const
+
+/**
+ * Die Antwort zur Art `bildReferenz` fertigmachen: Kopfzeile lesen, Block
+ * davor, Schutzwoerter in den Negativ-Prompt. Ohne lesbare Kopfzeile (Modell
+ * hat das Format ignoriert) bleibt der Text, wie er kam. Fuer alle anderen
+ * Arten tut die Funktion nichts — so kann jeder Weg sie ohne Weiche rufen.
+ */
+export function textNachArt(art: AnalyseArt, roh: string): string {
+  if (art !== 'bildReferenz') return roh
+  const t = /^\s*-{3,}\s*$/m.exec(roh)
+  if (!t) return roh
+  const kopf = roh.slice(0, t.index)
+  const text = roh.slice(t.index + t[0].length).trim()
+  const g = /GESCHLECHT[*_ \t]*:[*_ \t]*([^\n]*)/i.exec(kopf)?.[1].trim().toLowerCase() ?? ''
+  if (!text) return roh
+  const block = g.startsWith('weib') ? REFERENZ_BLOCK.weiblich
+    : g.startsWith('m') ? REFERENZ_BLOCK.maennlich
+    : null
+  if (!block) return text
+  const zusatz = ['altered identity', 'beauty filter']
+  const zeile = /^(\s*Negative prompt\s*:)(.*)$/im.exec(text)
+  const mitNegativ = zeile
+    ? text.replace(zeile[0], () => `${zeile[1]}${zeile[2].trimEnd().replace(/[.,]\s*$/, '')}, ${zusatz.join(', ')}.`)
+    : `${text}\nNegative prompt: ${zusatz.join(', ')}`
+  return `${block}\n${mitNegativ}`
 }

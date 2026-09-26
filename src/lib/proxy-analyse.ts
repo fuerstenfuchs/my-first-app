@@ -16,7 +16,7 @@
  * wieder verschwindet.
  */
 
-import { ANALYSE_PROMPT, ANALYSE_ANGABEN, jsonAusAntwort, type AnalyseArt } from '@/lib/analyse-prompts'
+import { ANALYSE_PROMPT, ANALYSE_ANGABEN, jsonAusAntwort, textNachArt, type AnalyseArt } from '@/lib/analyse-prompts'
 
 export const PROXY_SPEICHER_SCHLUESSEL = 'tresor.proxy'
 // `localhost`, NICHT `127.0.0.1` — siehe die Messung bei `basis()` weiter unten.
@@ -279,7 +279,7 @@ export async function analysiereUeberProxy<T = unknown>(auftrag: ProxyAnalyseAuf
     if (!text) throw new Error('Der Proxy hat eine leere Antwort geliefert.')
 
     if (angaben.ausgabe === 'json') return jsonAusAntwort<T>(text)
-    return text as unknown as T
+    return textNachArt(auftrag.art, text) as unknown as T
   } catch (err) {
     // Der Aufrufer faellt hierauf auf die Server-Route zurueck. Damit in der
     // Meldung nicht „Failed to fetch" steht, wird hier uebersetzt.

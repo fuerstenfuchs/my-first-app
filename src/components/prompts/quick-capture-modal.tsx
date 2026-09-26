@@ -86,6 +86,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
   const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [personPlaceholder, setPersonPlaceholder] = useState(false)
+  const [referenzBild, setReferenzBild] = useState(false)
   const [selectedModel, setSelectedModel] = useState<AnalyzeModelId>(() => {
     if (typeof window === 'undefined') return 'claude-haiku-4-5-20251001'
     return (localStorage.getItem('pdb:analyze-model') as AnalyzeModelId | null) ?? 'claude-haiku-4-5-20251001'
@@ -231,11 +232,11 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
       // Modellwahl der ROUTE ist; der Proxy hat seine eigene in den
       // Einstellungen.
       const { ergebnis: prompt } = await analysiere<string>(
-        personPlaceholder ? 'bildPlatzhalter' : 'bild',
+        referenzBild ? 'bildReferenz' : personPlaceholder ? 'bildPlatzhalter' : 'bild',
         body,
         {
           route: '/api/analyze-image',
-          zusatz: { model: selectedModel, personPlaceholder },
+          zusatz: { model: selectedModel, personPlaceholder, referenzBild },
           // Damit die Wahl aus der Leiste auch ueber den Proxy gilt und nicht
           // nur ueber die Route.
           modell: proxyDa ? selectedModel : undefined,
@@ -493,11 +494,22 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
                   <input
                     type="checkbox"
                     checked={personPlaceholder}
-                    onChange={e => setPersonPlaceholder(e.target.checked)}
+                    onChange={e => { setPersonPlaceholder(e.target.checked); if (e.target.checked) setReferenzBild(false) }}
                     className="rounded"
                   />
                   <span className="text-xs text-muted-foreground">
                     Person als <code className="bg-muted px-1 rounded text-[11px]">[Person]</code> ersetzen
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={referenzBild}
+                    onChange={e => { setReferenzBild(e.target.checked); if (e.target.checked) setPersonPlaceholder(false) }}
+                    className="rounded"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Fuer Referenzbild (ohne Personenbeschreibung, mit Referenz-Block)
                   </span>
                 </label>
                 <Button

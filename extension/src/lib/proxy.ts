@@ -1,5 +1,5 @@
 import {
-  ANALYSE_PROMPT, ANALYSE_ANGABEN, jsonAusAntwort, type AnalyseArt,
+  ANALYSE_PROMPT, ANALYSE_ANGABEN, jsonAusAntwort, textNachArt, type AnalyseArt,
 } from '../../../src/lib/analyse-prompts'
 
 /**
@@ -153,5 +153,5 @@ export async function analyseUeberProxy<T>(
   const roh = j.choices?.[0]?.message?.content?.trim()
   if (!roh) throw new Error('Der Proxy hat eine leere Antwort geliefert.')
 
-  return angaben.ausgabe === 'json' ? jsonAusAntwort<T>(roh) : ({ prompt: roh } as T)
+  return angaben.ausgabe === 'json' ? jsonAusAntwort<T>(roh) : ({ prompt: textNachArt(art, roh) } as T)
 }

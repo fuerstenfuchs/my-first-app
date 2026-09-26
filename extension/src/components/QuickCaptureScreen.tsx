@@ -53,6 +53,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
   const [imageUploading, setImageUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [personPlaceholder, setPersonPlaceholder] = useState(false)
+  const [referenzBild, setReferenzBild] = useState(false)
   const [selectedModel, setSelectedModel] = useState<AnalyzeModelId>(
     () => (localStorage.getItem('pdb:analyze-model') as AnalyzeModelId | null) ?? 'claude-haiku-4-5-20251001'
   )
@@ -183,7 +184,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           // AVIF, HEIC und BMP vorher nach PNG um.
           const { base64: b64, mediaType: typ } = await alsAnalysebild(blob)
           const { prompt } = await analyseUeberProxy<{ prompt: string }>(
-            personPlaceholder ? 'bildPlatzhalter' : 'bild',
+            referenzBild ? 'bildReferenz' : personPlaceholder ? 'bildPlatzhalter' : 'bild',
             b64, typ, pe,
             selectedModel,   // die Wahl aus der Leiste gilt auch hier
           )
@@ -206,7 +207,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token ?? ''}`,
         },
-        body: JSON.stringify({ imageUrl: coverImageUrl, model: selectedModel, personPlaceholder }),
+        body: JSON.stringify({ imageUrl: coverImageUrl, model: selectedModel, personPlaceholder, referenzBild }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string }
@@ -369,10 +370,22 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
               <input
                 type="checkbox"
                 checked={personPlaceholder}
-                onChange={e => setPersonPlaceholder(e.target.checked)}
+                onChange={e => { setPersonPlaceholder(e.target.checked); if (e.target.checked) setReferenzBild(false) }}
                 className="rounded w-3 h-3"
               />
               <span className="text-[10px] text-zinc-400">[Person]</span>
+            </label>
+            <label
+              className="flex items-center gap-1 cursor-pointer ml-1"
+              title="Der Prompt kommt ohne Beschreibung der Person, mit Referenz-Block davor — fuer ein eigenes Charakterbild"
+            >
+              <input
+                type="checkbox"
+                checked={referenzBild}
+                onChange={e => { setReferenzBild(e.target.checked); if (e.target.checked) setPersonPlaceholder(false) }}
+                className="rounded w-3 h-3"
+              />
+              <span className="text-[10px] text-zinc-400">Referenz</span>
             </label>
           </div>
           {/* Zeile 2: Generieren-Button volle Breite */}

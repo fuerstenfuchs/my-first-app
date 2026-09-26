@@ -14,7 +14,7 @@ import { ANALYSE_PROMPT, ANALYSE_ANGABEN, jsonAusAntwort, type AnalyseArt } from
 
 const ARTEN: AnalyseArt[] = [
   'character', 'fashion', 'location', 'outfit', 'pose',
-  'kamera', 'licht', 'bild', 'bildPlatzhalter',
+  'kamera', 'licht', 'bild', 'bildPlatzhalter', 'bildReferenz',
 ]
 
 describe('ANALYSE_PROMPT', () => {
@@ -77,5 +77,22 @@ describe('jsonAusAntwort', () => {
 
   it('wirft bei Text ohne JSON — besser als still ein leeres Objekt', () => {
     expect(() => jsonAusAntwort('I cannot analyze this image.')).toThrow()
+  })
+})
+
+describe('textNachArt (Referenz-Fassung)', () => {
+  const antwort = 'GESCHLECHT: weiblich\n---\nthe same adult woman, red coat, rain\nNegative prompt: blurry.'
+  it('setzt Marks Block davor und ergaenzt den Negativ-Prompt einmal', async () => {
+    const { textNachArt, REFERENZ_BLOCK } = await import('./analyse-prompts')
+    const t = textNachArt('bildReferenz', antwort)
+    expect(t.startsWith(REFERENZ_BLOCK.weiblich + '\n')).toBe(true)
+    expect(t).toContain('Negative prompt: blurry, altered identity, beauty filter.')
+    expect(t).not.toContain('GESCHLECHT')
+  })
+  it('laesst andere Arten und Antworten ohne Kopf unberuehrt', async () => {
+    const { textNachArt } = await import('./analyse-prompts')
+    expect(textNachArt('bild', antwort)).toBe(antwort)
+    expect(textNachArt('bildReferenz', 'nur ein Text')).toBe('nur ein Text')
+    expect(textNachArt('bildReferenz', 'GESCHLECHT: keine\n---\nA car.')).toBe('A car.')
   })
 })
