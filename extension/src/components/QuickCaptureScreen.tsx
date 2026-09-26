@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { titelAusPrompt } from '../../../src/lib/analyse-prompts'
 import { supabase } from '../lib/supabase'
 import { bildHochladen } from '../../../src/lib/bild-hochladen'
 import type { PendingCapture } from '../types'
@@ -190,7 +191,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
           )
           setContent(prompt)
           if (!title.trim() || title === capture.title) {
-            setTitle(prompt.trim().slice(0, 55).trimEnd())
+            setTitle(titelAusPrompt(prompt))
           }
           return
         } catch (err) {
@@ -216,7 +217,7 @@ export function QuickCaptureScreen({ capture, captureRestored, onSaved, onBack, 
       const { prompt } = await res.json() as { prompt: string }
       setContent(prompt)
       if (!title.trim() || title === capture.title) {
-        setTitle(prompt.trim().slice(0, 55).trimEnd())
+        setTitle(titelAusPrompt(prompt))
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unbekannter Fehler'

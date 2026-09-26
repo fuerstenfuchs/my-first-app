@@ -1,5 +1,6 @@
 'use client'
 
+import { titelAusPrompt } from '@/lib/analyse-prompts'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
@@ -243,7 +244,7 @@ export function QuickCaptureModal({ isOpen, onClose, initialValues }: QuickCaptu
         },
       )
       setContent(prompt)
-      if (!title.trim()) setTitle(prompt.trim().slice(0, 55).trimEnd())
+      if (!title.trim()) setTitle(titelAusPrompt(prompt))
       setIsDirty(true)
       toast.success('Prompt generiert!')
     } catch {

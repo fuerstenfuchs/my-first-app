@@ -96,3 +96,12 @@ describe('textNachArt (Referenz-Fassung)', () => {
     expect(textNachArt('bildReferenz', 'GESCHLECHT: keine\n---\nA car.')).toBe('A car.')
   })
 })
+
+describe('titelAusPrompt', () => {
+  it('nimmt die Szene, nicht den Referenz-Block', async () => {
+    const { titelAusPrompt, textNachArt } = await import('./analyse-prompts')
+    const t = textNachArt('bildReferenz', 'GESCHLECHT: weiblich\n---\nthe same adult woman, red wool coat on a rainy street')
+    expect(titelAusPrompt(t)).toBe('Red wool coat on a rainy street')
+    expect(titelAusPrompt('A red car on a road')).toBe('A red car on a road')
+  })
+})

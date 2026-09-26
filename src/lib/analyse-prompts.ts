@@ -446,3 +446,21 @@ export function textNachArt(art: AnalyseArt, roh: string): string {
     : `${text}\nNegative prompt: ${zusatz.join(', ')}`
   return `${block}\n${mitNegativ}`
 }
+
+/**
+ * Titel aus einem Prompt: die ersten Zeichen der SZENE. Der Referenz-Block und
+ * die Wendung "the same adult woman/man" sagen nichts ueber das Bild und
+ * duerfen deshalb nicht den Titel stellen.
+ */
+export function titelAusPrompt(prompt: string): string {
+  let t = prompt.trim()
+  if (/^(FEMALE|MALE) IDENTITY REFERENCE\s*:/.test(t)) {
+    const rest = t.split(/\r?\n/).slice(1).join('\n').trim()
+    if (rest) t = rest
+  }
+  t = t.replace(/^(cinematic |candid |editorial )?(portrait|photo|shot)?\s*(of )?the same adult (woman|man)\s*[,:]?\s*/i, '')
+    .replace(/^the same adult (woman|man)\s*[,:]?\s*/i, '')
+  t = t.replace(/^[,.\s]+/, '')
+  const roh = (t.split(/\r?\n/)[0] ?? '').slice(0, 55).trimEnd()
+  return roh ? roh.charAt(0).toUpperCase() + roh.slice(1) : prompt.trim().slice(0, 55).trimEnd()
+}
