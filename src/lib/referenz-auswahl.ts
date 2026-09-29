@@ -35,6 +35,11 @@ import type { RefImage } from '@/lib/reference-images'
 const RANGFOLGE: { teil: string; rang: number }[] = [
   { teil: 'referenzsheet', rang: 0 },
   { teil: 'kombi',         rang: 1 },   // die Outfit-Kette nennt es so
+  // PROJ-92: ein Personenbild trägt ein Outfit. Es steht in der Liste gleich hinter
+  // dem Referenzsheet, wird aber NICHT von selbst gewählt (`standardReferenz`
+  // nimmt nur Ränge bis 1): Als Vorgabe schleppte es bei jeder Szene mit anderer
+  // Kleidung das falsche Outfit als „Charakter" mit.
+  { teil: 'personenbild',  rang: 1.5 },
   { teil: 'körper',        rang: 2 },
   { teil: 'koerper',       rang: 2 },
   { teil: 'vorne',         rang: 3 },   // Outfit von vorne

@@ -1,0 +1,278 @@
+/*
+  Personenbilder (PROJ-92) — Ergänzungen zum Papier des Scene Builders.
+
+  Die Tokens, `.sb-mod`, `.sb-strip`, `.sb-taste` usw. kommen aus
+  `../scene-builder/papier.css`; hier steht nur, was diese Seite zusätzlich
+  braucht. Alles hängt an `.pb` (innerhalb `.sb-papier`), damit keine andere
+  Seite davon berührt wird.
+
+  GRÖSSE: Mark am 29.09.2026: „Das ist mir viel zu klein. Schau mal auf meinen
+  riesigen Bildschirm." Die Ausgangsseite (Scene Builder) rechnet mit 14 px an
+  den Tasten; hier sind es 16 px, Titel 22 px, Kacheln mindestens 14 rem breit.
+  Nichts unter 13 px.
+
+  KONTUR #948668 für jedes Bedienelement (3,5 : 1 gegen Karte) — dasselbe wie
+  `.sb-taste`. `--sb-rule` bleibt den feinen Linien.
+*/
+
+.pb {
+  --pb-kante: #948668;
+  --pb-kante-stark: #6b6558;
+  --pb-wahl: #8d3e04;          /* Rand und Schrift der Auswahl: 6,2 : 1 auf Papier */
+  --pb-wahl-grund: #fff3e6;
+  --pb-wahl-rot: #b8520c;      /* Füllung der Häkchen und Nummern; weiße Schrift 4,9 : 1 */
+}
+
+/* Die Tasten dieser Seite sind größer als im Scene Builder. */
+.pb .sb-taste {
+  font-size: 16px;
+  padding: 9px 18px;
+  min-height: 44px;
+}
+.pb .sb-taste.klein { font-size: 14px; padding: 6px 12px; min-height: 36px; }
+
+/* Die dunkle Haupttaste (Erzeugen). Tinte, nicht Orange: Orange heißt „gewählt". */
+.pb .pb-haupt {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px 26px;
+  min-height: 52px;
+  color: #fbf6ea;
+  border-color: #1b1a16;
+  background: linear-gradient(180deg, #3a352d, #1b1a16);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 3px 0 #000,
+    0 6px 10px rgba(0, 0, 0, 0.28);
+}
+.pb .pb-haupt:hover,
+.pb .pb-haupt:focus-visible {
+  color: #fff;
+  border-color: #8a8172;
+  background: linear-gradient(180deg, #46403a, #221f1a);
+}
+.pb .pb-haupt:disabled { opacity: 0.5; }
+
+/* ── Kacheln: Person, Outfit, Format, Preset ─────────────────────────────── */
+.pb-kachel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--pb-kante);
+  background: var(--sb-card);
+  color: var(--sb-ink);
+  box-shadow: 0 1px 3px rgba(60, 48, 25, 0.09);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  cursor: pointer;
+}
+.pb-kachel:hover {
+  /* Neutral und kräftiger — Orange heißt „gewählt". */
+  border-color: var(--sb-ink);
+  box-shadow: 0 4px 10px rgba(60, 48, 25, 0.16);
+}
+.pb-kachel[data-an='ja'] {
+  border: 2px solid var(--pb-wahl);
+  padding: 9px;
+  background: var(--pb-wahl-grund);
+  box-shadow: 0 3px 10px rgba(141, 62, 4, 0.2);
+}
+.pb-kachel[data-an='ja']:hover { border-color: var(--sb-ink); }
+.pb-kachel[data-an='ja']::after {
+  content: '✓';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--pb-wahl-rot);
+  color: #fff;
+  font-weight: 900;
+  font-size: 17px;
+}
+.pb-kachel .pb-name { font-size: 17px; font-weight: 600; line-height: 1.25; }
+.pb-kachel[data-an='ja'] .pb-name { font-weight: 800; color: var(--pb-wahl); }
+.pb-kachel .pb-klein { font-size: 14px; color: var(--sb-ink3); }
+
+/* Bilder ganz und groß, nie beschnitten (DESIGN.md §4). */
+.pb-bild {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(#f3ead6, #eadfc6);
+  aspect-ratio: 3 / 4;
+}
+.pb-bild img { width: 100%; height: 100%; object-fit: contain; }
+.pb-bild.dunkel { background: #4f4f4f; aspect-ratio: 1 / 1; }
+.pb-bild.leer { color: var(--sb-ink2); font-size: 14px; text-align: center; padding: 10px; }
+
+.pb-raster-personen { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.pb-raster-outfits  { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.pb-raster-formate  { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+
+/* ── Bausteinbogen oben: vier Felder ─────────────────────────────────────── */
+.pb-felder { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.pb-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  min-height: 88px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--pb-kante);
+  background: var(--sb-pap2);
+  cursor: pointer;
+  transition: border-color 0.14s ease;
+}
+.pb-feld:hover { border-color: var(--sb-ink); }
+.pb-feld[data-an='ja'] {
+  border: 2px solid var(--pb-wahl);
+  padding: 9px 13px;
+  background: var(--pb-wahl-grund);
+  box-shadow: 0 3px 10px rgba(141, 62, 4, 0.16);
+}
+.pb-feld[data-an='ja']:hover { border-color: var(--sb-ink); }
+.pb-feld .pb-nr { font-size: 14px; letter-spacing: 0.16em; color: var(--sb-ink3); font-weight: 700; display: flex; gap: 8px; }
+.pb-feld[data-an='ja'] .pb-nr { color: var(--pb-wahl); }
+.pb-feld .pb-wert { font-size: 19px; font-weight: 700; line-height: 1.2; display: flex; gap: 10px; align-items: center; }
+.pb-feld .pb-wert img { width: 34px; height: 34px; object-fit: cover; border-radius: 8px; border: 1px solid var(--sb-rule); }
+
+/* ── Drei Spalten wie im Entwurf A ───────────────────────────────────────── */
+.pb-drei { display: grid; gap: 18px; align-items: start; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(22rem, 0.9fr); }
+.pb-koerper { display: grid; gap: 18px; align-items: start; grid-template-columns: minmax(0, 3.2fr) minmax(22rem, 1fr); }
+@media (max-width: 1400px) {
+  .pb-drei, .pb-koerper { grid-template-columns: 1fr; }
+}
+.pb-karte { padding: 18px 20px; }
+.pb-karte h2 { font-family: Georgia, 'Iowan Old Style', serif; font-size: 22px; font-weight: 700; }
+.pb-titelzeile { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.pb-titelzeile .pb-zahl { font-size: 14px; color: var(--sb-ink3); font-variant-numeric: tabular-nums; }
+
+.pb-suche {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--pb-kante);
+  background: var(--sb-card);
+  font-size: 16px;
+  color: var(--sb-ink);
+}
+.pb-suche:hover { border-color: var(--sb-ink); }
+.pb-suche:focus-visible { outline: 3px solid var(--sb-ink); outline-offset: 2px; }
+
+/* ── Körperkarte ─────────────────────────────────────────────────────────── */
+.pb-karte-drei { display: grid; gap: 18px; align-items: start; grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.5fr) minmax(18rem, 1fr); }
+@media (max-width: 1500px) { .pb-karte-drei { grid-template-columns: 1fr; } }
+
+.pb-buehne {
+  position: relative;
+  aspect-ratio: 968 / 1360;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #3a3a3a;
+}
+.pb-buehne > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pb-masslinie { position: absolute; width: 0; border-left: 2px dashed #f0a060; }
+.pb-punkt {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--sb-ink);
+  background: #fffdf8;
+  color: var(--sb-ink);
+  font-weight: 800;
+  font-size: 17px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease;
+  cursor: pointer;
+}
+.pb-punkt:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.pb-punkt[data-gesetzt='ja'] { background: var(--sb-ink); color: #fffdf8; border-color: #fffdf8; }
+.pb-punkt[data-an='ja'] { background: var(--pb-wahl-rot); color: #fff; border-color: #fff; }
+/* Zweifarbiger Ring: sichtbar auf dem dunklen Bild UND auf Papier. */
+.pb-punkt:focus-visible,
+.pb-taste-ring:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 0;
+  box-shadow: 0 0 0 6px var(--sb-ink);
+}
+
+.pb-liste { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.pb-liste .sb-taste { width: 100%; justify-content: space-between; }
+.pb-liste .sb-taste small { font-size: 14px; color: var(--sb-ink3); font-weight: 600; }
+.pb-liste .sb-taste[data-an='ja'] small { color: #fff; }
+
+.pb-stufen { display: grid; gap: 8px; }
+.pb-stufen .sb-taste { width: 100%; justify-content: flex-start; }
+.pb-paar { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ── Chips ───────────────────────────────────────────────────────────────── */
+.pb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pb-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--pb-kante);
+  background: var(--sb-pap2);
+  font-size: 15px;
+  font-weight: 600;
+}
+.pb-chip b { font-weight: 800; }
+.pb-chip button { font-size: 16px; line-height: 1; padding: 0 2px; color: var(--sb-ink2); cursor: pointer; }
+.pb-chip button:hover { color: var(--sb-ink); }
+
+/* ── Vorschau der Zutaten ────────────────────────────────────────────────── */
+.pb-zutaten { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); }
+.pb-zutat { display: flex; flex-direction: column; gap: 6px; }
+.pb-zutat .sb-plate { align-self: flex-start; }
+
+/* ── Ergebnisse ──────────────────────────────────────────────────────────── */
+.pb-ergebnisse { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+.pb-ergebnis { display: flex; flex-direction: column; gap: 6px; }
+.pb-ergebnis .pb-bild { aspect-ratio: 3 / 4; }
+.pb-status { font-size: 14px; font-weight: 700; padding: 2px 10px; border-radius: 999px; align-self: flex-start; background: var(--sb-pap2); border: 1px solid var(--pb-kante); }
+.pb-status[data-s='done'] { background: #e6f0e6; color: #245c37; border-color: #2f7d4a; }
+.pb-status[data-s='failed'] { background: #f6e6e2; color: #7d2a20; border-color: #a8392b; }
+
+.pb-vorschau {
+  white-space: pre-wrap;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--sb-rule2);
+  background: var(--sb-pap2);
+}
+
+.pb-hinweis { font-size: 15px; color: var(--sb-ink3); }
+.pb-fehler { font-size: 15px; color: #7d2a20; background: #f6e6e2; border: 1px solid #a8392b; border-radius: 12px; padding: 10px 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-punkt, .pb-kachel, .pb-feld { transition: none; }
+  .pb-punkt:hover { transform: translate(-50%, -50%); }
+}

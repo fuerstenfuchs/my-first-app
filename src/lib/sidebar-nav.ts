@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Users, Shirt, MapPin, Drama, Camera, Palette,
-  Clapperboard, Images, Aperture, type LucideIcon,
+  Clapperboard, Images, Aperture, PersonStanding, type LucideIcon,
 } from 'lucide-react'
 
 /**
@@ -107,6 +107,13 @@ export const PRODUKTION: NavEintrag[] = [
     href: '/bildstudio', label: 'Bildstudio', icon: Aperture,
     farben: f(['#160a1a', '#130918'], ['#c084fc', '#7c3aed'], ['#a855f7', '#6d28d9'],
       '0 0 18px rgba(168,85,247,0.22), 0 0 18px rgba(109,40,217,0.15)', 'text-purple-400'),
+  },
+  {
+    // Person + Körper + Outfit → Referenzbild (PROJ-92). Steht VOR dem Scene
+    // Builder, weil dessen Charakter-Feld die Ergebnisse aufnimmt.
+    href: '/personenbilder', label: 'Personenbilder', icon: PersonStanding,
+    farben: f(['#160f06', '#140e06'], ['#fdba74', '#ea580c'], ['#fb923c', '#c2410c'],
+      '0 0 18px rgba(251,146,60,0.2), 0 0 18px rgba(194,65,12,0.15)', 'text-orange-300'),
   },
   {
     href: '/scene-builder', label: 'Scene Builder', icon: Clapperboard,
