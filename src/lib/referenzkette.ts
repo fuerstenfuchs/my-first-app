@@ -339,18 +339,59 @@ export function referenzAnsage(schritt: KettenSchritt, optionen: KoerperOptionen
  * gar nicht zutrifft.
  */
 export type KoerperAuswahl = {
-  bau?: 'schlank' | 'durchschnittlich' | 'kraeftig' | 'sportlich'
-  groesse?: 'klein' | 'durchschnittlich' | 'gross'
-  oberweite?: 'klein' | 'mittel' | 'gross'
-  becken?: 'schmal' | 'durchschnittlich' | 'ausladend'
+  bau?: 'sehr_schlank' | 'schlank' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig' | 'sportlich'
+  groesse?: 'sehr_klein' | 'klein' | 'durchschnittlich' | 'gross' | 'sehr_gross'
+  oberweite?: 'sehr_klein' | 'klein' | 'mittel' | 'gross' | 'sehr_gross'
+  becken?: 'sehr_schmal' | 'schmal' | 'durchschnittlich' | 'ausladend' | 'sehr_ausladend'
   beinlaenge?: 'sehr_kurz' | 'kurz' | 'durchschnittlich' | 'lang' | 'sehr_lang'
+  /* Mark am 29.09.2026: „Die Beine an sich, der Aufbau sieht auch immer gleich
+     aus. Also die Waden, Oberschenkel, das sollte man getrennt vielleicht noch
+     machen können." Oberschenkel und Wade waren bis dahin Teil des allgemeinen
+     `bau` — ein Merkmal, das nicht unabhängig einstellbar war, obwohl es am
+     Bein sichtbar eigenständig variiert (schlanker Oberschenkel, kräftige
+     Wade und umgekehrt kommen beide real vor). */
+  oberschenkel?: 'sehr_duenn' | 'duenn' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig'
+  wade?: 'sehr_duenn' | 'duenn' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig'
 }
 
+/**
+ * Alle Extremstufen ergänzt (Mark, 29.09.2026): „Wir brauchen hier extremere
+ * Maße. In allen Körperteilen." Jede Stufe darüber ist nicht nur ein
+ * verstärktes Adjektiv, sondern nennt — wie schon bei „sehr lang" — ein
+ * konkretes Bild oder Verhältnis. Ein Bildmodell mittelt mehrere gleichzeitig
+ * gesetzte Merkmale gegeneinander ab; je konkreter jede einzelne Zeile, desto
+ * weniger geht davon in der Mittelung verloren.
+ */
 const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAuswahl[K]>, string> } = {
-  bau:        { schlank: 'slim build', durchschnittlich: 'average build', kraeftig: 'heavier, solid build', sportlich: 'athletic, toned build' },
-  groesse:    { klein: 'short stature', durchschnittlich: 'average height', gross: 'tall stature' },
-  oberweite:  { klein: 'small bust', mittel: 'medium bust', gross: 'large bust' },
-  becken:     { schmal: 'narrow hips', durchschnittlich: 'average hip width', ausladend: 'wide, flared hips' },
+  bau: {
+    sehr_schlank: 'extremely slim, visible bone structure at shoulders and collarbone, minimal body fat',
+    schlank: 'slim build',
+    durchschnittlich: 'average build',
+    kraeftig: 'heavier, solid build',
+    sehr_kraeftig: 'very heavy-set, large-framed build, substantial body mass',
+    sportlich: 'athletic, toned build',
+  },
+  groesse: {
+    sehr_klein: 'very short stature, notably petite proportions',
+    klein: 'short stature',
+    durchschnittlich: 'average height',
+    gross: 'tall stature',
+    sehr_gross: 'very tall stature, notably statuesque proportions',
+  },
+  oberweite: {
+    sehr_klein: 'very small, flat bust',
+    klein: 'small bust',
+    mittel: 'medium bust',
+    gross: 'large bust',
+    sehr_gross: 'very large, prominent bust, clearly the dominant feature of the torso silhouette',
+  },
+  becken: {
+    sehr_schmal: 'very narrow hips, straight up-and-down torso silhouette with almost no hip curve',
+    schmal: 'narrow hips',
+    durchschnittlich: 'average hip width',
+    ausladend: 'wide, flared hips',
+    sehr_ausladend: 'dramatically wide, flared hips, significantly wider than the shoulders',
+  },
   beinlaenge: {
     sehr_kurz: 'noticeably short legs relative to torso, making up clearly less than half of total body height',
     kurz: 'shorter legs relative to torso',
@@ -361,6 +402,20 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
     // Zahlenverhaeltnis statt nur "relativ laenger" — das Modell soll wirklich
     // WEITER gehen, nicht nur "etwas mehr vom selben".
     sehr_lang: 'strikingly long legs, making up roughly two-thirds or more of total body height; torso comparatively short; waist positioned noticeably high',
+  },
+  oberschenkel: {
+    sehr_duenn: 'very thin, slender thighs, minimal circumference',
+    duenn: 'slender thighs',
+    durchschnittlich: 'average thigh build',
+    kraeftig: 'muscular, solid thighs',
+    sehr_kraeftig: 'very thick, powerfully built thighs, significantly larger in circumference than the calves below them',
+  },
+  wade: {
+    sehr_duenn: 'very thin, slender calves, minimal circumference',
+    duenn: 'slender calves',
+    durchschnittlich: 'average calf build',
+    kraeftig: 'muscular, well-defined calves',
+    sehr_kraeftig: 'very thick, powerfully built calves',
   },
 }
 

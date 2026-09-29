@@ -51,19 +51,27 @@ type MerkmalFeld = {
 }[keyof KoerperAuswahl]
 
 /**
- * Alle fünf werden immer gezeigt: Am Charakter-Datenmodell hängt keine
+ * Alle sieben werden immer gezeigt: Am Charakter-Datenmodell hängt keine
  * Geschlechtsangabe, aus der man Felder ableiten könnte. Ein geratenes
  * Ausblenden nähme Mark genau die Eingriffsmöglichkeit, für die es diesen
  * Abschnitt gibt.
+ *
+ * OBERSCHENKEL UND WADE SIND SEIT DEM 29.09.2026 EIGENE FELDER, nicht mehr Teil
+ * von `bau`. Mark: „Die Beine an sich, der Aufbau sieht auch immer gleich aus.
+ * Also die Waden, Oberschenkel, das sollte man getrennt vielleicht noch machen
+ * können." Ein Körper kann schlank UND kräftige Waden haben, oder umgekehrt —
+ * ein einziges „Körperbau"-Feld kann diese Kombination nicht abbilden.
  */
 export const MERKMAL_FELDER: MerkmalFeld[] = [
   {
     schluessel: 'bau',
     label: 'Körperbau',
     optionen: [
+      { wert: 'sehr_schlank',     text: 'Sehr schlank' },
       { wert: 'schlank',          text: 'Schlank' },
       { wert: 'durchschnittlich', text: 'Durchschnittlich' },
       { wert: 'kraeftig',         text: 'Kräftig' },
+      { wert: 'sehr_kraeftig',    text: 'Sehr kräftig' },
       { wert: 'sportlich',        text: 'Sportlich' },
     ],
   },
@@ -71,27 +79,33 @@ export const MERKMAL_FELDER: MerkmalFeld[] = [
     schluessel: 'groesse',
     label: 'Größe',
     optionen: [
+      { wert: 'sehr_klein',       text: 'Sehr klein' },
       { wert: 'klein',            text: 'Klein' },
       { wert: 'durchschnittlich', text: 'Durchschnittlich' },
       { wert: 'gross',            text: 'Groß' },
+      { wert: 'sehr_gross',       text: 'Sehr groß' },
     ],
   },
   {
     schluessel: 'oberweite',
     label: 'Oberweite',
     optionen: [
-      { wert: 'klein',  text: 'Klein' },
-      { wert: 'mittel', text: 'Mittel' },
-      { wert: 'gross',  text: 'Groß' },
+      { wert: 'sehr_klein', text: 'Sehr klein' },
+      { wert: 'klein',      text: 'Klein' },
+      { wert: 'mittel',     text: 'Mittel' },
+      { wert: 'gross',      text: 'Groß' },
+      { wert: 'sehr_gross', text: 'Sehr groß' },
     ],
   },
   {
     schluessel: 'becken',
     label: 'Becken',
     optionen: [
+      { wert: 'sehr_schmal',      text: 'Sehr schmal' },
       { wert: 'schmal',           text: 'Schmal' },
       { wert: 'durchschnittlich', text: 'Durchschnittlich' },
       { wert: 'ausladend',        text: 'Ausladend' },
+      { wert: 'sehr_ausladend',   text: 'Sehr ausladend' },
     ],
   },
   {
@@ -103,6 +117,28 @@ export const MERKMAL_FELDER: MerkmalFeld[] = [
       { wert: 'durchschnittlich', text: 'Durchschnittlich' },
       { wert: 'lang',             text: 'Lang' },
       { wert: 'sehr_lang',        text: 'Sehr lang' },
+    ],
+  },
+  {
+    schluessel: 'oberschenkel',
+    label: 'Oberschenkel',
+    optionen: [
+      { wert: 'sehr_duenn',       text: 'Sehr dünn' },
+      { wert: 'duenn',            text: 'Dünn' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'kraeftig',         text: 'Kräftig' },
+      { wert: 'sehr_kraeftig',    text: 'Sehr kräftig' },
+    ],
+  },
+  {
+    schluessel: 'wade',
+    label: 'Wade',
+    optionen: [
+      { wert: 'sehr_duenn',       text: 'Sehr dünn' },
+      { wert: 'duenn',            text: 'Dünn' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'kraeftig',         text: 'Kräftig' },
+      { wert: 'sehr_kraeftig',    text: 'Sehr kräftig' },
     ],
   },
 ]
@@ -130,7 +166,7 @@ export function KoerperMerkmale({
                   delete neu[feld.schluessel]
                 } else {
                   // `feld.schluessel` ist hier weiterhin die Vereinigung aller
-                  // fünf Feldschlüssel; TypeScript verlangt für den
+                  // sieben Feldschlüssel; TypeScript verlangt für den
                   // Schreibzugriff deren Schnittmenge, die leer ist — das
                   // erzwingt diesen Umweg. Sicher ist er trotzdem: `wert` stammt
                   // aus `feld.optionen`, und die sind über den `MerkmalFeld`-Typ

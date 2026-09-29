@@ -210,6 +210,39 @@ describe('Körpermerkmale — Marks Liste vom 03.09.2026', () => {
     expect(kurzText).toContain('noticeably short legs')
     expect(kurzText).not.toBe(koerperMerkmaleText({ beinlaenge: 'kurz' }))
   })
+
+  // Mark am 29.09.2026: „Wir brauchen hier extremere Maße. In allen
+  // Körperteilen. Sowohl sehr große Brüste als auch sehr klein. Sehr
+  // ausladendes Becken. Ganz enges Becken." — für Körperbau, Größe, Oberweite
+  // und Becken gilt seither dieselbe Fünf-Stufen-Reihe wie bei der Beinlänge.
+  it('Körperbau, Größe, Oberweite und Becken haben je eine Extremstufe in beide Richtungen', () => {
+    const extrem = koerperMerkmaleText({
+      bau: 'sehr_kraeftig', groesse: 'sehr_gross', oberweite: 'sehr_gross', becken: 'sehr_ausladend',
+    })!
+    expect(extrem).toContain('very heavy-set')
+    expect(extrem).toContain('very tall stature')
+    expect(extrem).toContain('very large, prominent bust')
+    expect(extrem).toContain('dramatically wide, flared hips')
+
+    const gegenteil = koerperMerkmaleText({
+      bau: 'sehr_schlank', groesse: 'sehr_klein', oberweite: 'sehr_klein', becken: 'sehr_schmal',
+    })!
+    expect(gegenteil).toContain('extremely slim')
+    expect(gegenteil).toContain('very short stature')
+    expect(gegenteil).toContain('very small, flat bust')
+    expect(gegenteil).toContain('very narrow hips')
+  })
+
+  // Mark am 29.09.2026: „Die Beine an sich, der Aufbau sieht auch immer gleich
+  // aus. Also die Waden, Oberschenkel, das sollte man getrennt vielleicht noch
+  // machen können." Zwei neue, unabhängige Felder statt eines Teils von `bau`.
+  it('Oberschenkel und Wade sind unabhängig voneinander einstellbar', () => {
+    const gegensatz = koerperMerkmaleText({ oberschenkel: 'sehr_kraeftig', wade: 'sehr_duenn' })!
+    expect(gegensatz).toContain('very thick, powerfully built thighs')
+    expect(gegensatz).toContain('very thin, slender calves')
+    // Beide Zeilen stehen nebeneinander — keine überschreibt die andere.
+    expect(gegensatz.split('\n').filter(z => z.startsWith('- ')).length).toBe(2)
+  })
 })
 
 describe('Der fertige Prompt', () => {
