@@ -88,24 +88,47 @@ describe('Aufträge', () => {
     expect(vorn.prompt).toContain('Image 3 = BODY SHAPE REFERENCE')
   })
 
-  it('ohne Körpervorgabe gilt der Körper der Person; mit Vorgabe überstimmt sie ihn', () => {
+  it('ohne Körpervorgabe gilt der Körper der Person', () => {
     const ohne = baueAuftraege(EINGABE)[0].prompt
-    expect(ohne).toContain('Take the body proportions from it as well')
-    expect(ohne).toContain('the body proportions come from the person reference')
+    expect(ohne).toContain('Take the body proportions from it as well.')
+    expect(ohne).toContain('the body proportions come from the person reference.')
+    expect(ohne).not.toContain('BODY SHAPE REFERENCE')
+  })
 
+  it('mit Textzeilen überstimmen sie den Körper NUR dort, wo sie etwas sagen (Critic-Blocker 1)', () => {
     const mit = baueAuftraege({ ...EINGABE, koerperAuswahl: { beinlaenge: 'sehr_lang' } })[0].prompt
-    expect(mit).toContain('Do NOT take its body proportions')
+    // Alles, was nicht gesetzt ist, kommt weiter aus der Person …
+    expect(mit).toContain('Take the body proportions from it as well, EXCEPT where the ADDITIONAL BODY CHARACTERISTICS lines below say otherwise')
+    expect(mit).not.toContain('Do NOT take its body proportions')
+    // … und die gesetzte Zeile gewinnt gegen das Referenzsheet.
     expect(mit).toContain('ADDITIONAL BODY CHARACTERISTICS — these OVERRIDE the reference images')
     expect(mit).toContain('strikingly long legs')
-    expect(mit).toContain('they override the person reference')
+    expect(mit).toContain('the ADDITIONAL BODY CHARACTERISTICS lines override it')
     // Der Standard-Vorrangsatz, der die Körperform überstimmt hätte, darf nicht mitgehen.
     expect(mit).not.toContain('follow the reference image for that aspect and ignore the conflicting words')
   })
 
-  it('Ganzkörper vorn ist hochformatig, die Sheets folgen dem Vorbild der Kette', () => {
+  it('das Körperbild allein bestimmt den Körper — die Person nicht', () => {
+    const p = baueAuftraege({ ...EINGABE, koerperBild: url('koerper-presets/x.png') })[0].prompt
+    expect(p).toContain('Do NOT take its body proportions: the body-shape image below decides those.')
+    expect(p).toContain('Take its body proportions')
+    expect(p).toContain('the body proportions come from the body-shape image.')
+  })
+
+  it('Körperbild PLUS Zeilen: das Bild ist nur Anschauung, die Zeilen entscheiden (Critic-Blocker 2)', () => {
+    const p = baueAuftraege({ ...EINGABE, koerperBild: url('koerper-presets/x.png'), koerperAuswahl: { becken: 'sehr_ausladend' } })[0].prompt
+    expect(p).toContain('Use it only as a visual example for the body regions named in the ADDITIONAL BODY CHARACTERISTICS lines below')
+    expect(p).toContain('those lines decide')
+    expect(p).not.toContain('Take its body proportions')
+  })
+
+  it('Ganzkörper vorn ist hochformatig (2:3) — ohne eine zweite, widersprüchliche Formatansage', () => {
     const a = baueAuftraege(EINGABE)
     expect(a[0].size).toBe('1024x1536')
-    expect(a[0].aspect_ratio).toBe('portrait_4_5')
+    expect(a[0].aspect_ratio).toBeNull()
+    expect(a[0].prompt).toContain('PORTRAIT image, 2:3')
+    expect(a[0].prompt).not.toContain('4:5')
+    // Die Sheets folgen dem Vorbild der Kette.
     expect(a[1].size).toBe('1024x1024')
     expect(a[1].aspect_ratio).toBeNull()
   })

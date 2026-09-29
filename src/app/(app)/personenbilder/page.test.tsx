@@ -150,6 +150,10 @@ describe('Alles auf einmal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Alle drei' }))
     fireEvent.click(screen.getByRole('button', { name: '3 Bilder erzeugen' }))
     await waitFor(() => expect(anlegen).toHaveBeenCalledTimes(2))
+    await new Promise(r => setTimeout(r, 80))
+    expect(anlegen).toHaveBeenCalledTimes(2)                                   // nicht blind weiter
+    // Die Auswahl schrumpft auf den Rest: ein zweiter Klick zahlt nicht alles noch einmal.
+    expect(await screen.findByRole('button', { name: '2 Bilder erzeugen' })).toBeTruthy()
   })
 
   it('startet nichts ohne Person oder Outfit', async () => {
@@ -167,7 +171,9 @@ describe('Alles auf einmal', () => {
     await waehlePersonUndOutfit()
     const knopf = screen.getByRole('button', { name: '1 Bild erzeugen' })
     fireEvent.click(knopf); fireEvent.click(knopf)
-    await waitFor(() => expect(anlegen).toHaveBeenCalledTimes(1))
+    // Erst warten, bis alles zur Ruhe kommt — sonst wäre „genau einmal" schon vorher erfüllt.
+    await new Promise(r => setTimeout(r, 80))
+    expect(anlegen).toHaveBeenCalledTimes(1)
     frei()
   })
 })
@@ -179,10 +185,32 @@ describe('Körper', () => {
     fireEvent.click(screen.getByRole('tab', { name: /02 — KÖR/ }))
   }
 
-  it('hat zwölf Punkte auf der Karte', async () => {
+  it('hat genau zwölf Punkte auf der Karte', async () => {
+    const { container } = render(<PersonenbilderPage />)
+    fireEvent.click(screen.getByRole('tab', { name: /02 — KÖR/ }))
+    expect(container.querySelectorAll('.pb-punkt').length).toBe(12)
+  })
+
+  it('das Blender-Bild fällt weg, sobald seine Region anders gesetzt wird (Critic-Blocker 2)', async () => {
     await zumKoerper()
-    expect(screen.getAllByRole('button', { name: /^(Körperbau|Größe|Schultern|Arme|Oberweite|Taille|Bauch|Becken|Gesäß|Beinlänge|Oberschenkel|Wade)/ }).length)
-      .toBeGreaterThanOrEqual(12)
+    fireEvent.click(screen.getAllByRole('button', { name: /Sehr ausladend/ })[0])   // Bild + Stufe
+    fireEvent.click(screen.getByRole('button', { name: 'Schmal' }))                 // Region anders gesetzt
+    fireEvent.click(screen.getByRole('button', { name: '1 Bild erzeugen' }))
+    await waitFor(() => expect(anlegen).toHaveBeenCalledTimes(1))
+    const a = anlegen.mock.calls[0][0]
+    expect(a.reference_urls.length).toBe(2)                                          // kein Körperbild mehr
+    expect(a.prompt).toContain('narrow hips')
+    expect(a.prompt).not.toContain('BODY SHAPE REFERENCE')
+  })
+
+  it('das Blender-Bild bleibt, wenn eine ANDERE Region gesetzt wird', async () => {
+    await zumKoerper()
+    fireEvent.click(screen.getAllByRole('button', { name: /Sehr ausladend/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: /^10 · Beinlänge/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lang' }))
+    fireEvent.click(screen.getByRole('button', { name: '1 Bild erzeugen' }))
+    await waitFor(() => expect(anlegen).toHaveBeenCalledTimes(1))
+    expect(anlegen.mock.calls[0][0].reference_urls.length).toBe(3)
   })
 
   it('ein Blender-Extrem setzt die Stufe UND das Körperbild, und beides geht mit ans Modell', async () => {
@@ -226,6 +254,28 @@ describe('Körper', () => {
     await zumKoerper()
     fireEvent.change(screen.getByLabelText('Aktuelle Einstellung speichern'), { target: { value: 'Leer' } })
     expect((screen.getByRole('button', { name: 'Speichern' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+})
+
+describe('Ladefehler', () => {
+  it('werden nicht zum Titelbild: nichts wird bezahlt, bis die Bilder da sind', async () => {
+    ladeBilder.mockRejectedValue(new Error('Netz weg'))
+    render(<PersonenbilderPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /Anna/ }))
+    fireEvent.click(screen.getByRole('tab', { name: /03 — OUT/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /Abendkleid/ }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Laden fehlgeschlagen'))
+    expect((screen.getByRole('button', { name: /erzeugen/ }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.queryByText(/nur das Titelbild/)).toBeNull()
+  })
+})
+
+describe('Modelle', () => {
+  it('bietet nur die 2.5-Familie an — gpt-image-2 bleibt gesperrt', async () => {
+    render(<PersonenbilderPage />)
+    const optionen = Array.from((screen.getByLabelText('Modell') as HTMLSelectElement).options).map(o => o.value)
+    expect(optionen.length).toBeGreaterThan(0)
+    expect(optionen.every(v => v.startsWith('gpt-image-2.5'))).toBe(true)
   })
 })
 

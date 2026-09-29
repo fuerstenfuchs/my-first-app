@@ -25,7 +25,7 @@ const AUSSCHNITT = { x: 270, y: 210, breite: 484, hoehe: 680 }
 /** Lage jedes Punkts im 1024-Raum. Reihenfolge = Nummer auf der Karte. */
 const LAGE: Record<Schluessel, [number, number]> = {
   bau:          [300, 300],
-  groesse:      [725, 237],
+  groesse:      [725, 300],
   schultern:    [455, 350],
   arme:         [395, 415],
   oberweite:    [512, 402],

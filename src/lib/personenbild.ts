@@ -20,7 +20,7 @@
  * ignorierte die Körperform, um die es auf dieser Seite geht.
  */
 import {
-  GROESSE_VORGABE, ROLLEN_ANWEISUNG, groesseFuerFormat, promptFuerAuftrag,
+  GROESSE_VORGABE, ROLLEN_ANWEISUNG, promptFuerAuftrag,
   type ReferenzRolle,
 } from './image-generation'
 import { koerperMerkmaleText, type KoerperAuswahl } from './referenzkette'
@@ -98,41 +98,70 @@ export function outfitQuelle(bilder: readonly RefImage[], titelbild: string | nu
 
 const OHNE_KLEIDUNG = 'Ignore the clothing shown on it.'
 
-const PERSON_ZEILE: Record<PersonQuelle['art'], (hatKoerperVorgabe: boolean) => string> = {
-  sheet: b =>
+/**
+ * Woher der Körper kommt.
+ *  - keine:  weder Textzeilen noch Körperbild → der Körper der Person gilt.
+ *  - zeilen: Textzeilen (mit oder ohne Körperbild) → der Körper der Person gilt,
+ *            AUSSER dort, wo die Zeilen etwas anderes sagen.
+ *  - bild:   nur ein Körperbild, keine Zeilen → das Bild bestimmt den Körper.
+ *
+ * WARUM „AUSSER DORT" UND NICHT „NIMM NICHTS" (Critic, 29.09.2026): Die erste
+ * Fassung sagte bei jeder gesetzten Region „Do NOT take its body proportions".
+ * Setzte Mark nur „Beinlänge sehr lang", hatte das Modell für Größe, Becken,
+ * Oberweite usw. keine Quelle mehr und erfand sie — dasselbe Muster wie zuvor
+ * („der Körper sieht immer gleich aus"). `koerperMerkmaleText` macht es richtig:
+ * „Where a reference image shows the body differently, follow these lines."
+ */
+export type KoerperModus = 'keine' | 'zeilen' | 'bild'
+
+export function koerperModus(hatZeilen: boolean, hatBild: boolean): KoerperModus {
+  if (hatZeilen) return 'zeilen'
+  return hatBild ? 'bild' : 'keine'
+}
+
+const KOERPER_TEIL: Record<KoerperModus, string> = {
+  keine: 'Take the body proportions from it as well.',
+  zeilen: 'Take the body proportions from it as well, EXCEPT where the ADDITIONAL BODY CHARACTERISTICS lines below say otherwise.',
+  bild: 'Do NOT take its body proportions: the body-shape image below decides those.',
+}
+
+const PERSON_ZEILE: Record<PersonQuelle['art'], (m: KoerperModus) => string> = {
+  sheet: m =>
     'REFERENCE SHEET OF THE PERSON — take the face, hair, skin tone and identity from it. ' +
-    OHNE_KLEIDUNG + ' ' +
-    (b
-      ? 'Do NOT take its body proportions: the body-shape instructions below decide those.'
-      : 'Take the body proportions from it as well.'),
+    OHNE_KLEIDUNG + ' ' + KOERPER_TEIL[m],
   kopf: () =>
     'HEAD REFERENCE SHEET — take the face, hair, skin tone and identity from it. ' +
     'It shows the same person from several angles.',
-  koerper: b =>
+  koerper: m =>
     'BODY REFERENCE SHEET — ' +
-    (b
-      ? 'take NOTHING but the general figure type from it; the body-shape instructions below decide the proportions. '
-      : 'take the body proportions from it. ') +
+    KOERPER_TEIL[m].replace('from it as well', 'from it') + ' ' +
     OHNE_KLEIDUNG + ' The face in it is secondary; the head reference decides the face.',
-  titel: b =>
+  titel: m =>
     'PHOTO OF THE PERSON — take the face, hair, skin tone and identity from it. ' +
-    OHNE_KLEIDUNG + ' ' +
-    (b
-      ? 'Do NOT take its body proportions: the body-shape instructions below decide those.'
-      : 'Take the body proportions from it as well.'),
+    OHNE_KLEIDUNG + ' ' + KOERPER_TEIL[m],
 }
 
-const KOERPERFIGUR_ZEILE =
-  'BODY SHAPE REFERENCE — a grey 3D mannequin. Take ONLY its body proportions ' +
-  '(build, height, leg length, hips, bust, waist, shoulders, limbs) from it. ' +
-  'Ignore its grey colour and its missing face, hair and clothing; the person and outfit references decide those.'
+const KOERPERFIGUR_ZEILE: Record<Exclude<KoerperModus, 'keine'>, string> = {
+  zeilen:
+    'BODY SHAPE REFERENCE — a grey 3D mannequin that shows one extreme body region. ' +
+    'Use it only as a visual example for the body regions named in the ADDITIONAL BODY CHARACTERISTICS lines below; ' +
+    'those lines decide. Ignore its grey colour and its missing face, hair and clothing; every other body part follows the person reference.',
+  bild:
+    'BODY SHAPE REFERENCE — a grey 3D mannequin. Take its body proportions ' +
+    '(build, height, leg length, hips, bust, waist, shoulders, limbs) from it. ' +
+    'Ignore its grey colour and its missing face, hair and clothing; the person and outfit references decide those.',
+}
 
-function vorrangText(hatKoerperVorgabe: boolean): string {
+function vorrangText(m: KoerperModus): string {
+  const koerper =
+    m === 'keine'
+      ? 'the body proportions come from the person reference. '
+      : m === 'bild'
+        ? 'the body proportions come from the body-shape image. '
+        : 'the body proportions come from the person reference, except that the ADDITIONAL BODY CHARACTERISTICS lines override it (the body-shape image, if present, only illustrates the regions they name). '
   return (
     'Priority: the face, hair and skin tone come from the person reference; the garments come from the outfit reference; ' +
-    (hatKoerperVorgabe
-      ? 'the body proportions come from the body-shape image and the ADDITIONAL BODY CHARACTERISTICS lines, and they override the person reference. '
-      : 'the body proportions come from the person reference. ') +
+    koerper +
     'Everything else — pose, framing, lighting, background — comes from the text.'
   )
 }
@@ -221,9 +250,17 @@ ${STIL_GEMEINSAM}
 
 /** Format, dessen Größenangabe mitgeht — nur beim Hochformat sinnvoll. */
 const AUFTRAGS_FORMAT: Record<FormatId, AspectRatioKey | null> = {
-  vorn: 'portrait_4_5',
+  vorn: null,
   vier: null,
   sheet: null,
+}
+
+/** Das Hochformat steht im Prompt (2:3) UND in der Größe; eine zusätzliche
+ *  Formatansage („4:5") widerspräche beiden (Critic, 29.09.2026). */
+const AUFTRAGS_GROESSE: Record<FormatId, string> = {
+  vorn: '1024x1536',
+  vier: GROESSE_VORGABE,
+  sheet: GROESSE_VORGABE,
 }
 
 // ── Aufträge ───────────────────────────────────────────────────────────────
@@ -266,11 +303,11 @@ export function fehlendes(e: Pick<PersonenbildEingabe, 'personQuellen' | 'outfit
 }
 
 export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
-  const hatVorgabe = !!e.koerperBild || !!koerperMerkmaleText(e.koerperAuswahl)
   const koerperZeilen = koerperMerkmaleText(e.koerperAuswahl)
+  const modus = koerperModus(!!koerperZeilen, !!e.koerperBild)
 
   // Reihenfolge = Reihenfolge der Bilder: Person(en), Outfit, Körperfigur.
-  const zeilen: string[] = e.personQuellen.map(q => PERSON_ZEILE[q.art](hatVorgabe))
+  const zeilen: string[] = e.personQuellen.map(q => PERSON_ZEILE[q.art](modus))
   const urls: string[] = e.personQuellen.map(q => q.url)
   const rollen: ReferenzRolle[] = e.personQuellen.map(() => 'character')
 
@@ -279,8 +316,8 @@ export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
     urls.push(e.outfitBild)
     rollen.push('outfit')
   }
-  if (e.koerperBild) {
-    zeilen.push(KOERPERFIGUR_ZEILE)
+  if (e.koerperBild && modus !== 'keine') {
+    zeilen.push(KOERPERFIGUR_ZEILE[modus])
     urls.push(e.koerperBild)
     rollen.push('character')
   }
@@ -293,8 +330,8 @@ export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
     return {
       format,
       titel: `${e.personName} — ${e.outfitName} — ${label}`,
-      prompt: promptFuerAuftrag(teile.join('\n\n'), ratio, rollen, zeilen, vorrangText(hatVorgabe)),
-      size: ratio ? groesseFuerFormat(ratio).size : GROESSE_VORGABE,
+      prompt: promptFuerAuftrag(teile.join('\n\n'), ratio, rollen, zeilen, vorrangText(modus)),
+      size: AUFTRAGS_GROESSE[format],
       aspect_ratio: ratio,
       model: e.modell,
       referenzUrls: urls,

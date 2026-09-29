@@ -159,6 +159,6 @@
 
 | PROJ-91 | Körperform-Baukasten: Extremstufen, zwölf Regionen, 24 Blender-Presets | In Review | [PROJ-91](PROJ-91-koerperform-baukasten.md) | 2026-09-29 |
 
-| PROJ-92 | Personenbilder: Person + Körper + Outfit → Referenzbilder (eigene Seite) | In Progress | [PROJ-92](PROJ-92-personenbilder.md) | 2026-09-29 |
+| PROJ-92 | Personenbilder: Person + Körper + Outfit → Referenzbilder (eigene Seite) | In Review | [PROJ-92](PROJ-92-personenbilder.md) | 2026-09-29 |
 
 ## Next Available ID: PROJ-93

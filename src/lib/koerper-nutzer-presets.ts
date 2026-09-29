@@ -56,6 +56,15 @@ export function zeileZuPreset(z: Record<string, unknown>): NutzerPreset | null {
   }
 }
 
+/** Weicht die aktuelle Einstellung vom gewählten Preset ab? Dann bietet die Seite "Überschreiben" an. */
+export function unterscheidetSich(p: NutzerPreset, aktuell: KoerperAuswahl, aktuellBild: string | null): boolean {
+  const a = bereinigeMerkmale(aktuell) as Record<string, string | undefined>
+  const b = p.merkmale as Record<string, string | undefined>
+  const schluessel = new Set([...Object.keys(a), ...Object.keys(b)])
+  for (const k of schluessel) if (a[k] !== b[k]) return true
+  return (aktuellBild ?? null) !== (p.koerperBild ?? null)
+}
+
 /** Ist überhaupt etwas eingestellt, das sich zu speichern lohnt? */
 export function hatInhalt(a: KoerperAuswahl, bild: string | null): boolean {
   return Object.keys(bereinigeMerkmale(a)).length > 0 || !!bild

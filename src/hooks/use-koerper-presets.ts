@@ -21,6 +21,11 @@ import {
  */
 const TABELLE = 'koerper_presets'
 
+/** Postgres / PostgREST sagen es je nach Stand anders — beide Formulierungen erkennen. */
+function tabelleFehlt(text: string): boolean {
+  return /schema cache|does not exist|relation .* koerper_presets/i.test(text) && /koerper_presets/i.test(text)
+}
+
 export function useKoerperPresets() {
   const [presets, setPresets] = useState<NutzerPreset[]>([])
   const [laedt, setLaedt] = useState(true)
@@ -34,7 +39,9 @@ export function useKoerperPresets() {
       .order('sortierung', { ascending: true })
       .order('created_at', { ascending: true })
     if (error) {
-      setFehler(error.message)
+      setFehler(tabelleFehlt(error.message)
+        ? 'Die Tabelle für Presets fehlt noch — die Migration 20260929_koerper_presets.sql muss eingespielt werden.'
+        : error.message)
       setLaedt(false)
       return
     }
@@ -72,11 +79,14 @@ export function useKoerperPresets() {
     id: string, merkmale: KoerperAuswahl, koerperBild: string | null,
   ): Promise<boolean> => {
     const supabase = createClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from(TABELLE)
       .update({ merkmale: bereinigeMerkmale(merkmale), koerper_bild: koerperBild, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .select('id')
     if (error) { toast.error(`Preset nicht gespeichert: ${error.message}`); return false }
+    // Keine Zeile getroffen (gelöscht, fremde Zeile): nicht als Erfolg melden.
+    if (!data || data.length === 0) { toast.error('Das Preset gibt es nicht mehr.'); return false }
     setPresets(alt => alt.map(p => p.id === id ? { ...p, merkmale: bereinigeMerkmale(merkmale), koerperBild } : p))
     return true
   }, [])

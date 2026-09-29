@@ -65,11 +65,12 @@ export function Regionsliste({
   onAktiv: (k: Schluessel) => void
 }) {
   return (
-    <div className="pb-liste" role="list">
+    <div className="pb-liste">
       {KARTEN_REIHE.map(k => (
         <button
-          key={k} type="button" role="listitem" className="sb-taste"
+          key={k} type="button" className="sb-taste"
           data-an={aktiv === k ? 'ja' : undefined}
+          aria-pressed={aktiv === k}
           onClick={() => onAktiv(k)}
         >
           <span>{kartenNummer(k)} · {feld(k).label}</span>
@@ -112,6 +113,7 @@ export function Stufenfeld({
           <button
             key={e.wert} type="button" className="pb-kachel"
             data-an={gewaehlt === e.wert && koerperBild === e.bildUrl ? 'ja' : undefined}
+            aria-pressed={gewaehlt === e.wert && koerperBild === e.bildUrl}
             onClick={() => onWertMitBild(region, e.wert, e.bildUrl)}
           >
             <div className="pb-bild dunkel">
@@ -127,6 +129,7 @@ export function Stufenfeld({
           <button
             key={o.wert} type="button" className="sb-taste"
             data-an={gewaehlt === o.wert ? 'ja' : undefined}
+            aria-pressed={gewaehlt === o.wert}
             onClick={() => onWert(region, o.wert)}
           >
             {o.text}
@@ -135,6 +138,7 @@ export function Stufenfeld({
         <button
           type="button" className="sb-taste"
           data-an={gewaehlt === null ? 'ja' : undefined}
+          aria-pressed={gewaehlt === null}
           onClick={() => onWert(region, null)}
         >
           Aus Bild

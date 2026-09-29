@@ -20,7 +20,8 @@ import {
 } from '@/lib/personenbild'
 import { ablageMitFach, type VariantenClient } from '@/lib/ablage-variante'
 import { KARTE_BILD, gesetzteRegionen, type Schluessel } from '@/lib/koerper-regionen'
-import { bereinigeMerkmale, type NutzerPreset } from '@/lib/koerper-nutzer-presets'
+import { KOERPER_PRESETS } from '@/lib/koerper-presets'
+import { bereinigeMerkmale, unterscheidetSich, type NutzerPreset } from '@/lib/koerper-nutzer-presets'
 import { Koerperkarte, Regionsliste, Stufenfeld, koerperBildName } from '@/components/personenbilder/koerperkarte'
 import { KoerperPresetsSpalte } from '@/components/personenbilder/koerper-presets-spalte'
 import { Doppellinie, Passkreuz, Perforation } from '@/components/personenbilder/druckgrafik'
@@ -53,6 +54,9 @@ const REITER: { key: Reiter; code: string; label: string }[] = [
 
 function kleinschreibung(s: string) { return s.toLowerCase() }
 
+/** Nur die drei 2.5-Modelle zum Erzeugen — `gpt-image-2` bleibt gesperrt (Marks Regel vom 10.09.2026). */
+const ERZEUGEN_MODELLE = MODELLE_MIT_REFERENZ.filter(m => m.id.startsWith('gpt-image-2.5'))
+
 export default function PersonenbilderPage() {
   const { characters, loading: personenLaden } = useCharacters()
   const { outfits, loading: outfitsLaden } = useOutfits()
@@ -67,7 +71,7 @@ export default function PersonenbilderPage() {
   const [aktiveRegion, setAktiveRegion] = useState<Schluessel>('becken')
   const [presetId, setPresetId] = useState<string | null>(null)
   const [formate, setFormate] = useState<FormatId[]>(['sheet'])
-  const [modell, setModell] = useState<ModellId>(MODELLE_MIT_REFERENZ[0].id as ModellId)
+  const [modell, setModell] = useState<ModellId>(ERZEUGEN_MODELLE[0].id as ModellId)
   const [sucheP, setSucheP] = useState('')
   const [sucheO, setSucheO] = useState('')
   const [laeuft, setLaeuft] = useState(false)
@@ -80,26 +84,32 @@ export default function PersonenbilderPage() {
   // ── Bilder der Auswahl nachladen ────────────────────────────────────────
   const [personBilder, setPersonBilder] = useState<RefImage[]>([])
   const [personBilderLaden, setPersonBilderLaden] = useState(false)
+  // Ein Ladefehler darf nicht wie "keine Bilder" aussehen: sonst ginge das
+  // bezahlte Bild mit dem Titelbild los, und die Seite behauptete, es gebe nur das.
+  const [personBilderFehler, setPersonBilderFehler] = useState(false)
   useEffect(() => {
-    if (!personId) { setPersonBilder([]); return }
+    if (!personId) { setPersonBilder([]); setPersonBilderFehler(false); return }
     let abgebrochen = false
     setPersonBilderLaden(true)
+    setPersonBilderFehler(false)
     loadRefImages('character_variants', 'character_id', personId)
       .then(b => { if (!abgebrochen) setPersonBilder(b) })
-      .catch(() => { if (!abgebrochen) setPersonBilder([]) })
+      .catch(() => { if (!abgebrochen) { setPersonBilder([]); setPersonBilderFehler(true) } })
       .finally(() => { if (!abgebrochen) setPersonBilderLaden(false) })
     return () => { abgebrochen = true }
   }, [personId])
 
   const [outfitBilder, setOutfitBilder] = useState<RefImage[]>([])
   const [outfitBilderLaden, setOutfitBilderLaden] = useState(false)
+  const [outfitBilderFehler, setOutfitBilderFehler] = useState(false)
   useEffect(() => {
-    if (!outfitId) { setOutfitBilder([]); return }
+    if (!outfitId) { setOutfitBilder([]); setOutfitBilderFehler(false); return }
     let abgebrochen = false
     setOutfitBilderLaden(true)
+    setOutfitBilderFehler(false)
     loadRefImages('outfit_variants', 'outfit_id', outfitId)
       .then(b => { if (!abgebrochen) setOutfitBilder(b) })
-      .catch(() => { if (!abgebrochen) setOutfitBilder([]) })
+      .catch(() => { if (!abgebrochen) { setOutfitBilder([]); setOutfitBilderFehler(true) } })
       .finally(() => { if (!abgebrochen) setOutfitBilderLaden(false) })
     return () => { abgebrochen = true }
   }, [outfitId])
@@ -119,10 +129,14 @@ export default function PersonenbilderPage() {
     outfitId: outfit.id, outfitName: outfit.name, outfitBild,
     koerperBild, koerperAuswahl: koerper, formate, modell, durchlaufId: 'vorschau',
   } : null
-  const fehlt = eingabe
-    ? fehlendes(eingabe)
-    : [!person ? 'Person' : null, !outfit ? 'Outfit' : null, sortiereFormate(formate).length === 0 ? 'Format' : null]
-        .filter((x): x is string => x !== null)
+  const fehlt = [
+    ...(eingabe
+      ? fehlendes(eingabe)
+      : [!person ? 'Person' : null, !outfit ? 'Outfit' : null, sortiereFormate(formate).length === 0 ? 'Format' : null]
+          .filter((x): x is string => x !== null)),
+    ...(personBilderFehler ? ['Bilder der Person (Laden fehlgeschlagen)'] : []),
+    ...(outfitBilderFehler ? ['Bilder des Outfits (Laden fehlgeschlagen)'] : []),
+  ]
   const gewaehlteFormate = sortiereFormate(formate)
   const vorschauPrompt = eingabe && fehlt.length === 0 ? baueAuftraege(eingabe)[0]?.prompt ?? '' : ''
   const ladenNoch = personBilderLaden || outfitBilderLaden
@@ -136,7 +150,13 @@ export default function PersonenbilderPage() {
       return neu as KoerperAuswahl
     })
     setAktiveRegion(k)
-    setPresetId(null)
+    // Das Blender-Bild zeigt EINE Stufe EINER Region. Wird diese Region anders
+    // gesetzt, widerspraeche das Bild der Textzeile (Critic, 29.09.2026).
+    const bildPreset = KOERPER_PRESETS.find(p => p.bildUrl === koerperBild)
+    if (bildPreset) {
+      const bildWert = (bildPreset.merkmale as Record<string, string | undefined>)[k]
+      if (bildWert !== undefined && bildWert !== wert) setKoerperBild(null)
+    }
   }
   function setzeWertMitBild(k: Schluessel, wert: string, bildUrl: string) {
     setzeWert(k, wert)
@@ -158,7 +178,7 @@ export default function PersonenbilderPage() {
   }
 
   async function erzeugen() {
-    if (!eingabe || !person || fehlt.length > 0 || sperre.current) return
+    if (!eingabe || !person || fehlt.length > 0 || ladenNoch || sperre.current) return
     sperre.current = true
     setLaeuft(true)
     try {
@@ -176,6 +196,11 @@ export default function PersonenbilderPage() {
       // Die Liste ist für alle Formate dieselbe, also einmal.
       const sicherung = await referenzenSichern(auftraege[0].referenzUrls)
       const meldung = sicherungsMeldung(sicherung)
+      if (sicherung.gescheitert.length > 0) {
+        // Ein Auftrag mit einem Bild, das der Arbeiter ablehnt, scheitert sicher.
+        toast.error(meldung ?? 'Ein Referenzbild ließ sich nicht holen — es wurde nichts eingereiht.')
+        return
+      }
       if (meldung) toast.info(meldung)
 
       let eingereiht = 0
@@ -190,12 +215,17 @@ export default function PersonenbilderPage() {
         eingereiht++
       }
       if (eingereiht > 0) setLaeufe(alt => [durchlaufId, ...alt])
-      if (eingereiht === auftraege.length) {
+      if (eingereiht > 0 && eingereiht < auftraege.length) {
+        // Die Auswahl schrumpft auf den Rest: Ein zweiter Klick soll nicht alles noch einmal bezahlen.
+        const rest = auftraege.slice(eingereiht).map(a => a.format)
+        setFormate(rest)
+        toast.error(`${eingereiht} von ${auftraege.length} eingereiht — es fehlen noch: ${rest.map(f => FORMATE.find(x => x.id === f)!.label).join(', ')}.`)
+      } else if (eingereiht === auftraege.length) {
         toast.success(eingereiht === 1 ? 'Auftrag eingereiht' : `${eingereiht} Aufträge eingereiht`, {
           description: 'Der Arbeiter auf dem PC holt sie ab.',
         })
       } else {
-        toast.error(`${eingereiht} von ${auftraege.length} Aufträgen eingereiht — der Rest ging nicht.`)
+        toast.error('Der Auftrag konnte nicht eingereiht werden.')
       }
     } finally {
       sperre.current = false
@@ -262,7 +292,7 @@ export default function PersonenbilderPage() {
       <div>
         <label htmlFor="pb-modell" className="mb-1.5 block text-[15px] font-semibold">Modell</label>
         <select id="pb-modell" className="pb-suche" value={modell} onChange={e => setModell(e.target.value as ModellId)}>
-          {MODELLE_MIT_REFERENZ.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+          {ERZEUGEN_MODELLE.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
       </div>
 
@@ -326,7 +356,7 @@ export default function PersonenbilderPage() {
           </div>
           <span className="pb-name" style={{ fontWeight: 700 }}>{person?.name ?? ''}</span>
           {quellenText && (
-            <span className="pb-klein">{personBilderLaden ? 'Lädt …' : quellenText}</span>
+            <span className="pb-klein">{personBilderLaden ? 'Lädt …' : personBilderFehler ? 'Bilder ließen sich nicht laden' : quellenText}</span>
           )}
         </div>
         <div className="pb-zutat">
@@ -342,12 +372,12 @@ export default function PersonenbilderPage() {
             {koerperBild
               ? <Vorschaubild src={koerperBild} alt="" gross />
               // eslint-disable-next-line @next/next/no-img-element
-              : <img src={KARTE_BILD} alt="Grundfigur" style={{ objectFit: 'cover' }} />}
+              : <img src={KARTE_BILD} alt="Grundfigur" style={{ objectFit: 'contain' }} />}
           </div>
           <span className="pb-klein">{koerperBild ? koerperBildName(koerperBild) : 'Laut Referenzbild'}</span>
         </div>
       </div>
-      {quellen[0]?.art === 'titel' && person && (
+      {quellen[0]?.art === 'titel' && person && !personBilderLaden && !personBilderFehler && (
         <p className="pb-hinweis" role="status">
           Für {person.name} gibt es nur das Titelbild. Mit einem Referenzsheet wird die Person genauer.
         </p>
@@ -417,6 +447,7 @@ export default function PersonenbilderPage() {
                       auswahl={koerper}
                       koerperBild={koerperBild}
                       gewaehlt={presetId}
+                      geaendert={presetId !== null && (() => { const p = nutzerPresets.presets.find(x => x.id === presetId); return !!p && unterscheidetSich(p, koerper, koerperBild) })()}
                       onWaehlen={presetWaehlen}
                       onAnlegen={async name => {
                         const neu = await nutzerPresets.anlegen(name, koerper, koerperBild)

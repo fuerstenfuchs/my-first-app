@@ -21,7 +21,7 @@ import { koerperBildName } from '@/components/personenbilder/koerperkarte'
  * einstellen geht danach wie immer.
  */
 export function KoerperPresetsSpalte({
-  presets, laedt, fehler, auswahl, koerperBild, gewaehlt,
+  presets, laedt, fehler, auswahl, koerperBild, gewaehlt, geaendert,
   onWaehlen, onAnlegen, onUeberschreiben, onUmbenennen, onLoeschen, onLeeren,
 }: {
   presets: NutzerPreset[]
@@ -30,6 +30,8 @@ export function KoerperPresetsSpalte({
   auswahl: KoerperAuswahl
   koerperBild: string | null
   gewaehlt: string | null
+  /** Weicht die aktuelle Einstellung vom gewählten Preset ab? */
+  geaendert: boolean
   onWaehlen: (p: NutzerPreset) => void
   onAnlegen: (name: string) => Promise<boolean>
   onUeberschreiben: (id: string) => Promise<boolean>
@@ -116,6 +118,7 @@ export function KoerperPresetsSpalte({
                       : regionen.length === 1 ? '1 Region' : `${regionen.length} Regionen`}
                     {p.koerperBild ? ` · ${koerperBildName(p.koerperBild)}` : ''}
                   </span>
+                  {an && geaendert && <span className="pb-status">geändert</span>}
                   {p.koerperBild && (
                     <span className="pb-bild dunkel" style={{ maxWidth: 96, aspectRatio: '1 / 1' }}>
                       <Vorschaubild src={p.koerperBild} alt="" />

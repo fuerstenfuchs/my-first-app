@@ -1,6 +1,6 @@
 # PROJ-92 — Personenbilder
 
-**Status:** In Progress
+**Status:** In Review (Migration noch nicht eingespielt)
 **Erstellt:** 2026-09-29
 
 ## Auftrag
@@ -45,3 +45,23 @@ im Scene Builder verwenden kann. Alles schön groß und übersichtlich."
 `src/app/(app)/personenbilder/`, `src/components/personenbilder/`,
 `src/lib/personenbild.ts` (Prompts, Aufträge), `src/lib/koerper-felder.ts`
 (Felder, aus dem Formular herausgelöst), `src/hooks/use-koerper-presets.ts`.
+
+## Nach der Prüfung durch Critic (29.09.2026) behoben
+
+- Körper-Vorrang im Prompt: gesetzte Textzeilen überstimmen das Referenzsheet nur
+  dort, wo sie etwas sagen (vorher: pauschal „nimm keinen Körper" → alles Übrige
+  erfunden). Das Blender-Bild ist bei gesetzten Zeilen nur Anschauung.
+- Das Blender-Bild fällt weg, sobald seine Region anders gesetzt wird.
+- Ganzkörper vorn: 2:3 über Prompt und Größe, keine zweite Formatansage („4:5").
+- Teilabbruch: Auswahl schrumpft auf den Rest (kein doppeltes Bezahlen).
+- Ladefehler der Bilder blockieren das Erzeugen, statt still das Titelbild zu nehmen.
+- Modellwahl nur `gpt-image-2.5*`. Fremde Referenzbilder, die sich nicht holen lassen,
+  stoppen den Durchlauf.
+- Presets: „Überschreiben" bleibt nach dem Anpassen erreichbar („geändert"-Marke).
+
+## Offen
+
+- Outfit-Kacheln zeigen nur das Titelbild; ein Outfit ohne Titelbild, aber mit
+  Varianten, zeigt „Kein Bild".
+- Reiter ohne Pfeiltasten-Bedienung / `tabpanel`.
+- Migration `20260929_koerper_presets.sql` einspielen (Mark).

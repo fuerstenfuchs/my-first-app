@@ -97,9 +97,20 @@
   font-weight: 900;
   font-size: 17px;
 }
-.pb-kachel .pb-name { font-size: 17px; font-weight: 600; line-height: 1.25; }
+.pb-name { font-size: 17px; font-weight: 600; line-height: 1.25; }
 .pb-kachel[data-an='ja'] .pb-name { font-weight: 800; color: var(--pb-wahl); }
-.pb-kachel .pb-klein { font-size: 14px; color: var(--sb-ink3); }
+.pb-klein { font-size: 14px; color: var(--sb-ink2); }
+
+/* Tastaturfokus auf allem Anfassbaren: zweifarbiger Ring, sichtbar auf Papier UND auf dunklem Grund. */
+.pb-kachel:focus-visible,
+.pb-feld:focus-visible,
+.pb-chip button:focus-visible,
+.pb-suche:focus-visible,
+.pb summary:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 0;
+  box-shadow: 0 0 0 6px var(--sb-ink);
+}
 
 /* Bilder ganz und groß, nie beschnitten (DESIGN.md §4). */
 .pb-bild {
@@ -210,15 +221,15 @@
 .pb-punkt[data-gesetzt='ja'] { background: var(--sb-ink); color: #fffdf8; border-color: #fffdf8; }
 .pb-punkt[data-an='ja'] { background: var(--pb-wahl-rot); color: #fff; border-color: #fff; }
 /* Zweifarbiger Ring: sichtbar auf dem dunklen Bild UND auf Papier. */
-.pb-punkt:focus-visible,
-.pb-taste-ring:focus-visible {
+.pb-punkt:focus-visible {
   outline: 3px solid #fff;
   outline-offset: 0;
   box-shadow: 0 0 0 6px var(--sb-ink);
 }
 
-.pb-liste { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
-.pb-liste .sb-taste { width: 100%; justify-content: space-between; }
+.pb-liste { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+/* Der Name links, die gewählte Stufe rechts — bei Enge umbrechen statt überlaufen. */
+.pb-liste .sb-taste { width: 100%; justify-content: space-between; flex-wrap: wrap; white-space: normal; text-align: left; row-gap: 2px; }
 .pb-liste .sb-taste small { font-size: 14px; color: var(--sb-ink3); font-weight: 600; }
 .pb-liste .sb-taste[data-an='ja'] small { color: #fff; }
 
@@ -240,7 +251,7 @@
   font-weight: 600;
 }
 .pb-chip b { font-weight: 800; }
-.pb-chip button { font-size: 16px; line-height: 1; padding: 0 2px; color: var(--sb-ink2); cursor: pointer; }
+.pb-chip button { font-size: 20px; line-height: 1; min-width: 28px; min-height: 28px; border-radius: 50%; color: var(--sb-ink2); cursor: pointer; }
 .pb-chip button:hover { color: var(--sb-ink); }
 
 /* ── Vorschau der Zutaten ────────────────────────────────────────────────── */
@@ -269,7 +280,7 @@
   background: var(--sb-pap2);
 }
 
-.pb-hinweis { font-size: 15px; color: var(--sb-ink3); }
+.pb-hinweis { font-size: 15px; color: var(--sb-ink2); }
 .pb-fehler { font-size: 15px; color: #7d2a20; background: #f6e6e2; border: 1px solid #a8392b; border-radius: 12px; padding: 10px 14px; }
 
 @media (prefers-reduced-motion: reduce) {
