@@ -1,5 +1,5 @@
 /**
- * Vorgefertigte Körperform-Presets (PROJ-89) — Bild + passende Körpermerkmale
+ * Vorgefertigte Körperform-Presets (PROJ-91) — Bild + passende Körpermerkmale
  * in einem Klick.
  *
  * Mark am 29.09.2026: „Bevor man immer alles neu einstellen müsste, ver-

@@ -85,7 +85,7 @@ interface PromptToImageDialogProps {
    */
   bildplaetze?: Bildplatz[]
   /**
-   * EIN PLATZ VON AUSSEN VORBELEGT (PROJ-89) — für die Körperform-Presets.
+   * EIN PLATZ VON AUSSEN VORBELEGT (PROJ-91) — für die Körperform-Presets.
    *
    * Mark am 30.09.2026: Er wollte ein Preset auch dann wählen können, wenn er
    * ein Sheet EINZELN neu erzeugt (dieser Dialog), nicht nur beim ersten
@@ -363,7 +363,7 @@ export function PromptToImageDialog({
   }, [isOpen, plaetzeSchluessel, vorauswahlCharakter])
 
   /*
-    PRESET-VORBELEGUNG ANWENDEN (PROJ-89).
+    PRESET-VORBELEGUNG ANWENDEN (PROJ-91).
 
     Läuft NACH dem Vorbelege-Effekt oben — beide hängen an `isOpen`, React
     führt Effekte in Deklarationsreihenfolge aus. Ohne diese Reihenfolge

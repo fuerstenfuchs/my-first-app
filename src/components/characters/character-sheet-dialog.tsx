@@ -324,7 +324,7 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
     Koerperbau. Bisher gab es sie nur im Ketten-Dialog.
   */
   const [koerperAuswahl, setKoerperAuswahl] = useState<KoerperAuswahl>({})
-  /* Das per Preset gewählte Körperbild (PROJ-89) — siehe `platzVorbelegung`
+  /* Das per Preset gewählte Körperbild (PROJ-91) — siehe `platzVorbelegung`
    *  an `PromptToImageDialog` weiter unten. `null` heisst: kein Preset
    *  gewählt, der Platz bleibt bei seiner normalen Vorbelegung aus den
    *  Varianten. */
@@ -506,7 +506,7 @@ ${merkmale}` : basisPrompt
 
             {selected === 'koerper' && (
               <>
-                {/* PROJ-89: hier und nicht nur in der Referenzkette, weil die
+                {/* PROJ-91: hier und nicht nur in der Referenzkette, weil die
                     dort nur zeigt, solange das Körper-Sheet noch FEHLT — für
                     einen Charakter, der die Kette schon einmal durchlaufen
                     hat, ist dieser Einzeldialog der einzige Weg, die
@@ -620,7 +620,7 @@ ${merkmale}` : basisPrompt
           zurueck, wenn kein eigenes Koerperfoto abgelegt ist.
         */
         bildplaetze={plaetze}
-        /* PROJ-89: Platz 1 ist bei "koerper" IMMER die Koerperquelle —
+        /* PROJ-91: Platz 1 ist bei "koerper" IMMER die Koerperquelle —
            `quellenFuer('koerper', …)` liefert [Kopf-Sheet, Koerperquelle] in
            genau dieser Reihenfolge, siehe referenzkette.ts. */
         platzVorbelegung={selected === 'koerper' && presetBild ? { platz: 1, bild: presetBild } : null}

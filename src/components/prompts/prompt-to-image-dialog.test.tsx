@@ -163,7 +163,7 @@ describe('Zwei Bildplätze beim Körper-Sheet', () => {
   })
 })
 
-describe('Preset-Vorbelegung (PROJ-89)', () => {
+describe('Preset-Vorbelegung (PROJ-91)', () => {
   /*
     Mark am 30.09.2026: Er wollte ein Körperform-Preset auch dann wählen
     können, wenn er ein Sheet EINZELN neu erzeugt — nicht nur beim ersten

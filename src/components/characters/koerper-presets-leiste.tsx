@@ -5,7 +5,7 @@ import type { KoerperAuswahl } from '@/lib/referenzkette'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
- * Die Preset-Leiste (PROJ-89) — ein Klick statt Körpermerkmale-Feld und
+ * Die Preset-Leiste (PROJ-91) — ein Klick statt Körpermerkmale-Feld und
  * Referenzbild einzeln setzen.
  *
  * Mark am 29.09.2026: „Ich müsste dann eigentlich nur noch so ein Preset

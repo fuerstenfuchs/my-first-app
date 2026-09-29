@@ -157,4 +157,8 @@
 
 | PROJ-90 | GPT Image 2.5 Sunburst als Vorgabe (11 Stellen umgestellt) | In Review | [PROJ-90](PROJ-90-sunburst-als-vorgabe.md) | 2026-09-11 |
 
-## Next Available ID: PROJ-91
+| PROJ-91 | Körperform-Baukasten: Extremstufen, zwölf Regionen, 24 Blender-Presets | In Review | [PROJ-91](PROJ-91-koerperform-baukasten.md) | 2026-09-29 |
+
+| PROJ-92 | Personenbilder: Person + Körper + Outfit → Referenzbilder (eigene Seite) | In Progress | [PROJ-92](PROJ-92-personenbilder.md) | 2026-09-29 |
+
+## Next Available ID: PROJ-93
