@@ -343,7 +343,7 @@ export type KoerperAuswahl = {
   groesse?: 'klein' | 'durchschnittlich' | 'gross'
   oberweite?: 'klein' | 'mittel' | 'gross'
   becken?: 'schmal' | 'durchschnittlich' | 'ausladend'
-  beinlaenge?: 'kurz' | 'durchschnittlich' | 'lang'
+  beinlaenge?: 'sehr_kurz' | 'kurz' | 'durchschnittlich' | 'lang' | 'sehr_lang'
 }
 
 const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAuswahl[K]>, string> } = {
@@ -351,7 +351,17 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
   groesse:    { klein: 'short stature', durchschnittlich: 'average height', gross: 'tall stature' },
   oberweite:  { klein: 'small bust', mittel: 'medium bust', gross: 'large bust' },
   becken:     { schmal: 'narrow hips', durchschnittlich: 'average hip width', ausladend: 'wide, flared hips' },
-  beinlaenge: { kurz: 'shorter legs relative to torso', durchschnittlich: 'average leg length', lang: 'long legs relative to torso' },
+  beinlaenge: {
+    sehr_kurz: 'noticeably short legs relative to torso, making up clearly less than half of total body height',
+    kurz: 'shorter legs relative to torso',
+    durchschnittlich: 'average leg length',
+    lang: 'long legs relative to torso',
+    // Mark am 29.09.2026, nachdem "lang" beim Nachstellen eines sehr
+    // langbeinigen Originalfotos nicht reichte: eine Stufe darueber, mit einem
+    // Zahlenverhaeltnis statt nur "relativ laenger" — das Modell soll wirklich
+    // WEITER gehen, nicht nur "etwas mehr vom selben".
+    sehr_lang: 'strikingly long legs, making up roughly two-thirds or more of total body height; torso comparatively short; waist positioned noticeably high',
+  },
 }
 
 /**

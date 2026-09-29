@@ -98,9 +98,11 @@ export const MERKMAL_FELDER: MerkmalFeld[] = [
     schluessel: 'beinlaenge',
     label: 'Beinlänge',
     optionen: [
+      { wert: 'sehr_kurz',        text: 'Sehr kurz' },
       { wert: 'kurz',             text: 'Kurz' },
       { wert: 'durchschnittlich', text: 'Durchschnittlich' },
       { wert: 'lang',             text: 'Lang' },
+      { wert: 'sehr_lang',        text: 'Sehr lang' },
     ],
   },
 ]

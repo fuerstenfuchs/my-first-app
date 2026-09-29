@@ -196,6 +196,20 @@ describe('Körpermerkmale — Marks Liste vom 03.09.2026', () => {
     expect(alles).toContain('wide, flared hips')
     expect(alles).toContain('shorter legs')
   })
+
+  // Mark am 29.09.2026: "lang" reichte beim Nachstellen eines sehr
+  // langbeinigen Originalfotos nicht — eine Stufe darueber und darunter, mit
+  // einem Zahlenverhaeltnis, das ueber "relativ laenger/kuerzer" hinausgeht.
+  it('"sehr lang" und "sehr kurz" gehen ueber die einfache Stufe hinaus', () => {
+    const langText = koerperMerkmaleText({ beinlaenge: 'sehr_lang' })!
+    expect(langText).toContain('strikingly long legs')
+    expect(langText).toContain('two-thirds')
+    expect(langText).not.toBe(koerperMerkmaleText({ beinlaenge: 'lang' }))
+
+    const kurzText = koerperMerkmaleText({ beinlaenge: 'sehr_kurz' })!
+    expect(kurzText).toContain('noticeably short legs')
+    expect(kurzText).not.toBe(koerperMerkmaleText({ beinlaenge: 'kurz' }))
+  })
 })
 
 describe('Der fertige Prompt', () => {
