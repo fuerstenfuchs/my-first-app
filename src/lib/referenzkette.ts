@@ -352,6 +352,15 @@ export type KoerperAuswahl = {
      Wade und umgekehrt kommen beide real vor). */
   oberschenkel?: 'sehr_duenn' | 'duenn' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig'
   wade?: 'sehr_duenn' | 'duenn' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig'
+  /* Fuenf weitere Regionen, Mark am 29.09.2026 auf die Frage „welche anderen
+     Koerperregionen koennte man noch einbauen": Gesaess, Bauch, Taille,
+     Schultern, Arme — alle mit MPFB-Zielformen fuer spaetere Blender-Presets
+     belegt (siehe werkzeuge/blender/koerperform.py im Fuchsbau-Repo). */
+  gesaess?: 'sehr_flach' | 'flach' | 'durchschnittlich' | 'ausgepraegt' | 'sehr_ausgepraegt'
+  bauch?: 'sehr_flach' | 'flach' | 'durchschnittlich' | 'weich' | 'sehr_weich'
+  taille?: 'sehr_schmal' | 'schmal' | 'durchschnittlich' | 'gerade' | 'sehr_gerade'
+  schultern?: 'sehr_schmal' | 'schmal' | 'durchschnittlich' | 'breit' | 'sehr_breit'
+  arme?: 'sehr_duenn' | 'duenn' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig'
 }
 
 /**
@@ -416,6 +425,41 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
     durchschnittlich: 'average calf build',
     kraeftig: 'muscular, well-defined calves',
     sehr_kraeftig: 'very thick, powerfully built calves',
+  },
+  gesaess: {
+    sehr_flach: 'very flat, minimal buttocks volume',
+    flach: 'flat buttocks',
+    durchschnittlich: 'average buttocks',
+    ausgepraegt: 'full, rounded buttocks',
+    sehr_ausgepraegt: 'strikingly full and prominently rounded buttocks, significantly more volume than average',
+  },
+  bauch: {
+    sehr_flach: 'very flat, tightly toned stomach, visible muscle definition',
+    flach: 'flat, toned stomach',
+    durchschnittlich: 'average stomach',
+    weich: 'soft, rounded stomach',
+    sehr_weich: 'notably soft, full, rounded stomach, clearly protruding',
+  },
+  taille: {
+    sehr_schmal: 'very narrow, sharply defined waist, dramatic hourglass curve',
+    schmal: 'narrow, defined waist',
+    durchschnittlich: 'average waist',
+    gerade: 'straight waist with little definition',
+    sehr_gerade: 'very straight, undefined waist, torso the same width from ribcage to hips',
+  },
+  schultern: {
+    sehr_schmal: 'very narrow shoulders, notably slight frame',
+    schmal: 'narrow shoulders',
+    durchschnittlich: 'average shoulder width',
+    breit: 'broad shoulders',
+    sehr_breit: 'very broad, wide-set shoulders, significantly wider than the hips',
+  },
+  arme: {
+    sehr_duenn: 'very thin, slender arms, minimal circumference',
+    duenn: 'slender arms',
+    durchschnittlich: 'average arm build',
+    kraeftig: 'muscular, solid arms',
+    sehr_kraeftig: 'very thick, powerfully muscular arms',
   },
 }
 

@@ -51,7 +51,7 @@ type MerkmalFeld = {
 }[keyof KoerperAuswahl]
 
 /**
- * Alle sieben werden immer gezeigt: Am Charakter-Datenmodell hängt keine
+ * Alle zwölf werden immer gezeigt: Am Charakter-Datenmodell hängt keine
  * Geschlechtsangabe, aus der man Felder ableiten könnte. Ein geratenes
  * Ausblenden nähme Mark genau die Eingriffsmöglichkeit, für die es diesen
  * Abschnitt gibt.
@@ -141,6 +141,61 @@ export const MERKMAL_FELDER: MerkmalFeld[] = [
       { wert: 'sehr_kraeftig',    text: 'Sehr kräftig' },
     ],
   },
+  {
+    schluessel: 'gesaess',
+    label: 'Gesäß',
+    optionen: [
+      { wert: 'sehr_flach',       text: 'Sehr flach' },
+      { wert: 'flach',            text: 'Flach' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'ausgepraegt',      text: 'Ausgeprägt' },
+      { wert: 'sehr_ausgepraegt', text: 'Sehr ausgeprägt' },
+    ],
+  },
+  {
+    schluessel: 'bauch',
+    label: 'Bauch',
+    optionen: [
+      { wert: 'sehr_flach',       text: 'Sehr flach' },
+      { wert: 'flach',            text: 'Flach' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'weich',            text: 'Weich' },
+      { wert: 'sehr_weich',       text: 'Sehr weich' },
+    ],
+  },
+  {
+    schluessel: 'taille',
+    label: 'Taille',
+    optionen: [
+      { wert: 'sehr_schmal',      text: 'Sehr schmal' },
+      { wert: 'schmal',           text: 'Schmal' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'gerade',           text: 'Gerade' },
+      { wert: 'sehr_gerade',      text: 'Sehr gerade' },
+    ],
+  },
+  {
+    schluessel: 'schultern',
+    label: 'Schultern',
+    optionen: [
+      { wert: 'sehr_schmal',      text: 'Sehr schmal' },
+      { wert: 'schmal',           text: 'Schmal' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'breit',            text: 'Breit' },
+      { wert: 'sehr_breit',       text: 'Sehr breit' },
+    ],
+  },
+  {
+    schluessel: 'arme',
+    label: 'Arme',
+    optionen: [
+      { wert: 'sehr_duenn',       text: 'Sehr dünn' },
+      { wert: 'duenn',            text: 'Dünn' },
+      { wert: 'durchschnittlich', text: 'Durchschnittlich' },
+      { wert: 'kraeftig',         text: 'Kräftig' },
+      { wert: 'sehr_kraeftig',    text: 'Sehr kräftig' },
+    ],
+  },
 ]
 
 export function KoerperMerkmale({
@@ -166,7 +221,7 @@ export function KoerperMerkmale({
                   delete neu[feld.schluessel]
                 } else {
                   // `feld.schluessel` ist hier weiterhin die Vereinigung aller
-                  // sieben Feldschlüssel; TypeScript verlangt für den
+                  // zwölf Feldschlüssel; TypeScript verlangt für den
                   // Schreibzugriff deren Schnittmenge, die leer ist — das
                   // erzwingt diesen Umweg. Sicher ist er trotzdem: `wert` stammt
                   // aus `feld.optionen`, und die sind über den `MerkmalFeld`-Typ

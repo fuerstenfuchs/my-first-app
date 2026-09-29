@@ -243,6 +243,31 @@ describe('Körpermerkmale — Marks Liste vom 03.09.2026', () => {
     // Beide Zeilen stehen nebeneinander — keine überschreibt die andere.
     expect(gegensatz.split('\n').filter(z => z.startsWith('- ')).length).toBe(2)
   })
+
+  // Mark am 29.09.2026, auf die Frage "welche anderen Körperregionen könnte
+  // man noch einbauen": Gesäß, Bauch, Taille, Schultern, Arme — "alle noch
+  // einsetzen … auch wieder mit den Extremen".
+  it('Gesäß, Bauch, Taille, Schultern und Arme haben je eine Extremstufe in beide Richtungen', () => {
+    const extrem = koerperMerkmaleText({
+      gesaess: 'sehr_ausgepraegt', bauch: 'sehr_weich', taille: 'sehr_gerade',
+      schultern: 'sehr_breit', arme: 'sehr_kraeftig',
+    })!
+    expect(extrem).toContain('strikingly full and prominently rounded buttocks')
+    expect(extrem).toContain('notably soft, full, rounded stomach')
+    expect(extrem).toContain('very straight, undefined waist')
+    expect(extrem).toContain('very broad, wide-set shoulders')
+    expect(extrem).toContain('very thick, powerfully muscular arms')
+
+    const gegenteil = koerperMerkmaleText({
+      gesaess: 'sehr_flach', bauch: 'sehr_flach', taille: 'sehr_schmal',
+      schultern: 'sehr_schmal', arme: 'sehr_duenn',
+    })!
+    expect(gegenteil).toContain('very flat, minimal buttocks volume')
+    expect(gegenteil).toContain('very flat, tightly toned stomach')
+    expect(gegenteil).toContain('very narrow, sharply defined waist')
+    expect(gegenteil).toContain('very narrow shoulders')
+    expect(gegenteil).toContain('very thin, slender arms')
+  })
 })
 
 describe('Der fertige Prompt', () => {
