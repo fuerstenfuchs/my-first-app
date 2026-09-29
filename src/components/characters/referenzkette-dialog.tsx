@@ -22,6 +22,7 @@ import {
 } from '@/lib/referenzkette'
 import type { Character } from '@/hooks/use-characters'
 import { KoerperMerkmale } from '@/components/characters/koerper-merkmale'
+import { KoerperPresetsLeiste } from '@/components/characters/koerper-presets-leiste'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
 
@@ -341,6 +342,13 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
                 Titelbild als Körper-Vorlage.
               </p>
             </div>
+
+            <KoerperPresetsLeiste
+              onWaehlen={(bildUrl, merkmale) => {
+                koerperbildWaehlen(bildUrl)
+                setKoerperAuswahl(alt => ({ ...alt, ...merkmale }))
+              }}
+            />
 
             <KoerperMerkmale auswahl={koerperAuswahl} onAuswahl={setKoerperAuswahl} />
           </div>
