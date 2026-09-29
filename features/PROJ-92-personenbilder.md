@@ -1,6 +1,6 @@
 # PROJ-92 — Personenbilder
 
-**Status:** In Review (Migration noch nicht eingespielt)
+**Status:** In Review (Migration eingespielt am 29.09.2026)
 **Erstellt:** 2026-09-29
 
 ## Auftrag
@@ -64,4 +64,7 @@ im Scene Builder verwenden kann. Alles schön groß und übersichtlich."
 - Outfit-Kacheln zeigen nur das Titelbild; ein Outfit ohne Titelbild, aber mit
   Varianten, zeigt „Kein Bild".
 - Reiter ohne Pfeiltasten-Bedienung / `tabpanel`.
-- Migration `20260929_koerper_presets.sql` einspielen (Mark).
+
+## Migration
+
+`20260929_koerper_presets.sql` am 29.09.2026 mit Marks Freigabe als Supabase-Migration `koerper_presets` eingespielt. Vorher geprüft: Tabelle gab es nicht. Nachher: Zeilensicherheit an, vier Regeln (select/insert/update/delete je `auth.uid() = user_id`), keine Zeilen, keine Sicherheitsmeldung zur neuen Tabelle.
