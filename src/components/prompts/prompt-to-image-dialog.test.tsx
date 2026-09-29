@@ -91,6 +91,7 @@ function zeichne(
   mitPlaetzen: boolean,
   person: typeof PERSON | null = PERSON,
   ablage: typeof ABLAGE | null = null,
+  platzVorbelegung: { platz: number; bild: { url: string; label: string } } | null = null,
 ) {
   return render(
     <PromptToImageDialog
@@ -101,6 +102,7 @@ function zeichne(
       rollen={['character']}
       bildplaetze={mitPlaetzen ? bildplaetze('koerper', { hatKoerperfoto: true }) : undefined}
       ablage={ablage}
+      platzVorbelegung={platzVorbelegung}
     />,
   )
 }
@@ -158,6 +160,34 @@ describe('Zwei Bildplätze beim Körper-Sheet', () => {
     expect(auftrag.prompt).toContain('Image 1 = HEAD REFERENCE SHEET')
     expect(auftrag.prompt).toContain('Image 2 = ORIGINAL PHOTO')
     expect(auftrag.prompt).toContain('Completely ignore any face')
+  })
+})
+
+describe('Preset-Vorbelegung (PROJ-89)', () => {
+  /*
+    Mark am 30.09.2026: Er wollte ein Körperform-Preset auch dann wählen
+    können, wenn er ein Sheet EINZELN neu erzeugt — nicht nur beim ersten
+    Durchlauf der Referenzkette. Der Charakter braucht dafür nicht das
+    normale Vorbelegungs-Bild aus seinen Varianten zu tragen.
+  */
+  const PRESET_URL = speicher('koerper-presets/becken-sehr-schmal.png')
+
+  it('überschreibt Platz 1 (die Körperquelle) mit dem Preset-Bild', async () => {
+    zeichne(true, PERSON, null, { platz: 1, bild: { url: PRESET_URL, label: 'Preset' } })
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOPFBLATT, PRESET_URL])
+  })
+
+  it('lässt Platz 0 (das Kopfblatt) unberührt', async () => {
+    zeichne(true, PERSON, null, { platz: 1, bild: { url: PRESET_URL, label: 'Preset' } })
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls[0]).toBe(KOPFBLATT)
+  })
+
+  it('ohne Vorbelegung bleibt die normale Variantensuche unangetastet', async () => {
+    zeichne(true)
+    const auftrag = await abschicken()
+    expect(auftrag.reference_urls).toEqual([KOPFBLATT, KOERPERFOTO])
   })
 })
 

@@ -15,7 +15,9 @@ import {
 } from '@/lib/referenzkette'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import { KoerperMerkmale } from '@/components/characters/koerper-merkmale'
+import { KoerperPresetsLeiste } from '@/components/characters/koerper-presets-leiste'
 import { Vorschaubild } from '@/components/vorschaubild'
+import type { RefImage } from '@/lib/reference-images'
 
 // ── Sheet types ───────────────────────────────────────────────────────────────
 
@@ -322,6 +324,11 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
     Koerperbau. Bisher gab es sie nur im Ketten-Dialog.
   */
   const [koerperAuswahl, setKoerperAuswahl] = useState<KoerperAuswahl>({})
+  /* Das per Preset gewählte Körperbild (PROJ-89) — siehe `platzVorbelegung`
+   *  an `PromptToImageDialog` weiter unten. `null` heisst: kein Preset
+   *  gewählt, der Platz bleibt bei seiner normalen Vorbelegung aus den
+   *  Varianten. */
+  const [presetBild, setPresetBild] = useState<RefImage | null>(null)
 
   /*
     WOHIN DAS FERTIGE BLATT GEHOERT (PROJ-86).
@@ -498,11 +505,24 @@ ${merkmale}` : basisPrompt
             )}
 
             {selected === 'koerper' && (
-              <KoerperMerkmale
-                auswahl={koerperAuswahl}
-                onAuswahl={setKoerperAuswahl}
-                hinweis="Zusätzlich zu dem, was die Referenzbilder zeigen. Zeigt keins von beiden den Körperbau, ist das hier die einzige Quelle dafür."
-              />
+              <>
+                {/* PROJ-89: hier und nicht nur in der Referenzkette, weil die
+                    dort nur zeigt, solange das Körper-Sheet noch FEHLT — für
+                    einen Charakter, der die Kette schon einmal durchlaufen
+                    hat, ist dieser Einzeldialog der einzige Weg, die
+                    Körperform noch einmal zu ändern. */}
+                <KoerperPresetsLeiste
+                  onWaehlen={(bildUrl, merkmale) => {
+                    setPresetBild({ url: bildUrl, label: 'Preset' })
+                    setKoerperAuswahl(alt => ({ ...alt, ...merkmale }))
+                  }}
+                />
+                <KoerperMerkmale
+                  auswahl={koerperAuswahl}
+                  onAuswahl={setKoerperAuswahl}
+                  hinweis="Zusätzlich zu dem, was die Referenzbilder zeigen. Zeigt keins von beiden den Körperbau, ist das hier die einzige Quelle dafür."
+                />
+              </>
             )}
 
             {/* Prompt box */}
@@ -600,6 +620,10 @@ ${merkmale}` : basisPrompt
           zurueck, wenn kein eigenes Koerperfoto abgelegt ist.
         */
         bildplaetze={plaetze}
+        /* PROJ-89: Platz 1 ist bei "koerper" IMMER die Koerperquelle —
+           `quellenFuer('koerper', …)` liefert [Kopf-Sheet, Koerperquelle] in
+           genau dieser Reihenfolge, siehe referenzkette.ts. */
+        platzVorbelegung={selected === 'koerper' && presetBild ? { platz: 1, bild: presetBild } : null}
         ablage={ablageZiel}
       />}
     </Dialog>

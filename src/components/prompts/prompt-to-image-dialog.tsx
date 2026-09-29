@@ -85,6 +85,21 @@ interface PromptToImageDialogProps {
    */
   bildplaetze?: Bildplatz[]
   /**
+   * EIN PLATZ VON AUSSEN VORBELEGT (PROJ-89) — für die Körperform-Presets.
+   *
+   * Mark am 30.09.2026: Er wollte ein Preset auch dann wählen können, wenn er
+   * ein Sheet EINZELN neu erzeugt (dieser Dialog), nicht nur beim ersten
+   * Durchlauf der Referenzkette — die zeigt die Presets nur, solange das
+   * Körper-Sheet noch fehlt, und genau dann will Mark meist gar nicht mehr
+   * hin: Er hat den Charakter schon, und will nur die Körperform ändern.
+   *
+   * `platz` ist der Index in `bildplaetze` (beim Körper-Schritt immer 1 — die
+   * Körperquelle, siehe `quellenFuer('koerper', …)` in referenzkette.ts).
+   * Ändert sich der Wert, ÜBERSCHREIBT er die Vorbelegung aus den Varianten;
+   * `null` rührt den Platz nicht an.
+   */
+  platzVorbelegung?: { platz: number; bild: RefImage } | null
+  /**
    * WOHIN DAS FERTIGE BILD GEHOERT (PROJ-86).
    *
    * Mark am 07.09.2026 auf die Frage nach der Ablage: „Koennte man auch da
@@ -204,7 +219,7 @@ export function PromptToImageDialog({
   isOpen, onClose, prompt, titel, vorauswahlCharakter = null, vorauswahlLocation = null,
   vorauswahlOutfit = null,
   rollen: angeboteneRollen = ['character', 'outfit', 'location'],
-  bildplaetze, ablage = null,
+  bildplaetze, ablage = null, platzVorbelegung = null,
 }: PromptToImageDialogProps) {
   const { anlegen } = useImageJobs(false)
   const { characters, loading: charLaedt } = useCharacters()
@@ -346,6 +361,45 @@ export function PromptToImageDialog({
     // `bildplaetze` steckt bewusst nur über `plaetzeSchluessel` drin — siehe oben.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, plaetzeSchluessel, vorauswahlCharakter])
+
+  /*
+    PRESET-VORBELEGUNG ANWENDEN (PROJ-89).
+
+    Läuft NACH dem Vorbelege-Effekt oben — beide hängen an `isOpen`, React
+    führt Effekte in Deklarationsreihenfolge aus. Ohne diese Reihenfolge
+    schriebe der Varianten-Effekt eine spätere Preset-Wahl wieder zu, sobald
+    `vorauswahlCharakter` sich mit öffnet.
+
+    `asset` bekommt dieselbe Person wie zuvor an diesem Platz, sonst
+    `vorauswahlCharakter` — ein Preset ersetzt nur das BILD, nicht die
+    Charakterzuordnung, die `ReferenzKarte` daraus anzeigt.
+  */
+  // Wie `plaetzeSchluessel` oben: `platzVorbelegung` ist bei jedem Rendern des
+  // Aufrufers ein neues Objekt (Mark klickt im selben Zustand nichts an, aber
+  // React sieht trotzdem eine neue Referenz). Ein Schlüssel aus den
+  // tatsächlichen Werten läuft nur, wenn sich wirklich etwas ändert.
+  const vorbelegungSchluessel = platzVorbelegung ? `${platzVorbelegung.platz}|${platzVorbelegung.bild.url}` : ''
+  useEffect(() => {
+    // WICHTIG: erst NACHDEM die Varianten-Vorbelegung oben fertig ist
+    // (`belegtGerade === false`). Die laeuft async und schreibt das GANZE
+    // Feld neu — lief dieser Effekt frueher, ueberschriebe die Varianten-
+    // Vorbelegung das Preset kurz danach wieder mit dem Variantenbild. Genau
+    // das zeigte ein Test: ohne diese Reihenfolge landete `koerperfoto.jpg`
+    // im Platz statt des gewaehlten Presets.
+    if (!isOpen || !platzVorbelegung || belegtGerade) return
+    const { platz, bild } = platzVorbelegung
+    setPlatzWahl(alt => {
+      if (platz >= alt.length) return alt
+      const bisher = alt[platz]
+      const asset = bisher?.asset ?? vorauswahlCharakter
+      if (!asset) return alt
+      return alt.map((w, i) => (i === platz ? { asset, bild } : w))
+    })
+    // `vorauswahlCharakter` bewusst nicht in den Abhaengigkeiten: Er wechselt
+    // beim Oeffnen ohnehin nicht, und ihn aufzunehmen liesse den Effekt beim
+    // ersten Zuweisen des Fallback-Assets ein zweites Mal laufen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, vorbelegungSchluessel, belegtGerade])
 
   function pickerFertig(asset: PickbaresAsset, gewaehltesBild: RefImage | null) {
     if (!pickerOffen) return
