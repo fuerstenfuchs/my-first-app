@@ -22,6 +22,7 @@ import {
 } from '@/lib/referenzkette'
 import type { Character } from '@/hooks/use-characters'
 import { KoerperMerkmale } from '@/components/characters/koerper-merkmale'
+import { PersonMerkmale } from '@/components/characters/person-merkmale'
 import { KoerperPresetsLeiste } from '@/components/characters/koerper-presets-leiste'
 import { cn } from '@/lib/utils'
 import { Vorschaubild } from '@/components/vorschaubild'
@@ -61,7 +62,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
     phase, stand, standGeladen, titelbild, titelbildLiegtEigen, naechster,
     starte, kopfNehmen, kopfVerwerfen, abbrechen,
     koerperfotoUrl, koerperfotoLaedt, koerperfotoHochladen,
-    koerperAuswahl, setKoerperAuswahl, jobUnterwegsSchritt,
+    koerperAuswahl, setKoerperAuswahl, jobUnterwegsSchritt, personMerkmale,
     koerperbildIstAuswahl, kandidaten, kandidatenLaden, kandidatenHolen,
     koerperbildWaehlen,
   } = useReferenzkette(character, offen, onAenderung)
@@ -343,6 +344,15 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
               </p>
             </div>
 
+            <PersonMerkmale
+              geschlecht={personMerkmale.geschlecht}
+              hautzeichen={personMerkmale.hautzeichen}
+              onGeschlecht={personMerkmale.speichereGeschlecht}
+              onHautzeichen={personMerkmale.speichereHautzeichen}
+              gesperrt={personMerkmale.gesperrt}
+              fehler={personMerkmale.fehler}
+            />
+
             <KoerperPresetsLeiste
               onWaehlen={(bildUrl, merkmale) => {
                 koerperbildWaehlen(bildUrl)
@@ -350,7 +360,7 @@ export function ReferenzketteDialog({ offen, onClose, character, onAenderung }: 
               }}
             />
 
-            <KoerperMerkmale auswahl={koerperAuswahl} onAuswahl={setKoerperAuswahl} />
+            <KoerperMerkmale auswahl={koerperAuswahl} onAuswahl={setKoerperAuswahl} geschlecht={personMerkmale.geschlecht} />
           </div>
         )}
 

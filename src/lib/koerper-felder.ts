@@ -1,4 +1,6 @@
-import type { KoerperAuswahl } from './referenzkette'
+import type { KoerperAuswahl, MuskelStufe } from './referenzkette'
+
+export type MuskelSchluessel = Extract<keyof KoerperAuswahl, `muskel${string}`>
 
 /* Die Felder des Körperbau-Baukastens als DATEN — herausgelöst aus dem
  * Formular-Bauteil (PROJ-92), damit die Seite „Personenbilder" dieselbe Liste
@@ -46,7 +48,7 @@ export type MerkmalFeld = {
  * können." Ein Körper kann schlank UND kräftige Waden haben, oder umgekehrt —
  * ein einziges „Körperbau"-Feld kann diese Kombination nicht abbilden.
  */
-export const MERKMAL_FELDER: MerkmalFeld[] = [
+const KOERPER_FELDER: MerkmalFeld[] = [
   {
     schluessel: 'bau',
     label: 'Körperbau',
@@ -181,3 +183,54 @@ export const MERKMAL_FELDER: MerkmalFeld[] = [
     ],
   },
 ]
+
+const MUSKEL_OPTIONEN: { wert: MuskelStufe; text: string }[] = [
+  { wert: 'nicht_sichtbar', text: 'Nicht sichtbar' },
+  { wert: 'kaum',           text: 'Kaum sichtbar' },
+  { wert: 'leicht',         text: 'Leicht' },
+  { wert: 'deutlich',       text: 'Deutlich' },
+  { wert: 'stark',          text: 'Stark definiert' },
+  { wert: 'extrem',         text: 'Extrem' },
+]
+
+function muskelFeld(schluessel: MuskelSchluessel, label: string): MerkmalFeld {
+  return { schluessel, label, optionen: MUSKEL_OPTIONEN } as MerkmalFeld
+}
+
+/** Muskelgruppen — Schlüssel und Anzeigename. `muskel` ist der Gesamtwert. */
+export const MUSKEL_REGIONEN: [MuskelSchluessel, string][] = [
+  ['muskel',               'Muskeln gesamt'],
+  ['muskel_schultern',     'Schultermuskeln'],
+  ['muskel_brust',         'Brustmuskeln'],
+  ['muskel_ruecken',       'Rückenmuskeln'],
+  ['muskel_arme',          'Armmuskeln'],
+  ['muskel_bauch',         'Bauchmuskeln'],
+  ['muskel_gesaess',       'Gesäßmuskeln'],
+  ['muskel_oberschenkel',  'Oberschenkelmuskeln'],
+  ['muskel_waden',         'Wadenmuskeln'],
+]
+
+export const MERKMAL_FELDER: MerkmalFeld[] = [
+  ...KOERPER_FELDER,
+  ...MUSKEL_REGIONEN.map(([schluessel, label]) => muskelFeld(schluessel, label)),
+]
+
+/** Was bei Männern anders heißt (gleiche Stufen, anderer Wortlaut) — siehe `MERKMAL_TEXT_MANN`. */
+export const MANN_FELDER: Partial<Record<'bauch' | 'oberweite', { label: string; texte: Record<string, string> }>> = {
+  bauch: {
+    label: 'Bauch',
+    texte: { sehr_flach: 'Sehr flach / straff', flach: 'Flach', durchschnittlich: 'Durchschnittlich', weich: 'Kleiner Bauch', sehr_weich: 'Bierbauch' },
+  },
+  oberweite: {
+    label: 'Brustkorb',
+    texte: { sehr_klein: 'Sehr schmal', klein: 'Schmal', mittel: 'Durchschnittlich', gross: 'Breit', sehr_gross: 'Sehr breit / massiv' },
+  },
+}
+
+/** Das Feld in der Wortwahl zum Geschlecht — ohne Angabe unverändert. */
+export function feldFuer(f: MerkmalFeld, geschlecht?: 'mann' | 'frau' | null): MerkmalFeld {
+  const m = geschlecht === 'mann' && (f.schluessel === 'bauch' || f.schluessel === 'oberweite')
+    ? MANN_FELDER[f.schluessel] : undefined
+  if (!m) return f
+  return { ...f, label: m.label, optionen: f.optionen.map(o => ({ ...o, text: m.texte[o.wert as string] ?? o.text })) } as MerkmalFeld
+}

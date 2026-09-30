@@ -19,7 +19,9 @@ import {
   outfitQuelle, personQuellen, sortiereFormate, type FormatId, type PersonenbildEingabe,
 } from '@/lib/personenbild'
 import { ablageMitFach, type VariantenClient } from '@/lib/ablage-variante'
-import { KARTE_BILD, gesetzteRegionen, type Schluessel } from '@/lib/koerper-regionen'
+import { KARTE_BILD, gesetzteRegionen, modusVon, reiheFuer, type KartenModus, type Schluessel } from '@/lib/koerper-regionen'
+import { PersonMerkmale } from '@/components/characters/person-merkmale'
+import { usePersonMerkmale } from '@/hooks/use-person-merkmale'
 import { KOERPER_PRESETS } from '@/lib/koerper-presets'
 import { bereinigeMerkmale, unterscheidetSich, type NutzerPreset } from '@/lib/koerper-nutzer-presets'
 import { Koerperkarte, Regionsliste, Stufenfeld, koerperBildName } from '@/components/personenbilder/koerperkarte'
@@ -69,6 +71,7 @@ export default function PersonenbilderPage() {
   const [koerper, setKoerper] = useState<KoerperAuswahl>({})
   const [koerperBild, setKoerperBild] = useState<string | null>(null)
   const [aktiveRegion, setAktiveRegion] = useState<Schluessel>('becken')
+  const [kartenModus, setKartenModus] = useState<KartenModus>('form')
   const [presetId, setPresetId] = useState<string | null>(null)
   const [formate, setFormate] = useState<FormatId[]>(['sheet'])
   const [modell, setModell] = useState<ModellId>(ERZEUGEN_MODELLE[0].id as ModellId)
@@ -79,6 +82,7 @@ export default function PersonenbilderPage() {
   const sperre = useRef(false)
 
   const person = characters.find(c => c.id === personId) ?? null
+  const personMerkmale = usePersonMerkmale(personId, person?.metadata)
   const outfit = outfits.find(o => o.id === outfitId) ?? null
 
   // ── Bilder der Auswahl nachladen ────────────────────────────────────────
@@ -128,6 +132,7 @@ export default function PersonenbilderPage() {
     personId: person.id, personName: person.name, personQuellen: quellen,
     outfitId: outfit.id, outfitName: outfit.name, outfitBild,
     koerperBild, koerperAuswahl: koerper, formate, modell, durchlaufId: 'vorschau',
+    geschlecht: personMerkmale.geschlecht, hautzeichen: personMerkmale.hautzeichen,
   } : null
   const fehlt = [
     ...(eingabe
@@ -139,7 +144,7 @@ export default function PersonenbilderPage() {
   ]
   const gewaehlteFormate = sortiereFormate(formate)
   const vorschauPrompt = eingabe && fehlt.length === 0 ? baueAuftraege(eingabe)[0]?.prompt ?? '' : ''
-  const ladenNoch = personBilderLaden || outfitBilderLaden
+  const ladenNoch = personBilderLaden || outfitBilderLaden || (!!person && (personMerkmale.laedt || personMerkmale.fehler))
 
   // ── Handlungen ──────────────────────────────────────────────────────────
   function setzeWert(k: Schluessel, wert: string | null) {
@@ -248,7 +253,9 @@ export default function PersonenbilderPage() {
     [jobs, laeufe],
   )
 
-  const regionen = gesetzteRegionen(koerper)
+  const regionen = gesetzteRegionen(koerper, personMerkmale.geschlecht)
+  const formRegionen = regionen.filter(r => modusVon(r.schluessel) === 'form')
+  const muskelRegionen = regionen.filter(r => modusVon(r.schluessel) === 'muskeln')
   const quellenText =
     quellen.length === 0 ? null
     : quellen[0].art === 'sheet' ? 'Referenzsheet'
@@ -438,6 +445,19 @@ export default function PersonenbilderPage() {
             {/* ══ Reiter: Körper ══ */}
             {reiter === 'koe' && (
               <div className="pb-koerper">
+                <div className="pb-links">
+                {person ? (
+                  <div className="sb-mod pb-karte mb-4">
+                    <div className="pb-titelzeile"><h2>Merkmale von {person.name}</h2></div>
+                    <PersonMerkmale
+                      geschlecht={personMerkmale.geschlecht} hautzeichen={personMerkmale.hautzeichen}
+                      onGeschlecht={personMerkmale.speichereGeschlecht} onHautzeichen={personMerkmale.speichereHautzeichen}
+                      gesperrt={personMerkmale.gesperrt} fehler={personMerkmale.fehler}
+                    />
+                  </div>
+                ) : (
+                  <p className="pb-hinweis mb-4">Wähle im Reiter „Person“ eine Person, dann kannst du hier Geschlecht, Tattoos und Narben eintragen.</p>
+                )}
                 <div className="pb-karte-drei">
                   <div className="sb-mod pb-karte">
                     <KoerperPresetsSpalte
@@ -472,19 +492,31 @@ export default function PersonenbilderPage() {
                   <div className="sb-mod pb-karte flex flex-col gap-4">
                     <div className="pb-titelzeile" style={{ marginBottom: 0 }}>
                       <h2>Körperkarte</h2>
-                      <span className="pb-zahl ml-auto">{regionen.length} von 12 gesetzt</span>
+                      <span className="pb-zahl ml-auto">
+                        {kartenModus === 'form' ? `${formRegionen.length} von 12` : `${muskelRegionen.length} von 9`} gesetzt
+                      </span>
+                    </div>
+                    <div className="pb-stufen" role="group" aria-label="Karte wählen">
+                      {([['form', 'Körperform'], ['muskeln', 'Muskeln']] as [KartenModus, string][]).map(([m, l]) => (
+                        <button key={m} type="button" className="sb-taste"
+                          data-an={kartenModus === m ? 'ja' : undefined} aria-pressed={kartenModus === m}
+                          onClick={() => { setKartenModus(m); if (modusVon(aktiveRegion) !== m) setAktiveRegion(reiheFuer(m)[0]) }}>
+                          {l}
+                        </button>
+                      ))}
                     </div>
                     <div className="sb-dbl" aria-hidden="true" />
-                    <Koerperkarte auswahl={koerper} aktiv={aktiveRegion} onAktiv={setAktiveRegion} />
-                    <Regionsliste auswahl={koerper} aktiv={aktiveRegion} onAktiv={setAktiveRegion} />
+                    <Koerperkarte auswahl={koerper} aktiv={aktiveRegion} onAktiv={setAktiveRegion} modus={kartenModus} geschlecht={personMerkmale.geschlecht} />
+                    <Regionsliste auswahl={koerper} aktiv={aktiveRegion} onAktiv={setAktiveRegion} modus={kartenModus} geschlecht={personMerkmale.geschlecht} />
                   </div>
 
                   <div className="sb-mod pb-karte">
                     <Stufenfeld
-                      region={aktiveRegion} auswahl={koerper} koerperBild={koerperBild}
+                      region={aktiveRegion} auswahl={koerper} koerperBild={koerperBild} geschlecht={personMerkmale.geschlecht}
                       onWert={setzeWert} onWertMitBild={setzeWertMitBild}
                     />
                   </div>
+                </div>
                 </div>
                 {auftragsspalte}
               </div>

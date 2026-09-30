@@ -63,7 +63,7 @@ vi.mock('@/lib/supabase', () => ({
   createClient: () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
     from: () => ({
-      select: () => ({ eq: () => ({ limit: async () => ({ data: [] }) }) }),
+      select: () => ({ eq: () => ({ limit: async () => ({ data: [] }), single: async () => ({ data: { metadata: {} } }) }) }),
       insert: (z: unknown) => ({ select: () => ({ single: async () => einfuegenFach(z) }) }),
     }),
   }),

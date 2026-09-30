@@ -19,6 +19,8 @@ import {
   type KettenSchritt, type KoerperAuswahl, type Bildgruppe,
 } from '@/lib/referenzkette'
 import { loadRefImages } from '@/lib/reference-images'
+import { usePersonMerkmale } from '@/hooks/use-person-merkmale'
+import { hautzeichenText } from '@/lib/person-merkmale'
 
 /** Derselbe Baustein-Eintrag, den auch `Übernehmen` für Charaktere benutzt —
  * dieselbe Eimer- und Größengrenze gilt für ein von Hand hochgeladenes
@@ -123,6 +125,10 @@ export function useReferenzkette(
    * Auswahl soll möglich sein, ohne die vorige irgendwo aufzuräumen.
    */
   const [koerperAuswahl, setKoerperAuswahl] = useState<KoerperAuswahl>({})
+  /* Geschlecht und Hautzeichen hängen an der PERSON und gehen in jeden Schritt (30.09.2026). */
+  const personMerkmale = usePersonMerkmale(character.id, character.metadata)
+  const zeichenBlock = hautzeichenText(personMerkmale.hautzeichen)
+  const geschlecht = personMerkmale.geschlecht
   /**
    * Welcher NICHT-Kopf-Schritt gerade „aufgegeben, aber nicht gestoppt" in der
    * Luft hängt — Critic-Befund R04 vom 03.09.2026.
@@ -289,7 +295,7 @@ export function useReferenzkette(
     }
 
     const job = await anlegen({
-      prompt:          kettenPrompt(schritt, BASIS_PROMPT[schritt], { hatKoerperfoto, koerperAuswahl: koerper.koerperAuswahl }),
+      prompt:          kettenPrompt(schritt, BASIS_PROMPT[schritt], { hatKoerperfoto, koerperAuswahl: koerper.koerperAuswahl, geschlecht, hautzeichen: zeichenBlock }),
       model:           'gpt-image-2.5-sunburst',
       size:            GROESSE_VORGABE,
       aspect_ratio:    null,
@@ -310,7 +316,7 @@ export function useReferenzkette(
 
     setPhase({ art: 'wartet', schritt, seit: Date.now() })
     return warteAufJob(job.id)
-  }, [anlegen, character.name, titelbild, warteAufJob])
+  }, [anlegen, character.name, titelbild, warteAufJob, geschlecht, zeichenBlock])
 
   /**
    * Eine Variante über ihren NAMEN — die vorhandene, sonst eine neue.
@@ -649,6 +655,7 @@ export function useReferenzkette(
     koerperfotoHochladen,
     koerperAuswahl,
     setKoerperAuswahl,
+    personMerkmale,
     /** Siehe Kommentar an der Deklaration — steuert nur, ob der Dialog die
      * Körper-Vorgaben noch als änderbar zeigen darf. */
     jobUnterwegsSchritt,

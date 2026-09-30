@@ -161,4 +161,6 @@
 
 | PROJ-92 | Personenbilder: Person + Körper + Outfit → Referenzbilder (eigene Seite) | In Review | [PROJ-92](PROJ-92-personenbilder.md) | 2026-09-29 |
 
-## Next Available ID: PROJ-93
+| PROJ-93 | Hautzeichen (Tattoos), Muskeldefinition, Männer-Wortlaut | In Review | [PROJ-93](PROJ-93-hautzeichen-muskeln.md) | 2026-09-30 |
+
+## Next Available ID: PROJ-94

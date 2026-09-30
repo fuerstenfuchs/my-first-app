@@ -3,9 +3,11 @@
 import { Vorschaubild } from '@/components/vorschaubild'
 import type { KoerperAuswahl } from '@/lib/referenzkette'
 import {
-  KARTE_BILD, KARTEN_REIHE, MASSLINIEN, extremeVon, feld, kartenNummer, punktLage, stufenText,
-  type Schluessel,
+  KARTE_BILD, MASSLINIEN, extremeVon, feld, kartenNummer, punktLage, reiheFuer, stufenText,
+  type KartenModus, type Schluessel,
 } from '@/lib/koerper-regionen'
+import { feldFuer } from '@/lib/koerper-felder'
+import type { Geschlecht } from '@/lib/person-merkmale'
 import { KOERPER_PRESETS } from '@/lib/koerper-presets'
 
 /**
@@ -19,8 +21,10 @@ import { KOERPER_PRESETS } from '@/lib/koerper-presets'
  */
 
 export function Koerperkarte({
-  auswahl, aktiv, onAktiv,
+  auswahl, aktiv, onAktiv, modus = 'form', geschlecht = null,
 }: {
+  modus?: KartenModus
+  geschlecht?: Geschlecht | null
   auswahl: KoerperAuswahl
   aktiv: Schluessel
   onAktiv: (k: Schluessel) => void
@@ -29,13 +33,13 @@ export function Koerperkarte({
     <div className="pb-buehne">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={KARTE_BILD} alt="Grundfigur aus Blender, von vorn" />
-      {MASSLINIEN.map((l, i) => (
+      {modus === 'form' && MASSLINIEN.map((l, i) => (
         <span
           key={i} className="pb-masslinie" aria-hidden="true"
           style={{ left: `${l.x * 100}%`, top: `${l.von * 100}%`, height: `${(l.bis - l.von) * 100}%` }}
         />
       ))}
-      {KARTEN_REIHE.map(k => {
+      {reiheFuer(modus).map(k => {
         const p = punktLage(k)
         const gesetzt = auswahl[k] != null
         return (
@@ -44,7 +48,7 @@ export function Koerperkarte({
             style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
             data-an={aktiv === k ? 'ja' : undefined}
             data-gesetzt={gesetzt ? 'ja' : undefined}
-            aria-label={`${feld(k).label}${gesetzt ? `: ${stufenText(k, auswahl[k])}` : ''}`}
+            aria-label={`${feldFuer(feld(k), geschlecht).label}${gesetzt ? `: ${stufenTextFuer(k, auswahl[k], geschlecht)}` : ''}`}
             aria-pressed={aktiv === k}
             onClick={() => onAktiv(k)}
           >
@@ -58,23 +62,25 @@ export function Koerperkarte({
 
 /** Die Liste der zwölf Regionen neben der Karte — dieselbe Wahl, ohne Zielen. */
 export function Regionsliste({
-  auswahl, aktiv, onAktiv,
+  auswahl, aktiv, onAktiv, modus = 'form', geschlecht = null,
 }: {
+  modus?: KartenModus
+  geschlecht?: Geschlecht | null
   auswahl: KoerperAuswahl
   aktiv: Schluessel
   onAktiv: (k: Schluessel) => void
 }) {
   return (
     <div className="pb-liste">
-      {KARTEN_REIHE.map(k => (
+      {reiheFuer(modus).map(k => (
         <button
           key={k} type="button" className="sb-taste"
           data-an={aktiv === k ? 'ja' : undefined}
           aria-pressed={aktiv === k}
           onClick={() => onAktiv(k)}
         >
-          <span>{kartenNummer(k)} · {feld(k).label}</span>
-          <small>{stufenText(k, auswahl[k]) ?? 'aus Bild'}</small>
+          <span>{kartenNummer(k)} · {feldFuer(feld(k), geschlecht).label}</span>
+          <small>{stufenTextFuer(k, auswahl[k], geschlecht) ?? 'aus Bild'}</small>
         </button>
       ))}
     </div>
@@ -89,16 +95,19 @@ export function Regionsliste({
  * Referenzkette). Die Stufenknöpfe darunter setzen nur den Text.
  */
 export function Stufenfeld({
-  region, auswahl, koerperBild, onWert, onWertMitBild,
+  region, auswahl, koerperBild, onWert, onWertMitBild, geschlecht = null,
 }: {
+  geschlecht?: Geschlecht | null
   region: Schluessel
   auswahl: KoerperAuswahl
   koerperBild: string | null
   onWert: (k: Schluessel, wert: string | null) => void
   onWertMitBild: (k: Schluessel, wert: string, bildUrl: string) => void
 }) {
-  const f = feld(region)
+  const f = feldFuer(feld(region), geschlecht)
   const gewaehlt = auswahl[region] ?? null
+  // Die Oberweite-Bilder zeigen eine Büste; bei einem Mann würden sie sie mitliefern.
+  const extremen = geschlecht === 'mann' && region === 'oberweite' ? [] : extremeVon(region)
   return (
     <div>
       <div className="pb-titelzeile">
@@ -108,8 +117,8 @@ export function Stufenfeld({
       </div>
       <div className="sb-dbl mb-4" aria-hidden="true" />
 
-      <div className="pb-paar mb-4">
-        {extremeVon(region).map(e => (
+      {extremen.length > 0 && <div className="pb-paar mb-4">
+        {extremen.map(e => (
           <button
             key={e.wert} type="button" className="pb-kachel"
             data-an={gewaehlt === e.wert && koerperBild === e.bildUrl ? 'ja' : undefined}
@@ -122,7 +131,7 @@ export function Stufenfeld({
             <span className="pb-name">{e.text}</span>
           </button>
         ))}
-      </div>
+      </div>}
 
       <div className="pb-stufen">
         {f.optionen.map(o => (
@@ -146,6 +155,12 @@ export function Stufenfeld({
       </div>
     </div>
   )
+}
+
+/** Anzeigename einer Stufe in der Wortwahl zum Geschlecht. */
+function stufenTextFuer(k: Schluessel, wert: string | undefined, geschlecht: Geschlecht | null): string | null {
+  if (!wert) return null
+  return feldFuer(feld(k), geschlecht).optionen.find(o => o.wert === wert)?.text ?? null
 }
 
 /** Wie das gewählte Körperbild heißt — sein Preset, sonst „eigenes Bild". */

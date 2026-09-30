@@ -256,14 +256,14 @@ describe('Körpermerkmale — Marks Liste vom 03.09.2026', () => {
     expect(extrem).toContain('notably soft, full, rounded stomach')
     expect(extrem).toContain('very straight, undefined waist')
     expect(extrem).toContain('very broad, wide-set shoulders')
-    expect(extrem).toContain('very thick, powerfully muscular arms')
+    expect(extrem).toContain('very thick, powerfully built arms')
 
     const gegenteil = koerperMerkmaleText({
       gesaess: 'sehr_flach', bauch: 'sehr_flach', taille: 'sehr_schmal',
       schultern: 'sehr_schmal', arme: 'sehr_duenn',
     })!
     expect(gegenteil).toContain('very flat, minimal buttocks volume')
-    expect(gegenteil).toContain('very flat, tightly toned stomach')
+    expect(gegenteil).toContain('very flat stomach, minimal body fat')
     expect(gegenteil).toContain('very narrow, sharply defined waist')
     expect(gegenteil).toContain('very narrow shoulders')
     expect(gegenteil).toContain('very thin, slender arms')

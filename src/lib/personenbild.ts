@@ -24,6 +24,7 @@ import {
   type ReferenzRolle,
 } from './image-generation'
 import { koerperMerkmaleText, type KoerperAuswahl } from './referenzkette'
+import { hautzeichenText, type Geschlecht, type Hautzeichen } from './person-merkmale'
 import { nachNutzen, rangVon } from './referenz-auswahl'
 import type { RefImage } from './reference-images'
 import type { AspectRatioKey } from './scene-builder-options'
@@ -160,7 +161,7 @@ function vorrangText(m: KoerperModus): string {
         ? 'the body proportions come from the body-shape image. '
         : 'the body proportions come from the person reference, except that the ADDITIONAL BODY CHARACTERISTICS lines override it (the body-shape image, if present, only illustrates the regions they name). '
   return (
-    'Priority: the face, hair and skin tone come from the person reference; the garments come from the outfit reference; ' +
+    'Priority: the face, hair and skin tone come from the person reference (the SKIN MARKS lines below, if any, are added on top of it); the garments come from the outfit reference; ' +
     koerper +
     'Everything else — pose, framing, lighting, background — comes from the text.'
   )
@@ -275,6 +276,10 @@ export type PersonenbildEingabe = {
   /** Blender-Körperbild als Referenz — oder null. */
   koerperBild: string | null
   koerperAuswahl: KoerperAuswahl
+  /** Wortwahl für Bauch und Brustkorb; null = allgemein. */
+  geschlecht?: Geschlecht | null
+  /** Tattoos, Narben usw. der Person — auch wenn das Originalfoto sie verdeckt zeigt. */
+  hautzeichen?: readonly Hautzeichen[]
   formate: readonly string[]
   modell: string
   /** Eine Kennung für den ganzen Durchlauf; gemeinsam für alle Formate. */
@@ -303,7 +308,8 @@ export function fehlendes(e: Pick<PersonenbildEingabe, 'personQuellen' | 'outfit
 }
 
 export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
-  const koerperZeilen = koerperMerkmaleText(e.koerperAuswahl)
+  const koerperZeilen = koerperMerkmaleText(e.koerperAuswahl, e.geschlecht)
+  const zeichenZeilen = hautzeichenText(e.hautzeichen ?? [])
   const modus = koerperModus(!!koerperZeilen, !!e.koerperBild)
 
   // Reihenfolge = Reihenfolge der Bilder: Person(en), Outfit, Körperfigur.
@@ -325,6 +331,7 @@ export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
   return sortiereFormate(e.formate).map(format => {
     const teile = [PERSONENBILD_PROMPT[format]]
     if (koerperZeilen) teile.push(koerperZeilen)
+    if (zeichenZeilen) teile.push(zeichenZeilen)
     const ratio = AUFTRAGS_FORMAT[format]
     const label = FORMATE.find(f => f.id === format)!.label
     return {
@@ -344,6 +351,8 @@ export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
         person_id: e.personId,
         outfit_id: e.outfitId,
         koerper: e.koerperAuswahl,
+        geschlecht: e.geschlecht ?? null,
+        hautzeichen: e.hautzeichen ?? [],
         koerper_bild: e.koerperBild,
       },
     }

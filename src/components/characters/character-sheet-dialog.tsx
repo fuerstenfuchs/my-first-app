@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Copy, Check, ChevronLeft, Sparkles, User, ImagePlus } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -15,6 +15,9 @@ import {
 } from '@/lib/referenzkette'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import { KoerperMerkmale } from '@/components/characters/koerper-merkmale'
+import { PersonMerkmale } from '@/components/characters/person-merkmale'
+import { usePersonMerkmale } from '@/hooks/use-person-merkmale'
+import { hautzeichenText } from '@/lib/person-merkmale'
 import { KoerperPresetsLeiste } from '@/components/characters/koerper-presets-leiste'
 import { Vorschaubild } from '@/components/vorschaubild'
 import type { RefImage } from '@/lib/reference-images'
@@ -324,6 +327,12 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
     Koerperbau. Bisher gab es sie nur im Ketten-Dialog.
   */
   const [koerperAuswahl, setKoerperAuswahl] = useState<KoerperAuswahl>({})
+  /* Geschlecht und Hautzeichen der Person (30.09.2026) — gehen in jedes Blatt mit. */
+  const personMerkmale = usePersonMerkmale(character.id, character.metadata)
+  // Der Ausdrücke-Schalter folgt der Angabe an der Person (kein zweiter, unverbundener Schalter).
+  useEffect(() => {
+    if (personMerkmale.geschlecht) setGender(personMerkmale.geschlecht === 'mann' ? 'man' : 'woman')
+  }, [personMerkmale.geschlecht])
   /* Das per Preset gewählte Körperbild (PROJ-91) — siehe `platzVorbelegung`
    *  an `PromptToImageDialog` weiter unten. `null` heisst: kein Preset
    *  gewählt, der Platz bleibt bei seiner normalen Vorbelegung aus den
@@ -366,10 +375,9 @@ export function CharacterSheetDialog({ open, onClose, character }: Props) {
 
   // Die Merkmale gehen in den ANGEZEIGTEN Prompt, nicht erst beim Abschicken:
   // Was Mark kopiert, muss dasselbe sein wie das, was erzeugt wird.
-  const merkmale = selected === 'koerper' ? koerperMerkmaleText(koerperAuswahl) : null
-  const prompt = merkmale ? `${basisPrompt}
-
-${merkmale}` : basisPrompt
+  const merkmale = selected === 'koerper' ? koerperMerkmaleText(koerperAuswahl, personMerkmale.geschlecht) : null
+  const zeichen = selected ? hautzeichenText(personMerkmale.hautzeichen) : null
+  const prompt = [basisPrompt, merkmale, zeichen].filter(Boolean).join('\n\n')
 
   /*
     STABIL HALTEN, SONST WIRD MARKS AUSWAHL UEBERSCHRIEBEN.
@@ -504,6 +512,17 @@ ${merkmale}` : basisPrompt
               </div>
             )}
 
+            {selected && (
+              <PersonMerkmale
+                geschlecht={personMerkmale.geschlecht}
+                hautzeichen={personMerkmale.hautzeichen}
+                onGeschlecht={g => { personMerkmale.speichereGeschlecht(g); if (g) setGender(g === 'mann' ? 'man' : 'woman') }}
+                onHautzeichen={personMerkmale.speichereHautzeichen}
+                gesperrt={personMerkmale.gesperrt}
+                fehler={personMerkmale.fehler}
+              />
+            )}
+
             {selected === 'koerper' && (
               <>
                 {/* PROJ-91: hier und nicht nur in der Referenzkette, weil die
@@ -518,6 +537,7 @@ ${merkmale}` : basisPrompt
                   }}
                 />
                 <KoerperMerkmale
+                  geschlecht={personMerkmale.geschlecht}
                   auswahl={koerperAuswahl}
                   onAuswahl={setKoerperAuswahl}
                   hinweis="Zusätzlich zu dem, was die Referenzbilder zeigen. Zeigt keins von beiden den Körperbau, ist das hier die einzige Quelle dafür."

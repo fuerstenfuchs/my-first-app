@@ -22,11 +22,14 @@ import type { KoerperAuswahl } from '@/lib/referenzkette'
  */
 
 export { KEINE_ANGABE, MERKMAL_FELDER } from '@/lib/koerper-felder'
-import { KEINE_ANGABE, MERKMAL_FELDER } from '@/lib/koerper-felder'
+import { KEINE_ANGABE, MERKMAL_FELDER, feldFuer } from '@/lib/koerper-felder'
+import type { Geschlecht } from '@/lib/person-merkmale'
 
 export function KoerperMerkmale({
-  auswahl, onAuswahl, hinweis,
+  auswahl, onAuswahl, hinweis, geschlecht = null,
 }: {
+  /** Ändert die Wortwahl bei Bauch und Oberweite/Brustkorb. */
+  geschlecht?: Geschlecht | null
   auswahl: KoerperAuswahl
   onAuswahl: (naechste: KoerperAuswahl) => void
   /** Ein Satz unter den Feldern. Ohne Angabe steht dort der Standardsatz. */
@@ -36,7 +39,7 @@ export function KoerperMerkmale({
     <div className="space-y-2">
       <Label className="text-xs">Körpermerkmale</Label>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {MERKMAL_FELDER.map(feld => (
+        {MERKMAL_FELDER.map(roh => feldFuer(roh, geschlecht)).map(feld => (
           <div key={feld.schluessel} className="space-y-1">
             <span className="text-[13px] text-muted-foreground">{feld.label}</span>
             <Select

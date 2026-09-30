@@ -361,7 +361,23 @@ export type KoerperAuswahl = {
   taille?: 'sehr_schmal' | 'schmal' | 'durchschnittlich' | 'gerade' | 'sehr_gerade'
   schultern?: 'sehr_schmal' | 'schmal' | 'durchschnittlich' | 'breit' | 'sehr_breit'
   arme?: 'sehr_duenn' | 'duenn' | 'durchschnittlich' | 'kraeftig' | 'sehr_kraeftig'
+  /* Muskeldefinition, Mark am 30.09.2026: „wie definiert die Muskulatur sein
+     sollte … in allen Körperteilen, wo sich die Muskulatur auch befindet, dass
+     man die auch in Stufen gar nicht sieht oder extrem sieht." Unabhängig von
+     der MASSE (`arme` = dick/dünn): ein Arm kann dünn und definiert sein, oder
+     dick und weich. `muskel` ist der Gesamtwert, die Regionen verfeinern ihn. */
+  muskel?: MuskelStufe
+  muskel_schultern?: MuskelStufe
+  muskel_brust?: MuskelStufe
+  muskel_ruecken?: MuskelStufe
+  muskel_arme?: MuskelStufe
+  muskel_bauch?: MuskelStufe
+  muskel_gesaess?: MuskelStufe
+  muskel_oberschenkel?: MuskelStufe
+  muskel_waden?: MuskelStufe
 }
+
+export type MuskelStufe = 'nicht_sichtbar' | 'kaum' | 'leicht' | 'deutlich' | 'stark' | 'extrem'
 
 /**
  * Alle Extremstufen ergänzt (Mark, 29.09.2026): „Wir brauchen hier extremere
@@ -371,14 +387,94 @@ export type KoerperAuswahl = {
  * gesetzte Merkmale gegeneinander ab; je konkreter jede einzelne Zeile, desto
  * weniger geht davon in der Mittelung verloren.
  */
-const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAuswahl[K]>, string> } = {
+/** Die sechs Stufen je Muskelgruppe: (nicht sichtbar, kaum, leicht, deutlich, stark, extrem). */
+function muskelStufen(...t: [string, string, string, string, string, string]): Record<MuskelStufe, string> {
+  return { nicht_sichtbar: t[0], kaum: t[1], leicht: t[2], deutlich: t[3], stark: t[4], extrem: t[5] }
+}
+
+const MUSKEL_TEXT = {
+  muskel: muskelStufen(
+    'OVERALL: no visible muscle definition, smooth soft contours (unless a muscle line below names a body area differently)',
+    'OVERALL: barely any visible muscle definition, smooth contours (unless a muscle line below names a body area differently)',
+    'OVERALL: lightly toned, subtle muscle definition (unless a muscle line below names a body area differently)',
+    'OVERALL: clearly visible muscle definition, athletic (unless a muscle line below names a body area differently)',
+    'OVERALL: strongly defined muscles with clear separation between muscle groups, low body fat (unless a muscle line below names a body area differently)',
+    'OVERALL: extreme, bodybuilder-level muscle definition: deep separations, visible striations and veins, very low body fat (unless a muscle line below names a body area differently)',
+  ),
+  muskel_schultern: muskelStufen(
+    'shoulders with no visible muscle definition, smooth rounded contour',
+    'shoulders with barely visible deltoid definition',
+    'lightly defined deltoids',
+    'clearly defined deltoids',
+    'strongly developed, sharply defined deltoids with visible separation',
+    'massive, extremely defined boulder-like deltoids with deep separation and visible striations',
+  ),
+  muskel_brust: muskelStufen(
+    'chest with no visible muscle definition',
+    'chest with barely visible pectoral definition',
+    'lightly defined pectorals',
+    'clearly defined pectoral muscles',
+    'strongly developed pectorals with a visible lower edge and central groove',
+    'massive, extremely defined pectorals with deep separation, striations and a sharply cut lower edge',
+  ),
+  muskel_ruecken: muskelStufen(
+    'back with no visible muscle definition, smooth surface',
+    'back with barely visible muscle definition',
+    'lightly defined back muscles',
+    'clearly defined back with visible shoulder-blade and lat contours',
+    'strongly developed back, pronounced V-taper, visible lats and trapezius',
+    'massive, extremely defined back with deep muscle separation, wide flared lats and visible striations',
+  ),
+  muskel_arme: muskelStufen(
+    'arms with no visible muscle definition, smooth contour',
+    'arms with barely visible muscle definition',
+    'lightly toned arms with subtle biceps and triceps definition',
+    'clearly defined biceps, triceps and forearm muscles',
+    'strongly defined arms with pronounced biceps peak, separated triceps and visible veins',
+    'extremely muscular arms with huge peaked biceps, deeply separated triceps, prominent veins and striations',
+  ),
+  muskel_bauch: muskelStufen(
+    'stomach with no visible muscle definition, smooth surface',
+    'stomach with barely any visible abdominal definition',
+    'lightly toned stomach, faint hint of abdominal muscles',
+    'clearly visible abdominal muscles, defined four-pack',
+    'strongly defined six-pack with clear separation and visible obliques',
+    'extremely defined, deeply separated six- or eight-pack with sharply carved obliques and serratus, visible striations',
+  ),
+  muskel_gesaess: muskelStufen(
+    'buttocks with no visible muscle definition, soft contour',
+    'buttocks with barely any visible muscle tone',
+    'lightly toned buttocks',
+    'clearly toned, firm, defined gluteal muscles',
+    'strongly developed, very firm gluteal muscles with visible separation',
+    'extremely muscular, sharply defined gluteal muscles with deep separation and striations',
+  ),
+  muskel_oberschenkel: muskelStufen(
+    'thighs with no visible muscle definition, smooth contour',
+    'thighs with barely visible muscle definition',
+    'lightly toned thighs',
+    'clearly defined quadriceps and hamstrings',
+    'strongly defined thighs with visible separation between quadriceps muscles',
+    'extremely muscular thighs with deep separation, a visible teardrop above the knee and striations',
+  ),
+  muskel_waden: muskelStufen(
+    'calves with no visible muscle definition, smooth contour',
+    'calves with barely visible muscle definition',
+    'lightly toned calves',
+    'clearly defined calf muscles',
+    'strongly developed, diamond-shaped calf muscles with visible separation',
+    'extremely muscular calves with deep separation, prominent veins and striations',
+  ),
+} satisfies Record<keyof KoerperAuswahl & `muskel${string}`, Record<MuskelStufe, string>>
+
+const MERKMAL_TEXT_KOERPER: { [K in Exclude<keyof KoerperAuswahl, keyof typeof MUSKEL_TEXT>]: Record<NonNullable<KoerperAuswahl[K]>, string> } = {
   bau: {
     sehr_schlank: 'extremely slim, visible bone structure at shoulders and collarbone, minimal body fat',
     schlank: 'slim build',
     durchschnittlich: 'average build',
     kraeftig: 'heavier, solid build',
     sehr_kraeftig: 'very heavy-set, large-framed build, substantial body mass',
-    sportlich: 'athletic, toned build',
+    sportlich: 'athletic build, lean frame',
   },
   groesse: {
     sehr_klein: 'very short stature, notably petite proportions',
@@ -416,14 +512,14 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
     sehr_duenn: 'very thin, slender thighs, minimal circumference',
     duenn: 'slender thighs',
     durchschnittlich: 'average thigh build',
-    kraeftig: 'muscular, solid thighs',
+    kraeftig: 'thick, solid thighs',
     sehr_kraeftig: 'very thick, powerfully built thighs, significantly larger in circumference than the calves below them',
   },
   wade: {
     sehr_duenn: 'very thin, slender calves, minimal circumference',
     duenn: 'slender calves',
     durchschnittlich: 'average calf build',
-    kraeftig: 'muscular, well-defined calves',
+    kraeftig: 'thick, solid calves',
     sehr_kraeftig: 'very thick, powerfully built calves',
   },
   gesaess: {
@@ -434,8 +530,8 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
     sehr_ausgepraegt: 'strikingly full and prominently rounded buttocks, significantly more volume than average',
   },
   bauch: {
-    sehr_flach: 'very flat, tightly toned stomach, visible muscle definition',
-    flach: 'flat, toned stomach',
+    sehr_flach: 'very flat stomach, minimal body fat',
+    flach: 'flat stomach',
     durchschnittlich: 'average stomach',
     weich: 'soft, rounded stomach',
     sehr_weich: 'notably soft, full, rounded stomach, clearly protruding',
@@ -458,8 +554,37 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
     sehr_duenn: 'very thin, slender arms, minimal circumference',
     duenn: 'slender arms',
     durchschnittlich: 'average arm build',
-    kraeftig: 'muscular, solid arms',
-    sehr_kraeftig: 'very thick, powerfully muscular arms',
+    kraeftig: 'thick, solid arms',
+    sehr_kraeftig: 'very thick, powerfully built arms',
+  },
+}
+
+const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAuswahl[K]>, string> } = {
+  ...MERKMAL_TEXT_KOERPER,
+  ...MUSKEL_TEXT,
+}
+
+/**
+ * Was bei einem MANN anders gesagt wird, Mark am 30.09.2026: „wie wir das für
+ * Männer machen, weil die haben ja einen anderen Bauch wie Frauen." Die Stufen
+ * bleiben dieselben (gleiche Schlüssel, gleiche Presets); nur der Wortlaut im
+ * Prompt passt zum männlichen Körper. Ohne Angabe gilt der allgemeine Text.
+ * `oberweite` heißt bei Männern Brustkorb, nicht Brust im weiblichen Sinn.
+ */
+const MERKMAL_TEXT_MANN: { bauch: Record<NonNullable<KoerperAuswahl['bauch']>, string>; oberweite: Record<NonNullable<KoerperAuswahl['oberweite']>, string> } = {
+  bauch: {
+    sehr_flach: 'very flat, tight male stomach, waist drawn in, low body fat',
+    flach: 'flat, lean male stomach',
+    durchschnittlich: 'average male stomach, neither lean nor heavy',
+    weich: 'soft male stomach with a modest belly that rounds forward over the belt line',
+    sehr_weich: 'large, round beer-belly, clearly protruding and hanging over the belt line',
+  },
+  oberweite: {
+    sehr_klein: 'narrow, flat male chest',
+    klein: 'slim male chest',
+    mittel: 'average male chest',
+    gross: 'broad, full male chest',
+    sehr_gross: 'very broad, barrel-shaped, massive chest',
   },
 }
 
@@ -470,12 +595,15 @@ const MERKMAL_TEXT: { [K in keyof KoerperAuswahl]: Record<NonNullable<KoerperAus
  * Mark nichts sagt, soll dem Modell überlassen bleiben (aus dem Referenzbild
  * oder frei) — nicht mit einer erfundenen Vorgabe belegt werden.
  */
-export function koerperMerkmaleText(auswahl: KoerperAuswahl): string | null {
+export function koerperMerkmaleText(auswahl: KoerperAuswahl, geschlecht?: 'mann' | 'frau' | null): string | null {
   const zeilen = (Object.keys(MERKMAL_TEXT) as (keyof KoerperAuswahl)[])
     .map(schluessel => {
       const wert = auswahl[schluessel]
       if (!wert) return null
-      return (MERKMAL_TEXT[schluessel] as Record<string, string>)[wert]
+      const mann = geschlecht === 'mann' && (schluessel === 'bauch' || schluessel === 'oberweite')
+        ? (MERKMAL_TEXT_MANN[schluessel] as Record<string, string>)[wert]
+        : undefined
+      return mann ?? (MERKMAL_TEXT[schluessel] as Record<string, string>)[wert]
     })
     // `Boolean` statt `z !== null`: Ein Wert, der es an `MERKMAL_TEXT` vorbei
     // in `auswahl` schafft (Tippfehler an der Aufrufstelle, veraltete Option),
@@ -506,13 +634,19 @@ export function koerperMerkmaleText(auswahl: KoerperAuswahl): string | null {
 export function kettenPrompt(
   schritt: KettenSchritt,
   basis: string,
-  optionen: KoerperOptionen & { koerperAuswahl?: KoerperAuswahl },
+  optionen: KoerperOptionen & {
+    koerperAuswahl?: KoerperAuswahl
+    geschlecht?: 'mann' | 'frau' | null
+    /** Fertiger Block aus `hautzeichenText` — gilt für JEDES Blatt, auch den Kopf. */
+    hautzeichen?: string | null
+  },
 ): string {
   const teile = [basis]
   if (schritt === 'koerper' && optionen.koerperAuswahl) {
-    const merkmale = koerperMerkmaleText(optionen.koerperAuswahl)
+    const merkmale = koerperMerkmaleText(optionen.koerperAuswahl, optionen.geschlecht)
     if (merkmale) teile.push(merkmale)
   }
+  if (optionen.hautzeichen) teile.push(optionen.hautzeichen)
   const ansage = referenzAnsage(schritt, optionen)
   if (ansage) teile.push(ansage)
   return teile.join('\n\n')

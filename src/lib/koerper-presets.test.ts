@@ -3,8 +3,8 @@ import { KOERPER_PRESETS } from './koerper-presets'
 import { istEigenerSpeicher } from './referenzkette'
 
 describe('KOERPER_PRESETS', () => {
-  it('hat 24 Presets, je zwei Extreme aus jeder der zwölf Regionen', () => {
-    expect(KOERPER_PRESETS.length).toBe(24)
+  it('hat 40 Presets: je zwei Extreme aus zwölf Regionen und acht Muskelgruppen', () => {
+    expect(KOERPER_PRESETS.length).toBe(40)
   })
 
   it('jeder Schlüssel und jede Bild-Adresse ist eindeutig', () => {

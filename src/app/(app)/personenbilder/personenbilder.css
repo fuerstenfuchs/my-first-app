@@ -182,6 +182,7 @@
 .pb-suche:focus-visible { outline: 3px solid var(--sb-ink); outline-offset: 2px; }
 
 /* ── Körperkarte ─────────────────────────────────────────────────────────── */
+.pb-links { min-width: 0; }
 .pb-karte-drei { display: grid; gap: 18px; align-items: start; grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.5fr) minmax(18rem, 1fr); }
 @media (max-width: 1500px) { .pb-karte-drei { grid-template-columns: 1fr; } }
 
