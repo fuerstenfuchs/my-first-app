@@ -20,6 +20,7 @@ import {
 } from '@/lib/personenbild'
 import { ablageMitFach, type VariantenClient } from '@/lib/ablage-variante'
 import { KARTE_BILD, gesetzteRegionen, modusVon, reiheFuer, type KartenModus, type Schluessel } from '@/lib/koerper-regionen'
+import { ImageLightbox } from '@/components/image-lightbox'
 import { PersonMerkmale } from '@/components/characters/person-merkmale'
 import { usePersonMerkmale } from '@/hooks/use-person-merkmale'
 import { KOERPER_PRESETS } from '@/lib/koerper-presets'
@@ -71,6 +72,7 @@ export default function PersonenbilderPage() {
   const [koerper, setKoerper] = useState<KoerperAuswahl>({})
   const [koerperBild, setKoerperBild] = useState<string | null>(null)
   const [aktiveRegion, setAktiveRegion] = useState<Schluessel>('becken')
+  const [grossIdx, setGrossIdx] = useState<number | null>(null)
   const [kartenModus, setKartenModus] = useState<KartenModus>('form')
   const [presetId, setPresetId] = useState<string | null>(null)
   const [formate, setFormate] = useState<FormatId[]>(['sheet'])
@@ -252,6 +254,10 @@ export default function PersonenbilderPage() {
     () => jobs.filter(j => laeufe.includes(String((j.scene_meta as Record<string, unknown> | null)?.personenbild_id ?? ''))),
     [jobs, laeufe],
   )
+  const fertige = useMemo(
+    () => ergebnisse.filter(j => j.status === 'done' && j.result_paths[0]),
+    [ergebnisse],
+  )
 
   const regionen = gesetzteRegionen(koerper, personMerkmale.geschlecht)
   const formRegionen = regionen.filter(r => modusVon(r.schluessel) === 'form')
@@ -337,7 +343,13 @@ export default function PersonenbilderPage() {
                 <div key={j.id} className="pb-ergebnis">
                   <div className="pb-bild">
                     {j.status === 'done' && j.result_paths[0]
-                      ? <Vorschaubild src={ergebnisUrl(j.result_paths[0])} alt={String(meta.name ?? '')} gross />
+                      ? (
+                        <button type="button" className="pb-gross"
+                          aria-label={`${String(meta.name ?? 'Bild')} vergrößern`}
+                          onClick={() => setGrossIdx(fertige.findIndex(f => f.id === j.id))}>
+                          <Vorschaubild src={ergebnisUrl(j.result_paths[0])} alt={String(meta.name ?? '')} gross />
+                        </button>
+                      )
                       : <span className="pb-hinweis">{STATUS_TEXT[j.status]}</span>}
                   </div>
                   <span className="pb-status" data-s={j.status}>{fmt?.label ?? 'Bild'} · {STATUS_TEXT[j.status]}</span>
@@ -347,6 +359,13 @@ export default function PersonenbilderPage() {
           </div>
         )}
         <p className="pb-hinweis mt-2.5">Ablage: Charakter · {VARIANTE_NAME}</p>
+        {grossIdx !== null && fertige[grossIdx] && (
+          <ImageLightbox
+            images={fertige.map(f => ({ url: ergebnisUrl(f.result_paths[0]), id: f.id }))}
+            initialIndex={grossIdx}
+            onClose={() => setGrossIdx(null)}
+          />
+        )}
       </div>
     </div>
   )

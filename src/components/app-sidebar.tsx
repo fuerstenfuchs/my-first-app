@@ -179,47 +179,29 @@ export function AppSidebar() {
         <SidebarGroup className="py-1">
           <SidebarGroupLabel>Bausteine</SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
-            {/*
-              Der Abstand ist groesser als er aussehen muesste (PROJ-60): Der
-              Sockel unter jeder Kachel ist 3px + 6px hoch und wird beim Zeigen
-              noch tiefer. Bei 6px Luft haette die untere Kachelreihe den Sockel
-              der oberen ueberdeckt — ausgerechnet dort, wo sechs Kacheln
-              beieinander stehen, waere die Tiefe verschwunden.
-            */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {BAUSTEINE.map((e, i) => {
-                // Bis PROJ-52 zaehlten hier auch die drei Archetyp-Seiten mit.
-                // Es gibt sie nicht mehr; je Bereich bleibt eine Adresse.
+            {/* Alle Bausteine untereinander, in derselben Größe wie Bildstudio & Co. (Mark, 30.09.2026). */}
+            <SidebarMenu>
+              {BAUSTEINE.map(e => {
                 const aktiv = pathname.startsWith(e.href)
-                // Bei ungerader Anzahl die letzte Kachel ueber beide Spalten —
-                // eine halb leere Reihe sieht aus wie ein Fehler.
-                const letzteAllein = i === BAUSTEINE.length - 1 && BAUSTEINE.length % 2 === 1
                 return (
-                  <a
-                    key={e.href}
-                    href={e.href}
-                    title={e.label}
-                    aria-current={aktiv ? 'page' : undefined}
-                    className={cn(
-                      'glas-kachel flex h-[52px] flex-col items-center justify-center gap-1 rounded-lg',
-                      letzteAllein && 'col-span-2 flex-row gap-2',
-                    )}
-                    data-aktiv={aktiv ? 'ja' : 'nein'}
-                    onPointerEnter={scheinBeginnen}
-                    onPointerMove={scheinFolgen}
-                  >
-                    <e.icon className={cn('shrink-0', letzteAllein ? 'h-5 w-5' : 'h-4 w-4',
-                      aktiv ? 'text-orange-300' : 'text-white/80')} />
-                    <span className={cn(
-                      'font-semibold text-white leading-tight truncate',
-                      letzteAllein ? 'text-xs' : 'text-[10px] text-center px-1 w-full',
-                    )}>
-                      {letzteAllein ? e.label : (e.kurz ?? e.label)}
-                    </span>
-                  </a>
+                  <SidebarMenuItem key={e.href} className="py-1.5">
+                    <a
+                      href={e.href}
+                      aria-current={aktiv ? 'page' : undefined}
+                      className="glas-kachel flex w-full items-center rounded-xl"
+                      data-aktiv={aktiv ? 'ja' : 'nein'}
+                      onPointerEnter={scheinBeginnen}
+                      onPointerMove={scheinFolgen}
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center">
+                        <e.icon className={cn('h-6 w-6', aktiv ? 'text-orange-300' : 'text-white/80')} />
+                      </div>
+                      <span className="px-3 text-base font-semibold text-white">{e.label}</span>
+                    </a>
+                  </SidebarMenuItem>
                 )
               })}
-            </div>
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
