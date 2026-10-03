@@ -1,6 +1,6 @@
 'use client'
 
-import { istLokal, lokaleGroesse } from '@/lib/image-generation'
+import { istLokal, lokaleGroesse, type LokalStufe } from '@/lib/image-generation'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
@@ -56,6 +56,8 @@ export interface ImageJobInput {
    * bleibt es null — die Datenbank lässt es dort auch nicht zu.
    */
   ziel_klasse?:    '1K' | '2K' | '4K' | null
+  /** Nur für `lokal:`-Modelle: Auflösungsstufe. Ohne Angabe gilt Standard (2 MP). Landet als echte Pixelgröße in `size`. */
+  lokal_stufe?:    LokalStufe
 }
 
 const TABLE  = 'image_jobs'
@@ -127,7 +129,7 @@ export function useImageJobs(aktiv = true) {
         user_id:        user.id,
         prompt:         input.prompt,
         model:          input.model,
-        size:           istLokal(input.model) ? lokaleGroesse(input.aspect_ratio, input.size) : input.size,
+        size:           istLokal(input.model) ? lokaleGroesse(input.aspect_ratio, input.size, input.lokal_stufe, input.model) : input.size,
         aspect_ratio:   input.aspect_ratio ?? null,
         variants:       input.variants,
         reference_urls:  input.reference_urls ?? [],

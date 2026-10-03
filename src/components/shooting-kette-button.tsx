@@ -16,7 +16,7 @@ import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
   groesseFuerFormat, promptFuerAuftrag, passtZuReferenzen, ersatzModell, MODELLE,
   ROLLEN_ANWEISUNG,
-  type ModellId, type KlassenId, type Referenz, type ReferenzRolle,
+  type ModellId, type LokalStufe, type KlassenId, type Referenz, type ReferenzRolle,
 } from '@/lib/image-generation'
 import { baueShooting, kettenAnsage, KETTE_VORGABE, type KettenOptionen } from '@/lib/shooting-kette'
 import {
@@ -45,7 +45,7 @@ export function ShootingKetteButton({
   // Das Modell kommt vom Auftragsknopf daneben (Scene Builder); die Location-
   // Ansicht gibt keins mit und bleibt bei der Vorgabe. Eine zweite Auswahl
   // waere nur eine zweite Stelle, an der sie auseinanderlaufen.
-  modell = 'gpt-image-2.5-sunburst', zielKlasse = null, szenenName = null,
+  modell = 'gpt-image-2.5-sunburst', lokalStufe, zielKlasse = null, szenenName = null,
 }: {
   /** Die Szene — Vorlage für jeden Schritt. Braucht Charakter und Location. */
   scene: Scene
@@ -53,6 +53,7 @@ export function ShootingKetteButton({
   aspectRatio: AspectRatioKey | null
   sceneMeta: Record<string, unknown>
   modell?: ModellId
+  lokalStufe?: LokalStufe
   zielKlasse?: KlassenId | null
   szenenName?: string | null
 }) {
@@ -220,6 +221,7 @@ export function ShootingKetteButton({
           // EIN Format für das ganze Shooting. Was sich ändert, ist der
           // Bildausschnitt, nicht das Seitenverhältnis.
           aspect_ratio: aspectRatio,
+          lokal_stufe: lokalStufe,
           variants: 1,
           ziel_klasse: zielKlasse,
           reference_urls: refs.map(r => gesichert.get(r.url) ?? r.url),

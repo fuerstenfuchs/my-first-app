@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Loader2, Send, Save, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
+import { LokalStufeSelect } from '@/components/lokal-stufe-select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,9 +13,9 @@ import {
 import { createClient } from '@/lib/supabase'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, modelleFuer, passtZuReferenzen, ersatzModell, istLokal, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
+  MODELLE, modelleFuer, passtZuReferenzen, ersatzModell, istLokal, hatStufen, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
   formatHinweis, formatAnsage, rechnetInKlassen,
-  type ModellId, type Durchlaeufe, type KlassenId,
+  LOKAL_STUFE_VORGABE, type LokalStufe, type ModellId, type Durchlaeufe, type KlassenId,
 } from '@/lib/image-generation'
 import { ReferenzAblage, type Referenzbild } from '@/components/referenz-ablage'
 import { ASPECT_RATIOS, type AspectRatioKey } from '@/lib/scene-builder-options'
@@ -47,6 +48,7 @@ export function FreieErzeugung(
 
   const [prompt, setPrompt] = useState('')
   const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
+  const [stufe, setStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
   const [format, setFormat] = useState<AspectRatioKey>('landscape_16_9')
   const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [anzahl, setAnzahl] = useState<Durchlaeufe>(1)
@@ -96,7 +98,7 @@ export function FreieErzeugung(
   const [zuletztGespeichert, setZuletztGespeichert] = useState<string | null>(null)
 
   const inKlassen = rechnetInKlassen(modell)
-  const hinweis = useMemo(() => formatHinweis(modell, format), [modell, format])
+  const hinweis = useMemo(() => formatHinweis(modell, format, stufe), [modell, format, stufe])
   const formatLabel = ASPECT_RATIOS.find(f => f.key === format)?.label ?? format
 
   /**
@@ -152,6 +154,7 @@ export function FreieErzeugung(
         // Der native Weg nimmt Seitenverhältnis und Klasse, siehe `ziel_klasse`.
         size: groesseFuerFormat(format).size,
         aspect_ratio: format,
+        lokal_stufe: stufe,
         variants: anzahl,
         ziel_klasse: inKlassen ? klasse : null,
         reference_urls: referenzen.map(r => r.url),
@@ -281,6 +284,10 @@ export function FreieErzeugung(
         </SelectContent>
       </Select>
 
+      {hatStufen(modell) && (
+        <LokalStufeSelect value={stufe} onChange={setStufe} className="lt-feld h-11 border-0 px-3.5 text-[15px]" contentClassName="lt-menue" />
+      )}
+
       <div className="grid grid-cols-2 gap-1.5">
         <Select value={format} onValueChange={v => setFormat(v as AspectRatioKey)}>
           <SelectTrigger className="lt-feld h-11 border-0 px-3.5 text-[15px]" aria-label="Format"><SelectValue /></SelectTrigger>
@@ -345,7 +352,7 @@ export function FreieErzeugung(
           gemessen — 1024x1024 angefragt, 1122x1402 zurückbekommen. Eine Zahl,
           die nicht eintrifft, ist schlechter als keine. */}
       <p className="text-[13px] leading-snug text-muted-foreground">
-        {mitReferenz ? (
+        {mitReferenz && !istLokal(modell) ? (
           <>
             Ergebnis: <span className="text-foreground">richtet sich nach dem Referenzbild</span>
             {' '}— das gewünschte Format geht als Ansage im Prompt mit.
@@ -357,7 +364,9 @@ export function FreieErzeugung(
             </span>
             {inKlassen
               ? ' — Gemini kennt alle sieben Verhältnisse.'
-              : ' — die GPT-Image-Reihe rechnet in drei festen Größen.'}
+              : istLokal(modell)
+                ? ' — wird genau so gerechnet.'
+                : ' — die GPT-Image-Reihe rechnet in drei festen Größen.'}
           </>
         )}
       </p>

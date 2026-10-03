@@ -27,7 +27,7 @@ import { useScenePresets } from '@/hooks/use-scene-presets'
 import { ScenePresetDialog } from '@/components/scene-builder/scene-preset-dialog'
 import { QueueButton } from '@/components/scene-builder/queue-button'
 import { ShootingKetteButton } from '@/components/shooting-kette-button'
-import type { Referenz, ReferenzRolle, ModellId } from '@/lib/image-generation'
+import type { Referenz, ReferenzRolle, ModellId, LokalStufe } from '@/lib/image-generation'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
 import { nachNutzen, standardReferenz } from '@/lib/referenz-auswahl'
 import type { ScenePresetConfig } from '@/lib/scene-preset-types'
@@ -721,6 +721,7 @@ export default function SceneBuilderPage() {
   const [presetsOpen, setPresetsOpen] = useState(false)
   // Das Bildmodell gilt für den Auftragsknopf UND das Shooting daneben.
   const [bildModell, setBildModell] = useState<ModellId>('gpt-image-2.5-sunburst')
+  const [lokalStufe, setLokalStufe] = useState<LokalStufe>('standard')
 
   const cameras  = useMemo(() => visualAssets.filter(a => a.asset_type === 'camera'),  [visualAssets])
   const expressions = useMemo(() => visualAssets.filter(a => a.asset_type === 'expression'), [visualAssets])
@@ -1651,6 +1652,8 @@ export default function SceneBuilderPage() {
               }
               modell={bildModell}
               onModellChange={setBildModell}
+              stufe={lokalStufe}
+              onStufeChange={setLokalStufe}
             />
 
             {/*
@@ -1667,6 +1670,7 @@ export default function SceneBuilderPage() {
                 sceneMeta={buildPresetConfigFromScene() as unknown as Record<string, unknown>}
                 szenenName={scene.location.name}
                 modell={bildModell}
+                lokalStufe={lokalStufe}
               />
             )}
 

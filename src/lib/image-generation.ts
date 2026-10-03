@@ -117,7 +117,7 @@ export const MODELLE = [
   */
   {
     id: 'lokal:qwen21', label: 'Lokal · Qwen-Image 2.1',
-    note: 'Neuer PC — beste Ähnlichkeit (Personen, Tiere, Dinge) · nur nichtkommerziell · ca. 1–3 Min',
+    note: 'Neuer PC — beste Ähnlichkeit (Personen, Tiere, Dinge) · nur nichtkommerziell',
     kannReferenzen: true,
   },
   {
@@ -168,25 +168,71 @@ export function passtZuReferenzen(modell: ModellId, anzahl: number): boolean {
   return grenzen ? anzahl >= grenzen[0] && anzahl <= grenzen[1] : true
 }
 
-/** Seitenverhältnis → Pixel eines lokalen Modells (rund 1 MP, durch 16 teilbar). Gleiche Tabelle im Arbeiter. */
-const LOKAL_MASSE: Record<string, readonly [number, number]> = {
-  '1:1': [1024, 1024], '16:9': [1344, 768], '9:16': [768, 1344], '4:3': [1152, 864],
-  '3:4': [864, 1152], '3:2': [1248, 832], '2:3': [832, 1248], '4:5': [896, 1120], '21:9': [1568, 672],
+/*
+  DIE DREI AUFLÖSUNGSSTUFEN der lokalen Modelle (Mark, 03.10.2026): „Zwei
+  Megapixel als neuen Standard. Wahlweise ein Megapixel. Und wahlweise die
+  höchste Auflösung, 4,7 Megapixel — überall, im Trésor und im Fuchsbau."
+
+  Gemessen an einem Ganzkörperbild (Qwen 2.1, 2 Referenzen): 1 MP 91 s · 2,2 MP
+  164 s · 4,7 MP 389 s. Mehr Pixel im Gesicht machen Iris und Pupille rund und
+  klar; die Zeit wächst ungefähr mit den Pixeln. Dieselbe Tabelle steht im
+  Fuchsbau (src/anbieter/lokal.ts) und die Grenzen im Arbeiter.
+*/
+export const LOKAL_STUFEN = [
+  { id: 'schnell',  label: '1 MP · schnell',                    mp: 1.0 },
+  { id: 'standard', label: '2 MP · Standard',                   mp: 2.2 },
+  { id: 'maximal',  label: 'bis 4,7 MP · maximal, 6–7 Min je Bild', mp: 4.7 },
+] as const
+export type LokalStufe = typeof LOKAL_STUFEN[number]['id']
+export const LOKAL_STUFE_VORGABE: LokalStufe = 'standard'
+
+/** Obergrenze je Seite im Arbeiter (zusammen höchstens 5 Megapixel). */
+const LOKAL_MAX_SEITE = 2816
+
+/** Seitenverhältnis ("16:9") und Stufe → Pixel, durch 16 teilbar. */
+export function lokaleMasse(verhaeltnis: string, stufe: LokalStufe): [number, number] {
+  const m = /^(\d{1,2}):(\d{1,2})$/.exec(verhaeltnis)
+  const r = m && Number(m[1]) > 0 && Number(m[2]) > 0 ? Number(m[1]) / Number(m[2]) : 2 / 3
+  const mp = LOKAL_STUFEN.find(s => s.id === stufe)?.mp ?? 2.2
+  let h = Math.sqrt((mp * 1e6) / r)
+  let w = h * r
+  const gross = Math.max(w, h)
+  if (gross > LOKAL_MAX_SEITE) { w *= LOKAL_MAX_SEITE / gross; h *= LOKAL_MAX_SEITE / gross }
+  const auf16 = (x: number) => Math.max(512, Math.round(x / 16) * 16)
+  return [auf16(w), auf16(h)]
 }
-/** Die gpt-Größen, auf die lokal gerechnet wird, wenn kein Format gewählt ist. */
-const LOKAL_NACH_GPT: Record<string, string> = {
-  '1024x1024': '1024x1024', '1536x1024': '1248x832', '1024x1536': '832x1248',
-}
+
+/** Wenn kein Format gewählt ist, gilt das Verhältnis der gpt-Größe des Auftrags. */
+const GPT_VERHAELTNIS: Record<string, string> = { '1024x1024': '1:1', '1536x1024': '3:2', '1024x1536': '2:3' }
 
 /**
  * Die Größe, die ein lokales Modell WIRKLICH rechnet — für die Anzeige und den
- * Auftrag. Die gpt-Größe daneben zu stehen zu lassen, wäre falsch: Dort steht
- * 1536x1024, gerechnet werden 1344x768 (Mark, 03.10.2026).
+ * Auftrag. Die gpt-Größe daneben stehen zu lassen, wäre falsch: Dort steht
+ * 1536x1024, gerechnet werden z. B. 1824x1216 (Stufe Standard).
+ *
+ * SDXL + InstantID bleibt immer bei einem Megapixel: darüber wiederholt SDXL
+ * Bildteile.
  */
-export function lokaleGroesse(format: string | null | undefined, gptGroesse: string): string {
+/** SDXL rechnet in den Maßen, mit denen es trainiert wurde (1024er-Raster), nicht in den Stufen. */
+const SDXL_MASSE: Record<string, string> = {
+  '1:1': '1024x1024', '16:9': '1344x768', '9:16': '768x1344', '4:3': '1152x864', '3:4': '864x1152',
+  '3:2': '1216x832', '2:3': '832x1216', '4:5': '896x1088', '21:9': '1536x640',
+}
+
+/** Haben die Stufen bei diesem Modell eine Wirkung? SDXL bleibt immer bei einem Megapixel. */
+export function hatStufen(modell: string): boolean {
+  return istLokal(modell) && modell !== 'lokal:sdxl_instantid'
+}
+
+export function lokaleGroesse(
+  format: string | null | undefined, gptGroesse: string,
+  stufe: LokalStufe = LOKAL_STUFE_VORGABE, modell?: string,
+): string {
   const m = /(\d+)_(\d+)$/.exec(format ?? '')
-  const mass = m ? LOKAL_MASSE[`${m[1]}:${m[2]}`] : undefined
-  return mass ? `${mass[0]}x${mass[1]}` : (LOKAL_NACH_GPT[gptGroesse] ?? gptGroesse)
+  const verhaeltnis = m ? `${m[1]}:${m[2]}` : (GPT_VERHAELTNIS[gptGroesse] ?? '1:1')
+  if (modell === 'lokal:sdxl_instantid') return SDXL_MASSE[verhaeltnis] ?? '1024x1024'
+  const [w, h] = lokaleMasse(verhaeltnis, stufe)
+  return `${w}x${h}`
 }
 
 /**
@@ -251,8 +297,10 @@ export type KlassenId = typeof KLASSEN[number]['id']
  * Formatangabe, die 0,8 Prozent verschweigt, ist genau die Sorte Zusage, an
  * der man sich später stößt.
  */
-export function formatHinweis(modell: ModellId, format: AspectRatioKey | null): string {
-  if (istLokal(modell)) return 'wie gewählt, rund 1 Megapixel'
+export function formatHinweis(
+  modell: ModellId, format: AspectRatioKey | null, stufe: LokalStufe = LOKAL_STUFE_VORGABE,
+): string {
+  if (istLokal(modell)) return lokaleGroesse(format, groesseFuerFormat(format).size, stufe, modell).replace('x', '×')
   if (rechnetInKlassen(modell)) return 'auf ~1 % genau'
   const z = groesseFuerFormat(format)
   return z.hinweis ?? z.size

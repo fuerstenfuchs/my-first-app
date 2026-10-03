@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, lokaleGroesse, ersatzModell,
+  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, lokaleGroesse, lokaleMasse, ersatzModell,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE, type ReferenzRolle,
 } from './image-generation'
@@ -277,11 +277,31 @@ describe('Lokale Modelle auf dem neuen PC', () => {
 })
 
 describe('Größe lokaler Aufträge', () => {
-  it('schreibt das gerechnete Pixelmass statt der gpt-Größe', () => {
-    expect(lokaleGroesse('landscape_16_9', '1536x1024')).toBe('1344x768')
-    expect(lokaleGroesse('portrait_4_5', '1024x1536')).toBe('896x1120')
-    expect(lokaleGroesse(null, '1536x1024')).toBe('1248x832')
-    expect(lokaleGroesse(null, '1024x1024')).toBe('1024x1024')
+  it('Standard sind rund 2 MP, Schnell 1 MP, Maximal 4,7 MP', () => {
+    const mp = (g: string) => { const [w, h] = g.split('x').map(Number); return (w * h) / 1e6 }
+    expect(mp(lokaleGroesse('portrait_4_5', '1024x1536'))).toBeGreaterThan(2.0)
+    expect(mp(lokaleGroesse('portrait_4_5', '1024x1536'))).toBeLessThan(2.4)
+    expect(mp(lokaleGroesse('landscape_16_9', '1536x1024', 'schnell'))).toBeLessThan(1.1)
+    expect(mp(lokaleGroesse('landscape_16_9', '1536x1024', 'maximal'))).toBeGreaterThan(4.3)
+    expect(mp(lokaleGroesse('landscape_16_9', '1536x1024', 'maximal'))).toBeLessThanOrEqual(5.0)
+  })
+  it('alle Stufen und Formate: durch 16 teilbar, in den Grenzen des Arbeiters', () => {
+    for (const s of ['schnell', 'standard', 'maximal'] as const) {
+      for (const v of ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '4:5', '21:9']) {
+        const [w, h] = lokaleMasse(v, s)
+        expect(w % 16 + h % 16, `${s} ${v}`).toBe(0)
+        expect(Math.max(w, h), `${s} ${v}`).toBeLessThanOrEqual(2816)
+        expect(w * h, `${s} ${v}`).toBeLessThanOrEqual(5_000_000)
+      }
+    }
+  })
+  it('ohne Format gilt das Verhältnis der gpt-Größe', () => {
+    const [w, h] = lokaleGroesse(null, '1024x1024').split('x').map(Number)
+    expect(w).toBe(h)
+  })
+  it('SDXL bleibt bei 1 MP, auch auf Maximal', () => {
+    const [w, h] = lokaleGroesse('square_1_1', '1024x1024', 'maximal', 'lokal:sdxl_instantid').split('x').map(Number)
+    expect(w * h).toBeLessThanOrEqual(1_100_000)
   })
   it('Ersatz eines lokalen Modells ist wieder ein lokales', () => {
     expect(ersatzModell('lokal:sdxl_instantid', 2)).toBe('lokal:qwen21')

@@ -10,7 +10,7 @@ import { useImageJobs, ergebnisUrl } from '@/hooks/use-image-jobs'
 import { useKoerperPresets } from '@/hooks/use-koerper-presets'
 import { createClient } from '@/lib/supabase'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
-import { MODELLE_MIT_REFERENZ, STATUS_TEXT, istLokal, type ModellId } from '@/lib/image-generation'
+import { MODELLE_MIT_REFERENZ, STATUS_TEXT, istLokal, LOKAL_STUFEN, LOKAL_STUFE_VORGABE, type LokalStufe, type ModellId } from '@/lib/image-generation'
 import { OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategorien'
 import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import type { KoerperAuswahl } from '@/lib/referenzkette'
@@ -84,6 +84,7 @@ export default function PersonenbilderPage() {
   const [presetId, setPresetId] = useState<string | null>(null)
   const [formate, setFormate] = useState<FormatId[]>(['sheet'])
   const [modell, setModell] = useState<ModellId>(ERZEUGEN_MODELLE[0].id as ModellId)
+  const [stufe, setStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
   const [sucheP, setSucheP] = useState('')
   const [sucheO, setSucheO] = useState('')
   const [laeuft, setLaeuft] = useState(false)
@@ -220,7 +221,7 @@ export default function PersonenbilderPage() {
       let eingereiht = 0
       for (const a of auftraege) {
         const job = await anlegen({
-          prompt: a.prompt, model: a.model, size: a.size, aspect_ratio: a.aspect_ratio,
+          prompt: a.prompt, model: a.model, size: a.size, aspect_ratio: a.aspect_ratio, lokal_stufe: stufe,
           variants: 1,
           reference_urls: sicherung.urls, reference_roles: a.rollen,
           scene_meta: { ...a.scene_meta, ...(ziel ? { ablage: ziel } : {}) },
@@ -314,6 +315,14 @@ export default function PersonenbilderPage() {
         <select id="pb-modell" className="pb-suche" value={modell} onChange={e => setModell(e.target.value as ModellId)}>
           {ERZEUGEN_MODELLE.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
+        {istLokal(modell) && (
+          <div className="mt-2">
+            <label htmlFor="pb-stufe" className="mb-1.5 block text-[15px] font-semibold">Auflösung</label>
+            <select id="pb-stufe" className="pb-suche" value={stufe} onChange={e => setStufe(e.target.value as LokalStufe)}>
+              {LOKAL_STUFEN.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </div>
+        )}
         {istLokal(modell) && (
           <p className="mt-1.5 text-[13px] text-muted-foreground">
             {ERZEUGEN_MODELLE.find(m => m.id === modell)?.note}. Rechnet auf dem neuen PC — der muss an sein.

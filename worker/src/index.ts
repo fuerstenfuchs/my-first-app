@@ -32,7 +32,7 @@ function sage(text: string): void {
   console.log(`${uhrzeit()}  ${text}`)
 }
 
-const VERSION = '2026-09-01'
+const VERSION = '2026-10-03-stufen'
 
 let beenden = false
 const laufenderAbbruch = new AbortController()

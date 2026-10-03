@@ -3,16 +3,17 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Loader2, Send, Info } from 'lucide-react'
 import { toast } from 'sonner'
+import { LokalStufeSelect } from '@/components/lokal-stufe-select'
 import { Button } from '@/components/ui/button'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, modelleFuer, ersatzModell, istLokal, lokaleGroesse, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
+  MODELLE, modelleFuer, ersatzModell, istLokal, hatStufen, lokaleGroesse, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   ROLLEN_LABEL,
-  type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
+  LOKAL_STUFE_VORGABE, type LokalStufe, type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
 } from '@/lib/image-generation'
 import type { AspectRatioKey } from '@/lib/scene-builder-options'
 
@@ -25,6 +26,8 @@ interface QueueButtonProps {
   szenenName?: string | null
   modell?: ModellId
   onModellChange?: (m: ModellId) => void
+  stufe?: LokalStufe
+  onStufeChange?: (s: LokalStufe) => void
 }
 
 /**
@@ -35,10 +38,13 @@ interface QueueButtonProps {
  * die Zuordnung, welches Bild wofür steht, und die Formatansage.
  */
 export function QueueButton({
-  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, modell: modellAussen, onModellChange,
+  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, modell: modellAussen, onModellChange, stufe: stufeAussen, onStufeChange,
 }: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
   // Steuerbar von aussen: Die Shooting-Kette daneben soll dasselbe Modell nehmen.
+  const [eigeneStufe, setEigeneStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
+  const stufe = stufeAussen ?? eigeneStufe
+  const setStufe = onStufeChange ?? setEigeneStufe
   const [eigenesModell, setEigenesModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const modell = modellAussen ?? eigenesModell
   const setModell = onModellChange ?? setEigenesModell
@@ -101,6 +107,7 @@ export function QueueButton({
         model:           modell,
         size:            zuordnung.size,
         aspect_ratio:    aspectRatio,
+        lokal_stufe:     stufe,
         variants:        durchlaeufe,
         ziel_klasse:     inKlassen ? klasse : null,
         reference_urls:  referenzen.map(r => r.url),
@@ -132,7 +139,7 @@ export function QueueButton({
       gezeichnet (einziger Aufrufer: die Scene-Builder-Seite).
     */
     <div className="space-y-2.5 rounded-[14px] border border-[var(--sb-rule)] bg-[var(--sb-card)] p-3 shadow-[0_1px_3px_rgba(60,48,25,0.09)]">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={modell} onValueChange={v => setModell(v as ModellId)}>
           <SelectTrigger className="h-9 flex-1 rounded-[10px] text-sm" aria-label="Modell">
             <SelectValue />
@@ -143,6 +150,10 @@ export function QueueButton({
             ))}
           </SelectContent>
         </Select>
+
+        {hatStufen(modell) && (
+          <LokalStufeSelect value={stufe} onChange={setStufe} className="w-full rounded-[10px]" contentClassName="sb-papier" />
+        )}
 
         {inKlassen && (
           <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>
@@ -223,7 +234,7 @@ export function QueueButton({
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
           {istLokal(modell) ? (
-            <>Rechnet lokal in {lokaleGroesse(aspectRatio, zuordnung.size).replace('x', '×')} — genau so, auch mit Referenzbildern.</>
+            <>Rechnet lokal in {lokaleGroesse(aspectRatio, zuordnung.size, stufe, modell).replace('x', '×')} — genau so, auch mit Referenzbildern.</>
           ) : mitReferenz ? (
             <>Mit Referenzbildern bestimmt das Modell die Größe selbst.</>
           ) : (

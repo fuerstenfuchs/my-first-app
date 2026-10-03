@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, Send, X, ImagePlus, Info } from 'lucide-react'
 import { toast } from 'sonner'
+import { LokalStufeSelect } from '@/components/lokal-stufe-select'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -24,7 +25,7 @@ import { createClient } from '@/lib/supabase'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import {
-  MODELLE, passtZuReferenzen, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
+  MODELLE, hatStufen, LOKAL_STUFE_VORGABE, type LokalStufe, passtZuReferenzen, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
   ROLLEN_LABEL, ROLLEN_ANWEISUNG, zuordnungsBlock,
   type ModellId, type Durchlaeufe, type ReferenzRolle,
 } from '@/lib/image-generation'
@@ -234,6 +235,7 @@ export function PromptToImageDialog({
   const [locationBild, setLocationBild] = useState<RefImage | null>(null)
 
   const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
+  const [stufe, setStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)
@@ -621,6 +623,7 @@ export function PromptToImageDialog({
       model:           modell,
       size:            zuordnung.size,
       aspect_ratio:    format,
+      lokal_stufe:     stufe,
       variants:        durchlaeufe,
       reference_urls:  sicherung.urls,
       reference_roles: rollen,
@@ -818,6 +821,10 @@ export function PromptToImageDialog({
                 ))}
               </SelectContent>
             </Select>
+
+            {hatStufen(modell) && (
+              <LokalStufeSelect value={stufe} onChange={setStufe} className="h-8 w-44 text-[13px]" />
+            )}
 
             <Select
               value={format ?? 'auto'}

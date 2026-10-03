@@ -68,12 +68,19 @@ const SIZE_ZU_FORMAT: Record<string, [number, number]> = {
   '1024x1536': [832, 1248],
 }
 
-/** Die App schreibt bei lokalen Aufträgen das echte Pixelmass in `size` — nur Zulässiges durchlassen. */
+/**
+ * Die App schreibt bei lokalen Aufträgen das echte Pixelmass in `size` (Stufen
+ * 1 / 2 / 4,7 MP) — nur Zulässiges durchlassen: durch 16 teilbar, je Seite
+ * 512 bis 2816, zusammen höchstens 5 Megapixel (dieselben Grenzen wie im
+ * Arbeiter). Die drei gpt-Größen zählen NICHT: Sie stammen von Aufträgen aus
+ * der Zeit vor den Stufen, dort entscheidet das Seitenverhältnis.
+ */
 export function masseAusSize(size: string): [number, number] | undefined {
+  if (size in SIZE_ZU_FORMAT) return undefined
   const m = /^(\d{3,4})x(\d{3,4})$/.exec(size)
   if (!m) return undefined
   const b = Number(m[1]), h = Number(m[2])
-  return b % 16 === 0 && h % 16 === 0 && b >= 512 && h >= 512 && b * h <= 1_600_000 ? [b, h] : undefined
+  return b % 16 === 0 && h % 16 === 0 && b >= 512 && h >= 512 && b <= 2816 && h <= 2816 && b * h <= 5_000_000 ? [b, h] : undefined
 }
 
 export function masseFuerFormat(aspect: string | null | undefined): [number, number] | undefined {
@@ -168,7 +175,7 @@ export async function bildErzeugenLokal(
 
   // Ohne Format die gpt-Groesse des Auftrags uebersetzen — sonst nimmt der neue PC
   // sein Hochformat-Standardmass, auch wo die Oberflaeche "quadratisch" zeigt.
-  const mass = masseFuerFormat(job.aspect_ratio) ?? SIZE_ZU_FORMAT[job.size] ?? masseAusSize(job.size)
+  const mass = masseAusSize(job.size) ?? masseFuerFormat(job.aspect_ratio) ?? SIZE_ZU_FORMAT[job.size]
   const bestellung = {
     modell,
     prompt: job.prompt,
