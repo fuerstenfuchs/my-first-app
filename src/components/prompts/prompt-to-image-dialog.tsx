@@ -24,7 +24,7 @@ import { createClient } from '@/lib/supabase'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import {
-  MODELLE, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
+  MODELLE, passtZuReferenzen, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
   ROLLEN_LABEL, ROLLEN_ANWEISUNG, zuordnungsBlock,
   type ModellId, type Durchlaeufe, type ReferenzRolle,
 } from '@/lib/image-generation'
@@ -531,7 +531,7 @@ export function PromptToImageDialog({
     setCharakter(vorauswahlCharakter); setCharakterBild(null)
     setOutfit(vorauswahlOutfit); setOutfitBild(null)
     setLocation(vorauswahlLocation); setLocationBild(null)
-    setFormat(null); setDurchlaeufe(1)
+    setFormat(null); setDurchlaeufe(1); setModell('gpt-image-2.5-sunburst')
     // Die Plätze NICHT leeren: Der Vorbelegungs-Effekt läuft beim nächsten
     // Öffnen ohnehin und würde sie neu füllen. Sie hier zu leeren, hiesse den
     // Dialog für einen Wimpernschlag ohne Bilder zu zeigen.
@@ -539,6 +539,15 @@ export function PromptToImageDialog({
 
   async function handleQueue() {
     if (!text.trim() || laeuftRef.current) return
+    // Ein gesperrtes Modell kann gewählt geblieben sein (Referenzen kamen oder
+    // gingen nach der Wahl). Lieber hier stoppen als nach drei Fehlversuchen
+    // in der Warteschlange.
+    if (!passtZuReferenzen(modell, referenzen.length)) {
+      const neu = ersatzModell(modell, referenzen.length)
+      setModell(neu)
+      toast.error(`${MODELLE.find(m => m.id === modell)?.label ?? modell} passt nicht zu ${referenzen.length} Referenzbild(ern). Ich habe auf ${MODELLE.find(m => m.id === neu)?.label ?? neu} gestellt — bitte prüfen und noch einmal absenden.`)
+      return
+    }
     laeuftRef.current = true
     setLaeuft(true)
 
@@ -800,7 +809,12 @@ export function PromptToImageDialog({
               </SelectTrigger>
               <SelectContent>
                 {MODELLE.map(m => (
-                  <SelectItem key={m.id} value={m.id} className="text-xs">{m.label}</SelectItem>
+                  <SelectItem
+                    key={m.id} value={m.id} className="text-xs"
+                    disabled={!passtZuReferenzen(m.id, referenzen.length)}
+                  >
+                    {m.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  MODELLE,
+  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, lokaleGroesse, ersatzModell,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE, type ReferenzRolle,
 } from './image-generation'
@@ -227,5 +227,64 @@ describe('Welches Bildmodell die Vorgabe ist', () => {
     // Kennung. Ein Eintrag, den die Anzeige nicht mehr aufloesen kann, saehe
     // dort aus wie ein Fehler.
     expect(MODELLE.some(m => m.id === 'gpt-image-2')).toBe(true)
+  })
+})
+
+describe('Lokale Modelle auf dem neuen PC', () => {
+  it('stehen hinter allen Proxy-Modellen — der Proxy bleibt der Standardweg', () => {
+    const erstes = MODELLE.findIndex(m => istLokal(m.id))
+    expect(erstes).toBeGreaterThan(0)
+    expect(MODELLE.slice(erstes).every(m => istLokal(m.id))).toBe(true)
+    expect(istLokal(MODELLE[0].id)).toBe(false)
+  })
+
+  it('tragen die Vorsilbe, die der Arbeiter zur Weiche macht', () => {
+    for (const id of ['qwen21', 'klein9b', 'klein4b', 'sdxl_instantid']) {
+      expect(MODELLE.some(m => m.id === `lokal:${id}`), id).toBe(true)
+    }
+  })
+
+  it('SDXL+InstantID verlangt genau ein Referenzbild', () => {
+    expect(passtZuReferenzen('lokal:sdxl_instantid', 0)).toBe(false)
+    expect(passtZuReferenzen('lokal:sdxl_instantid', 1)).toBe(true)
+    expect(passtZuReferenzen('lokal:sdxl_instantid', 2)).toBe(false)
+  })
+
+  it('Qwen und FLUX klein nehmen null bis vier Referenzen', () => {
+    for (const id of ['lokal:qwen21', 'lokal:klein9b', 'lokal:klein4b'] as const) {
+      expect(passtZuReferenzen(id, 0), id).toBe(true)
+      expect(passtZuReferenzen(id, 4), id).toBe(true)
+      expect(passtZuReferenzen(id, 5), id).toBe(false)
+    }
+  })
+
+  it('Gemini bleibt bei Referenzen draussen, Proxy-Modelle haben keine Obergrenze', () => {
+    expect(passtZuReferenzen('gemini-3.1-flash-image', 1)).toBe(false)
+    expect(passtZuReferenzen('gpt-image-2.5-sunburst', 8)).toBe(true)
+  })
+
+  it('modelleFuer folgt der Zahl der Referenzen', () => {
+    expect(modelleFuer(0).some(m => m.id === 'lokal:sdxl_instantid')).toBe(false)
+    expect(modelleFuer(1).some(m => m.id === 'lokal:sdxl_instantid')).toBe(true)
+    expect(modelleFuer(2).some(m => m.id === 'lokal:sdxl_instantid')).toBe(false)
+    expect(modelleFuer(0)[0].id).toBe('gpt-image-2.5-sunburst')
+  })
+
+  it('rechnet nicht in Klassen und verspricht kein Proxy-Format', () => {
+    expect(rechnetInKlassen('lokal:qwen21')).toBe(false)
+    expect(formatHinweis('lokal:qwen21', 'landscape_16_9')).not.toMatch(/3:2/)
+  })
+})
+
+describe('Größe lokaler Aufträge', () => {
+  it('schreibt das gerechnete Pixelmass statt der gpt-Größe', () => {
+    expect(lokaleGroesse('landscape_16_9', '1536x1024')).toBe('1344x768')
+    expect(lokaleGroesse('portrait_4_5', '1024x1536')).toBe('896x1120')
+    expect(lokaleGroesse(null, '1536x1024')).toBe('1248x832')
+    expect(lokaleGroesse(null, '1024x1024')).toBe('1024x1024')
+  })
+  it('Ersatz eines lokalen Modells ist wieder ein lokales', () => {
+    expect(ersatzModell('lokal:sdxl_instantid', 2)).toBe('lokal:qwen21')
+    expect(ersatzModell('gemini-3.1-flash-image', 1)).toBe('gpt-image-2.5-sunburst')
   })
 })

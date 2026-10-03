@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, MODELLE_MIT_REFERENZ, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
+  MODELLE, modelleFuer, ersatzModell, istLokal, lokaleGroesse, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   ROLLEN_LABEL,
   type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
@@ -23,6 +23,8 @@ interface QueueButtonProps {
   sceneMeta: Record<string, unknown>
   /** Kurzname der Szene, wandert in den Dateinamen beim Download. */
   szenenName?: string | null
+  modell?: ModellId
+  onModellChange?: (m: ModellId) => void
 }
 
 /**
@@ -33,10 +35,13 @@ interface QueueButtonProps {
  * die Zuordnung, welches Bild wofür steht, und die Formatansage.
  */
 export function QueueButton({
-  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null,
+  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, modell: modellAussen, onModellChange,
 }: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
-  const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
+  // Steuerbar von aussen: Die Shooting-Kette daneben soll dasselbe Modell nehmen.
+  const [eigenesModell, setEigenesModell] = useState<ModellId>('gpt-image-2.5-sunburst')
+  const modell = modellAussen ?? eigenesModell
+  const setModell = onModellChange ?? setEigenesModell
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [laeuft, setLaeuft] = useState(false)
@@ -47,15 +52,20 @@ export function QueueButton({
    * weil dieses Menü nur `m.label` zeigt und die Notiz dazu gar nicht.
    */
   const auswahl = useMemo(
-    () => (referenzen.length > 0 ? MODELLE_MIT_REFERENZ : MODELLE),
+    () => modelleFuer(referenzen.length),
     [referenzen.length],
   )
 
   // Wer erst Gemini wählt und dann ein Referenzbild dazunimmt, hätte sonst ein
   // Modell eingestellt, das gar nicht mehr im Menü steht.
   useEffect(() => {
-    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2.5-sunburst')
-  }, [auswahl, modell])
+    if (auswahl.some(m => m.id === modell)) return
+    const neu = ersatzModell(modell, referenzen.length)
+    if (istLokal(modell)) {
+      toast.info(`${MODELLE.find(m => m.id === modell)?.label ?? modell} passt nicht zu ${referenzen.length} Referenzbild(ern) — gewechselt zu ${MODELLE.find(m => m.id === neu)?.label ?? neu}.`)
+    }
+    setModell(neu)
+  }, [auswahl, modell, referenzen.length])
 
   // Gemini rechnet in Größenklassen statt in Pixeln. Ohne diese Angabe lehnt
   // die Datenbank den Auftrag ab — und eine stille Vorgabe wäre schlechter als
@@ -212,7 +222,9 @@ export function QueueButton({
       <p className="flex items-start gap-1.5 text-[13px] leading-snug text-[var(--sb-ink2)]">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>
-          {mitReferenz ? (
+          {istLokal(modell) ? (
+            <>Rechnet lokal in {lokaleGroesse(aspectRatio, zuordnung.size).replace('x', '×')} — genau so, auch mit Referenzbildern.</>
+          ) : mitReferenz ? (
             <>Mit Referenzbildern bestimmt das Modell die Größe selbst.</>
           ) : (
             <>

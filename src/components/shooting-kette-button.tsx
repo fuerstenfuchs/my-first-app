@@ -14,7 +14,7 @@ import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import { cn } from '@/lib/utils'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
-  groesseFuerFormat, promptFuerAuftrag,
+  groesseFuerFormat, promptFuerAuftrag, passtZuReferenzen, ersatzModell, MODELLE,
   ROLLEN_ANWEISUNG,
   type ModellId, type KlassenId, type Referenz, type ReferenzRolle,
 } from '@/lib/image-generation'
@@ -42,9 +42,9 @@ import type { Outfit } from '@/hooks/use-outfits'
  */
 export function ShootingKetteButton({
   scene, referenzen, aspectRatio, sceneMeta,
-  // Beide Einstiege erzeugen mit derselben Vorgabe wie der Auftragsknopf
-  // daneben. Wer ein anderes Modell will, waehlt es dort — hier waere eine
-  // zweite Modellauswahl nur eine zweite Stelle, an der sie auseinanderlaufen.
+  // Das Modell kommt vom Auftragsknopf daneben (Scene Builder); die Location-
+  // Ansicht gibt keins mit und bleibt bei der Vorgabe. Eine zweite Auswahl
+  // waere nur eine zweite Stelle, an der sie auseinanderlaufen.
   modell = 'gpt-image-2.5-sunburst', zielKlasse = null, szenenName = null,
 }: {
   /** Die Szene — Vorlage für jeden Schritt. Braucht Charakter und Location. */
@@ -98,6 +98,17 @@ export function ShootingKetteButton({
 
   async function handleShooting() {
     if (laeuftRef.current || fehlt.length > 0) return
+    // Ein lokales Modell hat Grenzen bei der Zahl der Referenzen (SDXL genau eine,
+    // die anderen höchstens vier). Vor dem Ordner und vor dem ersten Auftrag
+    // prüfen, nicht nach dem dritten Fehlversuch in der Warteschlange.
+    const hoechstens = Math.max(0, ...kette.map(s => gruppe !== null
+      ? referenzen.filter(r => r.rolle !== 'outfit').length
+      : referenzen.filter(r => r.rolle !== 'outfit').length + (s.outfit?.cover_image_url ? 1 : 0)))
+    if (!passtZuReferenzen(modell, hoechstens)) {
+      const name = MODELLE.find(m => m.id === modell)?.label ?? modell
+      toast.error(`${name} passt nicht zu ${hoechstens} Referenzbildern. Bitte oben ${MODELLE.find(m => m.id === ersatzModell(modell, hoechstens))?.label ?? 'ein anderes Modell'} wählen.`)
+      return
+    }
     laeuftRef.current = true
     setLaeuft(true)
     setFortschritt(0)

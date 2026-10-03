@@ -11,6 +11,7 @@
  */
 
 import { bildErzeugen } from './proxy.ts'
+import { bildErzeugenLokal, istLokalesModell } from './lokal.ts'
 import { bildVergroessern } from './upscale.ts'
 import { bildVergroessernKi, type KiVerfahren } from './fal.ts'
 import { bildNachbauen, bildErzeugenGemini, GROESSENKLASSEN } from './gemini.ts'
@@ -252,6 +253,9 @@ async function erzeugen(job: ImageJob, sage: Melder, signal?: AbortSignal): Prom
       daten = e.daten.buffer.slice(
         e.daten.byteOffset, e.daten.byteOffset + e.daten.byteLength,
       ) as ArrayBuffer
+    } else if (istLokalesModell(job.model)) {
+      // Zwei-Wege-Bindung: ein `lokal:`-Modell geht NIE an den Proxy.
+      daten = await bildErzeugenLokal(job, signal, sage)
     } else {
       daten = await bildErzeugen(job, signal)
     }

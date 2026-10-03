@@ -23,6 +23,7 @@ import {
   GROESSE_VORGABE, ROLLEN_ANWEISUNG, promptFuerAuftrag,
   type ReferenzRolle,
 } from './image-generation'
+import { istLokal } from './image-generation'
 import { koerperMerkmaleText, type KoerperAuswahl } from './referenzkette'
 import { hautzeichenText, type Geschlecht, type Hautzeichen } from './person-merkmale'
 import { nachNutzen, rangVon } from './referenz-auswahl'
@@ -339,7 +340,9 @@ export function baueAuftraege(e: PersonenbildEingabe): Auftrag[] {
       titel: `${e.personName} — ${e.outfitName} — ${label}`,
       prompt: promptFuerAuftrag(teile.join('\n\n'), ratio, rollen, zeilen, vorrangText(modus)),
       size: AUFTRAGS_GROESSE[format],
-      aspect_ratio: ratio,
+      // Lokale Modelle halten das Mass genau ein (anders als gpt mit Referenz):
+      // Ohne Angabe kaeme Hochformat, die Blaetter sind aber quer.
+      aspect_ratio: ratio ?? (istLokal(e.modell) && format !== 'vorn' ? 'landscape_16_9' : null),
       model: e.modell,
       referenzUrls: urls,
       rollen,

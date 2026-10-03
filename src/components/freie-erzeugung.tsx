@@ -12,7 +12,7 @@ import {
 import { createClient } from '@/lib/supabase'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, MODELLE_MIT_REFERENZ, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
+  MODELLE, modelleFuer, passtZuReferenzen, ersatzModell, istLokal, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
   formatHinweis, formatAnsage, rechnetInKlassen,
   type ModellId, type Durchlaeufe, type KlassenId,
 } from '@/lib/image-generation'
@@ -69,15 +69,20 @@ export function FreieErzeugung(
    * erst nach dem Warten in der Warteschlange davon erfährt.
    */
   const auswahl = useMemo(
-    () => (mitReferenz ? MODELLE_MIT_REFERENZ : MODELLE),
-    [mitReferenz],
+    () => modelleFuer(referenzen.length),
+    [referenzen.length],
   )
 
   // Wer erst Gemini wählt und dann ein Referenzbild dazulegt, hätte sonst ein
   // Modell eingestellt, das gar nicht mehr im Menü steht.
   useEffect(() => {
-    if (!auswahl.some(m => m.id === modell)) setModell('gpt-image-2.5-sunburst')
-  }, [auswahl, modell])
+    if (auswahl.some(m => m.id === modell)) return
+    const neu = ersatzModell(modell, referenzen.length)
+    if (istLokal(modell)) {
+      toast.info(`${MODELLE.find(m => m.id === modell)?.label ?? modell} passt nicht zu ${referenzen.length} Referenzbild(ern) — gewechselt zu ${MODELLE.find(m => m.id === neu)?.label ?? neu}.`)
+    }
+    setModell(neu)
+  }, [auswahl, modell, referenzen.length])
 
   const [titel, setTitel] = useState('')
   const [speichert, setSpeichert] = useState(false)
@@ -261,13 +266,13 @@ export function FreieErzeugung(
             // Gesperrt, aber sichtbar: Ein Modell, das aus der Liste
             // verschwindet, wirkt wie ein Fehler. Eines, das dasteht und den
             // Grund nennt, erklärt sich selbst.
-            const gesperrt = mitReferenz && !m.kannReferenzen
+            const gesperrt = !passtZuReferenzen(m.id, referenzen.length)
             return (
               <SelectItem key={m.id} value={m.id} disabled={gesperrt} className="text-xs">
                 <span className="flex flex-col items-start">
                   <span>{m.label}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {gesperrt ? 'Kann keine Referenzbilder verarbeiten' : m.note}
+                    {gesperrt ? 'Passt nicht zur Zahl der Referenzbilder' : m.note}
                   </span>
                 </span>
               </SelectItem>

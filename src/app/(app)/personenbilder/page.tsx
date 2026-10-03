@@ -10,7 +10,7 @@ import { useImageJobs, ergebnisUrl } from '@/hooks/use-image-jobs'
 import { useKoerperPresets } from '@/hooks/use-koerper-presets'
 import { createClient } from '@/lib/supabase'
 import { loadRefImages, type RefImage } from '@/lib/reference-images'
-import { MODELLE_MIT_REFERENZ, STATUS_TEXT, type ModellId } from '@/lib/image-generation'
+import { MODELLE_MIT_REFERENZ, STATUS_TEXT, istLokal, type ModellId } from '@/lib/image-generation'
 import { OUTFIT_KATEGORIE_LABELS } from '@/lib/outfit-kategorien'
 import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import type { KoerperAuswahl } from '@/lib/referenzkette'
@@ -57,8 +57,15 @@ const REITER: { key: Reiter; code: string; label: string }[] = [
 
 function kleinschreibung(s: string) { return s.toLowerCase() }
 
-/** Nur die drei 2.5-Modelle zum Erzeugen — `gpt-image-2` bleibt gesperrt (Marks Regel vom 10.09.2026). */
-const ERZEUGEN_MODELLE = MODELLE_MIT_REFERENZ.filter(m => m.id.startsWith('gpt-image-2.5'))
+/**
+ * Die drei 2.5-Modelle über den Proxy — `gpt-image-2` bleibt gesperrt (Marks
+ * Regel vom 10.09.2026) — und dahinter die lokalen Wege auf dem neuen PC (Qwen,
+ * FLUX klein). SDXL+InstantID fehlt mit Absicht: Es nimmt genau ein Bild, die
+ * Ketten hier schicken mehrere.
+ */
+const ERZEUGEN_MODELLE = MODELLE_MIT_REFERENZ.filter(
+  m => m.id.startsWith('gpt-image-2.5') || (istLokal(m.id) && m.id !== 'lokal:sdxl_instantid'),
+)
 
 export default function PersonenbilderPage() {
   const { characters, loading: personenLaden } = useCharacters()
@@ -307,6 +314,11 @@ export default function PersonenbilderPage() {
         <select id="pb-modell" className="pb-suche" value={modell} onChange={e => setModell(e.target.value as ModellId)}>
           {ERZEUGEN_MODELLE.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
+        {istLokal(modell) && (
+          <p className="mt-1.5 text-[13px] text-muted-foreground">
+            {ERZEUGEN_MODELLE.find(m => m.id === modell)?.note}. Rechnet auf dem neuen PC — der muss an sein.
+          </p>
+        )}
       </div>
 
       {vorschauPrompt && (

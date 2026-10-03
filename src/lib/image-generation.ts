@@ -101,9 +101,113 @@ export const MODELLE = [
     // Scene Builder gar nicht gerendert wird, schützt niemanden.
     kannReferenzen: false,
   },
+  /*
+    LOKALE MODELLE — der neue PC (RTX 5060 Ti), Mark am 01.10.2026 / 03.10.2026.
+
+    Der Proxy bleibt der Standardweg: Diese Einträge stehen bewusst HINTER allen
+    Proxy-Modellen, die Vorgabe bleibt `MODELLE[0]`. Lokal ist für das, was der
+    Proxy ablehnt, oder wenn Mark ausdrücklich „lokal" will. Kosten: nur Strom.
+
+    Die Vorsilbe `lokal:` ist die Weiche: Der Arbeiter schickt solche Aufträge
+    NIE an den Proxy und die übrigen NIE an den neuen PC (worker/src/lokal.ts).
+    Was gemessen wurde: werkzeuge/arbeiter-neuer-pc/BILDMODELLE.md im Fuchsbau.
+
+    Ergebnisse brauchen keinen Umweg: Der Arbeiter holt die Referenzen aus
+    Supabase, rechnet im Heimnetz und legt das fertige Bild wie jedes andere ab.
+  */
+  {
+    id: 'lokal:qwen21', label: 'Lokal · Qwen-Image 2.1',
+    note: 'Neuer PC — beste Ähnlichkeit (Personen, Tiere, Dinge) · nur nichtkommerziell · ca. 1–3 Min',
+    kannReferenzen: true,
+  },
+  {
+    id: 'lokal:klein9b', label: 'Lokal · FLUX.2 klein 9B',
+    note: 'Neuer PC — schönes Licht und Haut, Ähnlichkeit schwächer · nur nichtkommerziell',
+    kannReferenzen: true,
+  },
+  {
+    id: 'lokal:klein4b', label: 'Lokal · FLUX.2 klein 4B',
+    note: 'Neuer PC — schnell, Ähnlichkeit schwach',
+    kannReferenzen: true,
+  },
+  {
+    id: 'lokal:sdxl_instantid', label: 'Lokal · SDXL + InstantID',
+    note: 'Neuer PC — starkes Gesicht, nur Nahaufnahmen, genau EIN Referenzbild',
+    kannReferenzen: true,
+  },
 ] as const
 
 export type ModellId = typeof MODELLE[number]['id']
+
+/** Läuft dieses Modell auf dem neuen PC statt über den Proxy? */
+export function istLokal(modell: string): boolean {
+  return modell.startsWith('lokal:')
+}
+
+/** Wie viele Referenzbilder ein lokales Modell nimmt: [wenigstens, höchstens]. Gleich wie im Arbeiter. */
+const LOKAL_REFERENZEN: Record<string, readonly [number, number]> = {
+  'lokal:qwen21': [0, 4],
+  'lokal:klein9b': [0, 4],
+  'lokal:klein4b': [0, 4],
+  'lokal:sdxl_instantid': [1, 1],
+}
+
+/**
+ * Passt dieses Modell zu dieser Zahl von Referenzbildern?
+ *
+ * Proxy-Modelle: `kannReferenzen` entscheidet nur, OB welche mitgehen dürfen.
+ * Lokale Modelle haben zusätzlich Grenzen nach oben und unten — SDXL+InstantID
+ * braucht genau eines, die anderen höchstens vier. Eine Absage hier erspart
+ * Mark, erst in der Warteschlange davon zu erfahren.
+ */
+export function passtZuReferenzen(modell: ModellId, anzahl: number): boolean {
+  const m = MODELLE.find(x => x.id === modell)
+  if (!m) return false
+  if (anzahl > 0 && !m.kannReferenzen) return false
+  const grenzen = LOKAL_REFERENZEN[modell]
+  return grenzen ? anzahl >= grenzen[0] && anzahl <= grenzen[1] : true
+}
+
+/** Seitenverhältnis → Pixel eines lokalen Modells (rund 1 MP, durch 16 teilbar). Gleiche Tabelle im Arbeiter. */
+const LOKAL_MASSE: Record<string, readonly [number, number]> = {
+  '1:1': [1024, 1024], '16:9': [1344, 768], '9:16': [768, 1344], '4:3': [1152, 864],
+  '3:4': [864, 1152], '3:2': [1248, 832], '2:3': [832, 1248], '4:5': [896, 1120], '21:9': [1568, 672],
+}
+/** Die gpt-Größen, auf die lokal gerechnet wird, wenn kein Format gewählt ist. */
+const LOKAL_NACH_GPT: Record<string, string> = {
+  '1024x1024': '1024x1024', '1536x1024': '1248x832', '1024x1536': '832x1248',
+}
+
+/**
+ * Die Größe, die ein lokales Modell WIRKLICH rechnet — für die Anzeige und den
+ * Auftrag. Die gpt-Größe daneben zu stehen zu lassen, wäre falsch: Dort steht
+ * 1536x1024, gerechnet werden 1344x768 (Mark, 03.10.2026).
+ */
+export function lokaleGroesse(format: string | null | undefined, gptGroesse: string): string {
+  const m = /(\d+)_(\d+)$/.exec(format ?? '')
+  const mass = m ? LOKAL_MASSE[`${m[1]}:${m[2]}`] : undefined
+  return mass ? `${mass[0]}x${mass[1]}` : (LOKAL_NACH_GPT[gptGroesse] ?? gptGroesse)
+}
+
+/**
+ * Wohin die Auswahl springt, wenn das gewählte Modell nicht mehr passt.
+ *
+ * Ein lokales Modell wird durch ein lokales ersetzt, nie durch den Proxy: Lokal
+ * ist gerade für das da, was der Proxy ablehnt — ein stiller Wechsel dorthin
+ * wäre der Ersatz, den die Zwei-Wege-Regel ausschließt (Critic, 03.10.2026).
+ */
+export function ersatzModell(aktuell: ModellId, anzahl: number): ModellId {
+  if (istLokal(aktuell)) {
+    const lokal = modelleFuer(anzahl).find(m => istLokal(m.id))
+    if (lokal) return lokal.id
+  }
+  return 'gpt-image-2.5-sunburst'
+}
+
+/** Die Modelle, die zu dieser Zahl von Referenzbildern passen. */
+export function modelleFuer(anzahl: number) {
+  return MODELLE.filter(m => passtZuReferenzen(m.id, anzahl))
+}
 
 /** Die Modelle, die Referenzbilder verarbeiten können. */
 export const MODELLE_MIT_REFERENZ = MODELLE.filter(m => m.kannReferenzen)
@@ -148,6 +252,7 @@ export type KlassenId = typeof KLASSEN[number]['id']
  * der man sich später stößt.
  */
 export function formatHinweis(modell: ModellId, format: AspectRatioKey | null): string {
+  if (istLokal(modell)) return 'wie gewählt, rund 1 Megapixel'
   if (rechnetInKlassen(modell)) return 'auf ~1 % genau'
   const z = groesseFuerFormat(format)
   return z.hinweis ?? z.size

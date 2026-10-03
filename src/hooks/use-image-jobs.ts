@@ -1,5 +1,6 @@
 'use client'
 
+import { istLokal, lokaleGroesse } from '@/lib/image-generation'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase'
@@ -126,7 +127,7 @@ export function useImageJobs(aktiv = true) {
         user_id:        user.id,
         prompt:         input.prompt,
         model:          input.model,
-        size:           input.size,
+        size:           istLokal(input.model) ? lokaleGroesse(input.aspect_ratio, input.size) : input.size,
         aspect_ratio:   input.aspect_ratio ?? null,
         variants:       input.variants,
         reference_urls:  input.reference_urls ?? [],

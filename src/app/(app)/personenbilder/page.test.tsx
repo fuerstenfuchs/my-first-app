@@ -275,7 +275,13 @@ describe('Modelle', () => {
     render(<PersonenbilderPage />)
     const optionen = Array.from((screen.getByLabelText('Modell') as HTMLSelectElement).options).map(o => o.value)
     expect(optionen.length).toBeGreaterThan(0)
-    expect(optionen.every(v => v.startsWith('gpt-image-2.5'))).toBe(true)
+    // Proxy: nur die 2.5-Familie. Dazu die lokalen Wege (Qwen, FLUX klein) — Marks
+    // Wunsch vom 03.10.2026. Nie gpt-image-2, nie Gemini, nie SDXL (genau ein Bild).
+    expect(optionen.every(v => v.startsWith('gpt-image-2.5') || ['lokal:qwen21', 'lokal:klein9b', 'lokal:klein4b'].includes(v))).toBe(true)
+    expect(optionen.some(v => v.startsWith('gpt-image-2.5'))).toBe(true)
+    expect(optionen).toContain('lokal:qwen21')
+    expect(optionen).not.toContain('lokal:sdxl_instantid')
+    expect(optionen[0]).toBe('gpt-image-2.5-sunburst')
   })
 })
 

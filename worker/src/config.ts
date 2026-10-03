@@ -93,6 +93,14 @@ export const config = {
   b2KeyId: (process.env.B2_KEY_ID ?? '').trim(),
   b2AppKey: (process.env.B2_APP_KEY ?? '').trim(),
   b2Bucket: (process.env.B2_BUCKET ?? '').trim(),
+  /**
+   * Der Arbeiter auf dem neuen PC (lokale Bilder, 01.10.2026). Bewusst KEINE
+   * Pflicht: ohne beides laufen alle Proxy-Modelle unverändert, und nur ein
+   * Auftrag mit einem `lokal:`-Modell scheitert — mit einem Satz, der sagt,
+   * was in die .env gehört.
+   */
+  arbeiterUrl: (process.env.ARBEITER_URL ?? '').trim().replace(/\/+$/, ''),
+  arbeiterToken: (process.env.ARBEITER_TOKEN ?? '').trim(),
 }
 
 export type B2Einrichtung =
@@ -119,7 +127,7 @@ export function b2Einrichtung(
 /** Schlüssel aus Fehlertexten entfernen, bevor irgendetwas ausgegeben wird. */
 export function ohneGeheimnis(text: string): string {
   let sauber = text
-  for (const geheim of [config.proxyToken, config.supabaseKey, config.falKey, config.b2KeyId, config.b2AppKey]) {
+  for (const geheim of [config.proxyToken, config.supabaseKey, config.falKey, config.b2KeyId, config.b2AppKey, config.arbeiterToken]) {
     if (geheim && geheim.length > 6) {
       sauber = sauber.split(geheim).join('***')
     }
