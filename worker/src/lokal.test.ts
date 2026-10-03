@@ -234,3 +234,18 @@ test('Krea 2 geht ohne Referenz an den neuen PC und mit Referenz nicht', async (
   assert.ok(d.byteLength > 100)
   assert.equal(JSON.parse(arbeiterAnfragen.find(a => a.methode === 'POST')!.rumpf).modell, 'krea2')
 })
+
+test('Der Schalter Krea-Gewichte reist in scene_meta und geht nur bei Krea 2 an den neuen PC', async () => {
+  const { bildErzeugenLokal } = await import('./lokal.ts')
+  modus = 'ok'
+  for (const [modell, meta, soll] of [
+    ['lokal:krea2', { lokal: { krea_gewichte: true } }, true],
+    ['lokal:krea2', { lokal: { krea_gewichte: 'ja' } }, undefined],
+    ['lokal:krea2', null, undefined],
+    ['lokal:qwen21', { lokal: { krea_gewichte: true } }, undefined],
+  ] as const) {
+    arbeiterAnfragen.length = 0
+    await bildErzeugenLokal(auftrag(modell, { scene_meta: meta }))
+    assert.equal(JSON.parse(arbeiterAnfragen.find(a => a.methode === 'POST')!.rumpf).krea_gewichte, soll, modell + JSON.stringify(meta))
+  }
+})

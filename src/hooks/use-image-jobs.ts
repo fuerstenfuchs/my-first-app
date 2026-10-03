@@ -41,6 +41,13 @@ export interface ImageJob {
   bearbeitung:    Record<string, unknown> | null
 }
 
+/** `scene_meta` des Auftrags; bei Krea 2 mit dem Schalter der Gewichte, den der Worker liest. */
+function szenenMeta(input: ImageJobInput): Record<string, unknown> | null {
+  const an = input.model === 'lokal:krea2' && input.lokal_krea_gewichte === true
+  if (!an) return input.scene_meta ?? null
+  return { ...(input.scene_meta ?? {}), lokal: { krea_gewichte: true } }
+}
+
 export interface ImageJobInput {
   prompt:          string
   model:           string
@@ -58,6 +65,8 @@ export interface ImageJobInput {
   ziel_klasse?:    '1K' | '2K' | '4K' | null
   /** Nur für `lokal:`-Modelle: Auflösungsstufe. Ohne Angabe gilt Standard (2 MP). Landet als echte Pixelgröße in `size`. */
   lokal_stufe?:    LokalStufe
+  /** Nur `lokal:krea2`: Gewichte je Textschicht an. Reist in `scene_meta.lokal`, der Worker liest es dort. */
+  lokal_krea_gewichte?: boolean
 }
 
 const TABLE  = 'image_jobs'
@@ -134,7 +143,7 @@ export function useImageJobs(aktiv = true) {
         variants:       input.variants,
         reference_urls:  input.reference_urls ?? [],
         reference_roles: input.reference_roles ?? [],
-        scene_meta:     input.scene_meta ?? null,
+        scene_meta:     szenenMeta(input),
         preset_id:      input.preset_id ?? null,
         ziel_klasse:    input.ziel_klasse ?? null,
       })

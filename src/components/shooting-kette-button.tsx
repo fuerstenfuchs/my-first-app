@@ -45,7 +45,7 @@ export function ShootingKetteButton({
   // Das Modell kommt vom Auftragsknopf daneben (Scene Builder); die Location-
   // Ansicht gibt keins mit und bleibt bei der Vorgabe. Eine zweite Auswahl
   // waere nur eine zweite Stelle, an der sie auseinanderlaufen.
-  modell = 'gpt-image-2.5-sunburst', lokalStufe, zielKlasse = null, szenenName = null,
+  modell = 'gpt-image-2.5-sunburst', lokalStufe, kreaGewichte, zielKlasse = null, szenenName = null,
 }: {
   /** Die Szene — Vorlage für jeden Schritt. Braucht Charakter und Location. */
   scene: Scene
@@ -54,6 +54,7 @@ export function ShootingKetteButton({
   sceneMeta: Record<string, unknown>
   modell?: ModellId
   lokalStufe?: LokalStufe
+  kreaGewichte?: boolean
   zielKlasse?: KlassenId | null
   szenenName?: string | null
 }) {
@@ -222,6 +223,7 @@ export function ShootingKetteButton({
           // Bildausschnitt, nicht das Seitenverhältnis.
           aspect_ratio: aspectRatio,
           lokal_stufe: lokalStufe,
+          lokal_krea_gewichte: kreaGewichte,
           variants: 1,
           ziel_klasse: zielKlasse,
           reference_urls: refs.map(r => gesichert.get(r.url) ?? r.url),

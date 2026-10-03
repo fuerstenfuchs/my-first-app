@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { Loader2, Send, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { LokalStufeSelect } from '@/components/lokal-stufe-select'
+import { KreaGewichteSchalter } from '@/components/krea-gewichte-schalter'
 import { Button } from '@/components/ui/button'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -28,6 +29,8 @@ interface QueueButtonProps {
   onModellChange?: (m: ModellId) => void
   stufe?: LokalStufe
   onStufeChange?: (s: LokalStufe) => void
+  kreaGewichte?: boolean
+  onKreaGewichteChange?: (an: boolean) => void
 }
 
 /**
@@ -38,11 +41,14 @@ interface QueueButtonProps {
  * die Zuordnung, welches Bild wofür steht, und die Formatansage.
  */
 export function QueueButton({
-  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, modell: modellAussen, onModellChange, stufe: stufeAussen, onStufeChange,
+  prompt, referenzen, aspectRatio, sceneMeta, szenenName = null, modell: modellAussen, onModellChange, stufe: stufeAussen, onStufeChange, kreaGewichte: gewichteAussen, onKreaGewichteChange: onGewichteChange,
 }: QueueButtonProps) {
   const { anlegen } = useImageJobs(false)
   // Steuerbar von aussen: Die Shooting-Kette daneben soll dasselbe Modell nehmen.
   const [eigeneStufe, setEigeneStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
+  const [eigeneGewichte, setEigeneGewichte] = useState(false)
+  const kreaGewichte = gewichteAussen ?? eigeneGewichte
+  const setKreaGewichte = onGewichteChange ?? setEigeneGewichte
   const stufe = stufeAussen ?? eigeneStufe
   const setStufe = onStufeChange ?? setEigeneStufe
   const [eigenesModell, setEigenesModell] = useState<ModellId>('gpt-image-2.5-sunburst')
@@ -108,6 +114,7 @@ export function QueueButton({
         size:            zuordnung.size,
         aspect_ratio:    aspectRatio,
         lokal_stufe:     stufe,
+        lokal_krea_gewichte: kreaGewichte,
         variants:        durchlaeufe,
         ziel_klasse:     inKlassen ? klasse : null,
         reference_urls:  referenzen.map(r => r.url),
@@ -154,6 +161,7 @@ export function QueueButton({
         {hatStufen(modell) && (
           <LokalStufeSelect value={stufe} onChange={setStufe} className="w-full rounded-[10px]" contentClassName="sb-papier" />
         )}
+        {modell === 'lokal:krea2' && <KreaGewichteSchalter value={kreaGewichte} onChange={setKreaGewichte} />}
 
         {inKlassen && (
           <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>

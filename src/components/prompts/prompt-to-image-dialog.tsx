@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Loader2, Send, X, ImagePlus, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { LokalStufeSelect } from '@/components/lokal-stufe-select'
+import { KreaGewichteSchalter } from '@/components/krea-gewichte-schalter'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -236,6 +237,7 @@ export function PromptToImageDialog({
 
   const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const [stufe, setStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
+  const [kreaGewichte, setKreaGewichte] = useState(false)
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)
@@ -624,6 +626,7 @@ export function PromptToImageDialog({
       size:            zuordnung.size,
       aspect_ratio:    format,
       lokal_stufe:     stufe,
+      lokal_krea_gewichte: kreaGewichte,
       variants:        durchlaeufe,
       reference_urls:  sicherung.urls,
       reference_roles: rollen,
@@ -825,6 +828,7 @@ export function PromptToImageDialog({
             {hatStufen(modell) && (
               <LokalStufeSelect value={stufe} onChange={setStufe} className="h-8 w-44 text-[13px]" />
             )}
+            {modell === 'lokal:krea2' && <KreaGewichteSchalter value={kreaGewichte} onChange={setKreaGewichte} />}
 
             <Select
               value={format ?? 'auto'}

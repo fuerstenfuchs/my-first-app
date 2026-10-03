@@ -151,6 +151,11 @@ async function referenzVorbereiten(url: string, nr: number): Promise<{ name: str
   return { name: `referenz-${nr + 1}.png`, base64: png.toString('base64') }
 }
 
+export function kreaGewichte(meta: unknown): boolean {
+  const lokal = (meta as { lokal?: { krea_gewichte?: unknown } } | null)?.lokal
+  return lokal?.krea_gewichte === true
+}
+
 /** Ein Bild lokal erzeugen. Gibt die PNG-Daten zurück. */
 export async function bildErzeugenLokal(
   job: ImageJob, signal?: AbortSignal, melde: (text: string) => void = () => {},
@@ -182,6 +187,8 @@ export async function bildErzeugenLokal(
     prompt: job.prompt,
     referenzen,
     anzahl: 1,
+    // Schalter „Krea-Gewichte" (nur Krea 2) reist in scene_meta.lokal
+    ...(modell === 'krea2' && kreaGewichte(job.scene_meta) ? { krea_gewichte: true } : {}),
     ...(mass ? { breite: mass[0], hoehe: mass[1] } : {}),
     nachbearbeitung: { hochrechnen: 0, augenfarbe: false, augen_referenz: 0 },
   }

@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Loader2, Send, Save, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { LokalStufeSelect } from '@/components/lokal-stufe-select'
+import { KreaGewichteSchalter } from '@/components/krea-gewichte-schalter'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -49,6 +50,7 @@ export function FreieErzeugung(
   const [prompt, setPrompt] = useState('')
   const [modell, setModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const [stufe, setStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
+  const [kreaGewichte, setKreaGewichte] = useState(false)
   const [format, setFormat] = useState<AspectRatioKey>('landscape_16_9')
   const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [anzahl, setAnzahl] = useState<Durchlaeufe>(1)
@@ -155,6 +157,7 @@ export function FreieErzeugung(
         size: groesseFuerFormat(format).size,
         aspect_ratio: format,
         lokal_stufe: stufe,
+        lokal_krea_gewichte: kreaGewichte,
         variants: anzahl,
         ziel_klasse: inKlassen ? klasse : null,
         reference_urls: referenzen.map(r => r.url),
@@ -287,6 +290,7 @@ export function FreieErzeugung(
       {hatStufen(modell) && (
         <LokalStufeSelect value={stufe} onChange={setStufe} className="lt-feld h-11 border-0 px-3.5 text-[15px]" contentClassName="lt-menue" />
       )}
+      {modell === 'lokal:krea2' && <KreaGewichteSchalter value={kreaGewichte} onChange={setKreaGewichte} className="px-1" />}
 
       <div className="grid grid-cols-2 gap-1.5">
         <Select value={format} onValueChange={v => setFormat(v as AspectRatioKey)}>

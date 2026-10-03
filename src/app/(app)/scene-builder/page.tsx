@@ -722,6 +722,7 @@ export default function SceneBuilderPage() {
   // Das Bildmodell gilt für den Auftragsknopf UND das Shooting daneben.
   const [bildModell, setBildModell] = useState<ModellId>('gpt-image-2.5-sunburst')
   const [lokalStufe, setLokalStufe] = useState<LokalStufe>('standard')
+  const [kreaGewichte, setKreaGewichte] = useState(false)
 
   const cameras  = useMemo(() => visualAssets.filter(a => a.asset_type === 'camera'),  [visualAssets])
   const expressions = useMemo(() => visualAssets.filter(a => a.asset_type === 'expression'), [visualAssets])
@@ -1654,6 +1655,8 @@ export default function SceneBuilderPage() {
               onModellChange={setBildModell}
               stufe={lokalStufe}
               onStufeChange={setLokalStufe}
+              kreaGewichte={kreaGewichte}
+              onKreaGewichteChange={setKreaGewichte}
             />
 
             {/*
@@ -1671,6 +1674,7 @@ export default function SceneBuilderPage() {
                 szenenName={scene.location.name}
                 modell={bildModell}
                 lokalStufe={lokalStufe}
+                kreaGewichte={kreaGewichte}
               />
             )}
 
