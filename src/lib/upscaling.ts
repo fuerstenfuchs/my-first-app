@@ -38,7 +38,9 @@ export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal' | 'gemini'
  * Beschriftung verlieren und sich nicht mehr erneut einreihen lassen.
  * Weggenommen wird nur das Angebot, nicht die Vergangenheit.
  */
-export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'gemini', 'crystal']
+// Crystal ist aus dem Menü genommen (Mark, 03.10.2026: zu teuer, rund das Vierzehnfache von SeedVR2).
+// Der Typ bleibt, damit alte Aufträge lesbar sind.
+export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'gemini']
 
 /** Die bezahlten Verfahren — an einer Stelle, damit niemand eins vergisst. */
 export const KOSTET_GELD: readonly Upscaler[] = ['seedvr2', 'crystal']

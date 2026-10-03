@@ -104,7 +104,12 @@ async function vergroessern(
   if (!job.source_path) {
     throw new Error('Vergrößerungsauftrag ohne Ausgangsbild.')
   }
-  const bekannt = ['lanczos', 'seedvr2', 'crystal', 'gemini']
+  // Crystal ist entfernt (Mark, 03.10.2026: zu teuer). Ein alter Auftrag damit scheitert mit klarem Satz,
+  // statt Geld auszugeben.
+  if (job.upscaler === 'crystal') {
+    throw new Error('Crystal wurde entfernt, weil es zu teuer ist. Neu einreihen mit SeedVR2 oder Gemini.')
+  }
+  const bekannt = ['lanczos', 'seedvr2', 'gemini']
   if (!job.upscaler || !bekannt.includes(job.upscaler)) {
     throw new Error(`Unbekanntes Vergrößerungsverfahren: ${job.upscaler ?? 'keins angegeben'}`)
   }
