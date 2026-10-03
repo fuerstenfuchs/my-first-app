@@ -185,3 +185,22 @@ export function kostenSatz(verfahren: Upscaler, stufe: Stufe): string {
   return `${VERFAHREN_NAME[verfahren]} über fal.ai — rekonstruiert Details, `
     + `kostet ${preis(verfahren, stufe)}.`
 }
+
+/**
+ * Wie groß das Ergebnis des lokalen Hochrechnens höchstens werden darf (Megapixel nach dem Hochrechnen).
+ * Derselbe Wert steht im Arbeiter (`MAX_PIXEL_ENDE` in arbeiter.py). Mark, 03.10.2026: 18 statt 16,8.
+ */
+export const LOKAL_MAX_PIXEL = 18_000_000
+
+/**
+ * Welche Stufen eines Verfahrens bei diesem Ausgangsbild angeboten werden.
+ *
+ * Nur das lokale Hochrechnen mit festem Faktor hat eine Obergrenze: 2200×2200 mit 2× wären 19,4 MP, und der Arbeiter lehnte erst in
+ * der Warteschlange ab. Ist die Größe des Ausgangsbilds nicht bekannt (Erzeugung mit Referenzbild), bleibt alles stehen — der
+ * Arbeiter sagt es dann beim Absenden.
+ */
+export function stufenFuer(verfahren: Upscaler, groesse: { breite: number; hoehe: number } | null): Stufe[] {
+  const alle = STUFEN[verfahren]
+  if (verfahren !== 'lokal' || !groesse) return alle
+  return alle.filter(s => s.art !== 'faktor' || groesse.breite * groesse.hoehe * s.wert ** 2 <= LOKAL_MAX_PIXEL)
+}

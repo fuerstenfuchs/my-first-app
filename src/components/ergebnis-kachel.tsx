@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { bildHerunterladen, dateinameFuerBild } from '@/lib/bild-download'
 import {
-  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld, IM_MENUE, STUFEN,
+  preis, VERFAHREN_NAME, VERFAHREN_HINWEIS, kostetGeld, IM_MENUE, stufenFuer,
   stufeLabel, KLASSE_FLAECHE, type Stufe, type Upscaler,
 } from '@/lib/upscaling'
 import type { ImageJob } from '@/hooks/use-image-jobs'
@@ -91,6 +91,12 @@ export function ErgebnisKachel({
   const [fragt, setFragt] = useState(false)
   const [loescht, setLoescht] = useState(false)
   const original = originalInBackblaze(job.scene_meta, pfad)
+  // Größe des Ausgangsbilds, soweit bekannt: das Original aus Backblaze (die Vergrößerung nimmt es), sonst die Größe des Auftrags.
+  const [sb, sh] = job.size.split('x').map(Number)
+  const ausgang = original ?? (job.reference_urls.length === 0 && sb && sh ? { breite: sb, hoehe: sh } : null)
+  const angebote = IM_MENUE
+    .map(v => ({ v, stufen: stufenFuer(v, ausgang) }))
+    .filter(a => a.stufen.length > 0)
 
   async function herunterladen() {
     setLaedt(true)
@@ -151,13 +157,13 @@ export function ErgebnisKachel({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="lt-menue min-w-56">
-              {IM_MENUE.map((v, nr) => (
+              {angebote.map(({ v, stufen }, nr) => (
                 <div key={v}>
                   {nr > 0 && <DropdownMenuSeparator />}
                   <DropdownMenuLabel className="text-[13px] font-normal text-muted-foreground">
                     {VERFAHREN_NAME[v]} · {VERFAHREN_HINWEIS[v]}
                   </DropdownMenuLabel>
-                  {STUFEN[v].map(stufe => (
+                  {stufen.map(stufe => (
                     <DropdownMenuItem
                       key={`${v}-${stufe.wert}`}
                       className="flex items-center justify-between gap-3 text-xs"

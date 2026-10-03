@@ -26,7 +26,7 @@ import { createClient } from '@/lib/supabase'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import {
-  MODELLE, hatStufen, LOKAL_STUFE_VORGABE, type LokalStufe, waehlbar, referenzProblem, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
+  MODELLE, KLASSEN, rechnetInKlassen, type KlassenId, hatStufen, LOKAL_STUFE_VORGABE, type LokalStufe, waehlbar, referenzProblem, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
   ROLLEN_LABEL, ROLLEN_ANWEISUNG, zuordnungsBlock,
   type ModellId, type Durchlaeufe, type ReferenzRolle,
 } from '@/lib/image-generation'
@@ -239,6 +239,8 @@ export function PromptToImageDialog({
   const [stufe, setStufe] = useState<LokalStufe>(LOKAL_STUFE_VORGABE)
   const [kreaGewichte, setKreaGewichte] = useState(false)
   const [durchlaeufe, setDurchlaeufe] = useState<Durchlaeufe>(1)
+  // Gemini rechnet in Größenklassen statt in Pixeln; ohne Angabe lehnt die Datenbank den Auftrag ab (Critic, 03.10.2026).
+  const [klasse, setKlasse] = useState<KlassenId>('2K')
   const [format, setFormat] = useState<AspectRatioKey | null>(null)
   const [laeuft, setLaeuft] = useState(false)
   /*
@@ -625,6 +627,7 @@ export function PromptToImageDialog({
       size:            zuordnung.size,
       aspect_ratio:    format,
       lokal_stufe:     stufe,
+      ziel_klasse:     rechnetInKlassen(modell) ? klasse : null,
       lokal_krea_gewichte: kreaGewichte,
       variants:        durchlaeufe,
       reference_urls:  sicherung.urls,
@@ -847,6 +850,19 @@ export function PromptToImageDialog({
                 ))}
               </SelectContent>
             </Select>
+
+            {rechnetInKlassen(modell) && (
+              <Select value={klasse} onValueChange={v => setKlasse(v as KlassenId)}>
+                <SelectTrigger className="h-8 w-28 text-[13px]" aria-label="Größenklasse">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {KLASSEN.map(k => (
+                    <SelectItem key={k.id} value={k.id} className="text-xs">{k.label} · {k.note}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <Select
               value={String(durchlaeufe)}
