@@ -325,7 +325,7 @@ export default function PersonenbilderPage() {
         )}
         {istLokal(modell) && (
           <p className="mt-1.5 text-[13px] text-muted-foreground">
-            {ERZEUGEN_MODELLE.find(m => m.id === modell)?.note}. Rechnet auf dem neuen PC — der muss an sein.
+            Rechnet auf dem neuen PC.
           </p>
         )}
       </div>

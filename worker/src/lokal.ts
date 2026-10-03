@@ -28,6 +28,7 @@ export const LOKAL_PRAEFIX = 'lokal:'
 /** Die Modelle des Arbeiters. Schlüssel = was hinter `lokal:` steht. `referenzen` = [wenigstens, höchstens]. */
 export const LOKALE_MODELLE = {
   qwen21:         { referenzen: [0, 4] },
+  krea2:          { referenzen: [0, 0] },
   klein9b:        { referenzen: [0, 4] },
   klein4b:        { referenzen: [0, 4] },
   sdxl_instantid: { referenzen: [1, 1] },

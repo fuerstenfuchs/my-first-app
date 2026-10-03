@@ -115,26 +115,13 @@ export const MODELLE = [
     Ergebnisse brauchen keinen Umweg: Der Arbeiter holt die Referenzen aus
     Supabase, rechnet im Heimnetz und legt das fertige Bild wie jedes andere ab.
   */
-  {
-    id: 'lokal:qwen21', label: 'Lokal · Qwen-Image 2.1',
-    note: 'Neuer PC — beste Ähnlichkeit (Personen, Tiere, Dinge) · nur nichtkommerziell',
-    kannReferenzen: true,
-  },
-  {
-    id: 'lokal:klein9b', label: 'Lokal · FLUX.2 klein 9B',
-    note: 'Neuer PC — schönes Licht und Haut, Ähnlichkeit schwächer · nur nichtkommerziell',
-    kannReferenzen: true,
-  },
-  {
-    id: 'lokal:klein4b', label: 'Lokal · FLUX.2 klein 4B',
-    note: 'Neuer PC — schnell, Ähnlichkeit schwach',
-    kannReferenzen: true,
-  },
-  {
-    id: 'lokal:sdxl_instantid', label: 'Lokal · SDXL + InstantID',
-    note: 'Neuer PC — starkes Gesicht, nur Nahaufnahmen, genau EIN Referenzbild',
-    kannReferenzen: true,
-  },
+  { id: 'lokal:qwen21',  label: 'Qwen 2.1 (lokal)',        note: 'Neuer PC', kannReferenzen: true },
+  // Krea 2 nimmt KEINE Referenzbilder (Test 03.10.2026: Referenzen über den Textencoder ergaben zwei Figuren nebeneinander und vermischte
+  // Kleidung). Dafür beste Haut und Augen, rund 2,7× so schnell wie Qwen. `kannReferenzen: false` sperrt es automatisch bei Referenzen.
+  { id: 'lokal:krea2',    label: 'Krea 2 (lokal)',          note: 'Neuer PC', kannReferenzen: false },
+  { id: 'lokal:klein9b',  label: 'FLUX klein 9B (lokal)',   note: 'Neuer PC', kannReferenzen: true },
+  { id: 'lokal:klein4b',  label: 'FLUX klein 4B (lokal)',   note: 'Neuer PC', kannReferenzen: true },
+  { id: 'lokal:sdxl_instantid', label: 'SDXL + InstantID (lokal)', note: 'Neuer PC', kannReferenzen: true },
 ] as const
 
 export type ModellId = typeof MODELLE[number]['id']
@@ -147,6 +134,7 @@ export function istLokal(modell: string): boolean {
 /** Wie viele Referenzbilder ein lokales Modell nimmt: [wenigstens, höchstens]. Gleich wie im Arbeiter. */
 const LOKAL_REFERENZEN: Record<string, readonly [number, number]> = {
   'lokal:qwen21': [0, 4],
+  'lokal:krea2': [0, 0],
   'lokal:klein9b': [0, 4],
   'lokal:klein4b': [0, 4],
   'lokal:sdxl_instantid': [1, 1],

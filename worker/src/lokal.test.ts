@@ -222,3 +222,15 @@ test('Pixelgroesse aus `size`: nur Zulaessiges', async () => {
   assert.equal(masseAusSize('4096x4096'), undefined)
   assert.equal(masseAusSize('quatsch'), undefined)
 })
+
+test('Krea 2 geht ohne Referenz an den neuen PC und mit Referenz nicht', async () => {
+  const { bildErzeugenLokal } = await import('./lokal.ts')
+  modus = 'ok'
+  arbeiterAnfragen.length = 0
+  const fuenf = ['https://beispiel.supabase.co/storage/v1/object/public/x/0.png']
+  await assert.rejects(bildErzeugenLokal(auftrag('lokal:krea2', { reference_urls: fuenf })), /0 Referenzbild/)
+  assert.equal(arbeiterAnfragen.length, 0)
+  const d = await bildErzeugenLokal(auftrag('lokal:krea2', { size: '1344x768' }))
+  assert.ok(d.byteLength > 100)
+  assert.equal(JSON.parse(arbeiterAnfragen.find(a => a.methode === 'POST')!.rumpf).modell, 'krea2')
+})

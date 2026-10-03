@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, lokaleGroesse, lokaleMasse, ersatzModell,
+  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, hatStufen, lokaleGroesse, lokaleMasse, ersatzModell,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE, type ReferenzRolle,
 } from './image-generation'
@@ -306,5 +306,24 @@ describe('Größe lokaler Aufträge', () => {
   it('Ersatz eines lokalen Modells ist wieder ein lokales', () => {
     expect(ersatzModell('lokal:sdxl_instantid', 2)).toBe('lokal:qwen21')
     expect(ersatzModell('gemini-3.1-flash-image', 1)).toBe('gpt-image-2.5-sunburst')
+  })
+})
+
+describe('Krea 2 (lokal)', () => {
+  it('nimmt keine Referenzbilder und wird bei Referenzen nicht angeboten', () => {
+    expect(passtZuReferenzen('lokal:krea2', 0)).toBe(true)
+    expect(passtZuReferenzen('lokal:krea2', 1)).toBe(false)
+    expect(modelleFuer(0).some(m => m.id === 'lokal:krea2')).toBe(true)
+    expect(modelleFuer(1).some(m => m.id === 'lokal:krea2')).toBe(false)
+  })
+  it('folgt den Auflösungsstufen und weicht bei Referenzen auf Qwen aus, nie auf den Proxy', () => {
+    expect(hatStufen('lokal:krea2')).toBe(true)
+    expect(ersatzModell('lokal:krea2', 2)).toBe('lokal:qwen21')
+  })
+  it('die Beschriftungen bleiben kurz', () => {
+    for (const m of MODELLE.filter(x => istLokal(x.id))) {
+      expect(m.label.length, m.id).toBeLessThanOrEqual(30)
+      expect(m.note.length, m.id).toBeLessThanOrEqual(12)
+    }
   })
 })
