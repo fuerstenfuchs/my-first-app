@@ -156,6 +156,39 @@ export function passtZuReferenzen(modell: ModellId, anzahl: number): boolean {
   return grenzen ? anzahl >= grenzen[0] && anzahl <= grenzen[1] : true
 }
 
+/**
+ * Wie viele Referenzbilder ein Modell höchstens nimmt (Unendlich bei den Proxy-Modellen mit Referenzen).
+ */
+export function maxReferenzen(modell: ModellId): number {
+  const m = MODELLE.find(x => x.id === modell)
+  if (!m || !m.kannReferenzen) return 0
+  return LOKAL_REFERENZEN[modell]?.[1] ?? Infinity
+}
+
+/**
+ * Darf das Modell AUSGEWÄHLT werden? Nur die Obergrenze zählt.
+ *
+ * WARUM NICHT `passtZuReferenzen`: SDXL+InstantID braucht genau ein Referenzbild. Wer es auswählen will, um danach das Bild
+ * hinzuzufügen, hatte vorher keine Chance — mit null Bildern stand es gesperrt da (Mark, 03.10.2026: „ich habe noch gar keins
+ * ausgewählt"). Zu WENIG Bilder ist ein Zustand auf dem Weg zum Absenden, zu VIELE ist ein Grund, das Modell zu sperren.
+ * Das Absenden prüft weiter mit `referenzProblem`.
+ */
+export function waehlbar(modell: ModellId, anzahl: number): boolean {
+  return anzahl <= maxReferenzen(modell)
+}
+
+/** Ein Satz, was bei dieser Zahl von Referenzbildern nicht stimmt — oder null, wenn alles passt. */
+export function referenzProblem(modell: ModellId, anzahl: number): string | null {
+  const m = MODELLE.find(x => x.id === modell)
+  if (!m) return 'Unbekanntes Modell.'
+  if (passtZuReferenzen(modell, anzahl)) return null
+  const grenzen = LOKAL_REFERENZEN[modell]
+  if (!m.kannReferenzen || grenzen?.[1] === 0) return `${m.label} nimmt keine Referenzbilder.`
+  if (grenzen && anzahl < grenzen[0]) return `${m.label} braucht ${grenzen[0] === grenzen[1] ? 'genau ' : 'mindestens '}${grenzen[0]} Referenzbild.`
+  if (grenzen) return `${m.label} nimmt höchstens ${grenzen[1]} Referenzbild${grenzen[1] === 1 ? '' : 'er'}.`
+  return `${m.label} passt nicht zu ${anzahl} Referenzbildern.`
+}
+
 /*
   DIE DREI AUFLÖSUNGSSTUFEN der lokalen Modelle (Mark, 03.10.2026): „Zwei
   Megapixel als neuen Standard. Wahlweise ein Megapixel. Und wahlweise die
@@ -240,7 +273,7 @@ export function ersatzModell(aktuell: ModellId, anzahl: number): ModellId {
 
 /** Die Modelle, die zu dieser Zahl von Referenzbildern passen. */
 export function modelleFuer(anzahl: number) {
-  return MODELLE.filter(m => passtZuReferenzen(m.id, anzahl))
+  return MODELLE.filter(m => waehlbar(m.id, anzahl))
 }
 
 /** Die Modelle, die Referenzbilder verarbeiten können. */

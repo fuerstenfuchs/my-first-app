@@ -14,7 +14,7 @@ import {
 import { createClient } from '@/lib/supabase'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, modelleFuer, passtZuReferenzen, ersatzModell, istLokal, hatStufen, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
+  MODELLE, modelleFuer, waehlbar, referenzProblem, ersatzModell, istLokal, hatStufen, DURCHLAEUFE, KLASSEN, groesseFuerFormat,
   formatHinweis, formatAnsage, rechnetInKlassen,
   LOKAL_STUFE_VORGABE, type LokalStufe, type ModellId, type Durchlaeufe, type KlassenId,
 } from '@/lib/image-generation'
@@ -141,6 +141,9 @@ export function FreieErzeugung(
   async function erzeugen() {
     const text = prompt.trim()
     if (!text || laeuft) return
+    // Zu wenige Referenzbilder für das gewählte Modell (z. B. SDXL ohne Bild): sagen, was fehlt, statt in der Warteschlange zu scheitern.
+    const problem = referenzProblem(modell, referenzen.length)
+    if (problem) { toast.error(problem); return }
     setLaeuft(true)
     try {
       const job = await anlegen({
@@ -272,13 +275,13 @@ export function FreieErzeugung(
             // Gesperrt, aber sichtbar: Ein Modell, das aus der Liste
             // verschwindet, wirkt wie ein Fehler. Eines, das dasteht und den
             // Grund nennt, erklärt sich selbst.
-            const gesperrt = !passtZuReferenzen(m.id, referenzen.length)
+            const gesperrt = !waehlbar(m.id, referenzen.length)
             return (
               <SelectItem key={m.id} value={m.id} disabled={gesperrt} className="text-xs">
                 <span className="flex flex-col items-start">
                   <span>{m.label}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {gesperrt ? 'Passt nicht zur Zahl der Referenzbilder' : m.note}
+                    {gesperrt ? (referenzProblem(m.id, referenzen.length) ?? m.note) : m.note}
                   </span>
                 </span>
               </SelectItem>

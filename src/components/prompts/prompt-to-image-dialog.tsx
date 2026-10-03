@@ -26,7 +26,7 @@ import { createClient } from '@/lib/supabase'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import {
-  MODELLE, hatStufen, LOKAL_STUFE_VORGABE, type LokalStufe, passtZuReferenzen, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
+  MODELLE, hatStufen, LOKAL_STUFE_VORGABE, type LokalStufe, waehlbar, referenzProblem, ersatzModell, istLokal, DURCHLAEUFE, groesseFuerFormat, promptFuerAuftrag,
   ROLLEN_LABEL, ROLLEN_ANWEISUNG, zuordnungsBlock,
   type ModellId, type Durchlaeufe, type ReferenzRolle,
 } from '@/lib/image-generation'
@@ -546,10 +546,9 @@ export function PromptToImageDialog({
     // Ein gesperrtes Modell kann gewählt geblieben sein (Referenzen kamen oder
     // gingen nach der Wahl). Lieber hier stoppen als nach drei Fehlversuchen
     // in der Warteschlange.
-    if (!passtZuReferenzen(modell, referenzen.length)) {
-      const neu = ersatzModell(modell, referenzen.length)
-      setModell(neu)
-      toast.error(`${MODELLE.find(m => m.id === modell)?.label ?? modell} passt nicht zu ${referenzen.length} Referenzbild(ern). Ich habe auf ${MODELLE.find(m => m.id === neu)?.label ?? neu} gestellt — bitte prüfen und noch einmal absenden.`)
+    const problem = referenzProblem(modell, referenzen.length)
+    if (problem) {
+      toast.error(problem)
       return
     }
     laeuftRef.current = true
@@ -817,7 +816,7 @@ export function PromptToImageDialog({
                 {MODELLE.map(m => (
                   <SelectItem
                     key={m.id} value={m.id} className="text-xs"
-                    disabled={!passtZuReferenzen(m.id, referenzen.length)}
+                    disabled={!waehlbar(m.id, referenzen.length)}
                   >
                     {m.label}
                   </SelectItem>

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select'
 import { useImageJobs } from '@/hooks/use-image-jobs'
 import {
-  MODELLE, modelleFuer, ersatzModell, istLokal, hatStufen, lokaleGroesse, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
+  MODELLE, modelleFuer, referenzProblem, ersatzModell, istLokal, hatStufen, lokaleGroesse, DURCHLAEUFE, KLASSEN, rechnetInKlassen,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   ROLLEN_LABEL,
   LOKAL_STUFE_VORGABE, type LokalStufe, type ModellId, type Durchlaeufe, type Referenz, type KlassenId,
@@ -99,6 +99,8 @@ export function QueueButton({
 
   async function handleQueue() {
     if (!prompt || laeuftRef.current) return
+    const problem = referenzProblem(modell, referenzen.length)
+    if (problem) { toast.error(problem); return }
     laeuftRef.current = true
     setLaeuft(true)
 

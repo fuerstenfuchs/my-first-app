@@ -14,7 +14,7 @@ import { referenzenSichern, sicherungsMeldung } from '@/lib/referenzen-sichern'
 import { cn } from '@/lib/utils'
 import type { AblageZiel } from '@/lib/ablage-auftrag'
 import {
-  groesseFuerFormat, promptFuerAuftrag, passtZuReferenzen, ersatzModell, MODELLE,
+  groesseFuerFormat, promptFuerAuftrag, referenzProblem,
   ROLLEN_ANWEISUNG,
   type ModellId, type LokalStufe, type KlassenId, type Referenz, type ReferenzRolle,
 } from '@/lib/image-generation'
@@ -106,9 +106,9 @@ export function ShootingKetteButton({
     const hoechstens = Math.max(0, ...kette.map(s => gruppe !== null
       ? referenzen.filter(r => r.rolle !== 'outfit').length
       : referenzen.filter(r => r.rolle !== 'outfit').length + (s.outfit?.cover_image_url ? 1 : 0)))
-    if (!passtZuReferenzen(modell, hoechstens)) {
-      const name = MODELLE.find(m => m.id === modell)?.label ?? modell
-      toast.error(`${name} passt nicht zu ${hoechstens} Referenzbildern. Bitte oben ${MODELLE.find(m => m.id === ersatzModell(modell, hoechstens))?.label ?? 'ein anderes Modell'} wählen.`)
+    const problem = referenzProblem(modell, hoechstens)
+    if (problem) {
+      toast.error(problem)
       return
     }
     laeuftRef.current = true

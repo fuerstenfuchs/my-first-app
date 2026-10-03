@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, hatStufen, lokaleGroesse, lokaleMasse, ersatzModell,
+  MODELLE, istLokal, passtZuReferenzen, modelleFuer, formatHinweis, rechnetInKlassen, hatStufen, referenzProblem, lokaleGroesse, lokaleMasse, ersatzModell,
   groesseFuerFormat, formatAnsage, promptFuerAuftrag, referenzZuordnung,
   NATIVE_GROESSEN, GROESSE_VORGABE, DURCHLAEUFE, type ReferenzRolle,
 } from './image-generation'
@@ -263,11 +263,23 @@ describe('Lokale Modelle auf dem neuen PC', () => {
     expect(passtZuReferenzen('gpt-image-2.5-sunburst', 8)).toBe(true)
   })
 
-  it('modelleFuer folgt der Zahl der Referenzen', () => {
-    expect(modelleFuer(0).some(m => m.id === 'lokal:sdxl_instantid')).toBe(false)
+  it('modelleFuer sperrt nur bei ZU VIELEN Referenzen — SDXL ist ohne Bild wählbar', () => {
+    // Mark, 03.10.2026: „Ich habe noch gar keins ausgewählt" — SDXL stand gesperrt da, weil es genau EIN Bild braucht.
+    expect(modelleFuer(0).some(m => m.id === 'lokal:sdxl_instantid')).toBe(true)
     expect(modelleFuer(1).some(m => m.id === 'lokal:sdxl_instantid')).toBe(true)
     expect(modelleFuer(2).some(m => m.id === 'lokal:sdxl_instantid')).toBe(false)
+    expect(modelleFuer(1).some(m => m.id === 'gemini-3.1-flash-image')).toBe(false)
     expect(modelleFuer(0)[0].id).toBe('gpt-image-2.5-sunburst')
+  })
+
+  it('beim Absenden sagt referenzProblem, was fehlt', () => {
+    expect(referenzProblem('lokal:sdxl_instantid', 0)).toMatch(/genau 1 Referenzbild/)
+    expect(referenzProblem('lokal:sdxl_instantid', 2)).toMatch(/höchstens 1 Referenzbild/)
+    expect(referenzProblem('lokal:krea2', 1)).toMatch(/keine Referenzbilder/)
+    expect(referenzProblem('gemini-3.1-flash-image', 1)).toMatch(/keine Referenzbilder/)
+    expect(referenzProblem('lokal:qwen21', 0)).toBeNull()
+    expect(referenzProblem('lokal:sdxl_instantid', 1)).toBeNull()
+    expect(referenzProblem('gpt-image-2.5-sunburst', 6)).toBeNull()
   })
 
   it('rechnet nicht in Klassen und verspricht kein Proxy-Format', () => {
