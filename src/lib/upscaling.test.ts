@@ -16,6 +16,13 @@ describe('Vergrößern: 5K lokal (PROJ-94)', () => {
     }
   })
 
+  it('Lokal · SeedVR2 hat 2×, 3× und 4× und kostet nichts', () => {
+    expect(IM_MENUE).toContain('lokal')
+    expect(kostetGeld('lokal')).toBe(false)
+    expect(STUFEN.lokal.map(stufeLabel)).toEqual(['2×', '3×', '4×'])
+    expect(kostenSatz('lokal', STUFEN.lokal[0])).toMatch(/kostet nichts/)
+  })
+
   it('Crystal ist nicht mehr im Menü (zu teuer), die bezahlten Wege bleiben', () => {
     expect(IM_MENUE).not.toContain('crystal')
     expect(IM_MENUE).toContain('seedvr2')

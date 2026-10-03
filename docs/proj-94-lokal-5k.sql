@@ -25,3 +25,10 @@ alter table public.image_jobs add constraint image_jobs_upscale_ziel
       )
     )
   );
+
+-- ── Nachtrag (03.10.2026): auch die normale lokale Vergrößerung ─────────────────────────────────────────────────
+-- `lokal` = SeedVR2 7B (normal) auf dem neuen PC, Faktor 2/3/4 wie bei SeedVR2 über fal.ai. Faktor in `scale`, `ziel_klasse` leer —
+-- die vorhandene Regel `image_jobs_upscale_ziel` deckt das ab (dritter Zweig), nur die Liste der erlaubten Verfahren wächst.
+alter table public.image_jobs drop constraint if exists image_jobs_upscaler_check;
+alter table public.image_jobs add constraint image_jobs_upscaler_check
+  check (upscaler is null or upscaler in ('lanczos', 'seedvr2', 'crystal', 'gemini', 'lokal', 'lokal_5k', 'lokal_5k_zwei'));

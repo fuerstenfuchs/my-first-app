@@ -272,3 +272,20 @@ export async function bildHochrechnen5k(
   }
   return bestellungAusfuehren(e, bestellung, signal, melde)
 }
+
+/**
+ * Ein vorhandenes Bild um einen festen Faktor hochrechnen lassen (2×, 3× oder 4×) — SeedVR2 7B (normal) auf dem neuen PC, nur Strom.
+ * Der Arbeiter lehnt eine Endgröße über 16,8 Megapixel mit klarem Satz ab; sie steht dann als Fehler am Auftrag.
+ */
+export async function bildHochrechnenFaktor(
+  quelle: ArrayBuffer, faktor: 2 | 3 | 4, signal?: AbortSignal, melde: (text: string) => void = () => {},
+): Promise<ArrayBuffer> {
+  const e = einstellung()
+  if (quelle.byteLength > 40 * 1024 * 1024) throw new Error('Das Ausgangsbild ist zu groß für den neuen PC (über 40 MB).')
+  const bestellung = {
+    modell: 'hochrechnen',
+    quelle: { name: 'quelle.png', base64: Buffer.from(quelle).toString('base64') },
+    nachbearbeitung: { hochrechnen: faktor },
+  }
+  return bestellungAusfuehren(e, bestellung, signal, melde)
+}

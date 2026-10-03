@@ -27,7 +27,7 @@ export type ImageJob = {
   job_type: 'generate' | 'upscale'
   source_path: string | null
   scale: number | null
-  upscaler: 'lanczos' | 'seedvr2' | 'crystal' | 'gemini' | 'lokal_5k' | 'lokal_5k_zwei' | null
+  upscaler: 'lanczos' | 'seedvr2' | 'crystal' | 'gemini' | 'lokal' | 'lokal_5k' | 'lokal_5k_zwei' | null
   /** Nur bei Gemini: Groessenklasse statt Faktor. */
   ziel_klasse: '1K' | '2K' | '4K' | null
   external_ref: FalAnfrage | null

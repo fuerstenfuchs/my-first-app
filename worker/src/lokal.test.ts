@@ -272,3 +272,17 @@ test('5K: ein zu grosses Ausgangsbild wird vor dem Versand abgelehnt', async () 
   await assert.rejects(bildHochrechnen5k(new ArrayBuffer(41 * 1024 * 1024), 'scharf'), /zu groß/)
   assert.equal(arbeiterAnfragen.length, 0)
 })
+
+test('Hochrechnen um festen Faktor: Faktor geht als hochrechnen hin, nicht als auf_5k', async () => {
+  const { bildHochrechnenFaktor } = await import('./lokal.ts')
+  modus = 'ok'
+  for (const f of [2, 3, 4] as const) {
+    arbeiterAnfragen.length = 0
+    const quelle = PNG.buffer.slice(PNG.byteOffset, PNG.byteOffset + PNG.byteLength) as ArrayBuffer
+    await bildHochrechnenFaktor(quelle, f)
+    const b = JSON.parse(arbeiterAnfragen.find(a => a.methode === 'POST')!.rumpf)
+    assert.equal(b.modell, 'hochrechnen')
+    assert.deepEqual(b.nachbearbeitung, { hochrechnen: f })
+    assert.ok(arbeiterAnfragen.some(a => a.methode === 'DELETE'))
+  }
+})
