@@ -11,7 +11,7 @@
  */
 
 import { bildErzeugen } from './proxy.ts'
-import { bildErzeugenLokal, istLokalesModell } from './lokal.ts'
+import { bildErzeugenLokal, bildHochrechnen5k, istLokalesModell } from './lokal.ts'
 import { bildVergroessern } from './upscale.ts'
 import { bildVergroessernKi, type KiVerfahren } from './fal.ts'
 import { bildNachbauen, bildErzeugenGemini, GROESSENKLASSEN } from './gemini.ts'
@@ -19,7 +19,7 @@ import {
   auftragFertig, ergebnisAblegen, quelleHolen, externeAnfrageMerken, fortschrittMerken,
 } from './supabase.ts'
 import type { ImageJob } from './supabase.ts'
-import { speicherVermerk, type Vermerk } from './speicher.ts'
+import { speicherVermerk, masseLesen, type Vermerk } from './speicher.ts'
 
 /** Wohin Zwischenmeldungen gehen — der Dauerbetrieb stempelt die Uhrzeit davor. */
 export type Melder = (text: string) => void
@@ -109,7 +109,7 @@ async function vergroessern(
   if (job.upscaler === 'crystal') {
     throw new Error('Crystal wurde entfernt, weil es zu teuer ist. Neu einreihen mit SeedVR2 oder Gemini.')
   }
-  const bekannt = ['lanczos', 'seedvr2', 'gemini']
+  const bekannt = ['lanczos', 'seedvr2', 'gemini', 'lokal_5k', 'lokal_5k_zwei']
   if (!job.upscaler || !bekannt.includes(job.upscaler)) {
     throw new Error(`Unbekanntes Vergrößerungsverfahren: ${job.upscaler ?? 'keins angegeben'}`)
   }
@@ -144,6 +144,12 @@ async function vergroessern(
     ) as ArrayBuffer
     nachher = { breite: ergebnis.breite, hoehe: ergebnis.hoehe }
     sage(`  Seitenverhältnis ${ergebnis.verhaeltnis}, Farben auf das Original zurückgerechnet.`)
+  } else if (job.upscaler === 'lokal_5k' || job.upscaler === 'lokal_5k_zwei') {
+    // Auf dem neuen PC, kostet nur Strom. Der Arbeiter dort rechnet den Faktor aus der Bildgröße (lange Seite 5120, höchstens 18 MP).
+    ziel = '5K'
+    sage(`  Hochrechnen auf 5K auf dem neuen PC (${job.upscaler === 'lokal_5k' ? 'scharf' : 'zwei Stufen'})…`)
+    daten = await bildHochrechnen5k(quelle, job.upscaler === 'lokal_5k' ? 'scharf' : 'zwei_stufen', signal, sage)
+    nachher = (await masseLesen(Buffer.from(daten))) ?? { breite: 0, hoehe: 0 }
   } else if (job.upscaler !== 'lanczos') {
     if (!job.scale) throw new Error('Vergrößerungsauftrag ohne Faktor.')
     ziel = `${job.scale}×`

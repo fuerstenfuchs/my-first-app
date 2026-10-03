@@ -58,7 +58,9 @@ function istHeute(iso: string): boolean {
 /** Was unter der Kachel steht — kurz, aber genug zum Wiedererkennen. */
 function beschriftung(job: ImageJob): string {
   if (job.job_type === 'upscale') {
-    const ziel = job.upscaler === 'gemini' ? job.ziel_klasse : `${job.scale}×`
+    const ziel = job.upscaler === 'gemini' ? job.ziel_klasse
+      : job.upscaler === 'lokal_5k' || job.upscaler === 'lokal_5k_zwei' ? '5K'
+      : `${job.scale}×`
     return `${ziel} · ${job.upscaler ? VERFAHREN_NAME[job.upscaler] : ''}`
   }
   const name = (job.scene_meta?.name as string | undefined) ?? job.prompt

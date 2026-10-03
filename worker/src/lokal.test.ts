@@ -249,3 +249,26 @@ test('Der Schalter Krea-Gewichte reist in scene_meta und geht nur bei Krea 2 an 
     assert.equal(JSON.parse(arbeiterAnfragen.find(a => a.methode === 'POST')!.rumpf).krea_gewichte, soll, modell + JSON.stringify(meta))
   }
 })
+
+test('5K: das Bild geht in voller Groesse als quelle hin, der Modus als auf_5k', async () => {
+  const { bildHochrechnen5k } = await import('./lokal.ts')
+  modus = 'ok'
+  for (const m of ['scharf', 'zwei_stufen'] as const) {
+    arbeiterAnfragen.length = 0
+    const quelle = PNG.buffer.slice(PNG.byteOffset, PNG.byteOffset + PNG.byteLength) as ArrayBuffer
+    const d = await bildHochrechnen5k(quelle, m)
+    assert.ok(d.byteLength > 100)
+    const b = JSON.parse(arbeiterAnfragen.find(a => a.methode === 'POST')!.rumpf)
+    assert.equal(b.modell, 'hochrechnen')
+    assert.equal(b.nachbearbeitung.auf_5k, m)
+    assert.equal(Buffer.from(b.quelle.base64, 'base64').length, PNG.length, 'nicht verkleinert, nicht verändert')
+    assert.ok(arbeiterAnfragen.some(a => a.methode === 'DELETE'), 'aufgeräumt')
+  }
+})
+
+test('5K: ein zu grosses Ausgangsbild wird vor dem Versand abgelehnt', async () => {
+  const { bildHochrechnen5k } = await import('./lokal.ts')
+  arbeiterAnfragen.length = 0
+  await assert.rejects(bildHochrechnen5k(new ArrayBuffer(41 * 1024 * 1024), 'scharf'), /zu groß/)
+  assert.equal(arbeiterAnfragen.length, 0)
+})

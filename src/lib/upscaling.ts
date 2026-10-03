@@ -23,7 +23,7 @@
  * Welches besser ist, hängt vom Bild ab. Deshalb beide, statt eines
  * auszuwählen.
  */
-export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal' | 'gemini'
+export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal' | 'gemini' | 'lokal_5k' | 'lokal_5k_zwei'
 
 /**
  * Was im Menü angeboten wird — und in welcher Reihenfolge.
@@ -40,7 +40,8 @@ export type Upscaler = 'lanczos' | 'seedvr2' | 'crystal' | 'gemini'
  */
 // Crystal ist aus dem Menü genommen (Mark, 03.10.2026: zu teuer, rund das Vierzehnfache von SeedVR2).
 // Der Typ bleibt, damit alte Aufträge lesbar sind.
-export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'gemini']
+// `lokal_5k*` (PROJ-94): SeedVR2 7B Sharp auf dem neuen PC, bis 5K, kostet nur Strom. Vorgabe ist `lokal_5k` (scharf), Mark 03.10.2026.
+export const IM_MENUE: readonly Upscaler[] = ['seedvr2', 'gemini', 'lokal_5k', 'lokal_5k_zwei']
 
 /** Die bezahlten Verfahren — an einer Stelle, damit niemand eins vergisst. */
 export const KOSTET_GELD: readonly Upscaler[] = ['seedvr2', 'crystal']
@@ -54,6 +55,8 @@ export const VERFAHREN_NAME: Record<Upscaler, string> = {
   seedvr2: 'KI · SeedVR2',
   crystal: 'KI · Crystal',
   gemini:  'KI · Gemini',
+  lokal_5k: 'Lokal · 5K scharf',
+  lokal_5k_zwei: 'Lokal · 5K zwei Stufen',
 }
 
 /** Was im Menü unter der Überschrift steht. */
@@ -66,6 +69,8 @@ export const VERFAHREN_HINWEIS: Record<Upscaler, string> = {
   // Bestätigung danach: Gemini baut das Bild NEU — am Porträt gemessen saßen
   // Brauenform und Lidfalte hinterher anders.
   gemini:  'gratis, bis 4K — rechnet das Bild NEU, bei Gesichtern prüfen',
+  lokal_5k: 'neuer PC',
+  lokal_5k_zwei: 'neuer PC',
 }
 
 /**
@@ -80,6 +85,8 @@ export const VERFAHREN_HINWEIS: Record<Upscaler, string> = {
 export type Stufe =
   | { art: 'faktor'; wert: 2 | 3 | 4 }
   | { art: 'klasse'; wert: '1K' | '2K' | '4K' }
+  // 5K: lange Seite 5120 Pixel, höchstens 18 Megapixel — der Arbeiter rechnet den Faktor aus der Bildgröße
+  | { art: 'ziel5k'; wert: '5K' }
 
 const FAKTOREN: Stufe[] = [
   { art: 'faktor', wert: 2 }, { art: 'faktor', wert: 3 }, { art: 'faktor', wert: 4 },
@@ -91,6 +98,8 @@ export const STUFEN: Record<Upscaler, Stufe[]> = {
   crystal: FAKTOREN,
   // 1K wäre bei Marks Bildern eine Verkleinerung — deshalb nur 2K und 4K.
   gemini: [{ art: 'klasse', wert: '2K' }, { art: 'klasse', wert: '4K' }],
+  lokal_5k: [{ art: 'ziel5k', wert: '5K' }],
+  lokal_5k_zwei: [{ art: 'ziel5k', wert: '5K' }],
 }
 
 /**
@@ -163,6 +172,9 @@ export function kostenSatz(verfahren: Upscaler, stufe: Stufe): string {
   if (verfahren === 'gemini') {
     return 'Gemini baut das Bild neu auf — über Deinen eigenen Zugang, kostet nichts extra. '
       + 'Bei Gesichtern das Ergebnis ansehen: Es ist ein Nachbau, kein Vergrößern.'
+  }
+  if (verfahren === 'lokal_5k' || verfahren === 'lokal_5k_zwei') {
+    return 'Der neue PC rechnet es — das kostet nichts. Er muss dafür an sein.'
   }
   if (!kostetGeld(verfahren)) {
     return 'Der Arbeiter rechnet sie auf dem PC — das kostet nichts.'

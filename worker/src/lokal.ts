@@ -193,6 +193,13 @@ export async function bildErzeugenLokal(
     nachbearbeitung: { hochrechnen: 0, augenfarbe: false, augen_referenz: 0 },
   }
 
+  return bestellungAusfuehren(e, bestellung, signal, melde)
+}
+
+/** Einen Auftrag an den neuen PC schicken, auf das Ergebnis warten, das Bild holen und den Auftrag dort aufräumen. */
+async function bestellungAusfuehren(
+  e: Einstellung, bestellung: object, signal: AbortSignal | undefined, melde: (text: string) => void,
+): Promise<ArrayBuffer> {
   const start = Date.now()
   const angelegt = await jsonOderFehler(
     await frage(e, '/auftrag', { methode: 'POST', rumpf: bestellung, ms: 60_000, signal }), e.token,
@@ -244,4 +251,24 @@ export async function bildErzeugenLokal(
   } finally {
     await frage(e, dort, { methode: 'DELETE', ms: 8000 }).catch(() => undefined)
   }
+}
+
+/**
+ * Ein vorhandenes Bild auf 5K hochrechnen lassen (PROJ-94, Mark 03.10.2026).
+ *
+ * 5K heißt: lange Seite 5120 Pixel, höchstens 18 Megapixel — den Faktor rechnet der Arbeiter selbst aus der Größe des Bildes.
+ * `scharf` = eine Stufe mit SeedVR2 7B Sharp (Vorgabe), `zwei_stufen` = erst normal 2×, dann Sharp.
+ * Das Bild geht in VOLLER Größe hin (bis 4096 px je Seite), nicht auf 1024 verkleinert wie eine Referenz.
+ */
+export async function bildHochrechnen5k(
+  quelle: ArrayBuffer, modus: 'scharf' | 'zwei_stufen', signal?: AbortSignal, melde: (text: string) => void = () => {},
+): Promise<ArrayBuffer> {
+  const e = einstellung()
+  if (quelle.byteLength > 40 * 1024 * 1024) throw new Error('Das Ausgangsbild ist zu groß für den neuen PC (über 40 MB).')
+  const bestellung = {
+    modell: 'hochrechnen',
+    quelle: { name: 'quelle.png', base64: Buffer.from(quelle).toString('base64') },
+    nachbearbeitung: { auf_5k: modus },
+  }
+  return bestellungAusfuehren(e, bestellung, signal, melde)
 }

@@ -163,4 +163,6 @@
 
 | PROJ-93 | Hautzeichen (Tattoos), Muskeldefinition, Männer-Wortlaut | In Review | [PROJ-93](PROJ-93-hautzeichen-muskeln.md) | 2026-09-30 |
 
-## Next Available ID: PROJ-94
+| PROJ-94 | 5K lokal hochrechnen (SeedVR2 7B Sharp auf dem neuen PC), Auflösungsstufen, Krea 2 | In Review | [PROJ-94](PROJ-94-lokal-5k.md) | 2026-10-03 |
+
+## Next Available ID: PROJ-95

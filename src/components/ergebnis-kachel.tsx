@@ -175,7 +175,9 @@ export function ErgebnisKachel({
                           ? (zielMasse(job, stufe.wert)
                               ? ` · ${original ? 'Original ' : ''}${zielMasse(job, stufe.wert)}`
                               : '')
-                          : ` · ${KLASSE_FLAECHE[stufe.wert]}`}
+                          : stufe.art === 'ziel5k'
+                            ? ' · bis 5120 px'
+                            : ` · ${KLASSE_FLAECHE[stufe.wert]}`}
                       </span>
                       <span className="text-[13px] tabular-nums text-muted-foreground">
                         {kostetGeld(v) ? preis(v, stufe) : 'gratis'}
