@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { analyseTypBestimmen } from '@/lib/bildtyp'
+import { outfitSheetText } from '@/lib/outfit-sheet-prompt'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -91,41 +92,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const metaParts = [`Outfit name: "${outfitName}"`]
-    if (outfitDescription) metaParts.push(`Description: ${outfitDescription}`)
-    if (outfitTags.length) metaParts.push(`Tags: ${outfitTags.join(', ')}`)
-    const metaText = metaParts.join('. ')
+    const metaText = outfitSheetText({ outfitName, outfitDescription, outfitTags, bilder: imageBlocks.length })
 
     const userContent: Anthropic.MessageParam['content'] = [
       ...imageBlocks,
-      {
-        type: 'text',
-        text: imageBlocks.length > 0
-          ? `${metaText}
-
-Analyze every clothing piece and accessory visible in these outfit images. Then generate a single, ready-to-use image generation prompt (for Midjourney, Flux, or Stable Diffusion) that shows the complete outfit as a ghost mannequin / invisible mannequin photo.
-
-Requirements for the prompt:
-- Ghost mannequin effect: clothes look worn and 3D-shaped, but NO person, NO model, NO skin, NO face, NO hands, NO feet visible anywhere
-- Front view on the LEFT side, back view on the RIGHT side — both on one image side by side
-- White or very light neutral background
-- Professional fashion product photography style
-- Describe every garment precisely (color, fabric texture, cut, details like buttons/zippers/prints)
-- Do NOT mention any person, body, or model
-
-Output ONLY the prompt text. No explanation, no intro, no quotes around it.`
-          : `${metaText}
-
-Generate a single, ready-to-use image generation prompt (for Midjourney, Flux, or Stable Diffusion) that shows this outfit as a ghost mannequin / invisible mannequin photo.
-
-Requirements:
-- Ghost mannequin effect: clothes look worn and 3D-shaped, but NO person, NO model, NO skin visible
-- Front view on the LEFT, back view on the RIGHT — both on one image
-- White background, professional fashion product photography
-- Describe plausible garments based on the outfit name and tags
-
-Output ONLY the prompt text. No explanation, no intro.`,
-      },
+      { type: 'text', text: metaText },
     ]
 
     const msg = await anthropic.messages.create({

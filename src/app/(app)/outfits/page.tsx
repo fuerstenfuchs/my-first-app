@@ -42,6 +42,8 @@ import { passtZurSuche } from '@/lib/bausteine'
 import { cn } from '@/lib/utils'
 import { analysiere, type AnalyseBild } from '@/hooks/use-analyse'
 import { bildFuerAnalyse } from '@/lib/bild-fuer-analyse'
+import { proxyBereit, textZuBildernUeberProxy } from '@/lib/proxy-analyse'
+import { outfitSheetText } from '@/lib/outfit-sheet-prompt'
 import { Vorschaubild } from '@/components/vorschaubild'
 
 /**
@@ -225,7 +227,38 @@ export default function OutfitsPage() {
     setSheetError(null)
     setGeneratedSheetPrompt(null)
     setPromptCopied(false)
+    let proxyGrund: string | null = null
     try {
+      // Erst Marks eigener Proxy (aus dem Browser, kostenlos), sonst die
+      // Server-Route mit bezahltem Schluessel. Ohne den Schluessel auf dem
+      // Server kam hier vorher nur „Anthropic API key nicht konfiguriert".
+      if (proxyBereit()) {
+        try {
+          const bilder: { base64: string; mediaType: string }[] = []
+          for (const i of variant.images.slice(0, 4)) {
+            try {
+              const r = await fetch(i.url)
+              if (!r.ok) continue
+              const b = await bildFuerAnalyse(await r.blob())
+              bilder.push({ base64: b.imageBase64, mediaType: b.mediaType })
+            } catch { /* dieses Bild ueberspringen */ }
+          }
+          const text = await textZuBildernUeberProxy({
+            text: outfitSheetText({
+              outfitName: outfit.name,
+              outfitDescription: outfit.description,
+              outfitTags: outfit.tags,
+              bilder: bilder.length,
+            }),
+            bilder,
+          })
+          setGeneratedSheetPrompt(text)
+          return
+        } catch (err) {
+          // Der Proxy-Weg ist gescheitert: die Route versuchen, aber den Grund merken.
+          proxyGrund = err instanceof Error ? err.message : String(err)
+        }
+      }
       const res = await fetch('/api/generate-outfit-sheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,7 +270,7 @@ export default function OutfitsPage() {
         }),
       })
       const data = await res.json() as { prompt?: string; error?: string }
-      if (!res.ok || !data.prompt) throw new Error(data.error ?? 'Unbekannter Fehler')
+      if (!res.ok || !data.prompt) throw new Error(proxyGrund ?? data.error ?? 'Unbekannter Fehler')
       setGeneratedSheetPrompt(data.prompt)
     } catch (err) {
       setSheetError(err instanceof Error ? err.message : 'Generierung fehlgeschlagen')

@@ -288,3 +288,59 @@ export async function analysiereUeberProxy<T = unknown>(auftrag: ProxyAnalyseAuf
     fertig()
   }
 }
+
+export interface ProxyTextAuftrag {
+  /** Der fertige Auftragstext (Anweisung). */
+  text: string
+  /** Bilder als reines Base64 OHNE `data:`-Vorspann. */
+  bilder: { base64: string; mediaType?: string }[]
+  maxTokens?: number
+  modell?: string
+  signal?: AbortSignal
+}
+
+/**
+ * Freier Text zu Bildern ueber den Proxy — fuer das Outfit-Sheet, das keine
+ * der festen Analyse-Arten ist. Gleicher Weg wie `analysiereUeberProxy`
+ * (aus dem Browser, Proxy auf Marks Rechner), nur ohne Systemprompt-Tabelle.
+ */
+export async function textZuBildernUeberProxy(auftrag: ProxyTextAuftrag): Promise<string> {
+  const e = proxyEinstellungenLesen()
+  const adresse = basis(e.url)
+  if (!adresse) throw new Error('Es ist keine Proxy-Adresse eingetragen.')
+  if (!e.token.trim()) throw new Error('Es ist kein Proxy-Zugangsschlüssel eingetragen.')
+
+  const { signal, fertig } = mitFrist(FRIST_MS, auftrag.signal)
+  try {
+    const res = await fetch(`${adresse}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${e.token.trim()}` },
+      signal,
+      body: JSON.stringify({
+        model: auftrag.modell ?? e.modell ?? PROXY_VORGABE_MODELL,
+        max_tokens: auftrag.maxTokens ?? 600,
+        messages: [{
+          role: 'user',
+          content: [
+            ...auftrag.bilder.map(b => ({
+              type: 'image_url',
+              image_url: { url: `data:${(b.mediaType ?? 'image/jpeg').split(';')[0].trim() || 'image/jpeg'};base64,${b.base64}` },
+            })),
+            { type: 'text', text: auftrag.text },
+          ],
+        }],
+      }),
+    })
+    if (!res.ok) {
+      const roh = await res.text().catch(() => '')
+      throw new Error(`Der Proxy antwortet mit HTTP ${res.status}${roh ? ` — ${roh.slice(0, 200)}` : ''}`)
+    }
+    const text = textAusAntwort(await res.json())
+    if (!text) throw new Error('Der Proxy hat eine leere Antwort geliefert.')
+    return text
+  } catch (err) {
+    throw new Error(fehlerSatz(err, adresse))
+  } finally {
+    fertig()
+  }
+}
