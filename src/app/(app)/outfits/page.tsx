@@ -232,7 +232,9 @@ export default function OutfitsPage() {
       // Erst Marks eigener Proxy (aus dem Browser, kostenlos), sonst die
       // Server-Route mit bezahltem Schluessel. Ohne den Schluessel auf dem
       // Server kam hier vorher nur „Anthropic API key nicht konfiguriert".
-      if (proxyBereit()) {
+      if (!proxyBereit()) {
+        proxyGrund = 'Der Proxy ist in diesem Browser nicht eingerichtet — unter Einstellungen Adresse und Zugangsschlüssel eintragen.'
+      } else {
         try {
           const bilder: { base64: string; mediaType: string }[] = []
           for (const i of variant.images.slice(0, 4)) {
